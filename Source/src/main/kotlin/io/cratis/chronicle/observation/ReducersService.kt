@@ -86,6 +86,22 @@ class ReducersService(
         val requests = Channel<ObservationReducers.ReducerMessage>(Channel.BUFFERED)
 
         return CoroutineScope(Dispatchers.IO).launch {
+            try { doObserve(requests, eventTypes, reducer, reducerId, readModelClass, readModelName, handlersByEventTypeId) }
+            catch (e: Exception) {
+                System.err.println("[ReducersService] '$reducerId' registration failed: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun doObserve(
+        requests: kotlinx.coroutines.channels.Channel<ObservationReducers.ReducerMessage>,
+        eventTypes: List<ObservationReducers.EventTypeWithKeyExpression>,
+        reducer: Any,
+        reducerId: String,
+        readModelClass: KClass<*>?,
+        readModelName: String,
+        handlersByEventTypeId: Map<String, Pair<kotlin.reflect.KFunction<*>, KClass<*>>>
+    ) {
             requests.send(
                 ObservationReducers.ReducerMessage.newBuilder()
                     .setContent(
@@ -183,6 +199,5 @@ class ReducersService(
                         .build()
                 )
             }
-        }
     }
 }

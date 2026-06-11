@@ -3,7 +3,7 @@ services:
   # ─── MongoDB (default profile) ──────────────────────────────────────────────
   # Chronicle development image bundles MongoDB — use the slim image for local dev.
   chronicle-mongodb:
-    image: cratis/chronicle:latest-development-slim-development-slim
+    image: cratis/chronicle:latest-development-slim
     profiles: [mongodb, ""]
     depends_on:
       - mongodb

@@ -71,6 +71,7 @@ class ReactorsService(
         val requests = Channel<ObservationReactors.ReactorMessage>(Channel.BUFFERED)
 
         return CoroutineScope(Dispatchers.IO).launch {
+            try {
             requests.send(
                 ObservationReactors.ReactorMessage.newBuilder()
                     .setContent(
@@ -147,6 +148,9 @@ class ReactorsService(
                         )
                         .build()
                 )
+            }
+            } catch (e: Exception) {
+                System.err.println("[ReactorsService] '$reactorId' failed: ${e.message}")
             }
         }
     }

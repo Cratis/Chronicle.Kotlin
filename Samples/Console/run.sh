@@ -50,15 +50,18 @@ export CHRONICLE_SINK_TYPE="${CHRONICLE_SINK_TYPE:-$SINK_TYPE}"
 echo "▶  Starting Chronicle ($DATABASE) via docker compose..."
 docker compose --profile "$COMPOSE_PROFILE" -f "$SCRIPT_DIR/docker-compose.yml" up -d
 
-# Wait until the gRPC port is ready
-echo "Waiting for Chronicle to be ready on port 35000..."
-for i in $(seq 1 30); do
-    if nc -z localhost 35000 2>/dev/null; then
+# Wait until Chronicle's health endpoint reports ready (port 8080).
+# This is more reliable than waiting for the gRPC port alone because Chronicle
+# accepts TCP connections on 35000 during startup but isn't ready for gRPC until
+# migrations complete and the service is fully initialized.
+echo "Waiting for Chronicle to be ready..."
+for i in $(seq 1 60); do
+    if curl -s http://localhost:8080/health 2>/dev/null | grep -q "Healthy"; then
         echo "Chronicle is ready."
         break
     fi
-    if [ "$i" -eq 30 ]; then
-        echo "Timed out waiting for Chronicle on port 35000."
+    if [ "$i" -eq 60 ]; then
+        echo "Timed out waiting for Chronicle health check."
         docker compose --profile "$COMPOSE_PROFILE" -f "$SCRIPT_DIR/docker-compose.yml" logs
         docker compose --profile "$COMPOSE_PROFILE" -f "$SCRIPT_DIR/docker-compose.yml" down
         exit 1

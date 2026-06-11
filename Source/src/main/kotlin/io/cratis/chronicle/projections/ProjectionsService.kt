@@ -160,6 +160,7 @@ class ProjectionsService(
             .setIsActive(true)
             .setIsRewindable(true)
             .addAllFrom(fromPairs)
+            .setAutoMap(ProjectionsOuterClass.AutoMap.Enabled)
             .build()
     }
 }
