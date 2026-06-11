@@ -1,7 +1,10 @@
 services:
 
-  chronicle:
+  # ─── MongoDB (default profile) ──────────────────────────────────────────────
+  # Chronicle development image bundles MongoDB — use the slim image for local dev.
+  chronicle-mongodb:
     image: cratis/chronicle:latest-development-slim
+    profiles: [mongodb, ""]
     depends_on:
       - mongodb
       - mongodb-init
@@ -10,17 +13,19 @@ services:
       - Cratis__Chronicle__Storage__Type=MongoDB
       - Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongodb:27017/?directConnection=true
     ports:
-      - 8080:8080
-      - 35000:35000
+      - "8080:8080"
+      - "35000:35000"
 
   mongodb:
     image: mongo:8
+    profiles: [mongodb, ""]
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
-      - 27017:27017
+      - "27017:27017"
 
   mongodb-init:
     image: mongo:8
+    profiles: [mongodb, ""]
     depends_on:
       - mongodb
     restart: "no"
@@ -40,3 +45,67 @@ services:
             members: [{ _id: 0, host: 'localhost:27017' }]
           });
         }"
+
+  # ─── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16
+    profiles: [postgresql]
+    environment:
+      - POSTGRES_DB=chronicle
+      - POSTGRES_USER=chronicle
+      - POSTGRES_PASSWORD=chronicle
+    ports:
+      - "5432:5432"
+
+  chronicle-postgresql:
+    image: cratis/chronicle:latest
+    profiles: [postgresql]
+    depends_on:
+      - postgres
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Cratis__Chronicle__Storage__Type=PostgreSQL
+      - Cratis__Chronicle__Storage__ConnectionDetails=Host=postgres;Database=chronicle;Username=chronicle;Password=chronicle
+    ports:
+      - "8080:8080"
+      - "35000:35000"
+
+  # ─── SQL Server ─────────────────────────────────────────────────────────────
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    profiles: [mssql]
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Chronicle_Str0ng!
+    ports:
+      - "1433:1433"
+
+  chronicle-mssql:
+    image: cratis/chronicle:latest
+    profiles: [mssql]
+    depends_on:
+      - mssql
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Cratis__Chronicle__Storage__Type=SqlServer
+      - Cratis__Chronicle__Storage__ConnectionDetails=Server=mssql;Database=chronicle;User Id=sa;Password=Chronicle_Str0ng!;TrustServerCertificate=true
+    ports:
+      - "8080:8080"
+      - "35000:35000"
+
+  # ─── SQLite ──────────────────────────────────────────────────────────────────
+  chronicle-sqlite:
+    image: cratis/chronicle:latest
+    profiles: [sqlite]
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Cratis__Chronicle__Storage__Type=SQLite
+      - Cratis__Chronicle__Storage__ConnectionDetails=Data Source=/data/chronicle.db
+    volumes:
+      - chronicle-sqlite-data:/data
+    ports:
+      - "8080:8080"
+      - "35000:35000"
+
+volumes:
+  chronicle-sqlite-data:

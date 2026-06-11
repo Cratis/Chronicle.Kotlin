@@ -35,53 +35,67 @@ Select an employee with `1`–`3`, then:
 ## Prerequisites
 
 - JDK 17+
-- Docker (for Chronicle Kernel)
-- Gradle 8.13+
+- Docker (to start Chronicle)
+- Gradle 9+
 
 ## Running
 
-### 1. Start Chronicle
+Use a database-specific convenience script from `Samples/Console/`. Each script optionally starts Chronicle and the required infrastructure via docker compose (`--docker`) before launching the sample.
 
-The easiest way to run Chronicle locally is via Docker:
+| Script | Database | Sink type |
+| --- | --- | --- |
+| `run-sample.sh` | Configurable via `--database` (default: MongoDB) | — |
+| `run-mongodb.sh` | MongoDB (default) | `MongoDB` |
+| `run-postgresql.sh` | PostgreSQL | `SQL` |
+| `run-mssql.sh` | SQL Server | `SQL` |
+| `run-sqlite.sh` | SQLite | `SQL` |
+
+### Quick start (MongoDB — batteries included)
 
 ```bash
-docker run -d -p 35000:35000 -p 8080:8080 cratis/chronicle:latest-development
+./Samples/Console/run-mongodb.sh --docker
 ```
 
-Or using the included docker-compose file in the repository root:
+This starts a Chronicle + MongoDB stack via docker compose and then runs the sample.
+
+### PostgreSQL
 
 ```bash
-docker compose up -d
+./Samples/Console/run-postgresql.sh --docker
 ```
 
-### 2. Run the sample
-
-Use the convenience script in `Samples/Console/`:
+### SQL Server
 
 ```bash
-./Samples/Console/run-sample.sh
+./Samples/Console/run-mssql.sh --docker
 ```
 
-Or run directly with Gradle from the repository root:
+### SQLite
 
 ```bash
-gradle :Samples:Console:run
+./Samples/Console/run-sqlite.sh --docker
 ```
 
-You should see output with:
+### With an already-running Chronicle
 
-- A Chronicle connection log
-- Event appends for hire, promotion, and relocation
-- Read-model lookups for the selected employee (`R` keyboard command)
-- Transactional staged appends committed as one unit (`T` keyboard command)
-- Seeder status output for initial employees
-- Reactor logs for observed events
-- Compliance feature information (`C` and `V` keyboard commands)
-
-### 3. Override the connection string
+If Chronicle is already running, omit `--docker`:
 
 ```bash
-CHRONICLE_CONNECTION="chronicle://myserver:35000" gradle :Samples:Console:run
+./Samples/Console/run-mongodb.sh
+# or
+./Samples/Console/run-sample.sh --database postgresql
+```
+
+### Override the connection string
+
+```bash
+CHRONICLE_CONNECTION="chronicle://myserver:35000" ./Samples/Console/run-mongodb.sh
+```
+
+### Override the sink type
+
+```bash
+CHRONICLE_SINK_TYPE=SQL ./Samples/Console/run-sample.sh
 ```
 
 ## Project structure
