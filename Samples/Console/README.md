@@ -40,67 +40,64 @@ Select an employee with `1`–`3`, then:
 
 ## Running
 
-Use a database-specific convenience script from `Samples/Console/`. Each script optionally starts Chronicle and the required infrastructure via docker compose (`--docker`) before launching the sample.
+Two families of run scripts are provided:
 
-| Script | Database | Sink type |
-| --- | --- | --- |
-| `run-sample.sh` | Configurable via `--database` (default: MongoDB) | — |
-| `run-mongodb.sh` | MongoDB (default) | `MongoDB` |
-| `run-postgresql.sh` | PostgreSQL | `SQL` |
-| `run-mssql.sh` | SQL Server | `SQL` |
-| `run-sqlite.sh` | SQLite | `SQL` |
+- **`run.sh`** — all-in-one: starts Docker, waits for Chronicle, runs the sample, and stops Docker on exit. Accepts `--database` to select the backend.
+- **`run-<database>.sh`** — database-specific shortcuts that delegate to `run-sample.sh`. Pass `--docker` to also manage Docker automatically, or omit it when Chronicle is already running.
+- **`run-sample.sh`** — low-level launcher; accepts both `--database` and `--docker`.
 
-### Quick start (MongoDB — batteries included)
+### Quick start (MongoDB — fully automatic)
 
 ```bash
+./Samples/Console/run.sh
+```
+
+This starts Chronicle + MongoDB via docker compose, waits for it to be ready, runs the sample, and stops everything on exit.
+
+### Select a different database
+
+```bash
+./Samples/Console/run.sh --database postgresql
+./Samples/Console/run.sh --database mssql
+./Samples/Console/run.sh --database sqlite
+```
+
+### Database-specific shortcut scripts
+
+Each `run-<database>.sh` delegates to `run-sample.sh`:
+
+| Script | Database | Sink type | Docker flag |
+| --- | --- | --- | --- |
+| `run-mongodb.sh` | MongoDB (default) | `MongoDB` | `--docker` |
+| `run-postgresql.sh` | PostgreSQL | `SQL` | `--docker` |
+| `run-mssql.sh` | SQL Server | `SQL` | `--docker` |
+| `run-sqlite.sh` | SQLite | `SQL` | `--docker` |
+
+```bash
+# Start docker + run sample (batteries included)
 ./Samples/Console/run-mongodb.sh --docker
-```
-
-This starts a Chronicle + MongoDB stack via docker compose and then runs the sample.
-
-### PostgreSQL
-
-```bash
 ./Samples/Console/run-postgresql.sh --docker
-```
 
-### SQL Server
-
-```bash
-./Samples/Console/run-mssql.sh --docker
-```
-
-### SQLite
-
-```bash
-./Samples/Console/run-sqlite.sh --docker
-```
-
-### With an already-running Chronicle
-
-If Chronicle is already running, omit `--docker`:
-
-```bash
+# Chronicle already running — skip docker
 ./Samples/Console/run-mongodb.sh
-# or
 ./Samples/Console/run-sample.sh --database postgresql
 ```
 
 ### Override the connection string
 
 ```bash
-CHRONICLE_CONNECTION="chronicle://myserver:35000" ./Samples/Console/run-mongodb.sh
+CHRONICLE_CONNECTION="chronicle://myserver:35000" ./Samples/Console/run.sh
 ```
 
 ### Override the sink type
 
 ```bash
-CHRONICLE_SINK_TYPE=SQL ./Samples/Console/run-sample.sh
+CHRONICLE_SINK_TYPE=SQL ./Samples/Console/run.sh --database mongodb
 ```
 
 ## Project structure
 
-```
+```text
 Samples/Console/src/main/kotlin/io/cratis/chronicle/samples/console/
   Main.kt                   # Interactive console entry point
   Employees.kt              # Shared employee data and helpers
