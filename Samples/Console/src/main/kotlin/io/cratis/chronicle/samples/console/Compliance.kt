@@ -42,9 +42,7 @@ data class Customer(
     val totalOrders: Int = 0
 )
 
-@ReadModel(observerTypeValue = 1,
-    observerClass = CustomerReducer::class
-)
+@ReadModel
 data class CustomerDetails(
     val id: String = "",
     val fullName: String = "",

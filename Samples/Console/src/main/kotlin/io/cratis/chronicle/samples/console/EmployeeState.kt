@@ -5,7 +5,7 @@ package io.cratis.chronicle.samples.console
 
 import io.cratis.chronicle.readModels.ReadModel
 
-@ReadModel(observerTypeValue = 1, observerClass = EmployeeStateReducer::class)
+@ReadModel
 data class EmployeeState(
     val id: String = "",
     val firstName: String = "",

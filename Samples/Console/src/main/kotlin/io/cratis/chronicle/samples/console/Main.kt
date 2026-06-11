@@ -202,11 +202,14 @@ fun main() = runBlocking {
             CustomerAddressUpdated::class
         )
 
-        store.readModels.register(EmployeeState::class, Employee::class, Customer::class, CustomerDetails::class)
+        // Customer has no reducer or projection — register it explicitly so Chronicle knows its schema.
+        store.readModels.register(Customer::class)
         store.reactors.register(HrNotificationReactor())
+        // Reducers auto-register their read models (EmployeeState, CustomerDetails) with observerType=Reducer.
         store.reducers.register(EmployeeStateReducer())
         store.reducers.register(CustomerReducer())
-        store.projections.register(EmployeeListProjection())
+        // Model-bound projection: Employee is annotated with @FromEvent — no separate projection class needed.
+        store.projections.register(Employee::class)
         // Ensure the Default namespace exists so the seeding grain can distribute seeds to it.
         store.namespaces.ensure("Default")
         store.seeding.seed(EmployeeSeeder())
