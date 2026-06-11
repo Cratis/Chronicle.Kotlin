@@ -3,17 +3,17 @@
 
 package io.cratis.chronicle.projections
 
-import kotlin.reflect.KClass
-
 /**
- * Marks a class as a Chronicle projection.
+ * Marks a class as a Chronicle projection, or overrides the projection identifier on a model-bound read model.
  *
- * @property id Explicit identifier. Defaults to the class's fully-qualified name.
- * @property readModel The read model class this projection builds. Defaults to [Any] (inferred from [IProjectionFor]).
+ * This annotation is optional. When omitted, the class simple name is used as the projection identifier.
+ * Use it only when the identifier must differ from the class name (e.g. after a rename).
+ *
+ * For declarative projections the read model type is inferred from the [IProjectionFor] type parameter.
+ * For model-bound projections the annotated class itself is the read model.
+ *
+ * @property id Explicit identifier. Defaults to the class simple name.
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class Projection(
-    val id: String = "",
-    val readModel: KClass<*> = Any::class
-)
+annotation class Projection(val id: String = "")
