@@ -8,59 +8,69 @@ import Cratis.Chronicle.Contracts.ReadModels.Readmodels
 import bcl.Bcl
 import com.google.gson.Gson
 import io.cratis.chronicle.eventSequences.EventSequenceId
+import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
-
-private const val SINK_TYPE_MONGODB = "MongoDB"
 
 private val gson = Gson()
 
 class ReadModelsService(
     private val eventStoreName: String,
     private val namespace: String,
-    private val stub: ReadModelsGrpcKt.ReadModelsCoroutineStub
+    private val stub: ReadModelsGrpcKt.ReadModelsCoroutineStub,
+    private val defaultSinkTypeId: String = WellKnownSinkTypes.MONGODB
 ) : IReadModelsService {
 
     override suspend fun register(vararg readModelClasses: KClass<*>) {
-        val definitions = readModelClasses.map { cls ->
-            val ann = cls.findAnnotation<ReadModel>()
-            val identifier = ann?.id?.ifEmpty { cls.simpleName!! } ?: cls.simpleName!!
-            val displayName = ann?.displayName?.ifEmpty { cls.simpleName!! } ?: cls.simpleName!!
-            val observerTypeValue = ann?.observerTypeValue ?: 0
-            val observerIdentifier = if (ann?.observerClass != null && ann.observerClass != Nothing::class) {
-                ann.observerClass.simpleName ?: ""
-            } else ""
-
-            Readmodels.ReadModelDefinition.newBuilder()
-                .setType(
-                    Readmodels.ReadModelType.newBuilder()
-                        .setIdentifier(identifier)
-                        .build()
-                )
-                .setContainerName(identifier)
-                .setDisplayName(displayName)
-                .setSink(
-                    Readmodels.SinkDefinition.newBuilder()
-                        // lo=1 ensures the field serializes on the wire so C# protobuf-net
-                        // sees a non-null Guid (Guid.Empty maps to 00000001-... on server side,
-                        // which is used only as a configuration reference key).
-                        .setConfigurationId(
-                            Bcl.Guid.newBuilder().setLo(1L).setHi(0L).build()
-                        )
-                        .setTypeId(SINK_TYPE_MONGODB)
-                        .build()
-                )
-                .setSchema(generateSchema(cls))
-                .setObserverTypeValue(observerTypeValue)
-                .setObserverIdentifier(observerIdentifier)
-                .build()
+        for (cls in readModelClasses) {
+            registerWithObserver(cls, 0, "")
         }
+    }
+
+    /**
+     * Registers a read model and associates it with the given observer type and identifier.
+     * Called internally by [io.cratis.chronicle.observation.ReducersService] and
+     * [io.cratis.chronicle.projections.ProjectionsService] so that observer info is derived
+     * from the reducer/projection rather than from the [ReadModel] annotation.
+     *
+     * @param cls Read model class to register.
+     * @param observerType 0 = NotSet, 1 = Reducer, 2 = Projection.
+     * @param observerIdentifier Simple name of the reducer or projection that produces this model.
+     */
+    internal suspend fun registerWithObserver(cls: KClass<*>, observerType: Int, observerIdentifier: String) {
+        val ann = cls.findAnnotation<ReadModel>()
+        val identifier = ann?.id?.ifEmpty { cls.simpleName!! } ?: cls.simpleName!!
+        val displayName = ann?.displayName?.ifEmpty { cls.simpleName!! } ?: cls.simpleName!!
+
+        val definition = Readmodels.ReadModelDefinition.newBuilder()
+            .setType(
+                Readmodels.ReadModelType.newBuilder()
+                    .setIdentifier(identifier)
+                    .build()
+            )
+            .setContainerName(identifier)
+            .setDisplayName(displayName)
+            .setSink(
+                Readmodels.SinkDefinition.newBuilder()
+                    // lo=1 ensures the field serializes on the wire so C# protobuf-net
+                    // sees a non-null Guid (Guid.Empty maps to 00000001-... on server side,
+                    // which is used only as a configuration reference key).
+                    .setConfigurationId(
+                        Bcl.Guid.newBuilder().setLo(1L).setHi(0L).build()
+                    )
+                    .setTypeId(defaultSinkTypeId)
+                    .build()
+            )
+            .setSchema(generateSchema(cls))
+            .setObserverTypeValue(observerType)
+            .setObserverIdentifier(observerIdentifier)
+            .build()
 
         val request = Readmodels.RegisterManyRequest.newBuilder()
             .setEventStore(eventStoreName)
             .setOwnerValue(1) // CLIENT
-            .addAllReadModels(definitions)
+            .addReadModels(definition)
             .setSourceValue(1)
             .build()
 

@@ -29,7 +29,8 @@ class ReducersService(
     private val namespace: String,
     private val connectionId: String,
     private val stub: ReducersGrpcKt.ReducersCoroutineStub,
-    private val defaultSinkTypeId: String = WellKnownSinkTypes.MONGODB
+    private val defaultSinkTypeId: String = WellKnownSinkTypes.MONGODB,
+    private val readModels: io.cratis.chronicle.readModels.ReadModelsService? = null
 ) : IReducersService {
 
     override suspend fun register(reducer: Any): Job {
@@ -59,6 +60,12 @@ class ReducersService(
         val readModelAnn = readModelClass?.findAnnotation<ReadModel>()
         val readModelName = readModelAnn?.id?.ifEmpty { readModelClass?.simpleName ?: "" }
             ?: readModelClass?.simpleName ?: ""
+
+        // Auto-register the read model so the observer type (Reducer) and identifier are derived
+        // from this reducer rather than from the @ReadModel annotation.
+        if (readModelClass != null) {
+            readModels?.registerWithObserver(readModelClass, 1, reducerId)
+        }
 
         val eventTypes = handlersByEventTypeId.map { (id, pair) ->
             val (_, eventKClass) = pair

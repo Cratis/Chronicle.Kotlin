@@ -37,16 +37,24 @@ class EventStore(
         EventLog(name, namespace, services.eventSequences, unitOfWorkManager)
     }
 
+    // ReadModelsService is shared so that reducers and projections can auto-register their read
+    // models with the correct observer type without the caller having to set it on @ReadModel.
+    private val readModelsService: ReadModelsService by lazy {
+        ReadModelsService(name, namespace, services.readModels, defaultSinkTypeId)
+    }
+
+    override val readModels: IReadModelsService get() = readModelsService
+
     override val reactors: IReactorsService by lazy {
         ReactorsService(name, namespace, connectionId, services.reactors)
     }
 
     override val reducers: IReducersService by lazy {
-        ReducersService(name, namespace, connectionId, services.reducers, defaultSinkTypeId)
+        ReducersService(name, namespace, connectionId, services.reducers, defaultSinkTypeId, readModelsService)
     }
 
     override val projections: IProjectionsService by lazy {
-        ProjectionsService(name, services.projections)
+        ProjectionsService(name, services.projections, readModelsService)
     }
 
     override val constraints: IConstraintsService by lazy {
@@ -55,10 +63,6 @@ class EventStore(
 
     override val seeding: IEventSeedingService by lazy {
         EventSeedingService(name, namespace, services.eventSeeding)
-    }
-
-    override val readModels: IReadModelsService by lazy {
-        ReadModelsService(name, namespace, services.readModels)
     }
 
     val compliance by lazy {
