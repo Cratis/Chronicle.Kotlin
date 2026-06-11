@@ -4,16 +4,21 @@
 package io.cratis.chronicle
 
 import io.cratis.chronicle.connection.ChronicleConnectionString
+import io.cratis.chronicle.sinks.WellKnownSinkTypes
 
 /**
  * Options used to configure a [ChronicleClient].
  *
  * @property connectionString The parsed [ChronicleConnectionString] for the server.
  * @property programIdentifier A human-readable identifier for the connecting program. Used in diagnostics.
+ * @property defaultSinkTypeId The sink type used when registering reducers and projections.
+ *   Defaults to [WellKnownSinkTypes.MONGODB]. Override by passing an explicit value or by setting
+ *   the `CHRONICLE_SINK_TYPE` environment variable (e.g. `CHRONICLE_SINK_TYPE=SQL`).
  */
 data class ChronicleOptions(
     val connectionString: ChronicleConnectionString,
-    val programIdentifier: String = "Unknown"
+    val programIdentifier: String = "Unknown",
+    val defaultSinkTypeId: String = System.getenv("CHRONICLE_SINK_TYPE") ?: WellKnownSinkTypes.MONGODB
 ) {
     companion object {
         /**

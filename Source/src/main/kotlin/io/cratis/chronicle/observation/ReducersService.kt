@@ -10,6 +10,7 @@ import com.google.gson.Gson
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.readModels.ReadModel
+import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -27,7 +28,8 @@ class ReducersService(
     private val eventStoreName: String,
     private val namespace: String,
     private val connectionId: String,
-    private val stub: ReducersGrpcKt.ReducersCoroutineStub
+    private val stub: ReducersGrpcKt.ReducersCoroutineStub,
+    private val defaultSinkTypeId: String = WellKnownSinkTypes.MONGODB
 ) : IReducersService {
 
     override suspend fun register(reducer: Any): Job {
@@ -98,7 +100,7 @@ class ReducersService(
                                                     .setConfigurationId(
                                                         Bcl.Guid.newBuilder().setLo(1L).setHi(0L).build()
                                                     )
-                                                    .setTypeId("MongoDB")
+                                                    .setTypeId(defaultSinkTypeId)
                                                     .build()
                                             )
                                             .build()

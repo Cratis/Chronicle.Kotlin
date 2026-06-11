@@ -27,7 +27,8 @@ class EventStore(
     override val name: String,
     override val namespace: String,
     private val services: ChronicleServices,
-    private val connectionId: String
+    private val connectionId: String,
+    private val defaultSinkTypeId: String = io.cratis.chronicle.sinks.WellKnownSinkTypes.MONGODB
 ) : IEventStore {
 
     override val unitOfWorkManager: UnitOfWorkManager = UnitOfWorkManager()
@@ -41,7 +42,7 @@ class EventStore(
     }
 
     override val reducers: IReducersService by lazy {
-        ReducersService(name, namespace, connectionId, services.reducers)
+        ReducersService(name, namespace, connectionId, services.reducers, defaultSinkTypeId)
     }
 
     override val projections: IProjectionsService by lazy {
