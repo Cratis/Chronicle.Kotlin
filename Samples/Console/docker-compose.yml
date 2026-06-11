@@ -3,7 +3,7 @@ services:
   # ─── MongoDB (default profile) ──────────────────────────────────────────────
   # Chronicle development image bundles MongoDB — use the slim image for local dev.
   chronicle-mongodb:
-    image: cratis/chronicle:latest-development-slim
+    image: cratis/chronicle:latest-development-slim-development-slim
     profiles: [mongodb, ""]
     depends_on:
       - mongodb
@@ -58,7 +58,7 @@ services:
       - "5432:5432"
 
   chronicle-postgresql:
-    image: cratis/chronicle:latest
+    image: cratis/chronicle:latest-development-slim
     profiles: [postgresql]
     depends_on:
       - postgres
@@ -81,7 +81,7 @@ services:
       - "1433:1433"
 
   chronicle-mssql:
-    image: cratis/chronicle:latest
+    image: cratis/chronicle:latest-development-slim
     profiles: [mssql]
     depends_on:
       - mssql
@@ -95,7 +95,7 @@ services:
 
   # ─── SQLite ──────────────────────────────────────────────────────────────────
   chronicle-sqlite:
-    image: cratis/chronicle:latest
+    image: cratis/chronicle:latest-development-slim
     profiles: [sqlite]
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
