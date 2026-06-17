@@ -4,8 +4,8 @@
 package io.cratis.chronicle.samples.console;
 
 import io.cratis.chronicle.IEventStore;
-import io.cratis.chronicle.events.AppendResult;
 import io.cratis.chronicle.events.EventType;
+import io.cratis.chronicle.eventSequences.AppendResult;
 import io.cratis.chronicle.readModels.ReadModel;
 
 import java.util.Arrays;
@@ -217,25 +217,27 @@ public class Compliance {
             sampleCustomer.country
         );
         
-        List<AppendResult> results = store.getEventLog().appendMany(
-            sampleCustomer.id, 
-            Arrays.asList(registered, addressUpdated)
-        );
+        AppendResult result1 = store.getEventLog().append(sampleCustomer.id, registered, null);
+        AppendResult result2 = store.getEventLog().append(sampleCustomer.id, addressUpdated, null);
         
-        List<AppendResult> failures = results.stream()
-            .filter(r -> !r.isSuccess())
-            .collect(Collectors.toList());
-            
-        if (!failures.isEmpty()) {
-            String violations = failures.stream()
-                .flatMap(r -> r.getConstraintViolations().stream())
-                .map(v -> v.getMessage())
-                .collect(Collectors.joining("; "));
+        if (!result1.isSuccess() || !result2.isSuccess()) {
+            StringBuilder violations = new StringBuilder();
+            if (!result1.isSuccess()) {
+                violations.append(result1.getConstraintViolations().stream()
+                    .map(v -> v.getMessage())
+                    .collect(Collectors.joining("; ")));
+            }
+            if (!result2.isSuccess()) {
+                if (violations.length() > 0) violations.append("; ");
+                violations.append(result2.getConstraintViolations().stream()
+                    .map(v -> v.getMessage())
+                    .collect(Collectors.joining("; ")));
+            }
             System.out.println("[pii] Could not register " + sampleCustomer.fullName + ": " + violations);
             return;
         }
         
-        long lastSeq = results.get(results.size() - 1).getSequenceNumber().getValue();
+        long lastSeq = result2.getSequenceNumber();
         System.out.println("[pii] Registered " + sampleCustomer.fullName + " (" + 
                           sampleCustomer.id + ") with PII events up to sequence " + lastSeq);
     }
@@ -244,7 +246,8 @@ public class Compliance {
         SampleCustomerData sampleCustomer = SampleCustomerData.instance;
         CustomerDetails customer = store.getReadModels().getInstanceByKey(
             CustomerDetails.class, 
-            sampleCustomer.id
+            sampleCustomer.id,
+            null
         );
         
         if (customer == null || customer.getId().isEmpty()) {

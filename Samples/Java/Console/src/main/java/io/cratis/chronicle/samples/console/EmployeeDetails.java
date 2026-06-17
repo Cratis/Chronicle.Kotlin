@@ -14,15 +14,15 @@ import io.cratis.chronicle.readModels.ReadModel;
  * Properties are auto-mapped by name unless overridden with {@link SetFrom}.
  */
 @ReadModel
-@FromEvent(EmployeeHired.class)
-@FromEvent(EmployeeAddressSet.class)
-@FromEvent(EmployeePromoted.class)
-@FromEvent(EmployeeMoved.class)
+@FromEvent(eventType = EmployeeHired.class)
+@FromEvent(eventType = EmployeeAddressSet.class)
+@FromEvent(eventType = EmployeePromoted.class)
+@FromEvent(eventType = EmployeeMoved.class)
 public class EmployeeDetails {
     private String id = "";
     private String firstName = "";
     private String lastName = "";
-    @SetFrom(value = "newTitle", eventType = EmployeePromoted.class)
+    @SetFrom(propertyPath = "newTitle", eventType = EmployeePromoted.class)
     private String title = "";
     private String address = "";
     private String city = "";

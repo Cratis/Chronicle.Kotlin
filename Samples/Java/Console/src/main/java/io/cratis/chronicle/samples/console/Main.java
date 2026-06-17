@@ -7,10 +7,9 @@ import io.cratis.chronicle.ChronicleClient;
 import io.cratis.chronicle.ChronicleOptions;
 import io.cratis.chronicle.EventStore;
 import io.cratis.chronicle.IEventStore;
-import io.cratis.chronicle.auditing.CausationType;
-import io.cratis.chronicle.events.AppendResult;
+import io.cratis.chronicle.eventSequences.AppendResult;
 import io.cratis.chronicle.identity.Identity;
-import io.cratis.chronicle.unitofwork.UnitOfWork;
+import io.cratis.chronicle.transactions.UnitOfWork;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -73,7 +72,7 @@ public class Main {
     private static void setupCausation(Identity user, String commandName, Map<String, String> properties) {
         getIdentityProvider().setCurrentIdentity(user);
         getCausationManager().defineRoot(Map.of("source", "console-sample"));
-        getCausationManager().add(new CausationType(commandName), properties);
+        getCausationManager().add(commandName, properties);
     }
 
     private static final List<String> seedTitles = Arrays.asList(
@@ -104,11 +103,11 @@ public class Main {
                 getCausationManager().defineRoot(Map.of("source", "console-sample-seed"));
                 
                 store.getEventLog().append(employee.getId(), 
-                    new EmployeeHired(employee.getFirstName(), employee.getLastName(), title));
+                    new EmployeeHired(employee.getFirstName(), employee.getLastName(), title), null);
                 store.getEventLog().append(employee.getId(), 
-                    new EmployeeEmailSet(Employees.emailFor(employee)));
+                    new EmployeeEmailSet(Employees.emailFor(employee)), null);
                 store.getEventLog().append(employee.getId(), 
-                    new EmployeeAddressSet(addr.address, addr.city, addr.zipCode, addr.country));
+                    new EmployeeAddressSet(addr.address, addr.city, addr.zipCode, addr.country), null);
             }
         }
     }
@@ -116,31 +115,31 @@ public class Main {
     private static void promote(IEventStore store, Person person, Identity user, SimpleRandom random) throws Exception {
         String title = titles.get(random.next(titles.size()));
         setupCausation(user, "ConsoleSample.Commands.Promote", Map.of("employeeId", person.getId()));
-        AppendResult result = store.getEventLog().append(person.getId(), new EmployeePromoted(title));
+        AppendResult result = store.getEventLog().append(person.getId(), new EmployeePromoted(title), null);
         System.out.println("[" + person.getId() + "] Promoted " + person.getFirstName() + " " + 
                           person.getLastName() + " to '" + title + "' at sequence " + 
-                          result.getSequenceNumber().getValue() + "  [caused-by: " + user.getUserName() + "]");
+                          result.getSequenceNumber() + "  [caused-by: " + user.getUserName() + "]");
     }
 
     private static void move(IEventStore store, Person person, Identity user, SimpleRandom random) throws Exception {
         Address addr = addresses.get(random.next(addresses.size()));
         setupCausation(user, "ConsoleSample.Commands.Move", Map.of("employeeId", person.getId()));
         AppendResult result = store.getEventLog().append(person.getId(), 
-            new EmployeeMoved(addr.address, addr.city, addr.zipCode, addr.country));
+            new EmployeeMoved(addr.address, addr.city, addr.zipCode, addr.country), null);
         System.out.println("[" + person.getId() + "] Moved " + person.getFirstName() + " " + 
                           person.getLastName() + " to " + addr.address + ", " + addr.city + 
-                          " at sequence " + result.getSequenceNumber().getValue() + 
+                          ""  + 
                           "  [caused-by: " + user.getUserName() + "]");
     }
 
     private static void setEmail(IEventStore store, Person person, Identity user) throws Exception {
         String email = Employees.emailFor(person);
         setupCausation(user, "ConsoleSample.Commands.SetEmail", Map.of("employeeId", person.getId()));
-        AppendResult result = store.getEventLog().append(person.getId(), new EmployeeEmailSet(email));
+        AppendResult result = store.getEventLog().append(person.getId(), new EmployeeEmailSet(email), null);
         if (result.isSuccess()) {
             System.out.println("[" + person.getId() + "] Set " + person.getFirstName() + " " + 
                               person.getLastName() + "'s email to " + email + " at sequence " + 
-                              result.getSequenceNumber().getValue() + "  [caused-by: " + user.getUserName() + "]");
+                              result.getSequenceNumber() + "  [caused-by: " + user.getUserName() + "]");
         } else {
             String violations = String.join("; ", 
                 result.getConstraintViolations().stream()
@@ -157,11 +156,11 @@ public class Main {
         String email = Employees.emailFor(victim);
         
         setupCausation(user, "ConsoleSample.Commands.SetEmail", Map.of("employeeId", person.getId()));
-        AppendResult result = store.getEventLog().append(person.getId(), new EmployeeEmailSet(email));
+        AppendResult result = store.getEventLog().append(person.getId(), new EmployeeEmailSet(email), null);
         
         if (result.isSuccess()) {
             System.out.println("[" + person.getId() + "] Unexpectedly took " + email + 
-                              " at sequence " + result.getSequenceNumber().getValue() + 
+                              ""  + 
                               "  [caused-by: " + user.getUserName() + "]");
         } else {
             String violations = String.join("; ", 
@@ -186,11 +185,11 @@ public class Main {
             Map.of("employees", selected.getId() + "," + alsoUpdate.getId()));
 
         UnitOfWork unitOfWork = store.getUnitOfWorkManager().begin();
-        store.getEventLog().getTransactional().append(selected.getId(), new EmployeePromoted(selectedTitle));
+        store.getEventLog().getTransactional().append(selected.getId(), new EmployeePromoted(selectedTitle), null);
         store.getEventLog().getTransactional().appendMany(selected.getId(), 
             Arrays.asList(new EmployeeMoved(selectedAddr.address, selectedAddr.city, 
-                                           selectedAddr.zipCode, selectedAddr.country)));
-        store.getEventLog().getTransactional().append(alsoUpdate.getId(), new EmployeePromoted(secondTitle));
+                                           selectedAddr.zipCode, selectedAddr.country)), null);
+        store.getEventLog().getTransactional().append(alsoUpdate.getId(), new EmployeePromoted(secondTitle), null);
         unitOfWork.commit();
 
         System.out.println("[transaction] Committed staged events for " + selected.getFirstName() + " " + 
@@ -199,7 +198,7 @@ public class Main {
     }
 
     private static void readModel(IEventStore store, Person person) throws Exception {
-        EmployeeState state = store.getReadModels().getInstanceByKey(EmployeeState.class, person.getId());
+        EmployeeState state = store.getReadModels().getInstanceByKey(EmployeeState.class, person.getId(), null);
         if (state == null) {
             System.out.println("[read-model] No state found for " + person.getFirstName() + " " + 
                               person.getLastName() + " yet.");
@@ -276,18 +275,18 @@ Use 1-3 to select an employee. Then:
             );
 
             // Customer has no reducer or projection — register it explicitly so Chronicle knows its schema.
-            store.getReadModels().register(Customer.class);
-            store.getReactors().register(new HrNotificationReactor());
+            store.getReadModels().register(new Class[] { Customer.class }, null);
+            store.getReactors().register(new HrNotificationReactor(), null);
             // Reducers auto-register their read models (EmployeeState, CustomerDetails) with observerType=Reducer.
-            store.getReducers().register(new EmployeeStateReducer());
-            store.getReducers().register(new CustomerReducer());
+            store.getReducers().register(new EmployeeStateReducer(), null);
+            store.getReducers().register(new CustomerReducer(), null);
             // Declarative projection: a separate class implements IProjectionFor<Employee>.
-            store.getProjections().register(new EmployeeListProjection());
+            store.getProjections().register(new Object[] { new EmployeeListProjection() }, null);
             // Model-bound projection: EmployeeDetails carries @FromEvent/@SetFrom — no separate projection class needed.
-            store.getProjections().register(EmployeeDetails.class);
+            store.getProjections().register(new Object[] { EmployeeDetails.class }, null);
             // Ensure the Default namespace exists so the seeding grain can distribute seeds to it.
-            store.getNamespaces().ensure("Default");
-            store.getSeeding().seed(new EmployeeSeeder());
+            store.getNamespaces().ensure("Default", null);
+            store.getSeeding().seed(new Object[] { new EmployeeSeeder() }, null);
             Thread.sleep(2000);
             ensureSeededEmployees(store);
             // Register constraints AFTER seeding so the reindex job can find existing email events

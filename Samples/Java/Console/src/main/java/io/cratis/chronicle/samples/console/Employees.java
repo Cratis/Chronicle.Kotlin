@@ -6,25 +6,8 @@ package io.cratis.chronicle.samples.console;
 import java.util.Arrays;
 import java.util.List;
 
-/** A person that can be hired as an employee. */
-public class Person {
-    private final String id;
-    private final String firstName;
-    private final String lastName;
-
-    public Person(String id, String firstName, String lastName) {
-        this.id = id;
-        this.firstName = firstName;
-        this.lastName = lastName;
-    }
-
-    public String getId() { return id; }
-    public String getFirstName() { return firstName; }
-    public String getLastName() { return lastName; }
-}
-
 /** The employees the sample operates on, shared between seeding and the interactive console. */
-class Employees {
+public class Employees {
     public static final List<Person> employees = Arrays.asList(
         new Person("a0000001-0000-0000-0000-000000000000", "Ada", "Lovelace"),
         new Person("a0000002-0000-0000-0000-000000000000", "Grace", "Hopper"),
