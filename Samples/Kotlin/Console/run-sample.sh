@@ -60,7 +60,7 @@ fi
 echo "▶  Running sample (database=$DATABASE, sinkType=$CHRONICLE_SINK_TYPE)"
 
 if command -v gradle &>/dev/null; then
-    gradle --project-dir "$REPO_ROOT" :Samples:Console:run
+    gradle --project-dir "$REPO_ROOT" :Samples:Kotlin:Console:run
 else
     echo "Error: 'gradle' not found in PATH. Please install Gradle 9+ and ensure it is on your PATH."
     exit 1
