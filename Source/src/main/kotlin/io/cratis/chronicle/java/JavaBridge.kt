@@ -9,13 +9,19 @@ import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.eventSequences.ITransactionalEventSequence
+import io.cratis.chronicle.namespaces.NamespacesService
+import io.cratis.chronicle.observation.IReactorsService
+import io.cratis.chronicle.observation.IReducersService
+import io.cratis.chronicle.projections.IProjectionsService
 import io.cratis.chronicle.readModels.IReadModelsService
 import io.cratis.chronicle.constraints.IConstraintBuilder
 import io.cratis.chronicle.constraints.IConstraintsService
 import io.cratis.chronicle.constraints.IUniqueConstraintBuilder
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.events.EventTypesService
+import io.cratis.chronicle.seeding.IEventSeedingService
 import io.cratis.chronicle.transactions.UnitOfWork
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -136,6 +142,54 @@ object UnitOfWorkJavaBridge {
     @JvmStatic
     fun rollback(unitOfWork: UnitOfWork) {
         runBlocking { unitOfWork.rollback() }
+    }
+}
+
+/**
+ * Java-friendly bridge for IReactorsService operations.
+ */
+object ReactorsServiceJavaBridge {
+    @JvmStatic
+    fun register(service: IReactorsService, reactor: Any): Job =
+        runBlocking { service.register(reactor) }
+}
+
+/**
+ * Java-friendly bridge for IReducersService operations.
+ */
+object ReducersServiceJavaBridge {
+    @JvmStatic
+    fun register(service: IReducersService, reducer: Any): Job =
+        runBlocking { service.register(reducer) }
+}
+
+/**
+ * Java-friendly bridge for IProjectionsService operations.
+ */
+object ProjectionsServiceJavaBridge {
+    @JvmStatic
+    fun register(service: IProjectionsService, vararg projections: Any) {
+        runBlocking { service.register(*projections) }
+    }
+}
+
+/**
+ * Java-friendly bridge for NamespacesService operations.
+ */
+object NamespacesServiceJavaBridge {
+    @JvmStatic
+    fun ensure(service: NamespacesService, namespaceName: String) {
+        runBlocking { service.ensure(namespaceName) }
+    }
+}
+
+/**
+ * Java-friendly bridge for IEventSeedingService operations.
+ */
+object EventSeedingServiceJavaBridge {
+    @JvmStatic
+    fun seed(service: IEventSeedingService, vararg seeders: Any) {
+        runBlocking { service.seed(*seeders) }
     }
 }
 

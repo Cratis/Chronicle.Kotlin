@@ -28,6 +28,11 @@ import io.cratis.chronicle.java.ConstraintBuilderJavaBridge;
 import io.cratis.chronicle.java.EventTypesServiceJavaBridge;
 import io.cratis.chronicle.java.ConstraintsServiceJavaBridge;
 import io.cratis.chronicle.java.UnitOfWorkJavaBridge;
+import io.cratis.chronicle.java.ReactorsServiceJavaBridge;
+import io.cratis.chronicle.java.ReducersServiceJavaBridge;
+import io.cratis.chronicle.java.ProjectionsServiceJavaBridge;
+import io.cratis.chronicle.java.NamespacesServiceJavaBridge;
+import io.cratis.chronicle.java.EventSeedingServiceJavaBridge;
 import io.cratis.chronicle.java.CausationManagerJavaBridge;
 
 public class Main {
@@ -286,17 +291,17 @@ Use 1-3 to select an employee. Then:
 
             // Customer has no reducer or projection — register it explicitly so Chronicle knows its schema.
             ReadModelsJavaBridge.register(store.getReadModels(), Customer.class);
-            store.getReactors().register(new HrNotificationReactor(), null);
+            ReactorsServiceJavaBridge.register(store.getReactors(), new HrNotificationReactor());
             // Reducers auto-register their read models (EmployeeState, CustomerDetails) with observerType=Reducer.
-            store.getReducers().register(new EmployeeStateReducer(), null);
-            store.getReducers().register(new CustomerReducer(), null);
+            ReducersServiceJavaBridge.register(store.getReducers(), new EmployeeStateReducer());
+            ReducersServiceJavaBridge.register(store.getReducers(), new CustomerReducer());
             // Declarative projection: a separate class implements IProjectionFor<Employee>.
-            store.getProjections().register(new Object[] { new EmployeeListProjection() }, null);
+            ProjectionsServiceJavaBridge.register(store.getProjections(), new EmployeeListProjection());
             // Model-bound projection: EmployeeDetails carries @FromEvent/@SetFrom — no separate projection class needed.
-            store.getProjections().register(new Object[] { EmployeeDetails.class }, null);
+            ProjectionsServiceJavaBridge.register(store.getProjections(), EmployeeDetails.class);
             // Ensure the Default namespace exists so the seeding grain can distribute seeds to it.
-            store.getNamespaces().ensure("Default", null);
-            store.getSeeding().seed(new Object[] { new EmployeeSeeder() }, null);
+            NamespacesServiceJavaBridge.ensure(store.getNamespaces(), "Default");
+            EventSeedingServiceJavaBridge.seed(store.getSeeding(), new EmployeeSeeder());
             Thread.sleep(2000);
             ensureSeededEmployees(store);
             // Register constraints AFTER seeding so the reindex job can find existing email events
