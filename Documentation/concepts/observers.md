@@ -1,10 +1,14 @@
 # Observers
 
-An observer watches a stream of events and reacts to them. The Chronicle Kotlin client supports two observer patterns: **reactors** and **reducers** (reducers are a subset of the broader projection family).
+An observer watches a stream of events and reacts to them. The Chronicle
+Kotlin client supports two observer patterns: **reactors** and **reducers**
+(reducers are a subset of the broader projection family).
 
 ## Reactors
 
-A reactor performs **side effects** in response to events. It does not build persistent state — it acts. Typical uses include sending notifications, triggering commands in other services, and writing audit records.
+A reactor performs **side effects** in response to events. It does not build
+persistent state — it acts. Typical uses include sending notifications,
+triggering commands in other services, and writing audit records.
 
 ```kotlin
 @Reactor
@@ -20,13 +24,16 @@ class OrderNotifications {
 ```
 
 **Dispatch rules:**
-- One method per event type (first parameter determines the event type handled)
+
+- One method per event type (first parameter determines the event type)
 - Method name is arbitrary
-- The second parameter can be `EventContext` if you need event metadata — it is optional
+- The second parameter can be `EventContext` (optional, for metadata)
 
 ### Reactor identity
 
-By default the reactor ID is the **class simple name** — `OrderNotifications` becomes the identifier automatically. Override it with the `id` parameter only when you need a stable identifier that survives class renames:
+By default the reactor ID is the **class simple name** — `OrderNotifications`
+becomes the identifier automatically. Override it with the `id` parameter only
+when you need a stable identifier that survives class renames:
 
 ```kotlin
 @Reactor(id = "order-notifications")
@@ -35,7 +42,9 @@ class OrderNotifications { ... }
 
 ## Reducers
 
-A reducer **folds events into a read model**. Each handler receives the current state and the event, and returns the next state. Chronicle stores the result so your application can query it later.
+A reducer **folds events into a read model**. Each handler receives the
+current state and the event, and returns the next state. Chronicle stores the
+result so your application can query it later.
 
 ```kotlin
 @ReadModel
@@ -55,14 +64,18 @@ class OrderSummaryReducer {
 }
 ```
 
-Reducers run in-order, event by event, and are idempotent — Chronicle may replay them from the beginning if the observer restarts.
+Reducers run in-order, event by event, and are idempotent — Chronicle may
+replay them from the beginning if the observer restarts.
 
 ## Replay and idempotency
 
-Both reactors and reducers may be replayed from the beginning of the event log. Design them accordingly:
+Both reactors and reducers may be replayed from the beginning of the event
+log. Design them accordingly:
 
-- **Reactors** — guard against duplicate side effects (check-then-act or use idempotency keys at the target service)
-- **Reducers** — pure fold functions are naturally idempotent; avoid external I/O inside a reducer
+- **Reactors** — guard against duplicate side effects (check-then-act or
+  use idempotency keys)
+- **Reducers** — pure fold functions are naturally idempotent; avoid
+  external I/O inside a reducer
 
 ## Registering observers
 

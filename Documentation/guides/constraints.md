@@ -1,6 +1,8 @@
 # Constraints
 
-Constraints enforce business invariants at the event store level. When an event would violate a constraint, `append` returns a failed `AppendResult` instead of appending the event.
+Constraints enforce business invariants at the event store level. When an
+event would violate a constraint, `append` returns a failed `AppendResult`
+instead of appending the event.
 
 ## Unique event type constraint
 
@@ -15,11 +17,13 @@ class OneHirePerEmployee : IConstraint {
 }
 ```
 
-This makes it impossible to append a second `EmployeeHired` event for the same event source.
+This makes it impossible to append a second `EmployeeHired` event for the
+same event source.
 
 ## Unique property constraint
 
-Use `unique` to prevent two event sources from sharing the same value in a specific event field:
+Use `unique` to prevent two event sources from sharing the same value in a
+specific event field:
 
 ```kotlin
 @Constraint

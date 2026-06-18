@@ -1,17 +1,22 @@
 # Read Models
 
-A read model is a queryable view of state, derived from events. Chronicle maintains read models automatically — you define the shape and the mapping; Chronicle keeps them up to date.
+A read model is a queryable view of state, derived from events. Chronicle
+maintains read models automatically — you define the shape and the mapping;
+Chronicle keeps them up to date.
 
 ## Two ways to build read models
 
 | Approach | Best for | Annotation |
-|---|---|---|
-| **Reducer** | Folding all events for one event source into a single object | `@Reducer` |
-| **Projection** | Mapping specific event fields declaratively, possibly across sources | `@Projection` |
+| --- | --- | --- |
+| **Reducer** | Fold all events for one source | `@Reducer` |
+| **Projection** | Map specific event fields | `@Projection` |
 
 ## Read model identity
 
-Annotate the read model class with `@ReadModel`. Chronicle derives the identifier from the **class simple name** by default — `OrderSummary` becomes the identifier automatically. Supply an explicit `id` only when you need the identifier to remain stable regardless of future class renames:
+Annotate the read model class with `@ReadModel`. Chronicle derives the
+identifier from the **class simple name** by default — `OrderSummary` becomes
+the identifier automatically. Supply an explicit `id` only when you need the
+identifier to remain stable regardless of future class renames:
 
 ```kotlin
 @ReadModel
@@ -28,7 +33,8 @@ To override the default:
 data class OrderSummary(...)
 ```
 
-Every property must have a default value — Chronicle deserializes read models from JSON and missing fields fall back to their defaults.
+Every property must have a default value — Chronicle deserializes read models
+from JSON and missing fields fall back to their defaults.
 
 ## Querying
 
@@ -45,7 +51,8 @@ Returns `null` when no events have been projected for that key yet.
 
 ## Projections
 
-A projection maps event fields to read model fields declaratively. Implement `IProjectionFor<T>` and call `from()` for each event type you want to map:
+A projection maps event fields to read model fields declaratively. Implement
+`IProjectionFor<T>` and call `from()` for each event type you want to map:
 
 ```kotlin
 @Projection
@@ -63,7 +70,8 @@ class OrderSummaryProjection : IProjectionFor<OrderSummary> {
 }
 ```
 
-Alternatively, use the `@FromEvent` and `@SetFrom` annotations directly on the read model fields for a fully declarative style.
+Alternatively, use the `@FromEvent` and `@SetFrom` annotations directly on the
+read model fields for a fully declarative style.
 
 ## Registering read models
 

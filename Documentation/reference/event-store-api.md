@@ -44,18 +44,25 @@ interface IEventStore {
 ```kotlin
 interface IEventLog {
     suspend fun append(eventSourceId: String, event: Any): AppendResult
-    suspend fun append(eventSourceId: String, event: Any, options: AppendOptions): AppendResult
-    suspend fun appendMany(eventSourceId: String, events: List<Any>): List<AppendResult>
+    suspend fun append(
+        eventSourceId: String,
+        event: Any,
+        options: AppendOptions
+    ): AppendResult
+    suspend fun appendMany(
+        eventSourceId: String,
+        events: List<Any>
+    ): List<AppendResult>
 }
 ```
 
 ### AppendResult
 
 | Property | Type | Description |
-|---|---|---|
-| `isSuccess` | `Boolean` | `true` when appended without constraint violations |
+| --- | --- | --- |
+| `isSuccess` | `Boolean` | `true` when no constraint violations |
 | `sequenceNumber` | `EventSequenceNumber` | Position in the event log |
-| `constraintViolations` | `List<ConstraintViolation>` | Violations when `isSuccess` is `false` |
+| `constraintViolations` | `List<ConstraintViolation>` | On failure |
 
 ---
 
@@ -84,7 +91,10 @@ interface IReducersService {
 ```kotlin
 interface IReadModelsService {
     suspend fun register(vararg readModelClasses: KClass<*>)
-    suspend fun <T : Any> getInstanceByKey(readModelClass: KClass<T>, key: String): T?
+    suspend fun <T : Any> getInstanceByKey(
+        readModelClass: KClass<T>,
+        key: String
+    ): T?
 }
 ```
 

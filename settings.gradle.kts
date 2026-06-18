@@ -14,4 +14,5 @@ dependencyResolutionManagement {
 rootProject.name = "chronicle-kotlin-workspace"
 
 include("Source")
-include("Samples:Console")
+include("Samples:Kotlin:Console")
+include("Samples:Java:Console")

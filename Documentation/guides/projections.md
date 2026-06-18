@@ -1,6 +1,8 @@
 # Projections
 
-A projection maps event fields to read model fields declaratively. Unlike a reducer, you don't write fold logic — you describe which event property maps to which read model property.
+A projection maps event fields to read model fields declaratively. Unlike a
+reducer, you don't write fold logic — you describe which event property maps
+to which read model property.
 
 ## Define the projection
 
@@ -28,7 +30,7 @@ class EmployeeProjection : IProjectionFor<Employee> {
 ### Key mapping methods
 
 | Method | Maps the read model property to... |
-|---|---|
+| --- | --- |
 | `.toProperty("eventProp")` | The named field on the event |
 | `.toEventSourceId()` | The event source identifier |
 
@@ -41,7 +43,8 @@ store.readModels.register(Employee::class)
 
 ## Annotation-based projections
 
-For simple, direct field mappings, annotate the read model fields instead of implementing `IProjectionFor`:
+For simple, direct field mappings, annotate the read model fields instead of
+implementing `IProjectionFor`:
 
 ```kotlin
 @ReadModel
@@ -51,4 +54,5 @@ data class Employee(
 )
 ```
 
-This style is more concise but less flexible than the builder-based approach — it cannot express conditional logic or multiple sources for the same field.
+This style is more concise but less flexible than the builder-based approach
+— it cannot express conditional logic or multiple sources for the same field.
