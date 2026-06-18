@@ -1,6 +1,8 @@
 # Get Started
 
-By the end of this guide you will have a Kotlin or Java application that appends events to Chronicle and reads a projected read model back. The entire example is a self-contained Gradle project.
+By the end of this guide you will have a Kotlin or Java application
+that appends events to Chronicle and reads a projected read model back.
+The entire example is a self-contained Gradle project.
 
 ## Prerequisites
 
@@ -10,7 +12,7 @@ By the end of this guide you will have a Kotlin or Java application that appends
 
 ## 1. Add the dependency
 
-### Kotlin
+### Kotlin Setup
 
 ```kotlin
 // build.gradle.kts
@@ -19,7 +21,7 @@ dependencies {
 }
 ```
 
-### Java
+### Java Setup
 
 ```groovy
 // build.gradle
@@ -30,9 +32,10 @@ dependencies {
 
 ## 2. Connect to the kernel
 
-`ChronicleClient` is the entry point. For local development use the `development()` factory, which connects to `localhost:35000`:
+`ChronicleClient` is the entry point. For local development use the
+`development()` factory, which connects to `localhost:35000`:
 
-### Kotlin
+### Kotlin Development Setup
 
 ```kotlin
 import io.cratis.chronicle.ChronicleClient
@@ -41,7 +44,7 @@ val client = ChronicleClient.development()
 val store = client.getEventStore("MyApp")
 ```
 
-### Java
+### Java Development Setup
 
 ```java
 import io.cratis.chronicle.ChronicleClient;
@@ -52,7 +55,7 @@ var store = client.getEventStore("MyApp");
 
 For production, supply explicit options:
 
-### Kotlin
+### Kotlin Production Setup
 
 ```kotlin
 val client = ChronicleClient(
@@ -60,7 +63,7 @@ val client = ChronicleClient(
 )
 ```
 
-### Java
+### Java Production Setup
 
 ```java
 var client = new ChronicleClient(
@@ -72,7 +75,7 @@ var client = new ChronicleClient(
 
 Annotate a data class or Java class with `@EventType`.
 
-### Kotlin
+### Kotlin Event Definition
 
 The `id` is a stable string identifier for the event type across deployments.
 
@@ -88,7 +91,7 @@ data class EmployeeHired(
 )
 ```
 
-### Java
+### Java Event Definition
 
 ```java
 import io.cratis.chronicle.events.EventType;
@@ -102,7 +105,8 @@ public class EmployeeHired {
 
     public EmployeeHired() {}
 
-    public EmployeeHired(String employeeId, String firstName, String lastName, String department) {
+    public EmployeeHired(String employeeId, String firstName,
+                         String lastName, String department) {
         this.employeeId = employeeId;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -111,22 +115,30 @@ public class EmployeeHired {
 
     // Getters and setters
     public String getEmployeeId() { return employeeId; }
-    public void setEmployeeId(String employeeId) { this.employeeId = employeeId; }
+    public void setEmployeeId(String employeeId) {
+        this.employeeId = employeeId;
+    }
 
     public String getFirstName() { return firstName; }
-    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
 
     public String getLastName() { return lastName; }
-    public void setLastName(String lastName) { this.lastName = lastName; }
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
 
     public String getDepartment() { return department; }
-    public void setDepartment(String department) { this.department = department; }
+    public void setDepartment(String department) {
+        this.department = department;
+    }
 }
 ```
 
 ## 4. Append an event
 
-### Kotlin
+### Kotlin Append Event
 
 ```kotlin
 val employeeId = "emp-001"
@@ -147,7 +159,7 @@ if (result.isSuccess) {
 }
 ```
 
-### Java
+### Java Append Event
 
 ```java
 String employeeId = "emp-001";
@@ -162,20 +174,24 @@ var result = store.getEventLog().append(
 );
 
 if (result.isSuccess()) {
-    System.out.println("Appended at sequence " + result.getSequenceNumber().getValue());
+    System.out.println("Appended at sequence " +
+        result.getSequenceNumber().getValue());
 } else {
-    String violations = result.getConstraintViolations().stream()
-        .map(v -> v.getMessage())
-        .collect(Collectors.joining(", "));
+    String violations =
+        result.getConstraintViolations().stream()
+            .map(v -> v.getMessage())
+            .collect(Collectors.joining(", "));
     System.out.println("Failed: " + violations);
 }
 ```
 
 ## 5. React to events
 
-A reactor observes events and performs side effects. Annotate the class with `@Reactor` and write one method per event type you want to handle.
+A reactor observes events and performs side effects. Annotate the
+class with `@Reactor` and write one method per event type you want to
+handle.
 
-### Kotlin
+### Kotlin Reactor
 
 ```kotlin
 import io.cratis.chronicle.observation.Reactor
@@ -183,7 +199,8 @@ import io.cratis.chronicle.observation.Reactor
 @Reactor
 class HrNotifications {
     fun onEmployeeHired(event: EmployeeHired) {
-        println("Welcome ${event.firstName} ${event.lastName} to ${event.department}!")
+        println("Welcome ${event.firstName} ${event.lastName} " +
+                "to ${event.department}!")
     }
 }
 
@@ -191,7 +208,7 @@ class HrNotifications {
 store.reactors.register(HrNotifications())
 ```
 
-### Java
+### Java Reactor
 
 ```java
 import io.cratis.chronicle.observation.Reactor;
@@ -199,8 +216,9 @@ import io.cratis.chronicle.observation.Reactor;
 @Reactor
 public class HrNotifications {
     public void onEmployeeHired(EmployeeHired event) {
-        System.out.println("Welcome " + event.getFirstName() + " " + 
-                          event.getLastName() + " to " + event.getDepartment() + "!");
+        System.out.println("Welcome " + event.getFirstName() +
+                          " " + event.getLastName() +
+                          " to " + event.getDepartment() + "!");
     }
 }
 
@@ -210,9 +228,10 @@ store.getReactors().register(new HrNotifications());
 
 ## 6. Build a read model
 
-A reducer folds a stream of events into a single mutable object. The `@ReadModel` marks the read model class, and `@Reducer` marks the reducer.
+A reducer folds a stream of events into a single mutable object. The
+`@ReadModel` marks the read model class, and `@Reducer` marks the reducer.
 
-### Kotlin
+### Kotlin Read Model
 
 ```kotlin
 import io.cratis.chronicle.readModels.ReadModel
@@ -240,7 +259,7 @@ class EmployeeProfileReducer {
 store.reducers.register(EmployeeProfileReducer())
 ```
 
-### Java
+### Java Read Model
 
 ```java
 import io.cratis.chronicle.readModels.ReadModel;
@@ -260,19 +279,27 @@ public class EmployeeProfile {
     public void setId(String id) { this.id = id; }
 
     public String getFirstName() { return firstName; }
-    public void setFirstName(String firstName) { this.firstName = firstName; }
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
 
     public String getLastName() { return lastName; }
-    public void setLastName(String lastName) { this.lastName = lastName; }
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+    }
 
     public String getDepartment() { return department; }
-    public void setDepartment(String department) { this.department = department; }
+    public void setDepartment(String department) {
+        this.department = department;
+    }
 }
 
 @Reducer
 public class EmployeeProfileReducer {
-    public EmployeeProfile on(EmployeeHired event, EmployeeProfile state) {
-        EmployeeProfile result = state != null ? state : new EmployeeProfile();
+    public EmployeeProfile on(EmployeeHired event,
+                              EmployeeProfile state) {
+        EmployeeProfile result =
+            state != null ? state : new EmployeeProfile();
         result.setId(event.getEmployeeId());
         result.setFirstName(event.getFirstName());
         result.setLastName(event.getLastName());
@@ -286,24 +313,32 @@ store.getReducers().register(new EmployeeProfileReducer());
 
 ## 7. Query a read model by key
 
-After events have been projected, query the read model by its event source identifier:
+After events have been projected, query the read model by its event
+source identifier:
 
-### Kotlin
+### Kotlin Query
 
 ```kotlin
-val profile = store.readModels.getInstanceByKey(EmployeeProfile::class, employeeId)
+val profile = store.readModels.getInstanceByKey(
+    EmployeeProfile::class,
+    employeeId
+)
 println(profile?.firstName) // Jane
 ```
 
-### Java
+### Java Query
 
 ```java
-EmployeeProfile profile = store.getReadModels().getInstanceByKey(EmployeeProfile.class, employeeId);
+EmployeeProfile profile = store.getReadModels()
+    .getInstanceByKey(EmployeeProfile.class, employeeId);
 System.out.println(profile.getFirstName()); // Jane
 ```
 
 ## What's next
 
-- [Guides](../guides/toc.yml) — deeper dives into reactors, projections, constraints, seeding, and compliance
-- [Concepts](../concepts/toc.yml) — understand events, observers, and the read model pipeline
-- [Reference](../reference/toc.yml) — full annotation and API reference
+- [Guides](../guides/toc.yml) — deeper dives into reactors,
+  projections, constraints, seeding, and compliance
+- [Concepts](../concepts/toc.yml) — understand events, observers,
+  and the read model pipeline
+- [Reference](../reference/toc.yml) — full annotation and API
+  reference

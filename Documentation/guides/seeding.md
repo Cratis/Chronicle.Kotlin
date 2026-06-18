@@ -1,6 +1,7 @@
 # Seeding
 
-Seeding pre-populates the event log with initial events. It is idempotent — running the same seeder twice does not duplicate events.
+Seeding pre-populates the event log with initial events. It is idempotent —
+running the same seeder twice does not duplicate events.
 
 ## Define a seeder
 
@@ -41,10 +42,12 @@ class EmployeeSeeder : ICanSeedEvents {
 store.seeding.seed(EmployeeSeeder())
 ```
 
-Call this once during application startup, before processing live traffic. Chronicle skips event sources that already have events.
+Call this once during application startup, before processing live traffic.
+Chronicle skips event sources that already have events.
 
 ## When to use seeding
 
 - Development and test environments that need realistic initial data
-- Reference data that should exist in all environments (lookup tables, configuration records)
+- Reference data that should exist in all environments (lookup tables,
+  configuration records)
 - Migration of existing data from a legacy system into an event-sourced store

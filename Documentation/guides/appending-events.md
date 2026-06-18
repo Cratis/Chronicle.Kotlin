@@ -5,7 +5,11 @@
 ```kotlin
 val result = store.eventLog.append(
     eventSourceId = "order-42",
-    event = OrderPlaced(orderId = "order-42", customerId = "cust-7", totalAmount = 149.99)
+    event = OrderPlaced(
+        orderId = "order-42",
+        customerId = "cust-7",
+        totalAmount = 149.99
+    )
 )
 
 if (result.isSuccess) {
@@ -16,10 +20,10 @@ if (result.isSuccess) {
 `AppendResult` has three fields:
 
 | Field | Type | Description |
-|---|---|---|
-| `isSuccess` | `Boolean` | `true` when the event was appended without constraint violations |
-| `sequenceNumber` | `EventSequenceNumber` | The position of the appended event in the log |
-| `constraintViolations` | `List<ConstraintViolation>` | Non-empty when a constraint rejected the event |
+| --- | --- | --- |
+| `isSuccess` | `Boolean` | `true` when no constraint violations |
+| `sequenceNumber` | `EventSequenceNumber` | Position of appended event |
+| `constraintViolations` | `List<ConstraintViolation>` | On rejection |
 
 ## Multiple events
 
@@ -44,7 +48,8 @@ if (failures.isNotEmpty()) {
 
 ## Handling constraint violations
 
-When a constraint rejects an event, `isSuccess` is `false` and `constraintViolations` lists the reasons. Handle them at the call site:
+When a constraint rejects an event, `isSuccess` is `false` and
+`constraintViolations` lists the reasons. Handle them at the call site:
 
 ```kotlin
 val result = store.eventLog.append("emp-001", EmployeeHired(email = "jane@example.com"))
