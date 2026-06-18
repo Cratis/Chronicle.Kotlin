@@ -7,17 +7,17 @@ import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 import io.cratis.chronicle.projections.Projection;
 
+import io.cratis.chronicle.java.ProjectionBuilderJavaBridge;
+
 /** Declarative projection artifact discovered by the Kotlin client. */
 @Projection
 public class EmployeeListProjection implements IProjectionFor<Employee> {
     @Override
     public void define(IProjectionBuilderFor<Employee> builder) {
-        builder
-            .from(EmployeeHired.class)
-            .from(EmployeeAddressSet.class)
-            .from(EmployeePromoted.class, fb -> 
-                fb.set(Employee::getTitle).toProperty("newTitle")
-            )
-            .from(EmployeeMoved.class);
+        ProjectionBuilderJavaBridge.from(builder, EmployeeHired.class);
+        ProjectionBuilderJavaBridge.from(builder, EmployeeAddressSet.class);
+        // EmployeePromoted updates title via auto-mapping (newTitle property in event → title in read model)
+        ProjectionBuilderJavaBridge.from(builder, EmployeePromoted.class);
+        ProjectionBuilderJavaBridge.from(builder, EmployeeMoved.class);
     }
 }

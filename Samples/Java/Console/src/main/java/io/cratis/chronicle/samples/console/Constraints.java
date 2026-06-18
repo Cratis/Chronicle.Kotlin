@@ -7,11 +7,14 @@ import io.cratis.chronicle.constraints.Constraint;
 import io.cratis.chronicle.constraints.IConstraint;
 import io.cratis.chronicle.constraints.IConstraintBuilder;
 
+import io.cratis.chronicle.java.ConstraintBuilderJavaBridge;
+import io.cratis.chronicle.java.UniqueConstraintBuilderJavaBridge;
+
 @Constraint
 class UniqueEmployeeHire implements IConstraint {
     @Override
     public void define(IConstraintBuilder builder) {
-        builder.uniqueFor(EmployeeHired.class, "An employee can only be hired once.");
+        ConstraintBuilderJavaBridge.uniqueFor(builder, EmployeeHired.class, "An employee can only be hired once.");
     }
 }
 
@@ -19,11 +22,11 @@ class UniqueEmployeeHire implements IConstraint {
 class UniqueEmployeeEmail implements IConstraint {
     @Override
     public void define(IConstraintBuilder builder) {
-        builder.unique(unique -> 
-            unique
-                .on(EmployeeEmailSet.class, EmployeeEmailSet::email)
+        builder.unique(unique -> {
+            UniqueConstraintBuilderJavaBridge.on(unique, EmployeeEmailSet.class, EmployeeEmailSet::email)
                 .ignoreCasing()
-                .withMessage("That email address is already in use by another employee.")
-        );
+                .withMessage("That email address is already in use by another employee.");
+            return null; // Java lambda returning Unit
+        });
     }
 }

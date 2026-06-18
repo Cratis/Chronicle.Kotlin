@@ -12,6 +12,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import io.cratis.chronicle.java.EventLogJavaBridge;
+import io.cratis.chronicle.java.ReadModelsJavaBridge;
+
 @EventType
 record CustomerRegistered(
     String customerId,
@@ -182,8 +185,8 @@ public class Compliance {
             sampleCustomer.country
         );
         
-        AppendResult result1 = store.getEventLog().append(sampleCustomer.id, registered, null);
-        AppendResult result2 = store.getEventLog().append(sampleCustomer.id, addressUpdated, null);
+        AppendResult result1 = EventLogJavaBridge.append(store.getEventLog(), sampleCustomer.id, registered, null);
+        AppendResult result2 = EventLogJavaBridge.append(store.getEventLog(), sampleCustomer.id, addressUpdated, null);
         
         if (!result1.isSuccess() || !result2.isSuccess()) {
             StringBuilder violations = new StringBuilder();
@@ -202,17 +205,17 @@ public class Compliance {
             return;
         }
         
-        long lastSeq = result2.getSequenceNumber();
+        long lastSeq = EventLogJavaBridge.getSequenceNumber(result2);
         System.out.println("[pii] Registered " + sampleCustomer.fullName + " (" + 
                           sampleCustomer.id + ") with PII events up to sequence " + lastSeq);
     }
 
     public static void showCustomerReadModel(IEventStore store) throws Exception {
         SampleCustomerData sampleCustomer = SampleCustomerData.instance;
-        CustomerDetails customer = store.getReadModels().getInstanceByKey(
+        CustomerDetails customer = ReadModelsJavaBridge.getInstanceByKey(
+            store.getReadModels(),
             CustomerDetails.class, 
-            sampleCustomer.id,
-            null
+            sampleCustomer.id
         );
         
         if (customer == null || customer.getId().isEmpty()) {

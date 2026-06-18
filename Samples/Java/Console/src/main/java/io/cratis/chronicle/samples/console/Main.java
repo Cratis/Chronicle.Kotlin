@@ -6,10 +6,12 @@ package io.cratis.chronicle.samples.console;
 import io.cratis.chronicle.ChronicleClient;
 import io.cratis.chronicle.ChronicleOptions;
 import io.cratis.chronicle.EventStore;
+import io.cratis.chronicle.EventStoreNamespaceName;
 import io.cratis.chronicle.IEventStore;
 import io.cratis.chronicle.eventSequences.AppendResult;
 import io.cratis.chronicle.identity.Identity;
 import io.cratis.chronicle.transactions.UnitOfWork;
+import io.cratis.chronicle.auditing.CausationType;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -19,6 +21,14 @@ import java.util.Map;
 
 import static io.cratis.chronicle.auditing.CausationManagerKt.getCausationManager;
 import static io.cratis.chronicle.identity.IdentityProviderKt.getIdentityProvider;
+import io.cratis.chronicle.java.EventLogJavaBridge;
+import io.cratis.chronicle.java.TransactionalEventSequenceJavaBridge;
+import io.cratis.chronicle.java.ReadModelsJavaBridge;
+import io.cratis.chronicle.java.ConstraintBuilderJavaBridge;
+import io.cratis.chronicle.java.EventTypesServiceJavaBridge;
+import io.cratis.chronicle.java.ConstraintsServiceJavaBridge;
+import io.cratis.chronicle.java.UnitOfWorkJavaBridge;
+import io.cratis.chronicle.java.CausationManagerJavaBridge;
 
 public class Main {
     private static final List<String> titles = Arrays.asList(
@@ -51,8 +61,8 @@ public class Main {
     );
 
     private static final List<Identity> users = Arrays.asList(
-        new Identity("u0000001-0000-0000-0000-000000000000", "Alice Smith", "alice.smith"),
-        new Identity("u0000002-0000-0000-0000-000000000000", "Bob Jones", "bob.jones"),
+        new Identity("u0000001-0000-0000-0000-000000000000", "Alice Smith", "alice.smith", null),
+        new Identity("u0000002-0000-0000-0000-000000000000", "Bob Jones", "bob.jones", null),
         Identity.Companion.getSystem()
     );
 
@@ -72,7 +82,7 @@ public class Main {
     private static void setupCausation(Identity user, String commandName, Map<String, String> properties) {
         getIdentityProvider().setCurrentIdentity(user);
         getCausationManager().defineRoot(Map.of("source", "console-sample"));
-        getCausationManager().add(commandName, properties);
+        CausationManagerJavaBridge.add(getCausationManager(), commandName, properties);
     }
 
     private static final List<String> seedTitles = Arrays.asList(
@@ -94,7 +104,7 @@ public class Main {
         List<Person> employees = Employees.employees;
         for (int index = 0; index < employees.size(); index++) {
             Person employee = employees.get(index);
-            boolean hasEvents = store.getEventLog().hasEventsFor(employee.getId());
+            boolean hasEvents = EventLogJavaBridge.hasEventsFor(store.getEventLog(), employee.getId());
             if (!hasEvents) {
                 String title = seedTitles.get(index % seedTitles.size());
                 Address addr = seedAddresses.get(index % seedAddresses.size());
@@ -102,11 +112,11 @@ public class Main {
                 getIdentityProvider().setCurrentIdentity(Identity.Companion.getSystem());
                 getCausationManager().defineRoot(Map.of("source", "console-sample-seed"));
                 
-                store.getEventLog().append(employee.getId(), 
+                EventLogJavaBridge.append(store.getEventLog(), employee.getId(), 
                     new EmployeeHired(employee.getFirstName(), employee.getLastName(), title), null);
-                store.getEventLog().append(employee.getId(), 
+                EventLogJavaBridge.append(store.getEventLog(), employee.getId(), 
                     new EmployeeEmailSet(Employees.emailFor(employee)), null);
-                store.getEventLog().append(employee.getId(), 
+                EventLogJavaBridge.append(store.getEventLog(), employee.getId(), 
                     new EmployeeAddressSet(addr.address, addr.city, addr.zipCode, addr.country), null);
             }
         }
@@ -115,16 +125,16 @@ public class Main {
     private static void promote(IEventStore store, Person person, Identity user, SimpleRandom random) throws Exception {
         String title = titles.get(random.next(titles.size()));
         setupCausation(user, "ConsoleSample.Commands.Promote", Map.of("employeeId", person.getId()));
-        AppendResult result = store.getEventLog().append(person.getId(), new EmployeePromoted(title), null);
+        AppendResult result = EventLogJavaBridge.append(store.getEventLog(), person.getId(), new EmployeePromoted(title), null);
         System.out.println("[" + person.getId() + "] Promoted " + person.getFirstName() + " " + 
                           person.getLastName() + " to '" + title + "' at sequence " + 
-                          result.getSequenceNumber() + "  [caused-by: " + user.getUserName() + "]");
+                          EventLogJavaBridge.getSequenceNumber(result) + "  [caused-by: " + user.getUserName() + "]");
     }
 
     private static void move(IEventStore store, Person person, Identity user, SimpleRandom random) throws Exception {
         Address addr = addresses.get(random.next(addresses.size()));
         setupCausation(user, "ConsoleSample.Commands.Move", Map.of("employeeId", person.getId()));
-        AppendResult result = store.getEventLog().append(person.getId(), 
+        AppendResult result = EventLogJavaBridge.append(store.getEventLog(), person.getId(), 
             new EmployeeMoved(addr.address, addr.city, addr.zipCode, addr.country), null);
         System.out.println("[" + person.getId() + "] Moved " + person.getFirstName() + " " + 
                           person.getLastName() + " to " + addr.address + ", " + addr.city + 
@@ -135,11 +145,11 @@ public class Main {
     private static void setEmail(IEventStore store, Person person, Identity user) throws Exception {
         String email = Employees.emailFor(person);
         setupCausation(user, "ConsoleSample.Commands.SetEmail", Map.of("employeeId", person.getId()));
-        AppendResult result = store.getEventLog().append(person.getId(), new EmployeeEmailSet(email), null);
+        AppendResult result = EventLogJavaBridge.append(store.getEventLog(), person.getId(), new EmployeeEmailSet(email), null);
         if (result.isSuccess()) {
             System.out.println("[" + person.getId() + "] Set " + person.getFirstName() + " " + 
                               person.getLastName() + "'s email to " + email + " at sequence " + 
-                              result.getSequenceNumber() + "  [caused-by: " + user.getUserName() + "]");
+                              EventLogJavaBridge.getSequenceNumber(result) + "  [caused-by: " + user.getUserName() + "]");
         } else {
             String violations = String.join("; ", 
                 result.getConstraintViolations().stream()
@@ -156,7 +166,7 @@ public class Main {
         String email = Employees.emailFor(victim);
         
         setupCausation(user, "ConsoleSample.Commands.SetEmail", Map.of("employeeId", person.getId()));
-        AppendResult result = store.getEventLog().append(person.getId(), new EmployeeEmailSet(email), null);
+        AppendResult result = EventLogJavaBridge.append(store.getEventLog(), person.getId(), new EmployeeEmailSet(email), null);
         
         if (result.isSuccess()) {
             System.out.println("[" + person.getId() + "] Unexpectedly took " + email + 
@@ -185,12 +195,12 @@ public class Main {
             Map.of("employees", selected.getId() + "," + alsoUpdate.getId()));
 
         UnitOfWork unitOfWork = store.getUnitOfWorkManager().begin();
-        store.getEventLog().getTransactional().append(selected.getId(), new EmployeePromoted(selectedTitle), null);
-        store.getEventLog().getTransactional().appendMany(selected.getId(), 
+        TransactionalEventSequenceJavaBridge.append(store.getEventLog().getTransactional(), selected.getId(), new EmployeePromoted(selectedTitle), null);
+        TransactionalEventSequenceJavaBridge.appendMany(store.getEventLog().getTransactional(), selected.getId(), 
             Arrays.asList(new EmployeeMoved(selectedAddr.address, selectedAddr.city, 
                                            selectedAddr.zipCode, selectedAddr.country)), null);
-        store.getEventLog().getTransactional().append(alsoUpdate.getId(), new EmployeePromoted(secondTitle), null);
-        unitOfWork.commit();
+        TransactionalEventSequenceJavaBridge.append(store.getEventLog().getTransactional(), alsoUpdate.getId(), new EmployeePromoted(secondTitle), null);
+        UnitOfWorkJavaBridge.commit(unitOfWork);
 
         System.out.println("[transaction] Committed staged events for " + selected.getFirstName() + " " + 
                           selected.getLastName() + " and " + alsoUpdate.getFirstName() + " " + 
@@ -198,7 +208,7 @@ public class Main {
     }
 
     private static void readModel(IEventStore store, Person person) throws Exception {
-        EmployeeState state = store.getReadModels().getInstanceByKey(EmployeeState.class, person.getId(), null);
+        EmployeeState state = ReadModelsJavaBridge.getInstanceByKey(store.getReadModels(), EmployeeState.class, person.getId());
         if (state == null) {
             System.out.println("[read-model] No state found for " + person.getFirstName() + " " + 
                               person.getLastName() + " yet.");
@@ -259,12 +269,12 @@ Use 1-3 to select an employee. Then:
         ChronicleClient client = new ChronicleClient(options);
 
         try {
-            EventStore store = (EventStore)client.getEventStore("TestStoreJava");
+            EventStore store = (EventStore)client.getEventStore("TestStoreJava", "Default");
 
             System.out.println("Event store ready: " + store.getName() + " / " + store.getNamespace());
 
             // Register event type schemas first — Chronicle requires them before events can be appended.
-            store.getEventTypes().register(
+            EventTypesServiceJavaBridge.register(store.getEventTypes(),
                 EmployeeHired.class,
                 EmployeeAddressSet.class,
                 EmployeePromoted.class,
@@ -275,7 +285,7 @@ Use 1-3 to select an employee. Then:
             );
 
             // Customer has no reducer or projection — register it explicitly so Chronicle knows its schema.
-            store.getReadModels().register(new Class[] { Customer.class }, null);
+            ReadModelsJavaBridge.register(store.getReadModels(), Customer.class);
             store.getReactors().register(new HrNotificationReactor(), null);
             // Reducers auto-register their read models (EmployeeState, CustomerDetails) with observerType=Reducer.
             store.getReducers().register(new EmployeeStateReducer(), null);
@@ -291,7 +301,7 @@ Use 1-3 to select an employee. Then:
             ensureSeededEmployees(store);
             // Register constraints AFTER seeding so the reindex job can find existing email events
             // and populate the global uniqueness index before the user can interact.
-            store.getConstraints().register(new UniqueEmployeeHire(), new UniqueEmployeeEmail());
+            ConstraintsServiceJavaBridge.register(store.getConstraints(), new UniqueEmployeeHire(), new UniqueEmployeeEmail());
             // Allow time for the reindex job to complete before allowing user interaction.
             Thread.sleep(3000);
 
