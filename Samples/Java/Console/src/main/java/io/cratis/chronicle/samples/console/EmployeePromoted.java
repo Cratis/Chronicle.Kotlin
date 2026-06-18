@@ -7,15 +7,4 @@ import io.cratis.chronicle.events.EventType;
 
 /** An employee has been promoted to a new title. */
 @EventType
-public class EmployeePromoted {
-    private String newTitle = "";
-
-    public EmployeePromoted() {}
-
-    public EmployeePromoted(String newTitle) {
-        this.newTitle = newTitle;
-    }
-
-    public String getNewTitle() { return newTitle; }
-    public void setNewTitle(String newTitle) { this.newTitle = newTitle; }
-}
+public record EmployeePromoted(String newTitle) {}

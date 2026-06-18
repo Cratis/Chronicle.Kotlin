@@ -7,30 +7,9 @@ import io.cratis.chronicle.events.EventType;
 
 /** An employee has relocated to a new address. */
 @EventType
-public class EmployeeMoved {
-    private String address = "";
-    private String city = "";
-    private String zipCode = "";
-    private String country = "";
-
-    public EmployeeMoved() {}
-
-    public EmployeeMoved(String address, String city, String zipCode, String country) {
-        this.address = address;
-        this.city = city;
-        this.zipCode = zipCode;
-        this.country = country;
-    }
-
-    public String getAddress() { return address; }
-    public void setAddress(String address) { this.address = address; }
-
-    public String getCity() { return city; }
-    public void setCity(String city) { this.city = city; }
-
-    public String getZipCode() { return zipCode; }
-    public void setZipCode(String zipCode) { this.zipCode = zipCode; }
-
-    public String getCountry() { return country; }
-    public void setCountry(String country) { this.country = country; }
-}
+public record EmployeeMoved(
+    String address,
+    String city,
+    String zipCode,
+    String country
+) {}

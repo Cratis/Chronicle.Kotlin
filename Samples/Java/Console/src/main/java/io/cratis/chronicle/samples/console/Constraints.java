@@ -21,7 +21,7 @@ class UniqueEmployeeEmail implements IConstraint {
     public void define(IConstraintBuilder builder) {
         builder.unique(unique -> 
             unique
-                .on(EmployeeEmailSet.class, EmployeeEmailSet::getEmail)
+                .on(EmployeeEmailSet.class, EmployeeEmailSet::email)
                 .ignoreCasing()
                 .withMessage("That email address is already in use by another employee.")
         );

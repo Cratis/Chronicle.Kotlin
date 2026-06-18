@@ -10,28 +10,28 @@ import io.cratis.chronicle.observation.Reactor;
 public class HrNotificationReactor {
 
     public void employeeHired(EmployeeHired event, EventContext context) {
-        System.out.println("[reactor] Employee hired: " + event.getFirstName() + " " + 
-                          event.getLastName() + " as " + event.getTitle() + 
+        System.out.println("[reactor] Employee hired: " + event.firstName() + " " + 
+                          event.lastName() + " as " + event.title() + 
                           " (seq=" + context.getSequenceNumber() + ")");
     }
 
     public void employeeAddressSet(EmployeeAddressSet event, EventContext context) {
-        System.out.println("[reactor] Address set: " + event.getCity() + ", " + 
-                          event.getCountry() + " (seq=" + context.getSequenceNumber() + ")");
+        System.out.println("[reactor] Address set: " + event.city() + ", " + 
+                          event.country() + " (seq=" + context.getSequenceNumber() + ")");
     }
 
     public void employeeEmailSet(EmployeeEmailSet event, EventContext context) {
-        System.out.println("[reactor] Email set: " + event.getEmail() + 
+        System.out.println("[reactor] Email set: " + event.email() + 
                           " (seq=" + context.getSequenceNumber() + ")");
     }
 
     public void employeePromoted(EmployeePromoted event, EventContext context) {
-        System.out.println("[reactor] Promoted to: " + event.getNewTitle() + 
+        System.out.println("[reactor] Promoted to: " + event.newTitle() + 
                           " (seq=" + context.getSequenceNumber() + ")");
     }
 
     public void employeeMoved(EmployeeMoved event, EventContext context) {
-        System.out.println("[reactor] Relocated to: " + event.getCity() + ", " + 
-                          event.getCountry() + " (seq=" + context.getSequenceNumber() + ")");
+        System.out.println("[reactor] Relocated to: " + event.city() + ", " + 
+                          event.country() + " (seq=" + context.getSequenceNumber() + ")");
     }
 }

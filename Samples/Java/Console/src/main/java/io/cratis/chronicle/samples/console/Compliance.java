@@ -13,68 +13,21 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @EventType
-class CustomerRegistered {
-    private String customerId;
-    private String email;
-    private String fullName;
-    private String phoneNumber;
-
-    public CustomerRegistered() {}
-
-    public CustomerRegistered(String customerId, String email, String fullName, String phoneNumber) {
-        this.customerId = customerId;
-        this.email = email;
-        this.fullName = fullName;
-        this.phoneNumber = phoneNumber;
-    }
-
-    public String getCustomerId() { return customerId; }
-    public void setCustomerId(String customerId) { this.customerId = customerId; }
-
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
-
-    public String getFullName() { return fullName; }
-    public void setFullName(String fullName) { this.fullName = fullName; }
-
-    public String getPhoneNumber() { return phoneNumber; }
-    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
-}
+record CustomerRegistered(
+    String customerId,
+    String email,
+    String fullName,
+    String phoneNumber
+) {}
 
 @EventType
-class CustomerAddressUpdated {
-    private String customerId;
-    private String streetAddress;
-    private String city;
-    private String postalCode;
-    private String country;
-
-    public CustomerAddressUpdated() {}
-
-    public CustomerAddressUpdated(String customerId, String streetAddress, String city, 
-                                 String postalCode, String country) {
-        this.customerId = customerId;
-        this.streetAddress = streetAddress;
-        this.city = city;
-        this.postalCode = postalCode;
-        this.country = country;
-    }
-
-    public String getCustomerId() { return customerId; }
-    public void setCustomerId(String customerId) { this.customerId = customerId; }
-
-    public String getStreetAddress() { return streetAddress; }
-    public void setStreetAddress(String streetAddress) { this.streetAddress = streetAddress; }
-
-    public String getCity() { return city; }
-    public void setCity(String city) { this.city = city; }
-
-    public String getPostalCode() { return postalCode; }
-    public void setPostalCode(String postalCode) { this.postalCode = postalCode; }
-
-    public String getCountry() { return country; }
-    public void setCountry(String country) { this.country = country; }
-}
+record CustomerAddressUpdated(
+    String customerId,
+    String streetAddress,
+    String city,
+    String postalCode,
+    String country
+) {}
 
 @ReadModel
 class Customer {
@@ -138,6 +91,18 @@ class CustomerDetails {
     private String country = "";
 
     public CustomerDetails() {}
+
+    public CustomerDetails(String id, String fullName, String email, String phoneNumber,
+                          String streetAddress, String city, String postalCode, String country) {
+        this.id = id;
+        this.fullName = fullName;
+        this.email = email;
+        this.phoneNumber = phoneNumber;
+        this.streetAddress = streetAddress;
+        this.city = city;
+        this.postalCode = postalCode;
+        this.country = country;
+    }
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }

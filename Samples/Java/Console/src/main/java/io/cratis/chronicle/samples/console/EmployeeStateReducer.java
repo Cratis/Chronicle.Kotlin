@@ -9,42 +9,72 @@ import io.cratis.chronicle.observation.Reducer;
 public class EmployeeStateReducer {
 
     public EmployeeState employeeHired(EmployeeHired event) {
-        System.out.println("[reducer] EmployeeHired: " + event.getFirstName() + " " + event.getLastName());
-        return new EmployeeState("", event.getFirstName(), event.getLastName(), event.getTitle(), 
+        System.out.println("[reducer] EmployeeHired: " + event.firstName() + " " + event.lastName());
+        return new EmployeeState("", event.firstName(), event.lastName(), event.title(), 
                                 "", "", "", "", "");
     }
 
     public EmployeeState employeeAddressSet(EmployeeAddressSet event, EmployeeState state) {
-        System.out.println("[reducer] EmployeeAddressSet: " + event.getCity());
-        EmployeeState result = state != null ? state : new EmployeeState();
-        result.setAddress(event.getAddress());
-        result.setCity(event.getCity());
-        result.setZipCode(event.getZipCode());
-        result.setCountry(event.getCountry());
-        return result;
+        System.out.println("[reducer] EmployeeAddressSet: " + event.city());
+        EmployeeState current = state != null ? state : new EmployeeState();
+        return new EmployeeState(
+            current.getId(),
+            current.getFirstName(),
+            current.getLastName(),
+            current.getTitle(),
+            current.getEmail(),
+            event.address(),
+            event.city(),
+            event.zipCode(),
+            event.country()
+        );
     }
 
     public EmployeeState employeeEmailSet(EmployeeEmailSet event, EmployeeState state) {
-        System.out.println("[reducer] EmployeeEmailSet: " + event.getEmail());
-        EmployeeState result = state != null ? state : new EmployeeState();
-        result.setEmail(event.getEmail());
-        return result;
+        System.out.println("[reducer] EmployeeEmailSet: " + event.email());
+        EmployeeState current = state != null ? state : new EmployeeState();
+        return new EmployeeState(
+            current.getId(),
+            current.getFirstName(),
+            current.getLastName(),
+            current.getTitle(),
+            event.email(),
+            current.getAddress(),
+            current.getCity(),
+            current.getZipCode(),
+            current.getCountry()
+        );
     }
 
     public EmployeeState employeePromoted(EmployeePromoted event, EmployeeState state) {
-        System.out.println("[reducer] EmployeePromoted: " + event.getNewTitle());
-        EmployeeState result = state != null ? state : new EmployeeState();
-        result.setTitle(event.getNewTitle());
-        return result;
+        System.out.println("[reducer] EmployeePromoted: " + event.newTitle());
+        EmployeeState current = state != null ? state : new EmployeeState();
+        return new EmployeeState(
+            current.getId(),
+            current.getFirstName(),
+            current.getLastName(),
+            event.newTitle(),
+            current.getEmail(),
+            current.getAddress(),
+            current.getCity(),
+            current.getZipCode(),
+            current.getCountry()
+        );
     }
 
     public EmployeeState employeeMoved(EmployeeMoved event, EmployeeState state) {
-        System.out.println("[reducer] EmployeeMoved: " + event.getCity());
-        EmployeeState result = state != null ? state : new EmployeeState();
-        result.setAddress(event.getAddress());
-        result.setCity(event.getCity());
-        result.setZipCode(event.getZipCode());
-        result.setCountry(event.getCountry());
-        return result;
+        System.out.println("[reducer] EmployeeMoved: " + event.city());
+        EmployeeState current = state != null ? state : new EmployeeState();
+        return new EmployeeState(
+            current.getId(),
+            current.getFirstName(),
+            current.getLastName(),
+            current.getTitle(),
+            current.getEmail(),
+            event.address(),
+            event.city(),
+            event.zipCode(),
+            event.country()
+        );
     }
 }

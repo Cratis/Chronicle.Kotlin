@@ -9,20 +9,29 @@ import io.cratis.chronicle.observation.Reducer;
 public class CustomerReducer {
 
     public CustomerDetails customerRegistered(CustomerRegistered event) {
-        CustomerDetails details = new CustomerDetails();
-        details.setId(event.getCustomerId());
-        details.setFullName(event.getFullName());
-        details.setEmail(event.getEmail());
-        details.setPhoneNumber(event.getPhoneNumber());
-        return details;
+        return new CustomerDetails(
+            event.customerId(),
+            event.fullName(),
+            event.email(),
+            event.phoneNumber(),
+            "",
+            "",
+            "",
+            ""
+        );
     }
 
     public CustomerDetails customerAddressUpdated(CustomerAddressUpdated event, CustomerDetails state) {
-        CustomerDetails result = state != null ? state : new CustomerDetails();
-        result.setStreetAddress(event.getStreetAddress());
-        result.setCity(event.getCity());
-        result.setPostalCode(event.getPostalCode());
-        result.setCountry(event.getCountry());
-        return result;
+        CustomerDetails current = state != null ? state : new CustomerDetails();
+        return new CustomerDetails(
+            current.getId(),
+            current.getFullName(),
+            current.getEmail(),
+            current.getPhoneNumber(),
+            event.streetAddress(),
+            event.city(),
+            event.postalCode(),
+            event.country()
+        );
     }
 }
