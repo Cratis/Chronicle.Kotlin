@@ -1,5 +1,5 @@
 name: Auto-Approve Publish Deployments
-# Reusable workflow that approves pending environment deployments (maven)
+# Reusable workflow that approves pending environment deployments (npm/nuget)
 # for a workflow run, intended for trusted publishing flows.
 
 on:
@@ -18,7 +18,7 @@ jobs:
   approve:
     runs-on: ubuntu-latest
     steps:
-      - name: Approve pending maven deployments
+      - name: Approve pending npm/nuget deployments
         env:
           GH_TOKEN: ${{ github.token }}
           WORKFLOW_RUN_ID: ${{ inputs.workflow_run_id }}
@@ -31,7 +31,7 @@ jobs:
           for ((attempt=1; attempt<=max_attempts; attempt++)); do
             mapfile -t env_ids < <(
               gh api "repos/${{ github.repository }}/actions/runs/${WORKFLOW_RUN_ID}/pending_deployments" \
-                --jq '.[] | select(.environment.name == "maven") | .environment.id' |
+                --jq '.[] | select(.environment.name == "npm" or .environment.name == "nuget") | .environment.id' |
                 sort -u
             )
 
@@ -52,13 +52,13 @@ jobs:
 
             run_status=$(gh api "repos/${{ github.repository }}/actions/runs/${WORKFLOW_RUN_ID}" --jq '.status')
             if [ "$run_status" = "completed" ]; then
-              echo "No pending maven deployments found for run ${WORKFLOW_RUN_ID}"
+              echo "No pending npm/nuget deployments found for run ${WORKFLOW_RUN_ID}"
               exit 0
             fi
 
-            echo "Attempt ${attempt}/${max_attempts}: no pending maven deployments yet for run ${WORKFLOW_RUN_ID}; run status is ${run_status}. Waiting ${sleep_seconds}s..."
+            echo "Attempt ${attempt}/${max_attempts}: no pending npm/nuget deployments yet for run ${WORKFLOW_RUN_ID}; run status is ${run_status}. Waiting ${sleep_seconds}s..."
             sleep "$sleep_seconds"
           done
 
-          echo "::error::Timed out waiting for pending maven deployments for run ${WORKFLOW_RUN_ID}"
+          echo "::error::Timed out waiting for pending npm/nuget deployments for run ${WORKFLOW_RUN_ID}"
           exit 1
