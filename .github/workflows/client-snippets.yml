@@ -1,0 +1,52 @@
+name: Client Snippet Verification
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  workflow_dispatch:
+
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "Documentation/client-snippets/**"
+      - "Documentation/client-snippets-java/**"
+      - "Documentation/validate-client-snippets.py"
+      - "Source/**"
+      - ".github/workflows/client-snippets.yml"
+
+  push:
+    branches: ["main"]
+    paths:
+      - "Documentation/client-snippets/**"
+      - "Documentation/client-snippets-java/**"
+      - "Documentation/validate-client-snippets.py"
+      - "Source/**"
+      - ".github/workflows/client-snippets.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Compile client snippets
+        run: python3 Documentation/validate-client-snippets.py

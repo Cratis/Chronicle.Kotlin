@@ -38,12 +38,10 @@ network policy, or load balancer termination).
 
 ## Namespace
 
-The event store namespace scopes events within a single logical store. The
-default namespace is `"default"`. Override it when calling `getEventStore`:
+See [Namespaces](/chronicle/concepts/namespaces/) for the full tenancy model.
+The default namespace is `"default"`. Override it when calling
+`getEventStore`:
 
 ```kotlin
 val store = client.getEventStore("MyApp", namespace = "production")
 ```
-
-Namespaces allow a single Chronicle Kernel to serve multiple isolated tenants
-or environments.

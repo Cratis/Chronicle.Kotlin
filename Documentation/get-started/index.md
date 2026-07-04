@@ -187,7 +187,8 @@ if (result.isSuccess()) {
 
 ## 5. React to events
 
-A reactor observes events and performs side effects. Annotate the
+A reactor observes events and performs side effects (see
+[Reactors](/chronicle/reactors/) for the full model). Annotate the
 class with `@Reactor` and write one method per event type you want to
 handle.
 
@@ -228,8 +229,9 @@ store.getReactors().register(new HrNotifications());
 
 ## 6. Build a read model
 
-A reducer folds a stream of events into a single mutable object. The
-`@ReadModel` marks the read model class, and `@Reducer` marks the reducer.
+A reducer folds a stream of events into a single mutable object (see
+[Reducers](/chronicle/reducers/) for the full model). The `@ReadModel`
+marks the read model class, and `@Reducer` marks the reducer.
 
 ### Kotlin Read Model
 

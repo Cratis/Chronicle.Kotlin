@@ -102,7 +102,9 @@ Marks a class as a Chronicle event seeder. The class must implement `ICanSeedEve
 ## @Pii
 
 Marks a property as personally identifiable information. Chronicle encrypts
-annotated fields at rest using a per-subject key.
+annotated fields at rest using a per-subject key. See [PII
+Attribute](/chronicle/compliance/pii/) for the full compliance model this
+participates in.
 
 ```kotlin
 @EventType
