@@ -1,8 +1,13 @@
 # Chronicle Kotlin Client
 
-The Chronicle Kotlin client is the JVM SDK for Chronicle. It wraps the Chronicle gRPC contracts with Kotlin-native constructs such as coroutines, data classes, and annotations.
+The Chronicle Kotlin client is the JVM SDK for Chronicle. It wraps the
+Chronicle gRPC contracts with Kotlin-native constructs such as coroutines,
+data classes, and annotations.
 
-Use this section for Kotlin and Java setup, runtime integration, annotations, and API reference details. Shared Chronicle concepts and workflows live in the main Chronicle docs and use language tabs when code differs by client.
+Use this section for Kotlin and Java setup, runtime integration,
+annotations, and API reference details. Shared Chronicle concepts and
+workflows live in the main Chronicle docs and use language tabs when code
+differs by client.
 
 ## Shared Chronicle topics
 
@@ -40,9 +45,11 @@ dependencies {
 }
 ```
 
-The same JVM client supports both Kotlin and Java. Shared pages include separate Kotlin and Java tabs when both examples exist.
+The same JVM client supports both Kotlin and Java. Shared pages include
+separate Kotlin and Java tabs when both examples exist.
 
 ## Client-specific pages
 
-- [Get Started](get-started/) — install the JVM client, connect, and run a small Kotlin flow
+- [Get Started](get-started/) — install the JVM client, connect, and run a
+  small Kotlin flow
 - [Reference](reference/) — annotations, configuration, and service API details

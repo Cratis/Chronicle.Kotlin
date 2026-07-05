@@ -4,7 +4,9 @@ sharedTopicBridge: true
 
 # Concepts
 
-Chronicle concepts are documented once in the shared Chronicle docs. The Kotlin client pages only cover Kotlin and Java setup, annotations, and API details.
+Chronicle concepts are documented once in the shared Chronicle docs. The
+Kotlin client pages only cover Kotlin and Java setup, annotations, and API
+details.
 
 Use these shared pages for the concepts:
 
@@ -16,6 +18,8 @@ Use these shared pages for the concepts:
 - [Reactors](/chronicle/reactors/)
 - [Reducers](/chronicle/reducers/)
 
-Shared examples use synchronized C#, Kotlin, Java, Elixir, and TypeScript tabs when the client APIs differ.
+Shared examples use synchronized C#, Kotlin, Java, Elixir, and TypeScript
+tabs when the client APIs differ.
 
-For JVM-specific syntax, see the [annotation reference](/chronicle/clients/kotlin/reference/annotations/).
+For JVM-specific syntax, see the [annotation
+reference](/chronicle/clients/kotlin/reference/annotations/).

@@ -1,6 +1,9 @@
 # Seeding
 
-This page shows how to seed events using the Chronicle Kotlin client. Seeding is sent to the Chronicle Server when the event store connects, and the server applies it once per namespace. See [Event Seeding](/chronicle/event-seeding/) for the concept this page assumes.
+This page shows how to seed events using the Chronicle Kotlin client.
+Seeding is sent to the Chronicle Server when the event store connects, and
+the server applies it once per namespace. See [Event
+Seeding](/chronicle/event-seeding/) for the concept this page assumes.
 
 ## Define events
 
@@ -8,7 +11,11 @@ This page shows how to seed events using the Chronicle Kotlin client. Seeding is
 import io.cratis.chronicle.events.EventType
 
 @EventType(id = "account-opened")
-data class AccountOpened(val accountId: String, val ownerName: String, val initialBalance: Double)
+data class AccountOpened(
+    val accountId: String,
+    val ownerName: String,
+    val initialBalance: Double
+)
 
 @EventType(id = "funds-deposited")
 data class FundsDeposited(val accountId: String, val amount: Double)
@@ -16,7 +23,8 @@ data class FundsDeposited(val accountId: String, val amount: Double)
 
 ## Implement a seeder
 
-Annotate a class with `@Seeder`, implement `ICanSeedEvents`, and use `IEventSeedingBuilder.forEventSource` to accumulate events:
+Annotate a class with `@Seeder`, implement `ICanSeedEvents`, and use
+`IEventSeedingBuilder.forEventSource` to accumulate events:
 
 ```kotlin
 import io.cratis.chronicle.seeding.ICanSeedEvents
@@ -36,7 +44,8 @@ class AccountSeeder : ICanSeedEvents {
 
 ## Seed mixed event types for one event source
 
-`forEventSource` takes a list of any event types, so mixing types for the same event source is the same call:
+`forEventSource` takes a list of any event types, so mixing types for the
+same event source is the same call:
 
 ```kotlin
 override fun seed(builder: IEventSeedingBuilder) {
@@ -55,8 +64,14 @@ Chain multiple calls to seed several event sources:
 ```kotlin
 override fun seed(builder: IEventSeedingBuilder) {
     builder
-        .forEventSource("account-1", listOf(AccountOpened("account-1", "Alice", 1000.0)))
-        .forEventSource("account-2", listOf(AccountOpened("account-2", "Bob", 500.0)))
+        .forEventSource(
+            "account-1",
+            listOf(AccountOpened("account-1", "Alice", 1000.0))
+        )
+        .forEventSource(
+            "account-2",
+            listOf(AccountOpened("account-2", "Bob", 500.0))
+        )
 }
 ```
 
@@ -83,4 +98,6 @@ suspend fun runSeeders(store: IEventStore) {
 - Keep seed data minimal and deterministic.
 - Use clear event source IDs to make debugging easier.
 - Group seeders by scenario so you can remove or adjust them easily.
-- Only call `store.seeding.seed(...)` when you want seeding to run — for example, guard it behind a development-only build flag or configuration check.
+- Only call `store.seeding.seed(...)` when you want seeding to run — for
+  example, guard it behind a development-only build flag or configuration
+  check.
