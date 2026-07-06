@@ -1,0 +1,10 @@
+{
+  // Client-snippet files are compiled code fragments embedded into the shared
+  // Chronicle docs via <ChronicleClientTabs>, not standalone pages — they are
+  // deliberately headerless and are validated for real by
+  // Documentation/validate-client-snippets.py, not by markdown structure rules.
+  "ignores": [
+    "Documentation/client-snippets/**",
+    "Documentation/client-snippets-java/**"
+  ]
+}

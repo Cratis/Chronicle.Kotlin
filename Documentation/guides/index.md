@@ -1,17 +1,23 @@
+---
+sharedTopicBridge: true
+---
+
 # Guides
 
-Task-focused recipes for working with the Chronicle Kotlin client. Each
-guide assumes you already have a running Chronicle Kernel and a configured
-`EventStore`. See [Get Started](../get-started/index.md) if you haven't set
-that up yet.
+Chronicle task guides are shared across clients. They live in the main
+Chronicle docs and use synchronized language tabs for Kotlin, Java, C#,
+Elixir, and TypeScript examples.
 
-| Guide | What you'll do |
-| --- | --- |
-| [Appending Events](appending-events.md) | Append single events, multiple events, and handle constraint violations |
-| [Reactors](reactors.md) | Set up an event observer that runs side effects |
-| [Reducers](reducers.md) | Fold events into a mutable read model |
-| [Projections](projections.md) | Declare event-to-field mappings without writing fold logic |
-| [Constraints](constraints.md) | Enforce uniqueness rules at the event store level |
-| [Seeding](seeding.md) | Pre-populate the event log with initial data |
-| [PII Compliance](compliance.md) | Annotate sensitive fields and manage their lifecycle |
-| [Transactions](transactions.md) | Group multiple appends into an atomic unit of work |
+Start with:
+
+- [Appending events](/chronicle/events/appending/)
+- [Read models](/chronicle/read-models/)
+- [Projections](/chronicle/projections/)
+- [Reactors](/chronicle/reactors/)
+- [Reducers](/chronicle/reducers/)
+- [Constraints](/chronicle/constraints/)
+- [Event evolution](/chronicle/understanding-event-evolution/)
+
+Use the Kotlin client section for
+[setup](/chronicle/clients/kotlin/get-started/) and [API
+reference](/chronicle/clients/kotlin/reference/).

@@ -1,53 +1,103 @@
 # Seeding
 
-Seeding pre-populates the event log with initial events. It is idempotent —
-running the same seeder twice does not duplicate events.
+This page shows how to seed events using the Chronicle Kotlin client.
+Seeding is sent to the Chronicle Server when the event store connects, and
+the server applies it once per namespace. See [Event
+Seeding](/chronicle/event-seeding/) for the concept this page assumes.
 
-## Define a seeder
-
-Annotate the class with `@Seeder` and implement `ICanSeedEvents`:
+## Define events
 
 ```kotlin
+import io.cratis.chronicle.events.EventType
+
+@EventType(id = "account-opened")
+data class AccountOpened(
+    val accountId: String,
+    val ownerName: String,
+    val initialBalance: Double
+)
+
+@EventType(id = "funds-deposited")
+data class FundsDeposited(val accountId: String, val amount: Double)
+```
+
+## Implement a seeder
+
+Annotate a class with `@Seeder`, implement `ICanSeedEvents`, and use
+`IEventSeedingBuilder.forEventSource` to accumulate events:
+
+```kotlin
+import io.cratis.chronicle.seeding.ICanSeedEvents
+import io.cratis.chronicle.seeding.IEventSeedingBuilder
+import io.cratis.chronicle.seeding.Seeder
+
 @Seeder
-class EmployeeSeeder : ICanSeedEvents {
+class AccountSeeder : ICanSeedEvents {
     override fun seed(builder: IEventSeedingBuilder) {
-        builder
-            .forEventSource("emp-001") {
-                it.event(EmployeeHired(
-                    employeeId = "emp-001",
-                    firstName = "Alice",
-                    lastName = "Anderson",
-                    department = "Engineering"
-                ))
-                it.event(EmployeeEmailSet(
-                    employeeId = "emp-001",
-                    email = "alice@example.com"
-                ))
-            }
-            .forEventSource("emp-002") {
-                it.event(EmployeeHired(
-                    employeeId = "emp-002",
-                    firstName = "Bob",
-                    lastName = "Baker",
-                    department = "Product"
-                ))
-            }
+        builder.forEventSource(
+            "account-1",
+            listOf(AccountOpened("account-1", "Alice", 1000.0))
+        )
     }
 }
 ```
 
-## Run the seeder
+## Seed mixed event types for one event source
+
+`forEventSource` takes a list of any event types, so mixing types for the
+same event source is the same call:
 
 ```kotlin
-store.seeding.seed(EmployeeSeeder())
+override fun seed(builder: IEventSeedingBuilder) {
+    builder.forEventSource(
+        "account-1",
+        listOf(
+            AccountOpened("account-1", "Alice", 1000.0),
+            FundsDeposited("account-1", 500.0)
+        )
+    )
+}
 ```
 
-Call this once during application startup, before processing live traffic.
-Chronicle skips event sources that already have events.
+Chain multiple calls to seed several event sources:
 
-## When to use seeding
+```kotlin
+override fun seed(builder: IEventSeedingBuilder) {
+    builder
+        .forEventSource(
+            "account-1",
+            listOf(AccountOpened("account-1", "Alice", 1000.0))
+        )
+        .forEventSource(
+            "account-2",
+            listOf(AccountOpened("account-2", "Bob", 500.0))
+        )
+}
+```
 
-- Development and test environments that need realistic initial data
-- Reference data that should exist in all environments (lookup tables,
-  configuration records)
-- Migration of existing data from a legacy system into an event-sourced store
+## Running seeders
+
+Pass seeder instances to the event store's `seeding` service:
+
+```kotlin
+import io.cratis.chronicle.IEventStore
+
+suspend fun runSeeders(store: IEventStore) {
+    store.seeding.seed(AccountSeeder())
+}
+```
+
+## How it runs
+
+- Seed batches are sent to the Chronicle Server when the event store connects.
+- The server deduplicates seeded events and applies them once per namespace.
+- Events are appended in a single batch for efficient startup.
+
+## Best practices
+
+- Keep seed data minimal and deterministic.
+- Use clear event source IDs to make debugging easier.
+- Group seeders by scenario so you can remove or adjust them easily.
+- Only call `store.seeding.seed(...)` when you want seeding to run — for
+  example, guard it behind a development-only build flag or configuration
+  check.

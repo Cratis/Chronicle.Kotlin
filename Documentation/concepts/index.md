@@ -1,38 +1,25 @@
+---
+sharedTopicBridge: true
+---
+
 # Concepts
 
-Chronicle is an event-sourced system kernel. The Kotlin client gives
-you idiomatic access to its core abstractions. Understanding these four
-concepts is enough to use the full API:
+Chronicle concepts are documented once in the shared Chronicle docs. The
+Kotlin client pages only cover Kotlin and Java setup, annotations, and API
+details.
 
-| Concept | What it is |
-| --- | --- |
-| **Event** | An immutable fact that something happened |
-| **Event Source** | The entity (string key) whose event history |
-| **Observer** | Reacts to events (reactor or reducer) |
-| **Read Model** | Queryable state derived from events |
+Use these shared pages for the concepts:
 
-## The flow
+- [Events](/chronicle/concepts/event/)
+- [Event sources](/chronicle/concepts/event-source/)
+- [Observers](/chronicle/concepts/observers/)
+- [Read models](/chronicle/read-models/)
+- [Projections](/chronicle/projections/)
+- [Reactors](/chronicle/reactors/)
+- [Reducers](/chronicle/reducers/)
 
-```mermaid
-graph LR
-    App["Your application"] -- append --> EL["Event Log"]
-    EL -- events --> Reactor["Reactor\n(side effects)"]
-    EL -- events --> Reducer["Reducer\n(read model)"]
-    EL -- events --> Projection["Projection\n(read model)"]
-    Reducer --> RM["Read Model Store"]
-    Projection --> RM
-    App -- query --> RM
-```
+Shared examples use synchronized C#, Kotlin, Java, Elixir, and TypeScript
+tabs when the client APIs differ.
 
-Events flow into the event log, which fans them out to all registered
-observers. Reactors perform side effects; reducers and projections
-build read models that your application queries later.
-
-## Pages in this section
-
-- [Events](events.md) — what events are, how they are identified, and how
-  generations work
-- [Observers](observers.md) — how reactors and reducers observe the event
-  stream
-- [Read Models](read-models.md) — how reducers, projections, and queries
-  work together
+For JVM-specific syntax, see the [annotation
+reference](/chronicle/clients/kotlin/reference/annotations/).

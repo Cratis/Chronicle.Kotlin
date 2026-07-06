@@ -1,24 +1,30 @@
 # Chronicle Kotlin Client
 
-The Chronicle Kotlin client is an idiomatic Kotlin library for building
-event-sourced applications with
-[Cratis Chronicle](https://github.com/Cratis/Chronicle). It wraps the
-Chronicle gRPC contracts with Kotlin-native constructs — coroutines, data
-classes, and annotations.
+The Chronicle Kotlin client is the JVM SDK for Chronicle. It wraps the
+Chronicle gRPC contracts with Kotlin-native constructs such as coroutines,
+data classes, and annotations.
 
-## What you can build
+Use this section for Kotlin and Java setup, runtime integration,
+annotations, and API reference details. Shared Chronicle concepts and
+workflows live in the main Chronicle docs and use language tabs when code
+differs by client.
 
-- **Event-driven domains** — append typed, immutable events to an event log
-  and have the system react to them
-- **Real-time read models** — fold events into queryable state using reducers
-  or projections
-- **Behavioral automation** — react to events across your system with reactors
-- **Integrity guarantees** — enforce uniqueness constraints at the event store
-  level
-- **PII compliance** — annotate sensitive fields so Chronicle can manage their
-  lifecycle
+## Shared Chronicle topics
 
-## Before you start
+- [Get started](/chronicle/get-started/)
+- [Events and event logs](/chronicle/events/)
+- [Appending events](/chronicle/events/appending/)
+- [Read models](/chronicle/read-models/)
+- [Projections](/chronicle/projections/)
+- [Reactors](/chronicle/reactors/)
+- [Reducers](/chronicle/reducers/)
+- [Constraints](/chronicle/constraints/)
+- [Event seeding](/chronicle/event-seeding/)
+- [Compliance](/chronicle/compliance/)
+- [Transactions and unit of work](/chronicle/events/transactions/)
+- [Event evolution](/chronicle/understanding-event-evolution/)
+
+## Kotlin and Java setup
 
 You need a running Chronicle Kernel. The simplest way is Docker Compose:
 
@@ -39,11 +45,11 @@ dependencies {
 }
 ```
 
-## Where to go next
+The same JVM client supports both Kotlin and Java. Shared pages include
+separate Kotlin and Java tabs when both examples exist.
 
-- [**Get Started**](get-started/toc.yml) — build your first event-sourced
-  feature in minutes
-- [**Guides**](guides/toc.yml) — recipes for specific tasks (reactors,
-  projections, constraints, seeding)
-- [**Concepts**](concepts/toc.yml) — understand how the pieces fit together
-- [**Reference**](reference/toc.yml) — complete API and annotation reference
+## Client-specific pages
+
+- [Get Started](get-started/) — install the JVM client, connect, and run a
+  small Kotlin flow
+- [Reference](reference/) — annotations, configuration, and service API details
