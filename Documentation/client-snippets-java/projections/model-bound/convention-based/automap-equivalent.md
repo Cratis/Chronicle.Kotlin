@@ -4,6 +4,7 @@ import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 import io.cratis.chronicle.readModels.ReadModel;
+import kotlin.jvm.JvmClassMappingKt;
 
 @EventType(id = "convention-equivalent-user-registered")
 record ConventionEquivalentUserRegistered(String name, String email) {}
@@ -18,7 +19,7 @@ class ConventionEquivalentUser {
 class ConventionEquivalentProjection implements IProjectionFor<ConventionEquivalentUser> {
     @Override
     public void define(IProjectionBuilderFor<ConventionEquivalentUser> builder) {
-        builder.from(ConventionEquivalentUserRegistered.class, null);
+        builder.from(JvmClassMappingKt.getKotlinClass(ConventionEquivalentUserRegistered.class), null);
     }
 }
 ```

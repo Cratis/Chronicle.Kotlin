@@ -14,7 +14,7 @@ record AccountInfo(String name, double balance) {
 }
 
 class ReadModelLookup {
-    void printAccount(IEventStore store, String accountId) {
+    void printAccount(IEventStore store, String accountId) throws InterruptedException {
         var account = (AccountInfo) BuildersKt.runBlocking(
             EmptyCoroutineContext.INSTANCE,
             (scope, continuation) -> {

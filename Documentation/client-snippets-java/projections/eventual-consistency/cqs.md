@@ -23,7 +23,7 @@ class EcCqsBookCommandHandler {
         this.store = store;
     }
 
-    void create(String bookId, String title) {
+    void create(String bookId, String title) throws InterruptedException {
         var eventLog = store.getEventLog();
 
         BuildersKt.runBlocking(EmptyCoroutineContext.INSTANCE, (scope, continuation) -> {
@@ -42,7 +42,7 @@ class EcCqsBookQueryHandler {
         this.store = store;
     }
 
-    EcCqsBook getBook(String bookId) {
+    EcCqsBook getBook(String bookId) throws InterruptedException {
         return (EcCqsBook) BuildersKt.runBlocking(
             EmptyCoroutineContext.INSTANCE,
             (scope, continuation) -> {

@@ -10,7 +10,7 @@ import kotlin.coroutines.Continuation;
 record SchemaValidatedOrderPlaced(String customerId, double total) {}
 
 class SchemaValidationExample {
-    void append(IEventStore store, String eventSourceId, String customerId, double total) {
+    void append(IEventStore store, String eventSourceId, String customerId, double total) throws InterruptedException {
         var result = (AppendResult) BuildersKt.runBlocking(
             EmptyCoroutineContext.INSTANCE,
             (scope, continuation) -> {

@@ -8,7 +8,7 @@ import kotlin.coroutines.EmptyCoroutineContext;
 import kotlin.coroutines.Continuation;
 
 class Main {
-    void run() {
+    void run() throws InterruptedException {
         var client = new ChronicleClient(ChronicleOptions.Companion.development());
         var eventStore = client.getEventStore("ChronicleConsole", "Default");
 

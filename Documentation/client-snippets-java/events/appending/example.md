@@ -16,7 +16,7 @@ class CheckoutService {
         this.store = store;
     }
 
-    void placeOrder(String orderId, String customerId, double total) {
+    void placeOrder(String orderId, String customerId, double total) throws InterruptedException {
         var result = (AppendResult) BuildersKt.runBlocking(
             EmptyCoroutineContext.INSTANCE,
             (scope, continuation) -> {

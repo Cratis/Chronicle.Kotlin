@@ -12,7 +12,7 @@ class ReducersGettingStartedOrderService {
         this.store = store;
     }
 
-    ReducersGettingStartedOrderSummary getOrderSummary(String orderId) {
+    ReducersGettingStartedOrderSummary getOrderSummary(String orderId) throws InterruptedException {
         return (ReducersGettingStartedOrderSummary) BuildersKt.runBlocking(
             EmptyCoroutineContext.INSTANCE,
             (scope, continuation) -> {

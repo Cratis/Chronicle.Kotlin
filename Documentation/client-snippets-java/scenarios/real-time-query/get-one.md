@@ -14,7 +14,7 @@ class ScenariosQueryBookService {
         this.store = store;
     }
 
-    ScenariosQueryBook getBook(String bookId) {
+    ScenariosQueryBook getBook(String bookId) throws InterruptedException {
         return (ScenariosQueryBook) BuildersKt.runBlocking(
             EmptyCoroutineContext.INSTANCE,
             (scope, continuation) -> {

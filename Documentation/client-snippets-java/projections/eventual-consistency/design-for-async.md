@@ -24,7 +24,7 @@ class EcBookService {
     }
 
     // Good — fire and forget: don't wait for the projection before returning
-    String createBook(String title, String author) {
+    String createBook(String title, String author) throws InterruptedException {
         var bookId = UUID.randomUUID().toString();
         var eventLog = store.getEventLog();
 
@@ -38,7 +38,7 @@ class EcBookService {
     }
 
     // Problematic — expecting immediate consistency
-    EcBookInventory createBookAndReturn(String title, String author) {
+    EcBookInventory createBookAndReturn(String title, String author) throws InterruptedException {
         var bookId = createBook(title, author);
 
         // The projection may not have run yet — this can return null or a stale instance

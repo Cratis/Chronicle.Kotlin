@@ -10,7 +10,7 @@ record TransactionalOrderPlaced(String orderId, double totalAmount) {}
 record TransactionalInventoryReserved(String sku, int quantity) {}
 
 class TransactionalOrderWorkflow {
-    void commitOrder(IEventStore store) {
+    void commitOrder(IEventStore store) throws InterruptedException {
         var unitOfWork = store.getUnitOfWorkManager().begin();
 
         try {

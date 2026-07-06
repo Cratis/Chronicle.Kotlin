@@ -7,7 +7,7 @@ import kotlin.coroutines.Continuation;
 import java.util.UUID;
 
 class TutorialFirstEventAppend {
-    String addBook(IEventStore eventStore) {
+    String addBook(IEventStore eventStore) throws InterruptedException {
         var bookId = UUID.randomUUID().toString();
 
         BuildersKt.runBlocking(EmptyCoroutineContext.INSTANCE, (scope, continuation) -> {

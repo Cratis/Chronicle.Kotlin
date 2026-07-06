@@ -2,6 +2,7 @@
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
+import kotlin.jvm.JvmClassMappingKt;
 
 @EventType(id = "index-automap-account-opened")
 record IndexAutoMapAccountOpened(String name, double balance) {}
@@ -15,7 +16,7 @@ class IndexAutoMapAccountProjection implements IProjectionFor<IndexAutoMapAccoun
     @Override
     public void define(IProjectionBuilderFor<IndexAutoMapAccountInfo> builder) {
         // No configure block — matching properties are mapped automatically.
-        builder.from(IndexAutoMapAccountOpened.class, null);
+        builder.from(JvmClassMappingKt.getKotlinClass(IndexAutoMapAccountOpened.class), null);
     }
 }
 ```

@@ -2,7 +2,7 @@
 import io.cratis.chronicle.ChronicleClient;
 import io.cratis.chronicle.ChronicleOptions;
 
-class Main {
+class ConsoleConnect {
     void run() {
         // ChronicleOptions.development() points at the local dev kernel on chronicle://localhost:35000
         var client = new ChronicleClient(ChronicleOptions.Companion.development());

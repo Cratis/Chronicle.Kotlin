@@ -13,7 +13,7 @@ class GetStartedBookService {
         this.eventStore = eventStore;
     }
 
-    String addBook() {
+    String addBook() throws InterruptedException {
         var eventLog = eventStore.getEventLog();
         var bookId = UUID.randomUUID().toString();
 

@@ -12,7 +12,7 @@ class ReactorRegistration {
         this.emailGateway = emailGateway;
     }
 
-    Job register(IEventStore store) {
+    Job register(IEventStore store) throws InterruptedException {
         return (Job) BuildersKt.runBlocking(
             EmptyCoroutineContext.INSTANCE,
             (scope, continuation) -> {

@@ -14,7 +14,7 @@ class DesigningReadModelsCustomerDetailService {
         this.store = store;
     }
 
-    DesigningReadModelsCustomerDetail getDetail(String customerId) {
+    DesigningReadModelsCustomerDetail getDetail(String customerId) throws InterruptedException {
         return (DesigningReadModelsCustomerDetail) BuildersKt.runBlocking(
             EmptyCoroutineContext.INSTANCE,
             (scope, continuation) -> {
