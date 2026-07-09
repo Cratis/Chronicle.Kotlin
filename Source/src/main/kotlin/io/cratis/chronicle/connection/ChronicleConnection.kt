@@ -3,8 +3,8 @@
 
 package io.cratis.chronicle.connection
 
+import io.grpc.Grpc
 import io.grpc.ManagedChannel
-import io.grpc.ManagedChannelBuilder
 import java.util.concurrent.TimeUnit
 
 /**
@@ -41,12 +41,11 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
     }
 
     private fun createChannel(): ManagedChannel {
-        val builder = if (connectionString.disableTls) {
-            ManagedChannelBuilder.forAddress(connectionString.host, connectionString.port)
-                .usePlaintext()
-        } else {
-            ManagedChannelBuilder.forAddress(connectionString.host, connectionString.port)
-        }
+        val builder = Grpc.newChannelBuilderForAddress(
+            connectionString.host,
+            connectionString.port,
+            connectionString.createCredentials()
+        )
         builder.intercept(BearerTokenInterceptor(tokenProvider))
         return builder.build()
     }
