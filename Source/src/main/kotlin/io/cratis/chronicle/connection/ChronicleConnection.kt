@@ -35,9 +35,9 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
 
         val scheme = if (connectionString.disableTls) "http" else "https"
         val tokenEndpoint =
-            "$scheme://${connectionString.host}:${connectionString.managementPort}/connect/token"
+            "$scheme://${connectionString.host}:${connectionString.port}/connect/token"
 
-        return OAuthTokenProvider(tokenEndpoint, username, password)
+        return OAuthTokenProvider(tokenEndpoint, username, password, connectionString.host, connectionString.disableTls)
     }
 
     private fun createChannel(): ManagedChannel {
