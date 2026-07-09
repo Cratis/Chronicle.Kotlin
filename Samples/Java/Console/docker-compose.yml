@@ -13,7 +13,6 @@ services:
       - Cratis__Chronicle__Storage__Type=MongoDB
       - Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongodb:27017/?directConnection=true
     ports:
-      - "8080:8080"
       - "35000:35000"
 
   mongodb:
@@ -67,7 +66,6 @@ services:
       - Cratis__Chronicle__Storage__Type=PostgreSQL
       - Cratis__Chronicle__Storage__ConnectionDetails=Host=postgres;Database=chronicle;Username=chronicle;Password=chronicle
     ports:
-      - "8080:8080"
       - "35000:35000"
 
   # ─── SQL Server ─────────────────────────────────────────────────────────────
@@ -90,7 +88,6 @@ services:
       - Cratis__Chronicle__Storage__Type=SqlServer
       - Cratis__Chronicle__Storage__ConnectionDetails=Server=mssql;Database=chronicle;User Id=sa;Password=Chronicle_Str0ng!;TrustServerCertificate=true
     ports:
-      - "8080:8080"
       - "35000:35000"
 
   # ─── SQLite ──────────────────────────────────────────────────────────────────
@@ -104,7 +101,6 @@ services:
     volumes:
       - chronicle-sqlite-data:/data
     ports:
-      - "8080:8080"
       - "35000:35000"
 
 volumes:
