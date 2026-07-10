@@ -13,6 +13,7 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 import java.time.Instant
+import javax.net.ssl.SSLContext
 
 private const val TOKEN_EXPIRY_BUFFER_SECONDS = 60L
 private const val DEFAULT_TOKEN_EXPIRY_SECONDS = 3600L
@@ -39,14 +40,25 @@ object NoOpTokenProvider : ITokenProvider {
  * @param tokenEndpoint The full URL of the /connect/token endpoint.
  * @param clientId The OAuth client identifier.
  * @param clientSecret The OAuth client secret.
+ * @param host The Chronicle server host, used to trust its self-signed development certificate over TLS.
+ * @param disableTls Whether TLS is disabled for the token request.
  */
 class OAuthTokenProvider(
     private val tokenEndpoint: String,
     private val clientId: String,
-    private val clientSecret: String
+    private val clientSecret: String,
+    host: String = "localhost",
+    disableTls: Boolean = false
 ) : ITokenProvider {
 
-    private val httpClient = HttpClient.newHttpClient()
+    private val httpClient = if (disableTls) {
+        HttpClient.newHttpClient()
+    } else {
+        val sslContext = SSLContext.getInstance("TLS").apply {
+            init(null, arrayOf(SelfSignedTrustManager(host)), null)
+        }
+        HttpClient.newBuilder().sslContext(sslContext).build()
+    }
     private val gson = Gson()
     private val mutex = Mutex()
 

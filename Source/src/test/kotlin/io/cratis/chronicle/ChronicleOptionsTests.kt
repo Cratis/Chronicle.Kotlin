@@ -16,11 +16,11 @@ class ChronicleOptionsTests {
     }
 
     @Test
-    fun `development options point to localhost with TLS disabled`() {
+    fun `development options point to localhost over TLS`() {
         val opts = ChronicleOptions.development()
         assertEquals("localhost", opts.connectionString.host)
         assertEquals(35000, opts.connectionString.port)
-        assertTrue(opts.connectionString.disableTls)
+        assertFalse(opts.connectionString.disableTls)
     }
 
     @Test

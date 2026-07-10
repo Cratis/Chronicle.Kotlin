@@ -17,22 +17,19 @@ data class ChronicleConnectionString(
     val username: String? = null,
     val password: String? = null,
     val disableTls: Boolean = false,
-    val apiKey: String? = null,
-    val managementPort: Int = DEFAULT_MANAGEMENT_PORT
+    val apiKey: String? = null
 ) {
     companion object {
         private const val DEFAULT_PORT = 35000
-        const val DEFAULT_MANAGEMENT_PORT = 8080
         const val DEVELOPMENT_CLIENT = "chronicle-dev-client"
         const val DEVELOPMENT_CLIENT_SECRET = "chronicle-dev-secret"
 
-        /** Development connection string pointing to localhost with TLS disabled. */
+        /** Development connection string pointing to localhost over TLS with the standard dev credentials. */
         val DEVELOPMENT: ChronicleConnectionString = ChronicleConnectionString(
             host = "localhost",
             port = DEFAULT_PORT,
             username = DEVELOPMENT_CLIENT,
-            password = DEVELOPMENT_CLIENT_SECRET,
-            disableTls = true
+            password = DEVELOPMENT_CLIENT_SECRET
         )
 
         /**
@@ -95,10 +92,19 @@ data class ChronicleConnectionString(
 
     /**
      * Creates the appropriate gRPC [ChannelCredentials] based on this connection string's TLS settings.
+     *
+     * When TLS is enabled, the channel trusts the Chronicle Kernel's auto-generated self-signed
+     * development certificate via [SelfSignedTrustManager] — see its documentation for the exact
+     * validation behavior.
      */
     fun createCredentials(): ChannelCredentials =
-        if (disableTls) InsecureChannelCredentials.create()
-        else TlsChannelCredentials.create()
+        if (disableTls) {
+            InsecureChannelCredentials.create()
+        } else {
+            TlsChannelCredentials.newBuilder()
+                .trustManager(SelfSignedTrustManager(host))
+                .build()
+        }
 
     /** Returns the target address in host:port format. */
     val target: String get() = "$host:$port"

@@ -33,7 +33,7 @@ data class ChronicleOptions(
         /**
          * Creates [ChronicleOptions] pre-configured for local development.
          *
-         * Points to localhost:35000 with TLS disabled and the standard dev credentials.
+         * Points to localhost:35000 over TLS with the standard dev credentials.
          */
         fun development(): ChronicleOptions =
             ChronicleOptions(ChronicleConnectionString.DEVELOPMENT)

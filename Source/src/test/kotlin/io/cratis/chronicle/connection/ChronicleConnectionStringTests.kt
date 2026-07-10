@@ -51,7 +51,7 @@ class ChronicleConnectionStringTests {
         val cs = ChronicleConnectionString.DEVELOPMENT
         assertEquals("localhost", cs.host)
         assertEquals(35000, cs.port)
-        assertTrue(cs.disableTls)
+        assertFalse(cs.disableTls)
         assertEquals("chronicle-dev-client", cs.username)
     }
 
