@@ -26,9 +26,9 @@ private data class OAuthTokenResponse(
  * Builds an [HttpClient] honoring the `disableTls`/`skipTlsValidation` connection string options —
  * shared by [OAuthTokenProvider] and [LeastConnectionsLoadBalancerStrategy].
  *
- * When TLS is enabled and [skipTlsValidation] is false (the default), the platform default trust
- * manager performs full certificate validation. [skipTlsValidation] opts into accepting any
- * certificate via [InsecureTrustManager] instead.
+ * When TLS is enabled, [skipTlsValidation] defaults to `true`, accepting any certificate via
+ * [InsecureTrustManager]. Set it to `false` to require full certificate chain validation against
+ * the platform default trust manager instead.
  */
 internal fun createChronicleHttpClient(disableTls: Boolean, skipTlsValidation: Boolean): HttpClient = when {
     disableTls -> HttpClient.newHttpClient()
@@ -55,14 +55,14 @@ object NoOpTokenProvider : ITokenProvider {
  * @param clientSecret The OAuth client secret.
  * @param disableTls Whether TLS is disabled for the token request.
  * @param skipTlsValidation Whether to accept any TLS certificate for the token request instead of
- *   validating it against the platform default trust manager.
+ *   validating it against the platform default trust manager. Defaults to `true`.
  */
 class OAuthTokenProvider(
     private val tokenEndpoint: String,
     private val clientId: String,
     private val clientSecret: String,
     disableTls: Boolean = false,
-    skipTlsValidation: Boolean = false
+    skipTlsValidation: Boolean = true
 ) : ITokenProvider {
 
     private val httpClient = createChronicleHttpClient(disableTls, skipTlsValidation)

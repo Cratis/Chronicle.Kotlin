@@ -43,7 +43,7 @@ import kotlin.random.Random
  */
 class LeastConnectionsLoadBalancerStrategy(
     private val disableTls: Boolean = false,
-    private val skipTlsValidation: Boolean = false,
+    private val skipTlsValidation: Boolean = true,
     private val maxSelectionJitterMs: Int = DEFAULT_MAX_SELECTION_JITTER_MS,
     private val httpClient: HttpClient = createChronicleHttpClient(disableTls, skipTlsValidation)
 ) : LoadBalancerStrategy {

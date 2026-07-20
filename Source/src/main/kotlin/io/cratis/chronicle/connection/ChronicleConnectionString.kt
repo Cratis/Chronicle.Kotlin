@@ -25,7 +25,7 @@ data class ChronicleConnectionString(
     val username: String? = null,
     val password: String? = null,
     val disableTls: Boolean = false,
-    val skipTlsValidation: Boolean = false,
+    val skipTlsValidation: Boolean = true,
     val apiKey: String? = null,
     val loadBalancer: LoadBalancer = LoadBalancer.LEAST_CONNECTIONS,
     val srvNameServer: String? = null,
@@ -44,14 +44,14 @@ data class ChronicleConnectionString(
 
         /**
          * Development connection string pointing to localhost over TLS with the standard dev
-         * credentials. Skips certificate validation since the Kernel serves a self-signed
-         * development certificate that a strict, default connection string would now reject.
+         * credentials. Certificate validation is skipped by default (see [skipTlsValidation]),
+         * so this connects to the Kernel's self-signed development certificate without further
+         * configuration.
          */
         val DEVELOPMENT: ChronicleConnectionString = ChronicleConnectionString(
             addresses = listOf(ChronicleServerAddress("localhost", DEFAULT_PORT)),
             username = DEVELOPMENT_CLIENT,
-            password = DEVELOPMENT_CLIENT_SECRET,
-            skipTlsValidation = true
+            password = DEVELOPMENT_CLIENT_SECRET
         )
 
         /**
@@ -97,7 +97,7 @@ data class ChronicleConnectionString(
             }
 
             var disableTls = false
-            var skipTlsValidation = false
+            var skipTlsValidation = true
             var apiKey: String? = null
             var loadBalancer = LoadBalancer.LEAST_CONNECTIONS
             var srvNameServer: String? = null
@@ -171,10 +171,10 @@ data class ChronicleConnectionString(
     /**
      * Creates the appropriate gRPC [ChannelCredentials] based on this connection string's TLS settings.
      *
-     * By default (`disableTls=false`, `skipTlsValidation=false`) the platform default trust
-     * manager performs full certificate validation — a server certificate that isn't trusted, or
-     * whose hostname doesn't match, is rejected exactly as any other TLS client would reject it.
-     * Set `skipTlsValidation=true` to accept any certificate via [InsecureTrustManager] instead.
+     * By default (`disableTls=false`, `skipTlsValidation=true`) the client connects over TLS but
+     * accepts any certificate via [InsecureTrustManager], including self-signed ones. Set
+     * `skipTlsValidation=false` to require full certificate chain validation against the platform
+     * default trust manager instead — only do so against a server whose certificate is verifiable.
      */
     fun createCredentials(): ChannelCredentials = when {
         disableTls -> InsecureChannelCredentials.create()

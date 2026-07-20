@@ -12,12 +12,10 @@ import javax.net.ssl.X509ExtendedTrustManager
 /**
  * Trust manager that accepts any certificate chain and any hostname — no validation at all.
  *
- * Used only when a connection string opts in explicitly via `skipTlsValidation=true`, e.g. to
- * connect through a certificate the client has no way to validate (an internal CA, a hostname
- * that doesn't match the certificate's subject). This is intentionally broader than
- * [SelfSignedTrustManager], which still enforces every check except a self-signed root or a
- * hostname mismatch, never both together. [InsecureTrustManager] enforces nothing and must only
- * ever be opted into deliberately — it is never the default.
+ * This is the default trust manager: `skipTlsValidation` defaults to `true`, since Chronicle
+ * kernels commonly serve a self-signed certificate the client has no way to validate. Set
+ * `skipTlsValidation=false` to require full certificate chain validation against the platform
+ * default trust manager instead, against a server whose certificate is actually verifiable.
  */
 class InsecureTrustManager : X509ExtendedTrustManager() {
     override fun checkClientTrusted(chain: Array<out X509Certificate>, authType: String) = Unit

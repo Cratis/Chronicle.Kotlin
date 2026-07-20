@@ -220,8 +220,14 @@ class ChronicleConnectionStringTests {
     }
 
     @Test
-    fun `skipTlsValidation is false by default`() {
+    fun `skipTlsValidation is true by default`() {
         val cs = ChronicleConnectionString.parse("chronicle://host:35000")
+        assertTrue(cs.skipTlsValidation)
+    }
+
+    @Test
+    fun `parses skipTlsValidation explicitly set to false`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000?skipTlsValidation=false")
         assertFalse(cs.skipTlsValidation)
     }
 
@@ -234,15 +240,15 @@ class ChronicleConnectionStringTests {
     }
 
     @Test
-    fun `createCredentials uses a fully permissive trust manager when skipTlsValidation is true`() {
-        val cs = ChronicleConnectionString.parse("chronicle://host:35000?skipTlsValidation=true")
+    fun `createCredentials uses a fully permissive trust manager by default`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000")
         val credentials = cs.createCredentials() as TlsChannelCredentials
         assertTrue(credentials.trustManagers.any { it is InsecureTrustManager })
     }
 
     @Test
-    fun `createCredentials validates strictly by default`() {
-        val cs = ChronicleConnectionString.parse("chronicle://host:35000")
+    fun `createCredentials validates strictly when skipTlsValidation is false`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000?skipTlsValidation=false")
         val credentials = cs.createCredentials() as TlsChannelCredentials
         // No custom trust manager is configured at all — TlsChannelCredentials.create() leaves
         // trustManagers null/empty, meaning "use the platform default trust manager".
