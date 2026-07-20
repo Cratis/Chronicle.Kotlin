@@ -5,7 +5,6 @@ package io.cratis.chronicle.observation
 
 import Cratis.Chronicle.Contracts.Observation.Reducers.ObservationReducers
 import Cratis.Chronicle.Contracts.Observation.Reducers.ReducersGrpcKt
-import bcl.Bcl
 import com.google.gson.Gson
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.events.EventType
@@ -118,14 +117,6 @@ class ReducersService(
                                             .setReadModel(readModelName)
                                             .setIsActive(true)
                                             .addAllEventTypes(eventTypes)
-                                            .setSink(
-                                                ObservationReducers.SinkDefinition.newBuilder()
-                                                    .setConfigurationId(
-                                                        Bcl.Guid.newBuilder().setLo(1L).setHi(0L).build()
-                                                    )
-                                                    .setTypeId(defaultSinkTypeId)
-                                                    .build()
-                                            )
                                             .build()
                                     )
                                     .build()

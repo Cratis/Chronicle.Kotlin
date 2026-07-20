@@ -9,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import java.net.InetAddress
 import java.util.UUID
 
 /**
@@ -29,10 +30,15 @@ class ConnectionManager(
     fun connect() {
         keepAliveJob = CoroutineScope(Dispatchers.IO).launch {
             try {
+                val process = ProcessHandle.current()
                 val request = Clients.ConnectRequest.newBuilder()
                     .setConnectionId(connectionId)
                     .setClientVersion("1.0.0")
                     .setIsRunningWithDebugger(false)
+                    .setProcessId(process.pid().toInt())
+                    .setProcessPath(process.info().command().orElse(""))
+                    .setMachineName(InetAddress.getLocalHost().hostName)
+                    .setClientType(CLIENT_TYPE)
                     .build()
 
                 stub.connect(request).collect { keepAlive ->
@@ -52,5 +58,9 @@ class ConnectionManager(
     fun disconnect() {
         keepAliveJob?.cancel()
         keepAliveJob = null
+    }
+
+    companion object {
+        private const val CLIENT_TYPE = "Kotlin"
     }
 }
