@@ -3,6 +3,8 @@
 
 package io.cratis.chronicle.connection
 
+import io.grpc.InsecureChannelCredentials
+import io.grpc.TlsChannelCredentials
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 
@@ -52,6 +54,7 @@ class ChronicleConnectionStringTests {
         assertEquals("localhost", cs.host)
         assertEquals(35000, cs.port)
         assertFalse(cs.disableTls)
+        assertTrue(cs.skipTlsValidation)
         assertEquals("chronicle-dev-client", cs.username)
     }
 
@@ -206,5 +209,43 @@ class ChronicleConnectionStringTests {
     fun `srvNameServer is null by default`() {
         val cs = ChronicleConnectionString.parse("chronicle://host:35000")
         assertNull(cs.srvNameServer)
+    }
+
+    // skipTlsValidation
+
+    @Test
+    fun `parses skipTlsValidation flag`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000?skipTlsValidation=true")
+        assertTrue(cs.skipTlsValidation)
+    }
+
+    @Test
+    fun `skipTlsValidation is false by default`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000")
+        assertFalse(cs.skipTlsValidation)
+    }
+
+    // createCredentials
+
+    @Test
+    fun `createCredentials returns insecure channel credentials when disableTls is true`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000?disableTls=true")
+        assertTrue(cs.createCredentials() is InsecureChannelCredentials)
+    }
+
+    @Test
+    fun `createCredentials uses a fully permissive trust manager when skipTlsValidation is true`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000?skipTlsValidation=true")
+        val credentials = cs.createCredentials() as TlsChannelCredentials
+        assertTrue(credentials.trustManagers.any { it is InsecureTrustManager })
+    }
+
+    @Test
+    fun `createCredentials validates strictly by default`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000")
+        val credentials = cs.createCredentials() as TlsChannelCredentials
+        // No custom trust manager is configured at all — TlsChannelCredentials.create() leaves
+        // trustManagers null/empty, meaning "use the platform default trust manager".
+        assertTrue(credentials.trustManagers.orEmpty().none { it is InsecureTrustManager })
     }
 }

@@ -25,6 +25,7 @@ data class ChronicleConnectionString(
     val username: String? = null,
     val password: String? = null,
     val disableTls: Boolean = false,
+    val skipTlsValidation: Boolean = false,
     val apiKey: String? = null,
     val loadBalancer: LoadBalancer = LoadBalancer.LEAST_CONNECTIONS,
     val srvNameServer: String? = null,
@@ -41,11 +42,16 @@ data class ChronicleConnectionString(
         const val DEVELOPMENT_CLIENT = "chronicle-dev-client"
         const val DEVELOPMENT_CLIENT_SECRET = "chronicle-dev-secret"
 
-        /** Development connection string pointing to localhost over TLS with the standard dev credentials. */
+        /**
+         * Development connection string pointing to localhost over TLS with the standard dev
+         * credentials. Skips certificate validation since the Kernel serves a self-signed
+         * development certificate that a strict, default connection string would now reject.
+         */
         val DEVELOPMENT: ChronicleConnectionString = ChronicleConnectionString(
             addresses = listOf(ChronicleServerAddress("localhost", DEFAULT_PORT)),
             username = DEVELOPMENT_CLIENT,
-            password = DEVELOPMENT_CLIENT_SECRET
+            password = DEVELOPMENT_CLIENT_SECRET,
+            skipTlsValidation = true
         )
 
         /**
@@ -91,6 +97,7 @@ data class ChronicleConnectionString(
             }
 
             var disableTls = false
+            var skipTlsValidation = false
             var apiKey: String? = null
             var loadBalancer = LoadBalancer.LEAST_CONNECTIONS
             var srvNameServer: String? = null
@@ -102,6 +109,7 @@ data class ChronicleConnectionString(
                         val value = param.substring(eqIndex + 1)
                         when (key.lowercase()) {
                             "disabletls" -> disableTls = value.equals("true", ignoreCase = true)
+                            "skiptlsvalidation" -> skipTlsValidation = value.equals("true", ignoreCase = true)
                             "apikey" -> apiKey = value
                             "loadbalancer" -> loadBalancer = LoadBalancer.parse(value)
                             "srvnameserver" -> srvNameServer = value
@@ -115,6 +123,7 @@ data class ChronicleConnectionString(
                 username = username,
                 password = password,
                 disableTls = disableTls,
+                skipTlsValidation = skipTlsValidation,
                 apiKey = apiKey,
                 loadBalancer = loadBalancer,
                 srvNameServer = srvNameServer,
@@ -162,18 +171,16 @@ data class ChronicleConnectionString(
     /**
      * Creates the appropriate gRPC [ChannelCredentials] based on this connection string's TLS settings.
      *
-     * When TLS is enabled, the channel trusts the Chronicle Kernel's auto-generated self-signed
-     * development certificate via [SelfSignedTrustManager] — see its documentation for the exact
-     * validation behavior.
+     * By default (`disableTls=false`, `skipTlsValidation=false`) the platform default trust
+     * manager performs full certificate validation — a server certificate that isn't trusted, or
+     * whose hostname doesn't match, is rejected exactly as any other TLS client would reject it.
+     * Set `skipTlsValidation=true` to accept any certificate via [InsecureTrustManager] instead.
      */
-    fun createCredentials(): ChannelCredentials =
-        if (disableTls) {
-            InsecureChannelCredentials.create()
-        } else {
-            TlsChannelCredentials.newBuilder()
-                .trustManager(SelfSignedTrustManager(host))
-                .build()
-        }
+    fun createCredentials(): ChannelCredentials = when {
+        disableTls -> InsecureChannelCredentials.create()
+        skipTlsValidation -> TlsChannelCredentials.newBuilder().trustManager(InsecureTrustManager()).build()
+        else -> TlsChannelCredentials.create()
+    }
 
     /** Renders the first configured server address as `host:port` (IPv6 hosts in bracket notation). */
     val target: String get() = addresses.first().toString()

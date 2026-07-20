@@ -37,7 +37,13 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
         val tokenEndpoint =
             "$scheme://${connectionString.host}:${connectionString.port}/connect/token"
 
-        return OAuthTokenProvider(tokenEndpoint, username, password, connectionString.host, connectionString.disableTls)
+        return OAuthTokenProvider(
+            tokenEndpoint,
+            username,
+            password,
+            connectionString.disableTls,
+            connectionString.skipTlsValidation
+        )
     }
 
     private fun createChannel(): ManagedChannel {
