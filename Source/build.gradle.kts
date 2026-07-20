@@ -9,12 +9,14 @@ version = providers.gradleProperty("version").getOrElse("0.0.0-SNAPSHOT")
 
 val coroutinesVersion = "1.9.0"
 val chronicleContractsVersion = "15.34.4"
+val dnsJavaVersion = "3.6.5"
 
 dependencies {
     api("io.cratis:chronicle-contracts:$chronicleContractsVersion")
     api("io.grpc:grpc-netty-shaded:1.70.0")
     api("com.google.code.gson:gson:2.11.0")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
+    api("dnsjava:dnsjava:$dnsJavaVersion")
     api(kotlin("reflect"))
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
