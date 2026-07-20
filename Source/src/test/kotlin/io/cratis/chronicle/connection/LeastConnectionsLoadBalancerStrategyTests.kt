@@ -45,14 +45,14 @@ class LeastConnectionsLoadBalancerStrategyTests {
         every { httpClient.send(capture(requests), any<HttpResponse.BodyHandler<String>>()) } answers {
             val uri = requests.captured.uri().toString()
             when {
-                uri.contains("a.example.com") && uri.endsWith("/connections/count") -> response(200, """{"count":20}""")
-                uri.contains("b.example.com") && uri.endsWith("/connections/count") -> response(200, """{"count":1}""")
+                uri.contains("a.example.com") && uri.endsWith("/connections/count") -> response(200, "20")
+                uri.contains("b.example.com") && uri.endsWith("/connections/count") -> response(200, "1")
                 uri.endsWith("/connections/reserve") -> response(200, "")
                 else -> response(404, "")
             }
         }
 
-        val strategy = LeastConnectionsLoadBalancerStrategy(httpClient = httpClient)
+        val strategy = LeastConnectionsLoadBalancerStrategy(maxSelectionJitterMs = 0, httpClient = httpClient)
         val selected = strategy.select(listOf(addressA, addressB))
 
         assertEquals(addressB, selected)
@@ -60,22 +60,22 @@ class LeastConnectionsLoadBalancerStrategyTests {
     }
 
     @Test
-    fun `treats a failed probe as zero connections rather than failing selection`() = runBlocking {
+    fun `treats a failed probe as maximally loaded rather than failing selection`() = runBlocking {
         val httpClient = mockk<HttpClient>()
         every {
             httpClient.send(match { it.uri().toString().contains("a.example.com") && it.uri().toString().endsWith("/connections/count") }, any<HttpResponse.BodyHandler<String>>())
         } throws IOException("connection refused")
         every {
             httpClient.send(match { it.uri().toString().contains("b.example.com") && it.uri().toString().endsWith("/connections/count") }, any<HttpResponse.BodyHandler<String>>())
-        } returns response(200, """{"count":20}""")
+        } returns response(200, "20")
         every {
             httpClient.send(match { it.uri().toString().endsWith("/connections/reserve") }, any<HttpResponse.BodyHandler<String>>())
         } returns response(200, "")
 
-        val strategy = LeastConnectionsLoadBalancerStrategy(httpClient = httpClient)
+        val strategy = LeastConnectionsLoadBalancerStrategy(maxSelectionJitterMs = 0, httpClient = httpClient)
         val selected = strategy.select(listOf(addressA, addressB))
 
-        assertEquals(addressA, selected)
+        assertEquals(addressB, selected)
     }
 
     @Test
@@ -83,10 +83,10 @@ class LeastConnectionsLoadBalancerStrategyTests {
         val httpClient = mockk<HttpClient>()
         val requests = slot<HttpRequest>()
         every { httpClient.send(capture(requests), any<HttpResponse.BodyHandler<String>>()) } answers {
-            response(200, """{"count":0}""")
+            response(200, "0")
         }
 
-        val strategy = LeastConnectionsLoadBalancerStrategy(disableTls = true, httpClient = httpClient)
+        val strategy = LeastConnectionsLoadBalancerStrategy(disableTls = true, maxSelectionJitterMs = 0, httpClient = httpClient)
         strategy.select(listOf(addressA, addressB))
 
         assertEquals("http", requests.captured.uri().scheme)
