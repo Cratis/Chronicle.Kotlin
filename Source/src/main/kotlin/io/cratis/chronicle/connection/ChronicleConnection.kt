@@ -38,10 +38,13 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
     val services: ChronicleServices by lazy { ChronicleServices(channel) }
 
     private val connectionManager: ConnectionManager by lazy {
-        ConnectionManager(services.connection).also { it.connect() }
+        ConnectionManager(KeepAliveConnections(services.connection)).also { it.connect() }
     }
 
-    /** The stable client connection ID shared across all reducer and reactor registrations. */
+    /** Tracks whether the client is connected, and under which connection ID. */
+    val lifecycle: ConnectionLifecycle get() = connectionManager.lifecycle
+
+    /** The current client connection ID. Rotates on every reconnect. */
     val connectionId: String get() = connectionManager.connectionId
 
     private suspend fun resolveAndSelect(): ChronicleServerAddress {
@@ -91,7 +94,7 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
     }
 
     fun disconnect() {
-        connectionManager.disconnect()
+        connectionManager.close()
         if (!channel.isShutdown) {
             channel.shutdown()
             if (!channel.awaitTermination(5, TimeUnit.SECONDS)) {
