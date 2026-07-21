@@ -6,6 +6,7 @@ package io.cratis.chronicle.observation
 import Cratis.Chronicle.Contracts.Observation.Reactors.ObservationReactors
 import Cratis.Chronicle.Contracts.Observation.Reactors.ReactorsGrpcKt
 import com.google.gson.Gson
+import io.cratis.chronicle.connection.ConnectionLifecycle
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.events.EventType
@@ -13,11 +14,15 @@ import io.cratis.chronicle.events.EventTypeDescriptor
 import io.cratis.chronicle.events.EventTypeGeneration
 import io.cratis.chronicle.events.EventTypeId
 import io.cratis.chronicle.identity.Identity
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.util.UUID
@@ -30,7 +35,7 @@ private val gson = Gson()
 class ReactorsService(
     private val eventStoreName: String,
     private val namespace: String,
-    private val connectionId: String,
+    private val lifecycle: ConnectionLifecycle,
     private val stub: ReactorsGrpcKt.ReactorsCoroutineStub
 ) : IReactorsService {
 
@@ -66,12 +71,40 @@ class ReactorsService(
                 .build()
         }
 
+        // Re-register on every connection, not just the first. The kernel keys a
+        // subscription by connection id and drops it when the client is evicted, so an
+        // observation established under an earlier connection is dead once we reconnect.
+        return CoroutineScope(Dispatchers.IO).launch {
+            lifecycle.connections().collectLatest { connectionId ->
+                while (isActive) {
+                    try {
+                        observe(reactorId, reactor, connectionId, eventTypes, handlersByEventTypeId)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        System.err.println("[ReactorsService] '$reactorId' failed: ${e.message}")
+                    }
+
+                    // The kernel closes a cross-store (inbox) stream rather than tailing it
+                    // forever, so a stream that ends cleanly still has to be re-established.
+                    delay(REOBSERVE_DELAY_MS)
+                }
+            }
+        }
+    }
+
+    private suspend fun observe(
+        reactorId: String,
+        reactor: Any,
+        connectionId: String,
+        eventTypes: List<ObservationReactors.EventTypeWithKeyExpression>,
+        handlersByEventTypeId: Map<String, Pair<kotlin.reflect.KFunction<*>, KClass<*>>>
+    ) {
         // Use a Channel instead of MutableSharedFlow so that messages sent before
         // the gRPC stub starts collecting are buffered and not dropped.
         val requests = Channel<ObservationReactors.ReactorMessage>(Channel.BUFFERED)
 
-        return CoroutineScope(Dispatchers.IO).launch {
-            try {
+        try {
             requests.send(
                 ObservationReactors.ReactorMessage.newBuilder()
                     .setContent(
@@ -149,10 +182,16 @@ class ReactorsService(
                         .build()
                 )
             }
-            } catch (e: Exception) {
-                System.err.println("[ReactorsService] '$reactorId' failed: ${e.message}")
-            }
+        } finally {
+            // Leaking the channel would strand a dead stream holding buffered messages
+            // every time an observation is re-established.
+            requests.close()
         }
+    }
+
+    private companion object {
+        /** How long to wait before re-establishing an observation whose stream ended. */
+        const val REOBSERVE_DELAY_MS = 2_000L
     }
 
     private fun buildEventContext(ctx: ObservationReactors.EventContext): EventContext {

@@ -6,15 +6,20 @@ package io.cratis.chronicle.observation
 import Cratis.Chronicle.Contracts.Observation.Reducers.ObservationReducers
 import Cratis.Chronicle.Contracts.Observation.Reducers.ReducersGrpcKt
 import com.google.gson.Gson
+import io.cratis.chronicle.connection.ConnectionLifecycle
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.readModels.ReadModel
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
@@ -26,7 +31,7 @@ private val gson = Gson()
 class ReducersService(
     private val eventStoreName: String,
     private val namespace: String,
-    private val connectionId: String,
+    private val lifecycle: ConnectionLifecycle,
     private val stub: ReducersGrpcKt.ReducersCoroutineStub,
     private val defaultSinkTypeId: String = WellKnownSinkTypes.MONGODB,
     private val readModels: io.cratis.chronicle.readModels.ReadModelsService? = null
@@ -80,20 +85,30 @@ class ReducersService(
                 .build()
         }
 
-        // Use a Channel instead of MutableSharedFlow so that messages sent before
-        // the gRPC stub starts collecting are buffered and not dropped.
-        val requests = Channel<ObservationReducers.ReducerMessage>(Channel.BUFFERED)
-
+        // Re-register on every connection, not just the first. The kernel keys a
+        // subscription by connection id and drops it when the client is evicted, so an
+        // observation established under an earlier connection is dead once we reconnect.
         return CoroutineScope(Dispatchers.IO).launch {
-            try { doObserve(requests, eventTypes, reducer, reducerId, readModelClass, readModelName, handlersByEventTypeId) }
-            catch (e: Exception) {
-                System.err.println("[ReducersService] '$reducerId' registration failed: ${e.message}")
+            lifecycle.connections().collectLatest { connectionId ->
+                while (isActive) {
+                    try {
+                        doObserve(connectionId, eventTypes, reducer, reducerId, readModelClass, readModelName, handlersByEventTypeId)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        System.err.println("[ReducersService] '$reducerId' failed: ${e.message}")
+                    }
+
+                    // The kernel closes a cross-store (inbox) stream rather than tailing it
+                    // forever, so a stream that ends cleanly still has to be re-established.
+                    delay(REOBSERVE_DELAY_MS)
+                }
             }
         }
     }
 
     private suspend fun doObserve(
-        requests: kotlinx.coroutines.channels.Channel<ObservationReducers.ReducerMessage>,
+        connectionId: String,
         eventTypes: List<ObservationReducers.EventTypeWithKeyExpression>,
         reducer: Any,
         reducerId: String,
@@ -101,6 +116,10 @@ class ReducersService(
         readModelName: String,
         handlersByEventTypeId: Map<String, Pair<kotlin.reflect.KFunction<*>, KClass<*>>>
     ) {
+        // Use a Channel instead of MutableSharedFlow so that messages sent before
+        // the gRPC stub starts collecting are buffered and not dropped.
+        val requests = Channel<ObservationReducers.ReducerMessage>(Channel.BUFFERED)
+        try {
             requests.send(
                 ObservationReducers.ReducerMessage.newBuilder()
                     .setContent(
@@ -190,5 +209,15 @@ class ReducersService(
                         .build()
                 )
             }
+        } finally {
+            // Leaking the channel would strand a dead stream holding buffered messages
+            // every time an observation is re-established.
+            requests.close()
+        }
+    }
+
+    private companion object {
+        /** How long to wait before re-establishing an observation whose stream ended. */
+        const val REOBSERVE_DELAY_MS = 2_000L
     }
 }
