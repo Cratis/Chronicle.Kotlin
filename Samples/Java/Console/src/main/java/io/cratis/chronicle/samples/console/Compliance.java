@@ -4,6 +4,7 @@
 package io.cratis.chronicle.samples.console;
 
 import io.cratis.chronicle.IEventStore;
+import io.cratis.chronicle.compliance.Pii;
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.eventSequences.AppendResult;
 import io.cratis.chronicle.readModels.ReadModel;
@@ -18,28 +19,34 @@ import io.cratis.chronicle.java.ReadModelsJavaBridge;
 @EventType
 record CustomerRegistered(
     String customerId,
-    String email,
-    String fullName,
-    String phoneNumber
+    @Pii(description = "Customer email address") String email,
+    @Pii(description = "Customer full legal name") String fullName,
+    @Pii(description = "Customer phone contact number") String phoneNumber
 ) {}
 
 @EventType
 record CustomerAddressUpdated(
     String customerId,
-    String streetAddress,
-    String city,
-    String postalCode,
+    @Pii(description = "Customer street address") String streetAddress,
+    @Pii(description = "City of residence") String city,
+    @Pii(description = "Postal code") String postalCode,
     String country
 ) {}
 
 @ReadModel
 class Customer {
     private String id = "";
+    @Pii(description = "Customer full legal name")
     private String fullName = "";
+    @Pii(description = "Customer email address")
     private String email = "";
+    @Pii(description = "Customer phone contact number")
     private String phoneNumber = "";
+    @Pii(description = "Customer street address")
     private String streetAddress = "";
+    @Pii(description = "City of residence")
     private String city = "";
+    @Pii(description = "Postal code")
     private String postalCode = "";
     private String country = "";
     private String customerNumber = "";
@@ -85,11 +92,17 @@ class Customer {
 @ReadModel
 class CustomerDetails {
     private String id = "";
+    @Pii(description = "Customer full legal name")
     private String fullName = "";
+    @Pii(description = "Customer email address")
     private String email = "";
+    @Pii(description = "Customer phone contact number")
     private String phoneNumber = "";
+    @Pii(description = "Customer street address")
     private String streetAddress = "";
+    @Pii(description = "City of residence")
     private String city = "";
+    @Pii(description = "Postal code")
     private String postalCode = "";
     private String country = "";
 
