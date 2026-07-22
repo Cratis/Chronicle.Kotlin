@@ -15,7 +15,6 @@ dependencies {
     runtimeOnly 'io.grpc:grpc-netty-shaded:1.70.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.9.0'
-    implementation 'com.google.code.gson:gson:2.11.0'
 }
 
 java {

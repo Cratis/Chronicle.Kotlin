@@ -1,0 +1,35 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+package io.cratis.chronicle.connection
+
+import java.net.Socket
+import java.security.cert.X509Certificate
+import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLEngine
+import javax.net.ssl.X509ExtendedTrustManager
+
+/**
+ * Trust manager that accepts any certificate chain and any hostname — no validation at all.
+ *
+ * This is the default trust manager: `skipTlsValidation` defaults to `true`, since Chronicle
+ * kernels commonly serve a self-signed certificate the client has no way to validate. Set
+ * `skipTlsValidation=false` to require full certificate chain validation against the platform
+ * default trust manager instead, against a server whose certificate is actually verifiable.
+ */
+class InsecureTrustManager : X509ExtendedTrustManager() {
+    override fun checkClientTrusted(chain: Array<out X509Certificate>, authType: String) = Unit
+    override fun checkClientTrusted(chain: Array<out X509Certificate>, authType: String, socket: Socket) = Unit
+    override fun checkClientTrusted(chain: Array<out X509Certificate>, authType: String, engine: SSLEngine) = Unit
+    override fun checkServerTrusted(chain: Array<out X509Certificate>, authType: String) = Unit
+    override fun checkServerTrusted(chain: Array<out X509Certificate>, authType: String, socket: Socket) = Unit
+    override fun checkServerTrusted(chain: Array<out X509Certificate>, authType: String, engine: SSLEngine) = Unit
+    override fun getAcceptedIssuers(): Array<X509Certificate> = emptyArray()
+
+    companion object {
+        /** Builds an [SSLContext] that trusts any certificate via [InsecureTrustManager]. */
+        fun sslContext(): SSLContext = SSLContext.getInstance("TLS").apply {
+            init(null, arrayOf(InsecureTrustManager()), null)
+        }
+    }
+}

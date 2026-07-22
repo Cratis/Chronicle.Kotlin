@@ -3,39 +3,37 @@
 
 package io.cratis.chronicle.samples.console
 
-import com.google.gson.Gson
 import io.cratis.chronicle.EventStore
+import io.cratis.chronicle.compliance.Pii
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.readModels.ReadModel
-
-private val gson = Gson()
 
 @EventType
 data class CustomerRegistered(
     val customerId: String,
-    val email: String,
-    val fullName: String,
-    val phoneNumber: String
+    @Pii(description = "Customer email address") val email: String,
+    @Pii(description = "Customer full legal name") val fullName: String,
+    @Pii(description = "Customer phone contact number") val phoneNumber: String
 )
 
 @EventType
 data class CustomerAddressUpdated(
     val customerId: String,
-    val streetAddress: String,
-    val city: String,
-    val postalCode: String,
+    @Pii(description = "Customer street address") val streetAddress: String,
+    @Pii(description = "City of residence") val city: String,
+    @Pii(description = "Postal code") val postalCode: String,
     val country: String
 )
 
 @ReadModel
 data class Customer(
     val id: String = "",
-    val fullName: String = "",
-    val email: String = "",
-    val phoneNumber: String = "",
-    val streetAddress: String = "",
-    val city: String = "",
-    val postalCode: String = "",
+    @Pii(description = "Customer full legal name") val fullName: String = "",
+    @Pii(description = "Customer email address") val email: String = "",
+    @Pii(description = "Customer phone contact number") val phoneNumber: String = "",
+    @Pii(description = "Customer street address") val streetAddress: String = "",
+    @Pii(description = "City of residence") val city: String = "",
+    @Pii(description = "Postal code") val postalCode: String = "",
     val country: String = "",
     val customerNumber: String = "",
     val accountStatus: String = "active",
@@ -45,12 +43,12 @@ data class Customer(
 @ReadModel
 data class CustomerDetails(
     val id: String = "",
-    val fullName: String = "",
-    val email: String = "",
-    val phoneNumber: String = "",
-    val streetAddress: String = "",
-    val city: String = "",
-    val postalCode: String = "",
+    @Pii(description = "Customer full legal name") val fullName: String = "",
+    @Pii(description = "Customer email address") val email: String = "",
+    @Pii(description = "Customer phone contact number") val phoneNumber: String = "",
+    @Pii(description = "Customer street address") val streetAddress: String = "",
+    @Pii(description = "City of residence") val city: String = "",
+    @Pii(description = "Postal code") val postalCode: String = "",
     val country: String = ""
 )
 

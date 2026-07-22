@@ -13,7 +13,6 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 import java.time.Instant
-import javax.net.ssl.SSLContext
 
 private const val TOKEN_EXPIRY_BUFFER_SECONDS = 60L
 private const val DEFAULT_TOKEN_EXPIRY_SECONDS = 3600L
@@ -22,6 +21,20 @@ private data class OAuthTokenResponse(
     val access_token: String,
     val expires_in: Long? = null
 )
+
+/**
+ * Builds an [HttpClient] honoring the `disableTls`/`skipTlsValidation` connection string options —
+ * shared by [OAuthTokenProvider] and [LeastConnectionsLoadBalancerStrategy].
+ *
+ * When TLS is enabled, [skipTlsValidation] defaults to `true`, accepting any certificate via
+ * [InsecureTrustManager]. Set it to `false` to require full certificate chain validation against
+ * the platform default trust manager instead.
+ */
+internal fun createChronicleHttpClient(disableTls: Boolean, skipTlsValidation: Boolean): HttpClient = when {
+    disableTls -> HttpClient.newHttpClient()
+    skipTlsValidation -> HttpClient.newBuilder().sslContext(InsecureTrustManager.sslContext()).build()
+    else -> HttpClient.newHttpClient()
+}
 
 /** Provides Bearer tokens for gRPC calls. */
 interface ITokenProvider {
@@ -40,25 +53,19 @@ object NoOpTokenProvider : ITokenProvider {
  * @param tokenEndpoint The full URL of the /connect/token endpoint.
  * @param clientId The OAuth client identifier.
  * @param clientSecret The OAuth client secret.
- * @param host The Chronicle server host, used to trust its self-signed development certificate over TLS.
  * @param disableTls Whether TLS is disabled for the token request.
+ * @param skipTlsValidation Whether to accept any TLS certificate for the token request instead of
+ *   validating it against the platform default trust manager. Defaults to `true`.
  */
 class OAuthTokenProvider(
     private val tokenEndpoint: String,
     private val clientId: String,
     private val clientSecret: String,
-    host: String = "localhost",
-    disableTls: Boolean = false
+    disableTls: Boolean = false,
+    skipTlsValidation: Boolean = true
 ) : ITokenProvider {
 
-    private val httpClient = if (disableTls) {
-        HttpClient.newHttpClient()
-    } else {
-        val sslContext = SSLContext.getInstance("TLS").apply {
-            init(null, arrayOf(SelfSignedTrustManager(host)), null)
-        }
-        HttpClient.newBuilder().sslContext(sslContext).build()
-    }
+    private val httpClient = createChronicleHttpClient(disableTls, skipTlsValidation)
     private val gson = Gson()
     private val mutex = Mutex()
 

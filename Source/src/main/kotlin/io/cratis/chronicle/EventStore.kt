@@ -17,6 +17,7 @@ import io.cratis.chronicle.observation.ReactorsService
 import io.cratis.chronicle.observation.ReducersService
 import io.cratis.chronicle.projections.IProjectionsService
 import io.cratis.chronicle.projections.ProjectionsService
+import io.cratis.chronicle.connection.ConnectionLifecycle
 import io.cratis.chronicle.readModels.IReadModelsService
 import io.cratis.chronicle.readModels.ReadModelsService
 import io.cratis.chronicle.seeding.EventSeedingService
@@ -27,7 +28,7 @@ class EventStore(
     override val name: String,
     override val namespace: String,
     private val services: ChronicleServices,
-    private val connectionId: String,
+    private val lifecycle: ConnectionLifecycle,
     private val defaultSinkTypeId: String = io.cratis.chronicle.sinks.WellKnownSinkTypes.MONGODB
 ) : IEventStore {
 
@@ -46,11 +47,11 @@ class EventStore(
     override val readModels: IReadModelsService get() = readModelsService
 
     override val reactors: IReactorsService by lazy {
-        ReactorsService(name, namespace, connectionId, services.reactors)
+        ReactorsService(name, namespace, lifecycle, services.reactors)
     }
 
     override val reducers: IReducersService by lazy {
-        ReducersService(name, namespace, connectionId, services.reducers, defaultSinkTypeId, readModelsService)
+        ReducersService(name, namespace, lifecycle, services.reducers, defaultSinkTypeId, readModelsService)
     }
 
     override val projections: IProjectionsService by lazy {
