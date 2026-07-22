@@ -51,8 +51,7 @@ export CHRONICLE_SINK_TYPE="${CHRONICLE_SINK_TYPE:-$SINK_TYPE}"
 if "$USE_DOCKER"; then
     echo "▶  Starting Chronicle ($DATABASE) via docker compose..."
     docker compose --profile "$COMPOSE_PROFILE" -f "$SCRIPT_DIR/docker-compose.yml" up -d
-    echo "✓  Chronicle  → http://localhost:8080  (Workbench)"
-    echo "✓  gRPC       → localhost:35000"
+    echo "✓  Chronicle  → localhost:35000  (gRPC + API, TLS with self-signed dev cert)"
     echo ""
     trap 'echo ""; echo "▶  Stopping containers..."; docker compose --profile "$COMPOSE_PROFILE" -f "$SCRIPT_DIR/docker-compose.yml" down' EXIT
 fi
