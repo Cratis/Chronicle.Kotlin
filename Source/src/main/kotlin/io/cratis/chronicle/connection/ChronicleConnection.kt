@@ -18,27 +18,21 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
     private val loadBalancerStrategy = LoadBalancerStrategy.forConnectionString(connectionString)
 
     /**
-     * The server address the channel and token provider connect to.
-     *
-     * Resolved once per [ChronicleConnection] instance: a `chronicle+srv://` connection string is
-     * looked up via DNS through [srvResolver], then [loadBalancerStrategy] picks one address from
-     * the result (or from the connection string's explicit [ChronicleConnectionString.addresses]
-     * for a non-SRV, possibly multi-host, connection string). Any reconnect/retry logic added to
-     * this class in the future should call [resolveAndSelect] again rather than reuse this cached
-     * value, so a server that comes up, goes down, or a DNS record that changes is picked up on
-     * the next attempt.
+     * The channel every stub holds. The [SwappableChannel] indirection is what makes
+     * [rebuildChannel] possible: stubs live as long as this connection, while the managed
+     * channel underneath is replaced whenever the session drops.
      */
-    private val selectedAddress: ChronicleServerAddress by lazy {
-        runBlocking(Dispatchers.IO) { resolveAndSelect() }
+    private val channel: SwappableChannel by lazy {
+        SwappableChannel(runBlocking(Dispatchers.IO) { dial() })
     }
-
-    private val tokenProvider: ITokenProvider by lazy { createTokenProvider() }
-    private val channel: ManagedChannel by lazy { createChannel() }
 
     val services: ChronicleServices by lazy { ChronicleServices(channel) }
 
     private val connectionManager: ConnectionManager by lazy {
-        ConnectionManager(KeepAliveConnections(services.connection)).also { it.connect() }
+        ConnectionManager(
+            KeepAliveConnections(services.connection),
+            refreshChannel = { rebuildChannel() }
+        ).also { it.connect() }
     }
 
     /** Tracks whether the client is connected, and under which connection ID. */
@@ -46,6 +40,42 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
 
     /** The current client connection ID. Rotates on every reconnect. */
     val connectionId: String get() = connectionManager.connectionId
+
+    /**
+     * Dials a fresh managed channel for a newly resolved and selected server address.
+     *
+     * Every dial resolves again rather than reusing an earlier result: a `chronicle+srv://`
+     * connection string is looked up via DNS through [srvResolver], then
+     * [loadBalancerStrategy] picks one address from the result (or from the connection
+     * string's explicit [ChronicleConnectionString.addresses] for a non-SRV, possibly
+     * multi-host, connection string). A server that comes up, goes down, or a DNS record
+     * that changes is therefore picked up on the next dial, and the OAuth token endpoint
+     * follows the dialed address.
+     */
+    private suspend fun dial(): ManagedChannel {
+        val address = resolveAndSelect()
+        val builder = Grpc.newChannelBuilderForAddress(
+            address.host,
+            address.port,
+            connectionString.createCredentials()
+        )
+        builder.intercept(BearerTokenInterceptor(createTokenProvider(address)))
+        return builder.build()
+    }
+
+    /**
+     * Drops the current channel and dials a fresh one.
+     *
+     * Called by [ConnectionManager] before every reconnect attempt: the session that ran
+     * on the previous channel is gone, and retrying on it could fail identically forever —
+     * the address it dials was pinned when it was built.
+     */
+    private suspend fun rebuildChannel() {
+        val previous = channel.swap(dial())
+        // The kernel has already evicted the session that ran on it and dropped its
+        // observers — nothing on the previous channel is worth draining.
+        previous.shutdownNow()
+    }
 
     private suspend fun resolveAndSelect(): ChronicleServerAddress {
         val addresses = if (connectionString.isSrv) {
@@ -56,7 +86,7 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
         return loadBalancerStrategy.select(addresses)
     }
 
-    private fun createTokenProvider(): ITokenProvider {
+    private fun createTokenProvider(address: ChronicleServerAddress): ITokenProvider {
         val hasApiKey = connectionString.apiKey != null
         if (hasApiKey) return NoOpTokenProvider
 
@@ -67,7 +97,7 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
 
         val scheme = if (connectionString.disableTls) "http" else "https"
         val tokenEndpoint =
-            "$scheme://${selectedAddress.host}:${selectedAddress.port}/connect/token"
+            "$scheme://${address.host}:${address.port}/connect/token"
 
         return OAuthTokenProvider(
             tokenEndpoint,
@@ -78,16 +108,6 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
         )
     }
 
-    private fun createChannel(): ManagedChannel {
-        val builder = Grpc.newChannelBuilderForAddress(
-            selectedAddress.host,
-            selectedAddress.port,
-            connectionString.createCredentials()
-        )
-        builder.intercept(BearerTokenInterceptor(tokenProvider))
-        return builder.build()
-    }
-
     fun connect() {
         @Suppress("UNUSED_EXPRESSION")
         connectionManager
@@ -95,10 +115,11 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
 
     fun disconnect() {
         connectionManager.close()
-        if (!channel.isShutdown) {
-            channel.shutdown()
-            if (!channel.awaitTermination(5, TimeUnit.SECONDS)) {
-                channel.shutdownNow()
+        val managed = channel.current
+        if (!managed.isShutdown) {
+            managed.shutdown()
+            if (!managed.awaitTermination(5, TimeUnit.SECONDS)) {
+                managed.shutdownNow()
             }
         }
     }

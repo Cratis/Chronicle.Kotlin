@@ -35,12 +35,17 @@ import kotlin.random.Random
  * Eviction does not close the `Connect` stream, so a lost connection usually shows up as a
  * stream that simply goes silent. A watchdog therefore treats a gap between keep-alives as
  * a lost connection, and the session is re-established either way.
+ *
+ * Every re-establishment first asks [refreshChannel] for a fresh channel — retrying on the
+ * channel a session just died on could fail identically forever, because the address it
+ * dials was pinned when the channel was built.
  */
 class ConnectionManager(
     private val connections: IKeepAliveConnections,
     val lifecycle: ConnectionLifecycle = ConnectionLifecycle(),
     dispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val currentTimeMillis: () -> Long = System::currentTimeMillis
+    private val currentTimeMillis: () -> Long = System::currentTimeMillis,
+    private val refreshChannel: suspend () -> Unit = {}
 ) {
     /** Stable client identity for the current connection, rotated on every reconnect. */
     val connectionId: String get() = lifecycle.connectionId
@@ -72,6 +77,13 @@ class ConnectionManager(
 
         while (coroutineContext.isActive) {
             try {
+                // A drop condemns the channel the session ran on: gRPC redials dead
+                // transports on its own, but the address it dials stays pinned to
+                // whatever was resolved when the channel was built. Refreshing the
+                // channel before every retry re-resolves DNS/SRV, re-selects a host,
+                // and rebuilds authentication, so a replaced host or a changed record
+                // is not retried forever.
+                if (attempt > 0) refreshChannel()
                 runSession()
                 attempt = 0
             } catch (e: CancellationException) {
