@@ -15,7 +15,7 @@ import Cratis.Chronicle.Contracts.Projections.ProjectionsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.Seeding.EventSeedingGrpcKt
 
-class ChronicleServices(channel: io.grpc.ManagedChannel) {
+class ChronicleServices(channel: io.grpc.Channel) {
     val connection: ConnectionServiceGrpcKt.ConnectionServiceCoroutineStub =
         ConnectionServiceGrpcKt.ConnectionServiceCoroutineStub(channel)
     val eventSequences: EventSequencesGrpcKt.EventSequencesCoroutineStub =

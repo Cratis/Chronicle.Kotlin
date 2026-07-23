@@ -49,10 +49,14 @@ private class FakeConnections(
 @OptIn(ExperimentalCoroutinesApi::class)
 class ConnectionManagerTests {
 
-    private fun TestScope.managerFor(connections: IKeepAliveConnections) = ConnectionManager(
+    private fun TestScope.managerFor(
+        connections: IKeepAliveConnections,
+        refreshChannel: suspend () -> Unit = {}
+    ) = ConnectionManager(
         connections,
         dispatcher = StandardTestDispatcher(testScheduler),
-        currentTimeMillis = { testScheduler.currentTime }
+        currentTimeMillis = { testScheduler.currentTime },
+        refreshChannel = refreshChannel
     )
 
     @Test
@@ -134,6 +138,52 @@ class ConnectionManagerTests {
 
         // Reusing an evicted id would re-register observers the kernel has already dropped.
         assertNotEquals(before, after)
+    }
+
+    @Test
+    fun `refreshes the channel before every reconnect attempt`() = runTest {
+        val connections = FakeConnections(keepAlives = 0, thenFail = true)
+        var refreshes = 0
+        val manager = managerFor(connections) { refreshes++ }
+
+        manager.connect()
+        advanceTimeBy(30_000)
+        manager.close()
+
+        // Retrying on the channel a session just died on could fail identically forever —
+        // the address it dials was pinned when the channel was built.
+        assertTrue(connections.connectCount >= 2, "expected a retry, got ${connections.connectCount}")
+        assertTrue(refreshes >= 1, "expected a channel refresh before retrying, got $refreshes")
+    }
+
+    @Test
+    fun `does not refresh the channel for the first connect`() = runTest {
+        var refreshes = 0
+        val manager = managerFor(FakeConnections(keepAlives = 1)) { refreshes++ }
+
+        manager.connect()
+        advanceTimeBy(1_000)
+        manager.close()
+
+        assertEquals(0, refreshes)
+    }
+
+    @Test
+    fun `keeps retrying when refreshing the channel fails`() = runTest {
+        val connections = FakeConnections(keepAlives = 0, thenFail = true)
+        var refreshes = 0
+        val manager = managerFor(connections) {
+            refreshes++
+            throw RuntimeException("dns down")
+        }
+
+        manager.connect()
+        advanceTimeBy(120_000)
+        manager.close()
+
+        // A failed rebuild (e.g. DNS down) must never end the loop — it backs off and
+        // tries a fresh dial again, exactly like a failed session.
+        assertTrue(refreshes >= 2, "expected refresh retries, got $refreshes")
     }
 
     @Test
