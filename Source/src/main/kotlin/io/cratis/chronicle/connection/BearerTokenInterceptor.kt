@@ -19,7 +19,11 @@ private val AUTHORIZATION_HEADER: Metadata.Key<String> =
  * gRPC client interceptor that attaches a Bearer token to every outbound call.
  *
  * The token is obtained synchronously from [tokenProvider] before each call so it is
- * always fresh. The provider is responsible for caching and renewal.
+ * always fresh. The provider is responsible for caching and renewal. Attaching the token
+ * per call rather than at channel build time means an expiring token never invalidates
+ * the channel: streams opened while a token was valid stay authenticated, and every new
+ * call carries a current token. When no token can be obtained the call proceeds without
+ * auth and fails with the server's rejection — recovery is the session machinery's job.
  */
 class BearerTokenInterceptor(private val tokenProvider: ITokenProvider) : ClientInterceptor {
 
