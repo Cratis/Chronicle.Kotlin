@@ -11,8 +11,7 @@ on:
     branches:
       - "**"
     paths:
-      - "Documentation/client-snippets/**"
-      - "Documentation/client-snippets-java/**"
+      - "Documentation/**/*.md"
       - "Documentation/validate-client-snippets.py"
       - "Source/**"
       - ".github/workflows/client-snippets.yml"
@@ -20,8 +19,7 @@ on:
   push:
     branches: ["main"]
     paths:
-      - "Documentation/client-snippets/**"
-      - "Documentation/client-snippets-java/**"
+      - "Documentation/**/*.md"
       - "Documentation/validate-client-snippets.py"
       - "Source/**"
       - ".github/workflows/client-snippets.yml"

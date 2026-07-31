@@ -12,12 +12,16 @@ The entire example is a self-contained Gradle project.
 
 ## 1. Add the dependency
 
+The client is published to Maven Central as `io.cratis:chronicle`.
+
 ### Kotlin Setup
+
+<!-- validate: skip -->
 
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.cratis:chronicle:0.1.0")
+    implementation("io.cratis:chronicle:2.1.1")
 }
 ```
 
@@ -26,119 +30,169 @@ dependencies {
 ```groovy
 // build.gradle
 dependencies {
-    implementation 'io.cratis:chronicle:0.1.0'
+    implementation 'io.cratis:chronicle:2.1.1'
 }
 ```
 
 ## 2. Connect to the kernel
 
-`ChronicleClient` is the entry point. For local development use the
-`development()` factory, which connects to `localhost:35000`:
+`ChronicleClient` is the entry point, and it takes a `ChronicleOptions`.
+For local development use the `development()` factory, which points at
+`localhost:35000` over TLS with the standard development credentials:
 
 ### Kotlin Development Setup
 
+<!-- validate: body -->
+
 ```kotlin
 import io.cratis.chronicle.ChronicleClient
+import io.cratis.chronicle.ChronicleOptions
 
-val client = ChronicleClient.development()
+val client = ChronicleClient(ChronicleOptions.development())
 val store = client.getEventStore("MyApp")
 ```
 
 ### Java Development Setup
 
+`ChronicleOptions` is a Kotlin `data class`, so its factory methods are
+reached through `Companion` from Java. The `namespace` argument has a
+default value in Kotlin only — Java must pass it explicitly.
+
+<!-- validate: body -->
+
 ```java
 import io.cratis.chronicle.ChronicleClient;
+import io.cratis.chronicle.ChronicleOptions;
+import io.cratis.chronicle.EventStore;
 
 var client = new ChronicleClient(ChronicleOptions.Companion.development());
-var store = client.getEventStore("MyApp");
+EventStore store = client.getEventStore("MyApp", "Default");
 ```
 
-For production, supply explicit options:
+For anything other than local development, supply a connection string.
+The grammar is `chronicle://<user>:<password>@<host>[:<port>][,<host>...][?<options>]`
+— see [Configuration](../reference/configuration.md) for the full set of
+hosts, options, and the `chronicle+srv://` form.
 
 ### Kotlin Production Setup
 
+<!-- validate: body -->
+
 ```kotlin
 val client = ChronicleClient(
-    ChronicleOptions(host = "chronicle.internal", port = 35000)
+    ChronicleOptions.fromConnectionString(
+        "chronicle://my-client:my-secret@chronicle.internal:35000"
+    )
 )
 ```
 
 ### Java Production Setup
 
+<!-- validate: body -->
+
 ```java
 var client = new ChronicleClient(
-    new ChronicleOptions("chronicle.internal", 35000)
+    ChronicleOptions.Companion.fromConnectionString(
+        "chronicle://my-client:my-secret@chronicle.internal:35000"
+    )
 );
 ```
 
-## 3. Define an event type
+## 3. Suspend functions and Java interop
 
-Annotate a data class or Java class with `@EventType`.
+Every call that talks to the kernel — appending, registering, querying —
+is a Kotlin `suspend` function. In Kotlin, call them from a coroutine;
+`runBlocking` is fine for a console application:
+
+<!-- validate: declarations -->
+
+```kotlin
+import kotlinx.coroutines.runBlocking
+
+fun main() = runBlocking {
+    val client = ChronicleClient(ChronicleOptions.development())
+    val store = client.getEventStore("MyApp")
+    // everything below happens inside this coroutine
+}
+```
+
+Java cannot call `suspend` functions directly. The client ships blocking
+bridges in `io.cratis.chronicle.java` — one per service — and the Java
+examples below use them:
+
+<!-- validate: declarations -->
+
+```java
+import io.cratis.chronicle.java.EventLogJavaBridge;
+import io.cratis.chronicle.java.EventTypesServiceJavaBridge;
+import io.cratis.chronicle.java.ReactorsServiceJavaBridge;
+import io.cratis.chronicle.java.ReadModelsJavaBridge;
+import io.cratis.chronicle.java.ReducersServiceJavaBridge;
+```
+
+## 4. Define an event type
+
+Annotate a data class or Java record with `@EventType`. The class name is
+used as the identifier, so no argument is needed.
 
 ### Kotlin Event Definition
 
-The `id` is a stable string identifier for the event type across deployments.
+<!-- validate: declarations -->
 
 ```kotlin
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "EmployeeHired")
+@EventType
 data class EmployeeHired(
-    val employeeId: String,
-    val firstName: String,
-    val lastName: String,
-    val department: String
+    val employeeId: String = "",
+    val firstName: String = "",
+    val lastName: String = "",
+    val department: String = ""
 )
 ```
 
 ### Java Event Definition
 
+<!-- validate: declarations -->
+
 ```java
 import io.cratis.chronicle.events.EventType;
 
 @EventType
-public class EmployeeHired {
-    private String employeeId;
-    private String firstName;
-    private String lastName;
-    private String department;
-
-    public EmployeeHired() {}
-
-    public EmployeeHired(String employeeId, String firstName,
-                         String lastName, String department) {
-        this.employeeId = employeeId;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.department = department;
-    }
-
-    // Getters and setters
-    public String getEmployeeId() { return employeeId; }
-    public void setEmployeeId(String employeeId) {
-        this.employeeId = employeeId;
-    }
-
-    public String getFirstName() { return firstName; }
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public String getLastName() { return lastName; }
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
-    public String getDepartment() { return department; }
-    public void setDepartment(String department) {
-        this.department = department;
-    }
-}
+public record EmployeeHired(
+    String employeeId,
+    String firstName,
+    String lastName,
+    String department
+) {}
 ```
 
-## 4. Append an event
+## 5. Register the event types
+
+Chronicle needs the schema for an event type before it will accept events
+of that type. Register them once at startup, before appending anything.
+
+### Kotlin Event Type Registration
+
+<!-- validate: body needs=store -->
+
+```kotlin
+store.eventTypes.register(EmployeeHired::class)
+```
+
+### Java Event Type Registration
+
+<!-- validate: body needs=store -->
+
+```java
+EventTypesServiceJavaBridge.register(store.getEventTypes(), EmployeeHired.class);
+```
+
+## 6. Append an event
 
 ### Kotlin Append Event
+
+<!-- validate: body needs=store -->
 
 ```kotlin
 val employeeId = "emp-001"
@@ -161,21 +215,27 @@ if (result.isSuccess) {
 
 ### Java Append Event
 
+<!-- validate: body needs=store -->
+
 ```java
+import java.util.stream.Collectors;
+
 String employeeId = "emp-001";
-var result = store.getEventLog().append(
+var result = EventLogJavaBridge.append(
+    store.getEventLog(),
     employeeId,
     new EmployeeHired(
         employeeId,
         "Jane",
         "Smith",
         "Engineering"
-    )
+    ),
+    null
 );
 
 if (result.isSuccess()) {
     System.out.println("Appended at sequence " +
-        result.getSequenceNumber().getValue());
+        EventLogJavaBridge.getSequenceNumber(result));
 } else {
     String violations =
         result.getConstraintViolations().stream()
@@ -185,55 +245,83 @@ if (result.isSuccess()) {
 }
 ```
 
-## 5. React to events
+`EventSequenceNumber` is a Kotlin value class, so it has no ordinary
+getter on the JVM — read the sequence number through
+`EventLogJavaBridge.getSequenceNumber` rather than off the result.
+
+## 7. React to events
 
 A reactor observes events and performs side effects (see
 [Reactors](/chronicle/reactors/) for the full model). Annotate the
 class with `@Reactor` and write one method per event type you want to
-handle.
+handle. The first parameter type is what selects the events a method
+receives — the method name is free.
 
 ### Kotlin Reactor
+
+<!-- validate: declarations -->
 
 ```kotlin
 import io.cratis.chronicle.observation.Reactor
 
 @Reactor
 class HrNotifications {
-    fun onEmployeeHired(event: EmployeeHired) {
+    fun employeeHired(event: EmployeeHired) {
         println("Welcome ${event.firstName} ${event.lastName} " +
                 "to ${event.department}!")
     }
 }
+```
 
-// Register and start observing
+Register it to start observing:
+
+<!-- validate: body needs=store -->
+
+```kotlin
 store.reactors.register(HrNotifications())
 ```
 
 ### Java Reactor
+
+<!-- validate: declarations -->
 
 ```java
 import io.cratis.chronicle.observation.Reactor;
 
 @Reactor
 public class HrNotifications {
-    public void onEmployeeHired(EmployeeHired event) {
-        System.out.println("Welcome " + event.getFirstName() +
-                          " " + event.getLastName() +
-                          " to " + event.getDepartment() + "!");
+    public void employeeHired(EmployeeHired event) {
+        System.out.println("Welcome " + event.firstName() +
+                          " " + event.lastName() +
+                          " to " + event.department() + "!");
     }
 }
-
-// Register and start observing
-store.getReactors().register(new HrNotifications());
 ```
 
-## 6. Build a read model
+Register it to start observing:
 
-A reducer folds a stream of events into a single mutable object (see
+<!-- validate: body needs=store -->
+
+```java
+ReactorsServiceJavaBridge.register(store.getReactors(), new HrNotifications());
+```
+
+## 8. Build a read model
+
+A reducer folds a stream of events into a single object (see
 [Reducers](/chronicle/reducers/) for the full model). The `@ReadModel`
 marks the read model class, and `@Reducer` marks the reducer.
 
+A reducer method takes the event, and optionally the current state. The
+state is `null` for the first event of an event source, so declare that
+parameter as nullable and fall back to a fresh instance.
+
+Registering a reducer registers its read model too — you only need to
+register a read model explicitly when nothing projects into it.
+
 ### Kotlin Read Model
+
+<!-- validate: declarations -->
 
 ```kotlin
 import io.cratis.chronicle.readModels.ReadModel
@@ -249,23 +337,34 @@ data class EmployeeProfile(
 
 @Reducer
 class EmployeeProfileReducer {
-    fun on(event: EmployeeHired, state: EmployeeProfile): EmployeeProfile =
-        state.copy(
+    fun employeeHired(
+        event: EmployeeHired,
+        state: EmployeeProfile?
+    ): EmployeeProfile =
+        (state ?: EmployeeProfile()).copy(
             id = event.employeeId,
             firstName = event.firstName,
             lastName = event.lastName,
             department = event.department
         )
 }
+```
 
+<!-- validate: body needs=store -->
+
+```kotlin
 store.reducers.register(EmployeeProfileReducer())
 ```
 
 ### Java Read Model
 
+Java needs one file per public type, so the read model and the reducer are
+two files.
+
+<!-- validate: declarations -->
+
 ```java
 import io.cratis.chronicle.readModels.ReadModel;
-import io.cratis.chronicle.observation.Reducer;
 
 @ReadModel
 public class EmployeeProfile {
@@ -295,30 +394,43 @@ public class EmployeeProfile {
         this.department = department;
     }
 }
+```
+
+<!-- validate: declarations -->
+
+```java
+import io.cratis.chronicle.observation.Reducer;
 
 @Reducer
 public class EmployeeProfileReducer {
-    public EmployeeProfile on(EmployeeHired event,
-                              EmployeeProfile state) {
+    public EmployeeProfile employeeHired(EmployeeHired event,
+                                         EmployeeProfile state) {
         EmployeeProfile result =
             state != null ? state : new EmployeeProfile();
-        result.setId(event.getEmployeeId());
-        result.setFirstName(event.getFirstName());
-        result.setLastName(event.getLastName());
-        result.setDepartment(event.getDepartment());
+        result.setId(event.employeeId());
+        result.setFirstName(event.firstName());
+        result.setLastName(event.lastName());
+        result.setDepartment(event.department());
         return result;
     }
 }
-
-store.getReducers().register(new EmployeeProfileReducer());
 ```
 
-## 7. Query a read model by key
+<!-- validate: body needs=store -->
+
+```java
+ReducersServiceJavaBridge.register(
+    store.getReducers(), new EmployeeProfileReducer());
+```
+
+## 9. Query a read model by key
 
 After events have been projected, query the read model by its event
 source identifier:
 
 ### Kotlin Query
+
+<!-- validate: body needs=store,employeeId -->
 
 ```kotlin
 val profile = store.readModels.getInstanceByKey(
@@ -330,9 +442,14 @@ println(profile?.firstName) // Jane
 
 ### Java Query
 
+<!-- validate: body needs=store,employeeId -->
+
 ```java
-EmployeeProfile profile = store.getReadModels()
-    .getInstanceByKey(EmployeeProfile.class, employeeId);
+EmployeeProfile profile = ReadModelsJavaBridge.getInstanceByKey(
+    store.getReadModels(),
+    EmployeeProfile.class,
+    employeeId
+);
 System.out.println(profile.getFirstName()); // Jane
 ```
 

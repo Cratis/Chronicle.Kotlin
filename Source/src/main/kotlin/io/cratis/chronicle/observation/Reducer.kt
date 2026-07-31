@@ -6,7 +6,7 @@ package io.cratis.chronicle.observation
 /**
  * Marks a class as a Chronicle reducer.
  *
- * @property id Explicit identifier. Defaults to the class's fully-qualified name.
+ * @property id Explicit identifier. Defaults to the class simple name.
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
