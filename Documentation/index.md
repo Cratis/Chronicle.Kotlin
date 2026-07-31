@@ -26,22 +26,67 @@ differs by client.
 
 ## Kotlin and Java setup
 
-You need a running Chronicle Kernel. The simplest way is Docker Compose:
+You need a running Chronicle Kernel. The simplest way is Docker Compose.
+Chronicle serves gRPC, the API, and health checks on port `35000` over TLS
+with a self-signed development certificate:
 
 ```yaml
 services:
   chronicle:
-    image: cratis/chronicle:latest
+    image: cratis/chronicle:latest-development-slim
+    depends_on:
+      - mongodb
+      - mongodb-init
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Cratis__Chronicle__Storage__Type=MongoDB
+      - Cratis__Chronicle__Storage__ConnectionDetails=mongodb://mongodb:27017/?directConnection=true
     ports:
       - "35000:35000"
-      - "35001:35001"
+
+  mongodb:
+    image: mongo:8
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
+    ports:
+      - "27017:27017"
+
+  # Chronicle's MongoDB storage needs a replica set — initiate it once.
+  mongodb-init:
+    image: mongo:8
+    depends_on:
+      - mongodb
+    restart: "no"
+    command:
+      - /bin/bash
+      - -lc
+      - |
+        until mongosh --host mongodb --quiet \
+          --eval "db.adminCommand('ping')" >/dev/null 2>&1; do
+          sleep 1
+        done
+        mongosh --host mongodb --quiet --eval "
+        try {
+          rs.status();
+        } catch (e) {
+          rs.initiate({
+            _id: 'rs0',
+            members: [{ _id: 0, host: 'mongodb:27017' }]
+          });
+        }"
 ```
+
+Chronicle is ready once `curl -sk https://localhost:35000/health` reports
+`Healthy`. The `Samples/Kotlin/Console` and `Samples/Java/Console` folders
+in the repository contain this file along with PostgreSQL, SQL Server, and
+SQLite profiles.
 
 Then add the client to your Gradle build:
 
+<!-- validate: skip -->
+
 ```kotlin
 dependencies {
-    implementation("io.cratis:chronicle:0.1.0")
+    implementation("io.cratis:chronicle:2.1.1")
 }
 ```
 
