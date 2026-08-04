@@ -103,7 +103,15 @@ class ProjectionsService(
             fromPairs,
             joinPairs = collectJoinPairs(readModelClass),
             children = collectChildrenMap(readModelClass),
-            nested = collectNestedMap(readModelClass)
+            nested = collectNestedMap(readModelClass),
+            isRewindable = readModelClass.findAnnotation<NotRewindable>() == null,
+            autoMapEnabled = readModelClass.findAnnotation<NoAutoMap>() == null,
+            noAutoMapProperties = readModelClass.memberProperties
+                .filter { it.findAnnotation<NoAutoMap>() != null }
+                .map { it.name },
+            removedWith = buildRemovedWithPairs(readModelClass.findAnnotations<RemovedWith>()),
+            removedWithJoin = buildRemovedWithJoinPairs(readModelClass.findAnnotations<RemovedWithJoin>()),
+            all = collectFromEveryDefinition(readModelClass)
         )
     }
 
@@ -186,10 +194,18 @@ class ProjectionsService(
             }
             val identifiedBy = annotations.firstOrNull { it.identifiedBy.isNotEmpty() }?.identifiedBy ?: EVENT_SOURCE_ID_KEY
 
+            // A [RemovedWith]/[RemovedWithJoin] placed on the same property as [ChildrenFrom] removes a
+            // single child from this collection, rather than the whole read model instance.
+            val removedWith = buildRemovedWithPairs(prop.findAnnotations<RemovedWith>())
+            val removedWithJoin = buildRemovedWithJoinPairs(prop.findAnnotations<RemovedWithJoin>())
+            val autoMapEnabled = childClass.findAnnotation<NoAutoMap>() == null && readModelClass.findAnnotation<NoAutoMap>() == null
+
             result[prop.name] = ProjectionsOuterClass.ChildrenDefinition.newBuilder()
                 .setIdentifiedBy(identifiedBy)
                 .addAllFrom(fromPairs)
-                .setAutoMap(ProjectionsOuterClass.AutoMap.Enabled)
+                .addAllRemovedWith(removedWith)
+                .addAllRemovedWithJoin(removedWithJoin)
+                .setAutoMap(if (autoMapEnabled) ProjectionsOuterClass.AutoMap.Enabled else ProjectionsOuterClass.AutoMap.Disabled)
                 .build()
         }
         return result
@@ -214,14 +230,66 @@ class ProjectionsService(
                     .setValue(ProjectionsOuterClass.RemovedWithDefinition.newBuilder().setKey(EVENT_SOURCE_ID_KEY).build())
                     .build()
             }
+            val autoMapEnabled = nestedClass.findAnnotation<NoAutoMap>() == null && readModelClass.findAnnotation<NoAutoMap>() == null
 
             result[prop.name] = ProjectionsOuterClass.ChildrenDefinition.newBuilder()
                 .addAllFrom(fromPairs)
                 .addAllRemovedWith(removedWith)
-                .setAutoMap(ProjectionsOuterClass.AutoMap.Enabled)
+                .setAutoMap(if (autoMapEnabled) ProjectionsOuterClass.AutoMap.Enabled else ProjectionsOuterClass.AutoMap.Disabled)
                 .build()
         }
         return result
+    }
+
+    /** Builds [ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithDefinition] entries from [RemovedWith] annotations. */
+    private fun buildRemovedWithPairs(
+        annotations: List<RemovedWith>
+    ): List<ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithDefinition> = annotations.mapNotNull { ann ->
+        val eventAnnotation = ann.eventType.findAnnotation<EventType>() ?: return@mapNotNull null
+        val eventTypeId = eventAnnotation.id.ifEmpty { ann.eventType.simpleName!! }
+        ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithDefinition.newBuilder()
+            .setKey(toWireEventType(eventTypeId, eventAnnotation.generation))
+            .setValue(ProjectionsOuterClass.RemovedWithDefinition.newBuilder().setKey(ann.key).setParentKey(ann.parentKey).build())
+            .build()
+    }
+
+    /** Builds [ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithJoinDefinition] entries from [RemovedWithJoin] annotations. */
+    private fun buildRemovedWithJoinPairs(
+        annotations: List<RemovedWithJoin>
+    ): List<ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithJoinDefinition> = annotations.mapNotNull { ann ->
+        val eventAnnotation = ann.eventType.findAnnotation<EventType>() ?: return@mapNotNull null
+        val eventTypeId = eventAnnotation.id.ifEmpty { ann.eventType.simpleName!! }
+        ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithJoinDefinition.newBuilder()
+            .setKey(toWireEventType(eventTypeId, eventAnnotation.generation))
+            .setValue(ProjectionsOuterClass.RemovedWithJoinDefinition.newBuilder().setKey(ann.key).build())
+            .build()
+    }
+
+    /**
+     * Collects [FromAll]/[FromEvery] properties into a single [ProjectionsOuterClass.FromEveryDefinition]
+     * covering the whole projection, or `null` when neither annotation is used.
+     */
+    private fun collectFromEveryDefinition(readModelClass: KClass<*>): ProjectionsOuterClass.FromEveryDefinition? {
+        val properties = mutableMapOf<String, String>()
+        for (prop in readModelClass.memberProperties) {
+            prop.findAnnotation<FromAll>()?.let { fromAll ->
+                properties[prop.name] = fromEveryValue(prop.name, fromAll.property, fromAll.contextProperty)
+            }
+            prop.findAnnotation<FromEvery>()?.let { fromEvery ->
+                properties[prop.name] = fromEveryValue(prop.name, fromEvery.property, fromEvery.contextProperty)
+            }
+        }
+        if (properties.isEmpty()) return null
+        return ProjectionsOuterClass.FromEveryDefinition.newBuilder()
+            .putAllProperties(properties)
+            .setIncludeChildren(true)
+            .build()
+    }
+
+    private fun fromEveryValue(propertyName: String, property: String, contextProperty: String): String = when {
+        contextProperty.isNotEmpty() -> "\$eventContext($contextProperty)"
+        property.isNotEmpty() -> property
+        else -> propertyName
     }
 
     /** Builds a single gRPC [FromDefinition] entry for the given event class and property mappings. */
@@ -254,7 +322,13 @@ class ProjectionsService(
         fromPairs: List<ProjectionsOuterClass.KeyValuePair_EventType_FromDefinition>,
         joinPairs: List<ProjectionsOuterClass.KeyValuePair_EventType_JoinDefinition> = emptyList(),
         children: Map<String, ProjectionsOuterClass.ChildrenDefinition> = emptyMap(),
-        nested: Map<String, ProjectionsOuterClass.ChildrenDefinition> = emptyMap()
+        nested: Map<String, ProjectionsOuterClass.ChildrenDefinition> = emptyMap(),
+        isRewindable: Boolean = true,
+        autoMapEnabled: Boolean = true,
+        noAutoMapProperties: List<String> = emptyList(),
+        removedWith: List<ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithDefinition> = emptyList(),
+        removedWithJoin: List<ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithJoinDefinition> = emptyList(),
+        all: ProjectionsOuterClass.FromEveryDefinition? = null
     ): ProjectionsOuterClass.ProjectionDefinition {
         val readModelName = readModelClass.simpleName ?: ""
         val initialModelStateJson = try {
@@ -268,19 +342,23 @@ class ProjectionsService(
             "{}"
         }
 
-        return ProjectionsOuterClass.ProjectionDefinition.newBuilder()
+        val builder = ProjectionsOuterClass.ProjectionDefinition.newBuilder()
             .setIdentifier(projectionId)
             .setReadModel(readModelName)
             .setInitialModelState(initialModelStateJson)
             .setEventSequenceId(EventSequenceId.eventLog.value)
             .setIsActive(true)
-            .setIsRewindable(true)
+            .setIsRewindable(isRewindable)
             .addAllFrom(fromPairs)
             .addAllJoin(joinPairs)
             .putAllChildren(children)
             .putAllNested(nested)
-            .setAutoMap(ProjectionsOuterClass.AutoMap.Enabled)
-            .build()
+            .addAllRemovedWith(removedWith)
+            .addAllRemovedWithJoin(removedWithJoin)
+            .addAllNoAutoMapProperties(noAutoMapProperties)
+            .setAutoMap(if (autoMapEnabled) ProjectionsOuterClass.AutoMap.Enabled else ProjectionsOuterClass.AutoMap.Disabled)
+        if (all != null) builder.setAll(all)
+        return builder.build()
     }
 }
 
