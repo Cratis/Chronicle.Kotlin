@@ -72,7 +72,18 @@ class ProjectionsService(
 
         readModels.registerWithObserver(readModelClass, 2, projectionId)
 
-        return buildProjectionDefinition(projectionId, readModelClass, fromPairs)
+        return buildProjectionDefinition(
+            projectionId,
+            readModelClass,
+            fromPairs,
+            joinPairs = buildJoinPairsFromEntries(builderFor.joinEntries),
+            children = buildChildrenMapFromEntries(builderFor.childrenEntries),
+            nested = buildNestedMapFromEntries(builderFor.nestedEntries),
+            isRewindable = builderFor.isRewindable,
+            removedWith = buildRemovedWithPairsFromEntries(builderFor.removedWithEntries),
+            removedWithJoin = buildRemovedWithJoinPairsFromEntries(builderFor.removedWithJoinEntries),
+            all = buildFromEveryDefinitionFromEntries(builderFor.fromEveryProperties)
+        )
     }
 
     /**
@@ -315,6 +326,85 @@ class ProjectionsService(
 
     private fun toWireEventType(id: String, generation: Int): ProjectionsOuterClass.EventType =
         ProjectionsOuterClass.EventType.newBuilder().setId(id).setGeneration(generation).build()
+
+    /** Converts [JoinDefinitionEntry] instances collected by [ProjectionBuilderFor.join] into their wire shape. */
+    private fun buildJoinPairsFromEntries(entries: List<JoinDefinitionEntry>): List<ProjectionsOuterClass.KeyValuePair_EventType_JoinDefinition> =
+        entries.mapNotNull { entry ->
+            val eventAnnotation = entry.eventClass.findAnnotation<EventType>() ?: return@mapNotNull null
+            val eventTypeId = eventAnnotation.id.ifEmpty { entry.eventClass.simpleName!! }
+            val joinDef = ProjectionsOuterClass.JoinDefinition.newBuilder()
+                .setOn(entry.on)
+                .setKey(EVENT_SOURCE_ID_KEY)
+                .putAllProperties(entry.properties)
+                .build()
+            ProjectionsOuterClass.KeyValuePair_EventType_JoinDefinition.newBuilder()
+                .setKey(toWireEventType(eventTypeId, eventAnnotation.generation))
+                .setValue(joinDef)
+                .build()
+        }
+
+    /** Converts [ChildrenEntry] instances collected by [ProjectionBuilderFor.children] into their wire shape. */
+    private fun buildChildrenMapFromEntries(entries: List<ChildrenEntry>): Map<String, ProjectionsOuterClass.ChildrenDefinition> =
+        entries.associate { entry ->
+            val fromPairs = entry.fromEntries.mapNotNull { fe -> buildFromPair(fe.eventClass, fe.key, fe.properties, fe.parentKey) }
+            entry.propertyName to ProjectionsOuterClass.ChildrenDefinition.newBuilder()
+                .setIdentifiedBy(entry.identifiedBy)
+                .addAllFrom(fromPairs)
+                .setAutoMap(ProjectionsOuterClass.AutoMap.Enabled)
+                .build()
+        }
+
+    /** Converts [NestedEntry] instances collected by [ProjectionBuilderFor.nested] into their wire shape. */
+    private fun buildNestedMapFromEntries(entries: List<NestedEntry>): Map<String, ProjectionsOuterClass.ChildrenDefinition> =
+        entries.associate { entry ->
+            val fromPairs = entry.fromEntries.mapNotNull { fe -> buildFromPair(fe.eventClass, fe.key, fe.properties) }
+            val removedWith = entry.clearWithEventClasses.mapNotNull { eventClass ->
+                val eventAnnotation = eventClass.findAnnotation<EventType>() ?: return@mapNotNull null
+                val eventTypeId = eventAnnotation.id.ifEmpty { eventClass.simpleName!! }
+                ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithDefinition.newBuilder()
+                    .setKey(toWireEventType(eventTypeId, eventAnnotation.generation))
+                    .setValue(ProjectionsOuterClass.RemovedWithDefinition.newBuilder().setKey(EVENT_SOURCE_ID_KEY).build())
+                    .build()
+            }
+            entry.propertyName to ProjectionsOuterClass.ChildrenDefinition.newBuilder()
+                .addAllFrom(fromPairs)
+                .addAllRemovedWith(removedWith)
+                .setAutoMap(ProjectionsOuterClass.AutoMap.Enabled)
+                .build()
+        }
+
+    /** Converts [RemovedWithEntry] instances collected by [ProjectionBuilderFor.removedWith] into their wire shape. */
+    private fun buildRemovedWithPairsFromEntries(
+        entries: List<RemovedWithEntry>
+    ): List<ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithDefinition> = entries.mapNotNull { entry ->
+        val eventAnnotation = entry.eventClass.findAnnotation<EventType>() ?: return@mapNotNull null
+        val eventTypeId = eventAnnotation.id.ifEmpty { entry.eventClass.simpleName!! }
+        ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithDefinition.newBuilder()
+            .setKey(toWireEventType(eventTypeId, eventAnnotation.generation))
+            .setValue(ProjectionsOuterClass.RemovedWithDefinition.newBuilder().setKey(entry.key).setParentKey(entry.parentKey).build())
+            .build()
+    }
+
+    /** Converts [RemovedWithJoinEntry] instances collected by [ProjectionBuilderFor.removedWithJoin] into their wire shape. */
+    private fun buildRemovedWithJoinPairsFromEntries(
+        entries: List<RemovedWithJoinEntry>
+    ): List<ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithJoinDefinition> = entries.mapNotNull { entry ->
+        val eventAnnotation = entry.eventClass.findAnnotation<EventType>() ?: return@mapNotNull null
+        val eventTypeId = eventAnnotation.id.ifEmpty { entry.eventClass.simpleName!! }
+        ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithJoinDefinition.newBuilder()
+            .setKey(toWireEventType(eventTypeId, eventAnnotation.generation))
+            .setValue(ProjectionsOuterClass.RemovedWithJoinDefinition.newBuilder().setKey(entry.key).build())
+            .build()
+    }
+
+    /** Converts the accumulated [ProjectionBuilderFor.fromEveryProperties] into a [ProjectionsOuterClass.FromEveryDefinition]. */
+    private fun buildFromEveryDefinitionFromEntries(properties: Map<String, String>): ProjectionsOuterClass.FromEveryDefinition? {
+        if (properties.isEmpty()) return null
+        return ProjectionsOuterClass.FromEveryDefinition.newBuilder()
+            .putAllProperties(properties)
+            .setIncludeChildren(true)
+            .build()
+    }
 
     private fun buildProjectionDefinition(
         projectionId: String,
