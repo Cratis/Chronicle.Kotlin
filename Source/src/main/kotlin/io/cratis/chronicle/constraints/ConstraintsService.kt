@@ -38,7 +38,7 @@ class ConstraintsService(
                                 EventsConstraints.OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition.newBuilder()
                                     .setValue1(
                                         EventsConstraints.UniqueEventTypeConstraintDefinition.newBuilder()
-                                            .setEventTypeId(eventTypeId)
+                                            .addEventTypeIds(eventTypeId)
                                             .build()
                                     )
                                     .build()
