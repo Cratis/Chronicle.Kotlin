@@ -19,10 +19,11 @@ class EventStoreSubscriptionsService(
             .setIdentifier(id)
             .setSourceEventStore(sourceEventStore)
             .addAllEventTypes(
-                builder.build().map { eventTypeId ->
+                builder.build().map { eventType ->
                     ObservationEventstoresubscriptions.EventType.newBuilder()
-                        .setId(eventTypeId)
-                        .setGeneration(1)
+                        .setId(eventType.id.value)
+                        .setGeneration(eventType.generation.value)
+                        .setTombstone(eventType.tombstone)
                         .build()
                 }
             )

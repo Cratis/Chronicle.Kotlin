@@ -4,17 +4,21 @@
 package io.cratis.chronicle.eventStoreSubscriptions
 
 import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.events.EventTypeDescriptor
+import io.cratis.chronicle.events.EventTypeGeneration
+import io.cratis.chronicle.events.EventTypeId
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 
 class EventStoreSubscriptionBuilder : IEventStoreSubscriptionBuilder {
-    private val eventTypeIds = mutableListOf<String>()
+    private val eventTypes = mutableListOf<EventTypeDescriptor>()
 
     override fun <TEvent : Any> withEventType(eventClass: KClass<TEvent>): IEventStoreSubscriptionBuilder {
         val ann = eventClass.findAnnotation<EventType>() ?: return this
-        eventTypeIds.add(ann.id.ifEmpty { eventClass.simpleName!! })
+        val id = ann.id.ifEmpty { eventClass.simpleName!! }
+        eventTypes.add(EventTypeDescriptor(EventTypeId(id), EventTypeGeneration(ann.generation), ann.tombstone))
         return this
     }
 
-    fun build(): List<String> = eventTypeIds.toList()
+    fun build(): List<EventTypeDescriptor> = eventTypes.toList()
 }
