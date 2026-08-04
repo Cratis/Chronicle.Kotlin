@@ -14,6 +14,7 @@ import io.cratis.chronicle.externalServices.ExternalServicesService
 import io.cratis.chronicle.jobs.JobsService
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.namespaces.NamespacesService
+import io.cratis.chronicle.webhooks.WebhooksService
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
 import io.cratis.chronicle.observation.ReactorsService
@@ -91,5 +92,9 @@ class EventStore(
 
     val eventStoreSubscriptions by lazy {
         EventStoreSubscriptionsService(name, services.eventStoreSubscriptions)
+    }
+
+    val webhooks by lazy {
+        WebhooksService(name, services.webhooks)
     }
 }

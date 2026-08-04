@@ -5,6 +5,7 @@ package io.cratis.chronicle.java
 
 import Cratis.Chronicle.Contracts.Jobs.JobsOuterClass
 import Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.ObservationEventstoresubscriptions
+import Cratis.Chronicle.Contracts.Observation.Webhooks.ObservationWebhooks
 import io.cratis.chronicle.auditing.CausationManager
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.eventSequences.AppendOptions
@@ -28,6 +29,8 @@ import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.events.EventTypesService
 import io.cratis.chronicle.seeding.IEventSeedingService
 import io.cratis.chronicle.transactions.UnitOfWork
+import io.cratis.chronicle.webhooks.IWebhookDefinitionBuilder
+import io.cratis.chronicle.webhooks.WebhooksService
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 
@@ -273,6 +276,39 @@ object EventStoreSubscriptionsServiceJavaBridge {
     @JvmStatic
     fun getAll(service: EventStoreSubscriptionsService): List<ObservationEventstoresubscriptions.EventStoreSubscriptionDefinition> =
         runBlocking { service.getAll() }
+}
+
+/**
+ * Java-friendly bridge for webhook definition builder operations.
+ */
+object WebhookDefinitionBuilderJavaBridge {
+    @JvmStatic
+    fun <TEvent : Any> withEventType(builder: IWebhookDefinitionBuilder, eventClass: Class<TEvent>): IWebhookDefinitionBuilder =
+        builder.withEventType(eventClass.kotlin)
+}
+
+/**
+ * Java-friendly bridge for WebhooksService operations.
+ */
+object WebhooksServiceJavaBridge {
+    @JvmStatic
+    fun register(service: WebhooksService, vararg definers: Any) {
+        runBlocking { service.register(*definers) }
+    }
+
+    @JvmStatic
+    fun register(service: WebhooksService, id: String, targetUrl: String, configure: (IWebhookDefinitionBuilder) -> Unit) {
+        runBlocking { service.register(id, targetUrl, configure) }
+    }
+
+    @JvmStatic
+    fun getAll(service: WebhooksService): List<ObservationWebhooks.WebhookDefinition> =
+        runBlocking { service.getAll() }
+
+    @JvmStatic
+    fun remove(service: WebhooksService, id: String) {
+        runBlocking { service.remove(id) }
+    }
 }
 
 /**
