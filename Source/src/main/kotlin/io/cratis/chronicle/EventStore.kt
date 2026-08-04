@@ -51,7 +51,7 @@ class EventStore(
     override val readModels: IReadModelsService get() = readModelsService
 
     override val reactors: IReactorsService by lazy {
-        ReactorsService(name, namespace, lifecycle, services.reactors)
+        ReactorsService(name, namespace, lifecycle, services.reactors, eventLog)
     }
 
     override val reducers: IReducersService by lazy {
