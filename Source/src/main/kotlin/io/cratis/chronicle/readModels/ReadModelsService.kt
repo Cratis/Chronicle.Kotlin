@@ -3,24 +3,39 @@
 
 package io.cratis.chronicle.readModels
 
+import Cratis.Chronicle.Contracts.Compliance.ComplianceGrpcKt
+import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.Readmodels
 import bcl.Bcl
 import com.google.gson.Gson
+import io.cratis.chronicle.compliance.ComplianceService
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
+import kotlinx.coroutines.flow.Flow
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
 
 private val gson = Gson()
 
+/** Resolves the read model identifier for [this] class: the [ReadModel.id] override, or the class simple name. */
+internal fun KClass<*>.readModelIdentifier(): String {
+    val ann = findAnnotation<ReadModel>()
+    return ann?.id?.ifEmpty { simpleName!! } ?: simpleName!!
+}
+
 class ReadModelsService(
     private val eventStoreName: String,
     private val namespace: String,
     private val stub: ReadModelsGrpcKt.ReadModelsCoroutineStub,
+    materializedStub: MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub,
+    complianceStub: ComplianceGrpcKt.ComplianceCoroutineStub,
     private val defaultSinkTypeId: String = WellKnownSinkTypes.MONGODB
 ) : IReadModelsService {
+    private val compliance = ComplianceService(eventStoreName, namespace, complianceStub)
+
+    override val materialized: IMaterializedReadModels = MaterializedReadModels(eventStoreName, namespace, materializedStub)
 
     override suspend fun register(vararg readModelClasses: KClass<*>) {
         for (cls in readModelClasses) {
@@ -40,7 +55,7 @@ class ReadModelsService(
      */
     internal suspend fun registerWithObserver(cls: KClass<*>, observerType: Int, observerIdentifier: String) {
         val ann = cls.findAnnotation<ReadModel>()
-        val identifier = ann?.id?.ifEmpty { cls.simpleName!! } ?: cls.simpleName!!
+        val identifier = cls.readModelIdentifier()
         val displayName = ann?.displayName?.ifEmpty { cls.simpleName!! } ?: cls.simpleName!!
 
         val definition = Readmodels.ReadModelDefinition.newBuilder()
@@ -78,14 +93,10 @@ class ReadModelsService(
     }
 
     override suspend fun <T : Any> getInstanceByKey(readModelClass: KClass<T>, key: String): T? {
-        val ann = readModelClass.findAnnotation<ReadModel>()
-        val identifier = ann?.id?.ifEmpty { readModelClass.simpleName!! }
-            ?: readModelClass.simpleName!!
-
         val request = Readmodels.GetInstanceByKeyRequest.newBuilder()
             .setEventStore(eventStoreName)
             .setNamespace(namespace)
-            .setReadModelIdentifier(identifier)
+            .setReadModelIdentifier(readModelClass.readModelIdentifier())
             .setEventSequenceId(EventSequenceId.eventLog.value)
             .setReadModelKey(key)
             .setSessionId("")
@@ -98,6 +109,69 @@ class ReadModelsService(
             gson.fromJson(response.readModel, readModelClass.java)
         }
     }
+
+    override suspend fun <T : Any> getInstances(readModelClass: KClass<T>, eventCount: Long?): List<T> {
+        val builder = Readmodels.GetAllInstancesRequest.newBuilder()
+            .setEventStore(eventStoreName)
+            .setNamespace(namespace)
+            .setReadModelIdentifier(readModelClass.readModelIdentifier())
+            .setEventSequenceId(EventSequenceId.eventLog.value)
+        if (eventCount != null) builder.setEventCount(eventCount)
+
+        return stub.getAllInstances(builder.build()).instancesList.map { gson.fromJson(it, readModelClass.java) }
+    }
+
+    override suspend fun getSnapshotsById(readModelClass: KClass<*>, key: String): List<Readmodels.ReadModelSnapshot> {
+        val request = Readmodels.GetSnapshotsByKeyRequest.newBuilder()
+            .setEventStore(eventStoreName)
+            .setNamespace(namespace)
+            .setReadModelIdentifier(readModelClass.readModelIdentifier())
+            .setEventSequenceId(EventSequenceId.eventLog.value)
+            .setReadModelKey(key)
+            .build()
+
+        return stub.getSnapshotsByKey(request).snapshotsList
+    }
+
+    override fun watch(readModelClass: KClass<*>): Flow<Readmodels.ReadModelChangeset> {
+        val request = Readmodels.WatchRequest.newBuilder()
+            .setEventStore(eventStoreName)
+            .setNamespace(namespace)
+            .setReadModelIdentifier(readModelClass.readModelIdentifier())
+            .setEventSequenceId(EventSequenceId.eventLog.value)
+            .build()
+
+        return stub.watch(request)
+    }
+
+    override suspend fun dehydrateSession(readModelClass: KClass<*>, key: String, sessionId: String) {
+        val request = Readmodels.DehydrateSessionRequest.newBuilder()
+            .setEventStore(eventStoreName)
+            .setNamespace(namespace)
+            .setReadModelIdentifier(readModelClass.readModelIdentifier())
+            .setEventSequenceId(EventSequenceId.eventLog.value)
+            .setReadModelKey(key)
+            .setSessionId(sessionId)
+            .build()
+
+        stub.dehydrateSession(request)
+    }
+
+    override suspend fun <T : Any> release(instance: T, subject: String?): T {
+        val resolvedSubject = subject ?: resolveSubject(instance) ?: return instance
+        val schema = generateSchema(instance::class)
+        val payload = gson.toJson(instance)
+        val released = compliance.release(resolvedSubject, schema, payload)
+        @Suppress("UNCHECKED_CAST")
+        return gson.fromJson(released, instance::class.java) as T
+    }
+
+    /** Resolves the compliance subject for [instance] by looking for an `id` property, falling back to none. */
+    private fun resolveSubject(instance: Any): String? =
+        instance::class.memberProperties
+            .firstOrNull { it.name.equals("id", ignoreCase = true) }
+            ?.call(instance)
+            ?.toString()
 
     /**
      * Generates a minimal NJsonSchema-compatible JSON schema from a data class's member properties.

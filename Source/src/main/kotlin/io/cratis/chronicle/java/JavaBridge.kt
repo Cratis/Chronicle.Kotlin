@@ -7,6 +7,7 @@ import Cratis.Chronicle.Contracts.Events.Events
 import Cratis.Chronicle.Contracts.Jobs.JobsOuterClass
 import Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.ObservationEventstoresubscriptions
 import Cratis.Chronicle.Contracts.Observation.Webhooks.ObservationWebhooks
+import Cratis.Chronicle.Contracts.ReadModels.Readmodels
 import io.cratis.chronicle.auditing.CausationManager
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.compliance.ComplianceService
@@ -84,6 +85,27 @@ object ReadModelsJavaBridge {
     @JvmStatic
     fun <T : Any> getInstanceByKey(service: IReadModelsService, readModelClass: Class<T>, key: String): T? =
         runBlocking { service.getInstanceByKey(readModelClass.kotlin, key) }
+
+    @JvmStatic
+    fun <T : Any> getInstances(service: IReadModelsService, readModelClass: Class<T>): List<T> =
+        runBlocking { service.getInstances(readModelClass.kotlin) }
+
+    @JvmStatic
+    fun getSnapshotsById(service: IReadModelsService, readModelClass: Class<*>, key: String): List<Readmodels.ReadModelSnapshot> =
+        runBlocking { service.getSnapshotsById(readModelClass.kotlin, key) }
+
+    @JvmStatic
+    fun dehydrateSession(service: IReadModelsService, readModelClass: Class<*>, key: String, sessionId: String) {
+        runBlocking { service.dehydrateSession(readModelClass.kotlin, key, sessionId) }
+    }
+
+    @JvmStatic
+    fun <T : Any> release(service: IReadModelsService, instance: T): T =
+        runBlocking { service.release(instance) }
+
+    @JvmStatic
+    fun <T : Any> getMaterializedInstances(service: IReadModelsService, readModelClass: Class<T>, skip: Int, take: Int): List<T> =
+        runBlocking { service.materialized.getInstances(readModelClass.kotlin, skip, take) }
 }
 
 /**

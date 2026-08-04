@@ -16,6 +16,7 @@ import Cratis.Chronicle.Contracts.Observation.Reactors.ReactorsGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Reducers.ReducersGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Webhooks.WebhooksGrpcKt
 import Cratis.Chronicle.Contracts.Projections.ProjectionsGrpcKt
+import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.Seeding.EventSeedingGrpcKt
 
@@ -36,6 +37,8 @@ class ChronicleServices(channel: io.grpc.Channel) {
         EventSeedingGrpcKt.EventSeedingCoroutineStub(channel)
     val readModels: ReadModelsGrpcKt.ReadModelsCoroutineStub =
         ReadModelsGrpcKt.ReadModelsCoroutineStub(channel)
+    val materializedReadModels: MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub =
+        MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub(channel)
     val compliance: ComplianceGrpcKt.ComplianceCoroutineStub =
         ComplianceGrpcKt.ComplianceCoroutineStub(channel)
     val eventTypes: EventTypesGrpcKt.EventTypesCoroutineStub =
