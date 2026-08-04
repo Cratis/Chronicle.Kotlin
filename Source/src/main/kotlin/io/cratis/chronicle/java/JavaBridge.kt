@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.java
 
+import Cratis.Chronicle.Contracts.Events.Events
 import Cratis.Chronicle.Contracts.Jobs.JobsOuterClass
 import Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.ObservationEventstoresubscriptions
 import Cratis.Chronicle.Contracts.Observation.Webhooks.ObservationWebhooks
@@ -127,6 +128,15 @@ object EventTypesServiceJavaBridge {
             service.register(*eventClasses.map { it.kotlin }.toTypedArray())
         }
     }
+
+    @JvmStatic
+    fun registerSingle(service: EventTypesService, eventClass: Class<*>) {
+        runBlocking { service.registerSingle(eventClass.kotlin) }
+    }
+
+    @JvmStatic
+    fun getAllGenerationsForEventType(service: EventTypesService, eventTypeId: String): List<Events.EventTypeRegistration> =
+        runBlocking { service.getAllGenerationsForEventType(eventTypeId) }
 }
 
 /**
