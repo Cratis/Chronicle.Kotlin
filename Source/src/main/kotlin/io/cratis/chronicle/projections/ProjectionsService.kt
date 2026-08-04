@@ -91,8 +91,8 @@ class ProjectionsService(
             ?: readModelClass.simpleName!!
 
         val fromPairs = fromEventAnnotations.mapNotNull { fromAnn ->
-            val mappings = buildPropertyMappingsForEvent(readModelClass, fromAnn.eventType)
-            buildFromPair(fromAnn.eventType, fromAnn.key, mappings)
+            val mapped = buildPropertyMappingsForEvent(readModelClass, fromAnn.eventType)
+            buildFromPair(fromAnn.eventType, mapped.resolvedKey(fromAnn.key), mapped.properties)
         }
 
         readModels.registerWithObserver(readModelClass, 2, projectionId)
@@ -107,9 +107,13 @@ class ProjectionsService(
         )
     }
 
-    /** Collects [SetFrom] property mappings that apply to a given event type. */
-    private fun buildPropertyMappingsForEvent(readModelClass: KClass<*>, eventKClass: KClass<*>): Map<String, String> {
+    /**
+     * Collects [SetFrom] and arithmetic ([Count], [Increment], [Decrement], [AddFrom], [SubtractFrom])
+     * property mappings that apply to a given event type.
+     */
+    private fun buildPropertyMappingsForEvent(readModelClass: KClass<*>, eventKClass: KClass<*>): PropertyMappings {
         val mappings = mutableMapOf<String, String>()
+        var constantKey: String? = null
         for (prop in readModelClass.memberProperties) {
             for (setFrom in prop.findAnnotations<SetFrom>()) {
                 val appliesToEvent = setFrom.eventType == Nothing::class || setFrom.eventType == eventKClass
@@ -118,8 +122,26 @@ class ProjectionsService(
                     break // first matching annotation wins for this property
                 }
             }
+            prop.findAnnotations<Count>().firstOrNull { it.eventType == eventKClass }?.let { count ->
+                mappings[prop.name] = "\$count"
+                if (count.constantKey.isNotEmpty()) constantKey = count.constantKey
+            }
+            prop.findAnnotations<Increment>().firstOrNull { it.eventType == eventKClass }?.let { increment ->
+                mappings[prop.name] = "\$increment"
+                if (increment.constantKey.isNotEmpty()) constantKey = increment.constantKey
+            }
+            prop.findAnnotations<Decrement>().firstOrNull { it.eventType == eventKClass }?.let { decrement ->
+                mappings[prop.name] = "\$decrement"
+                if (decrement.constantKey.isNotEmpty()) constantKey = decrement.constantKey
+            }
+            prop.findAnnotations<AddFrom>().firstOrNull { it.eventType == eventKClass }?.let { addFrom ->
+                mappings[prop.name] = "\$add(${addFrom.eventPropertyName.ifEmpty { prop.name }})"
+            }
+            prop.findAnnotations<SubtractFrom>().firstOrNull { it.eventType == eventKClass }?.let { subtractFrom ->
+                mappings[prop.name] = "\$subtract(${subtractFrom.eventPropertyName.ifEmpty { prop.name }})"
+            }
         }
-        return mappings
+        return PropertyMappings(mappings, constantKey)
     }
 
     /**
@@ -159,8 +181,8 @@ class ProjectionsService(
             val childClass = prop.elementClass() ?: continue
 
             val fromPairs = annotations.mapNotNull { ann ->
-                val properties = buildPropertyMappingsForEvent(childClass, ann.eventType)
-                buildFromPair(ann.eventType, ann.key, properties, ann.parentKey)
+                val mapped = buildPropertyMappingsForEvent(childClass, ann.eventType)
+                buildFromPair(ann.eventType, mapped.resolvedKey(ann.key), mapped.properties, ann.parentKey)
             }
             val identifiedBy = annotations.firstOrNull { it.identifiedBy.isNotEmpty() }?.identifiedBy ?: EVENT_SOURCE_ID_KEY
 
@@ -181,8 +203,8 @@ class ProjectionsService(
             val nestedClass = prop.returnType.classifier as? KClass<*> ?: continue
 
             val fromPairs = nestedClass.findAnnotations<FromEvent>().mapNotNull { fromAnn ->
-                val mappings = buildPropertyMappingsForEvent(nestedClass, fromAnn.eventType)
-                buildFromPair(fromAnn.eventType, fromAnn.key, mappings)
+                val mapped = buildPropertyMappingsForEvent(nestedClass, fromAnn.eventType)
+                buildFromPair(fromAnn.eventType, mapped.resolvedKey(fromAnn.key), mapped.properties)
             }
             val removedWith = nestedClass.findAnnotations<ClearWith>().mapNotNull { clearWith ->
                 val eventAnnotation = clearWith.eventType.findAnnotation<EventType>() ?: return@mapNotNull null
@@ -260,6 +282,18 @@ class ProjectionsService(
             .setAutoMap(ProjectionsOuterClass.AutoMap.Enabled)
             .build()
     }
+}
+
+/**
+ * The property mappings collected for a single event type, plus an optional constant key that
+ * overrides the projection's normal per-instance key resolution (from [Count]/[Increment]/[Decrement]).
+ */
+private data class PropertyMappings(
+    val properties: Map<String, String>,
+    val constantKey: String? = null
+) {
+    /** Resolves the [FromDefinition] key to use: the [constantKey] wrapped as a value expression, or [default]. */
+    fun resolvedKey(default: String): String = constantKey?.let { "\$value($it)" } ?: default
 }
 
 /** Accumulates the [ProjectionsOuterClass.JoinDefinition] fields contributed by every [Join]-annotated property for one event type. */
