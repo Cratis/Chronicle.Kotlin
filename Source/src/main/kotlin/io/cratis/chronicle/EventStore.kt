@@ -9,6 +9,7 @@ import io.cratis.chronicle.constraints.ConstraintsService
 import io.cratis.chronicle.constraints.IConstraintsService
 import io.cratis.chronicle.events.EventTypesService
 import io.cratis.chronicle.eventSequences.EventLog
+import io.cratis.chronicle.externalServices.ExternalServicesService
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.namespaces.NamespacesService
 import io.cratis.chronicle.observation.IReactorsService
@@ -76,5 +77,9 @@ class EventStore(
 
     val namespaces by lazy {
         NamespacesService(name, services.namespaces)
+    }
+
+    val externalServices by lazy {
+        ExternalServicesService(name, services.externalServices)
     }
 }

@@ -9,6 +9,8 @@ import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.eventSequences.ITransactionalEventSequence
+import io.cratis.chronicle.externalServices.ExternalServicesService
+import io.cratis.chronicle.externalServices.IExternalServiceBuilder
 import io.cratis.chronicle.namespaces.NamespacesService
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
@@ -190,6 +192,16 @@ object EventSeedingServiceJavaBridge {
     @JvmStatic
     fun seed(service: IEventSeedingService, vararg seeders: Any) {
         runBlocking { service.seed(*seeders) }
+    }
+}
+
+/**
+ * Java-friendly bridge for ExternalServicesService operations.
+ */
+object ExternalServicesServiceJavaBridge {
+    @JvmStatic
+    fun register(service: ExternalServicesService, name: String, configure: (IExternalServiceBuilder) -> Unit) {
+        runBlocking { service.register(name, configure) }
     }
 }
 
