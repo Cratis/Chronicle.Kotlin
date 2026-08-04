@@ -24,4 +24,14 @@ class ComplianceService(
         val response = stub.release(request)
         return response.payload
     }
+
+    override suspend fun deleteEncryptionKey(identifier: String) {
+        val request = ComplianceOuterClass.DeleteEncryptionKeyRequest.newBuilder()
+            .setEventStore(eventStoreName)
+            .setNamespace(namespace)
+            .setIdentifier(identifier)
+            .build()
+
+        stub.deleteEncryptionKey(request)
+    }
 }

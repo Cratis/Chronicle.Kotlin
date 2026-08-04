@@ -8,6 +8,7 @@ import Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.Observatio
 import Cratis.Chronicle.Contracts.Observation.Webhooks.ObservationWebhooks
 import io.cratis.chronicle.auditing.CausationManager
 import io.cratis.chronicle.auditing.CausationType
+import io.cratis.chronicle.compliance.ComplianceService
 import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.IEventLog
@@ -318,5 +319,19 @@ object CausationManagerJavaBridge {
     @JvmStatic
     fun add(manager: CausationManager, typeName: String, properties: Map<String, String>) {
         manager.add(CausationType(typeName), properties)
+    }
+}
+
+/**
+ * Java-friendly bridge for ComplianceService operations.
+ */
+object ComplianceServiceJavaBridge {
+    @JvmStatic
+    fun release(service: ComplianceService, subject: String, schema: String, payload: String): String =
+        runBlocking { service.release(subject, schema, payload) }
+
+    @JvmStatic
+    fun deleteEncryptionKey(service: ComplianceService, identifier: String) {
+        runBlocking { service.deleteEncryptionKey(identifier) }
     }
 }
