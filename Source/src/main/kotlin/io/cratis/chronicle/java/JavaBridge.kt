@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.java
 
+import Cratis.Chronicle.Contracts.Jobs.JobsOuterClass
 import io.cratis.chronicle.auditing.CausationManager
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.eventSequences.AppendOptions
@@ -11,6 +12,7 @@ import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.eventSequences.ITransactionalEventSequence
 import io.cratis.chronicle.externalServices.ExternalServicesService
 import io.cratis.chronicle.externalServices.IExternalServiceBuilder
+import io.cratis.chronicle.jobs.JobsService
 import io.cratis.chronicle.namespaces.NamespacesService
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
@@ -203,6 +205,38 @@ object ExternalServicesServiceJavaBridge {
     fun register(service: ExternalServicesService, name: String, configure: (IExternalServiceBuilder) -> Unit) {
         runBlocking { service.register(name, configure) }
     }
+}
+
+/**
+ * Java-friendly bridge for JobsService operations.
+ */
+object JobsServiceJavaBridge {
+    @JvmStatic
+    fun stop(service: JobsService, jobId: String) {
+        runBlocking { service.stop(jobId) }
+    }
+
+    @JvmStatic
+    fun resume(service: JobsService, jobId: String) {
+        runBlocking { service.resume(jobId) }
+    }
+
+    @JvmStatic
+    fun delete(service: JobsService, jobId: String) {
+        runBlocking { service.delete(jobId) }
+    }
+
+    @JvmStatic
+    fun getJob(service: JobsService, jobId: String): JobsOuterClass.Job? =
+        runBlocking { service.getJob(jobId) }
+
+    @JvmStatic
+    fun getJobs(service: JobsService): List<JobsOuterClass.Job> =
+        runBlocking { service.getJobs() }
+
+    @JvmStatic
+    fun getJobSteps(service: JobsService, jobId: String): List<JobsOuterClass.JobStep> =
+        runBlocking { service.getJobSteps(jobId) }
 }
 
 /**

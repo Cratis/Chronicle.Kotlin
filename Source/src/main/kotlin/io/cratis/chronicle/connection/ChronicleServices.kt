@@ -9,6 +9,7 @@ import Cratis.Chronicle.Contracts.Events.Constraints.ConstraintsGrpcKt
 import Cratis.Chronicle.Contracts.Events.EventTypesGrpcKt
 import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
 import Cratis.Chronicle.Contracts.ExternalServices.ExternalServicesGrpcKt
+import Cratis.Chronicle.Contracts.Jobs.JobsGrpcKt
 import Cratis.Chronicle.Contracts.NamespacesGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Reactors.ReactorsGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Reducers.ReducersGrpcKt
@@ -41,4 +42,6 @@ class ChronicleServices(channel: io.grpc.Channel) {
         NamespacesGrpcKt.NamespacesCoroutineStub(channel)
     val externalServices: ExternalServicesGrpcKt.ExternalServicesCoroutineStub =
         ExternalServicesGrpcKt.ExternalServicesCoroutineStub(channel)
+    val jobs: JobsGrpcKt.JobsCoroutineStub =
+        JobsGrpcKt.JobsCoroutineStub(channel)
 }
