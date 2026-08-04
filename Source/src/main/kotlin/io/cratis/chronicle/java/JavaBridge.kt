@@ -4,12 +4,15 @@
 package io.cratis.chronicle.java
 
 import Cratis.Chronicle.Contracts.Jobs.JobsOuterClass
+import Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.ObservationEventstoresubscriptions
 import io.cratis.chronicle.auditing.CausationManager
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.eventSequences.ITransactionalEventSequence
+import io.cratis.chronicle.eventStoreSubscriptions.EventStoreSubscriptionsService
+import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionBuilder
 import io.cratis.chronicle.externalServices.ExternalServicesService
 import io.cratis.chronicle.externalServices.IExternalServiceBuilder
 import io.cratis.chronicle.jobs.JobsService
@@ -237,6 +240,39 @@ object JobsServiceJavaBridge {
     @JvmStatic
     fun getJobSteps(service: JobsService, jobId: String): List<JobsOuterClass.JobStep> =
         runBlocking { service.getJobSteps(jobId) }
+}
+
+/**
+ * Java-friendly bridge for event store subscription builder operations.
+ */
+object EventStoreSubscriptionBuilderJavaBridge {
+    @JvmStatic
+    fun <TEvent : Any> withEventType(builder: IEventStoreSubscriptionBuilder, eventClass: Class<TEvent>): IEventStoreSubscriptionBuilder =
+        builder.withEventType(eventClass.kotlin)
+}
+
+/**
+ * Java-friendly bridge for EventStoreSubscriptionsService operations.
+ */
+object EventStoreSubscriptionsServiceJavaBridge {
+    @JvmStatic
+    fun subscribe(
+        service: EventStoreSubscriptionsService,
+        id: String,
+        sourceEventStore: String,
+        configure: (IEventStoreSubscriptionBuilder) -> Unit
+    ) {
+        runBlocking { service.subscribe(id, sourceEventStore, configure) }
+    }
+
+    @JvmStatic
+    fun unsubscribe(service: EventStoreSubscriptionsService, id: String) {
+        runBlocking { service.unsubscribe(id) }
+    }
+
+    @JvmStatic
+    fun getAll(service: EventStoreSubscriptionsService): List<ObservationEventstoresubscriptions.EventStoreSubscriptionDefinition> =
+        runBlocking { service.getAll() }
 }
 
 /**

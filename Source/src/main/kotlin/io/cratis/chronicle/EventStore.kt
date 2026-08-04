@@ -9,6 +9,7 @@ import io.cratis.chronicle.constraints.ConstraintsService
 import io.cratis.chronicle.constraints.IConstraintsService
 import io.cratis.chronicle.events.EventTypesService
 import io.cratis.chronicle.eventSequences.EventLog
+import io.cratis.chronicle.eventStoreSubscriptions.EventStoreSubscriptionsService
 import io.cratis.chronicle.externalServices.ExternalServicesService
 import io.cratis.chronicle.jobs.JobsService
 import io.cratis.chronicle.eventSequences.IEventLog
@@ -86,5 +87,9 @@ class EventStore(
 
     val jobs by lazy {
         JobsService(name, namespace, services.jobs)
+    }
+
+    val eventStoreSubscriptions by lazy {
+        EventStoreSubscriptionsService(name, services.eventStoreSubscriptions)
     }
 }
