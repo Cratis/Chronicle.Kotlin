@@ -18,4 +18,12 @@ class NamespacesService(
             .build()
         stub.ensure(request)
     }
+
+    /** Lists all namespaces in the event store. */
+    override suspend fun getAll(): List<String> {
+        val request = CratisChronicleContracts.GetNamespacesRequest.newBuilder()
+            .setEventStore(eventStoreName)
+            .build()
+        return stub.getNamespaces(request).itemsList
+    }
 }

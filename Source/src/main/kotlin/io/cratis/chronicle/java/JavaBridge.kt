@@ -19,6 +19,7 @@ import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionsServi
 import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionBuilder
 import io.cratis.chronicle.externalServices.IExternalServicesService
 import io.cratis.chronicle.externalServices.IExternalServiceBuilder
+import io.cratis.chronicle.identities.IIdentityManagerService
 import io.cratis.chronicle.jobs.IJobsService
 import io.cratis.chronicle.namespaces.INamespacesService
 import io.cratis.chronicle.observation.IReactorsService
@@ -227,6 +228,20 @@ object NamespacesServiceJavaBridge {
     @JvmStatic
     fun ensure(service: INamespacesService, namespaceName: String) {
         runBlocking { service.ensure(namespaceName) }
+    }
+
+    @JvmStatic
+    fun getAll(service: INamespacesService): List<String> =
+        runBlocking { service.getAll() }
+}
+
+/**
+ * Java-friendly bridge for IIdentityManagerService operations.
+ */
+object IdentityManagerServiceJavaBridge {
+    @JvmStatic
+    fun rename(service: IIdentityManagerService, subject: String, name: String) {
+        runBlocking { service.rename(subject, name) }
     }
 }
 

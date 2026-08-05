@@ -11,10 +11,15 @@ import io.cratis.chronicle.constraints.IConstraintsService
 import io.cratis.chronicle.events.EventTypesService
 import io.cratis.chronicle.events.IEventTypesService
 import io.cratis.chronicle.eventSequences.EventLog
+import io.cratis.chronicle.eventSequences.EventSequence
+import io.cratis.chronicle.eventSequences.EventSequenceId
+import io.cratis.chronicle.eventSequences.IEventSequence
 import io.cratis.chronicle.eventStoreSubscriptions.EventStoreSubscriptionsService
 import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionsService
 import io.cratis.chronicle.externalServices.ExternalServicesService
 import io.cratis.chronicle.externalServices.IExternalServicesService
+import io.cratis.chronicle.identities.IIdentityManagerService
+import io.cratis.chronicle.identities.IdentityManagerService
 import io.cratis.chronicle.jobs.IJobsService
 import io.cratis.chronicle.jobs.JobsService
 import io.cratis.chronicle.eventSequences.IEventLog
@@ -34,6 +39,7 @@ import io.cratis.chronicle.readModels.ReadModelsService
 import io.cratis.chronicle.seeding.EventSeedingService
 import io.cratis.chronicle.seeding.IEventSeedingService
 import io.cratis.chronicle.transactions.UnitOfWorkManager
+import java.util.concurrent.ConcurrentHashMap
 
 class EventStore(
     override val name: String,
@@ -104,4 +110,15 @@ class EventStore(
     override val webhooks: IWebhooksService by lazy {
         WebhooksService(name, services.webhooks)
     }
+
+    override val identities: IIdentityManagerService by lazy {
+        IdentityManagerService(name, namespace, services.identities)
+    }
+
+    private val eventSequences = ConcurrentHashMap<EventSequenceId, IEventSequence>()
+
+    override fun getEventSequence(id: EventSequenceId): IEventSequence =
+        eventSequences.getOrPut(id) {
+            EventSequence(id, name, namespace, services.eventSequences)
+        }
 }

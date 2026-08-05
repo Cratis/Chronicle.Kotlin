@@ -6,4 +6,7 @@ package io.cratis.chronicle.namespaces
 interface INamespacesService {
     /** Ensures a namespace exists in the event store, creating it if absent. */
     suspend fun ensure(namespaceName: String)
+
+    /** Lists all namespaces in the event store. */
+    suspend fun getAll(): List<String>
 }
