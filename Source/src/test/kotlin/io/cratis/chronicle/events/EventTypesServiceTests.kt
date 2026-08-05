@@ -42,4 +42,36 @@ class EventTypesServiceTests {
         assertEquals("string", (properties["name"] as Map<*, *>)["type"])
         assertEquals("number", (properties["price"] as Map<*, *>)["type"])
     }
+
+    @Test
+    fun `getRegisteredEventTypes is empty before anything has been registered`() {
+        val stub = mockk<EventTypesGrpcKt.EventTypesCoroutineStub>()
+        val service = EventTypesService("my-event-store", stub)
+
+        assertTrue(service.getRegisteredEventTypes().isEmpty())
+    }
+
+    @Test
+    fun `getRegisteredEventTypes reflects every class registered through register`() = runBlocking {
+        val stub = mockk<EventTypesGrpcKt.EventTypesCoroutineStub>()
+        coEvery { stub.register(any(), any()) } returns Empty.getDefaultInstance()
+
+        val service = EventTypesService("my-event-store", stub)
+        service.register(ProductRegistered::class)
+
+        val registered = service.getRegisteredEventTypes()
+        assertEquals(1, registered.size)
+        assertEquals("ProductRegistered", registered.single().id.value)
+    }
+
+    @Test
+    fun `getRegisteredEventTypes reflects a class registered through registerSingle`() = runBlocking {
+        val stub = mockk<EventTypesGrpcKt.EventTypesCoroutineStub>()
+        coEvery { stub.registerSingle(any(), any()) } returns Empty.getDefaultInstance()
+
+        val service = EventTypesService("my-event-store", stub)
+        service.registerSingle(ProductRegistered::class)
+
+        assertEquals(1, service.getRegisteredEventTypes().size)
+    }
 }

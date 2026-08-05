@@ -104,7 +104,7 @@ class EventStore(
     }
 
     override val eventStoreSubscriptions: IEventStoreSubscriptionsService by lazy {
-        EventStoreSubscriptionsService(name, services.eventStoreSubscriptions)
+        EventStoreSubscriptionsService(name, services.eventStoreSubscriptions, eventTypes)
     }
 
     override val webhooks: IWebhooksService by lazy {

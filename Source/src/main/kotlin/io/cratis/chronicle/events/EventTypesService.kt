@@ -8,6 +8,7 @@ import Cratis.Chronicle.Contracts.Events.Events
 import io.cratis.chronicle.events.migrations.EventTypeMigrationBuilder
 import io.cratis.chronicle.events.migrations.IEventTypeMigration
 import io.cratis.chronicle.schemas.JsonSchemaGenerator
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import kotlin.reflect.full.findAnnotation
@@ -17,6 +18,8 @@ class EventTypesService(
     private val eventStoreName: String,
     private val stub: EventTypesGrpcKt.EventTypesCoroutineStub
 ) : IEventTypesService {
+    private val registeredEventTypes: MutableSet<EventTypeDescriptor> = ConcurrentHashMap.newKeySet()
+
     /**
      * Register one or more event types with the event store. [eventClasses] may contain plain
      * `@EventType`-annotated classes and/or [IEventTypeMigration] classes describing how to
@@ -24,6 +27,7 @@ class EventTypesService(
      * and merged into a single registration per event type id.
      */
     override suspend fun register(vararg eventClasses: KClass<*>) {
+        recordEventTypeDescriptors(eventClasses.toList())
         val registrations = buildRegistrations(eventClasses.toList())
         if (registrations.isEmpty()) return
         val request = Events.RegisterEventTypesRequest.newBuilder()
@@ -36,6 +40,7 @@ class EventTypesService(
 
     /** Register a single event type with the event store. */
     override suspend fun registerSingle(eventClass: KClass<*>) {
+        recordEventTypeDescriptors(listOf(eventClass))
         val registration = buildRegistrations(listOf(eventClass)).firstOrNull() ?: return
         val request = Events.RegisterSingleEventTypeRequest.newBuilder()
             .setEventStore(eventStoreName)
@@ -51,6 +56,17 @@ class EventTypesService(
             .setEventTypeId(eventTypeId)
             .build()
         return stub.getAllGenerationsForEventType(request).itemsList
+    }
+
+    override fun getRegisteredEventTypes(): List<EventTypeDescriptor> = registeredEventTypes.toList()
+
+    /** Records the [EventTypeDescriptor] for every `@EventType`-annotated class among [classes]. */
+    private fun recordEventTypeDescriptors(classes: List<KClass<*>>) {
+        classes.forEach { cls ->
+            val ann = cls.findAnnotation<EventType>() ?: return@forEach
+            val id = ann.id.ifEmpty { cls.simpleName!! }
+            registeredEventTypes.add(EventTypeDescriptor(EventTypeId(id), EventTypeGeneration(ann.generation), ann.tombstone))
+        }
     }
 
     private fun buildRegistrations(classes: List<KClass<*>>): List<Events.EventTypeRegistration> {

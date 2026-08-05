@@ -20,4 +20,14 @@ interface IEventTypesService {
 
     /** Get all known generations, and their migrations, for the given [eventTypeId]. */
     suspend fun getAllGenerationsForEventType(eventTypeId: String): List<Events.EventTypeRegistration>
+
+    /**
+     * Gets every event type that has been registered through [register]/[registerSingle] so far on
+     * this instance.
+     *
+     * Used as the fallback event type set by things like
+     * [io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionsService] when a caller
+     * does not explicitly narrow to specific event types.
+     */
+    fun getRegisteredEventTypes(): List<EventTypeDescriptor>
 }
