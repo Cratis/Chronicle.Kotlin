@@ -148,4 +148,34 @@ class EventSequenceTests {
         assertTrue(results.isEmpty())
         io.mockk.coVerify(exactly = 0) { stub.appendMany(any(), any()) }
     }
+
+    @Test
+    fun `getTailSequenceNumber returns the sequence number reported by the kernel`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val request = slot<Eventsequences.GetTailSequenceNumberRequest>()
+        coEvery { stub.getTailSequenceNumber(capture(request), any()) } returns Eventsequences.GetTailSequenceNumberResponse.newBuilder()
+            .setSequenceNumber(41)
+            .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        val tail = sequence.getTailSequenceNumber("source-1")
+
+        assertEquals(EventSequenceNumber(41), tail)
+        assertEquals("source-1", request.captured.eventSourceId)
+    }
+
+    @Test
+    fun `getTailSequenceNumber without an event source id queries across all event sources`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val request = slot<Eventsequences.GetTailSequenceNumberRequest>()
+        coEvery { stub.getTailSequenceNumber(capture(request), any()) } returns Eventsequences.GetTailSequenceNumberResponse.newBuilder()
+            .setSequenceNumber(9)
+            .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        val tail = sequence.getTailSequenceNumber()
+
+        assertEquals(EventSequenceNumber(9), tail)
+        assertEquals("", request.captured.eventSourceId)
+    }
 }

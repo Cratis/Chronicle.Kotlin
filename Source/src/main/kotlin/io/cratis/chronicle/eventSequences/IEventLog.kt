@@ -8,4 +8,5 @@ interface IEventLog : IEventSequence {
     override suspend fun append(eventSourceId: String, event: Any, options: AppendOptions?): AppendResult
     override suspend fun appendMany(eventSourceId: String, events: List<Any>, options: AppendOptions?): List<AppendResult>
     override suspend fun hasEventsFor(eventSourceId: String): Boolean
+    override suspend fun getTailSequenceNumber(eventSourceId: String?): EventSequenceNumber
 }

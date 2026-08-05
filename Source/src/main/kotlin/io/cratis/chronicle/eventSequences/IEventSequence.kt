@@ -37,4 +37,13 @@ interface IEventSequence {
      * @return `true` if events exist for the given source, otherwise `false`.
      */
     suspend fun hasEventsFor(eventSourceId: String): Boolean
+
+    /**
+     * Gets the sequence number of the last (tail) event in the sequence.
+     *
+     * @param eventSourceId Optional event source identifier to get the tail for.
+     *   If not specified, the tail sequence number across all event sources is returned.
+     * @return The tail [EventSequenceNumber].
+     */
+    suspend fun getTailSequenceNumber(eventSourceId: String? = null): EventSequenceNumber
 }

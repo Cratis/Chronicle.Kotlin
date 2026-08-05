@@ -130,6 +130,20 @@ open class EventSequence(
         return response.hasEvents
     }
 
+    override suspend fun getTailSequenceNumber(eventSourceId: String?): EventSequenceNumber {
+        val esName = eventStoreName
+        val ns = this@EventSequence.namespace
+        val request = Eventsequences.GetTailSequenceNumberRequest.newBuilder().apply {
+            this.eventStore = esName
+            this.namespace = ns
+            this.eventSequenceId = id.value
+            eventSourceId?.let { this.eventSourceId = it }
+        }.build()
+
+        val response = stub.getTailSequenceNumber(request)
+        return EventSequenceNumber(response.sequenceNumber)
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
