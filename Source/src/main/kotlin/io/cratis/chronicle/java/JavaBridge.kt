@@ -105,6 +105,10 @@ object ReadModelsJavaBridge {
         runBlocking { service.release(instance) }
 
     @JvmStatic
+    fun <T : Any> releaseMany(service: IReadModelsService, instances: List<T>): List<T> =
+        runBlocking { service.releaseMany(instances) }
+
+    @JvmStatic
     fun <T : Any> getMaterializedInstances(service: IReadModelsService, readModelClass: Class<T>, skip: Int, take: Int): List<T> =
         runBlocking { service.materialized.getInstances(readModelClass.kotlin, skip, take) }
 }

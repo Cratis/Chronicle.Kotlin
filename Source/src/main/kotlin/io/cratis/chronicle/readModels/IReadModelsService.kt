@@ -54,6 +54,16 @@ interface IReadModelsService {
      */
     suspend fun <T : Any> release(instance: T, subject: String? = null): T
 
+    /**
+     * Release (decrypt) PII-annotated properties in a collection of read model instances.
+     *
+     * The subject is derived from each instance individually - see [release] for details.
+     *
+     * @param instances The read model instances to decrypt.
+     * @return The decrypted instances, in the same order as [instances].
+     */
+    suspend fun <T : Any> releaseMany(instances: List<T>): List<T>
+
     /** Provides paginated access to server-materialized read model instances. */
     val materialized: IMaterializedReadModels
 }

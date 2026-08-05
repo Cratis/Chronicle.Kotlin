@@ -4,11 +4,13 @@
 package io.cratis.chronicle.readModels
 
 import Cratis.Chronicle.Contracts.Compliance.ComplianceGrpcKt
+import Cratis.Chronicle.Contracts.Compliance.ComplianceOuterClass
 import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.Readmodels
 import bcl.Bcl
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
@@ -22,6 +24,10 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 private data class EmployeeState(val name: String, val title: String)
+
+// Not file-private: ReadModelsService.resolveSubject() invokes the `id` property reflectively via
+// KProperty1.call(), which requires the declaring class itself to be JVM-accessible (public).
+data class ConfidentialProfile(val id: String, val ssn: String)
 
 private fun UUID.toContractGuid(): Bcl.Guid = Bcl.Guid.newBuilder()
     .setLo(java.lang.Long.reverseBytes(mostSignificantBits))
@@ -101,5 +107,33 @@ class ReadModelsServiceTests {
 
         assertNull(result.single().readModel)
         assertEquals(ReadModelChangeType.Removed, result.single().changeType)
+    }
+
+    @Test
+    fun `releaseMany releases every instance individually, preserving order`() = runBlocking {
+        val stub = mockk<ReadModelsGrpcKt.ReadModelsCoroutineStub>()
+        val complianceStub = mockk<ComplianceGrpcKt.ComplianceCoroutineStub>()
+        coEvery { complianceStub.release(any(), any()) } answers {
+            val request = firstArg<ComplianceOuterClass.ReleaseRequest>()
+            ComplianceOuterClass.ReleaseResponse.newBuilder().setPayload(request.payload).build()
+        }
+
+        val service = ReadModelsService(
+            "my-store",
+            "default",
+            stub,
+            mockk<MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub>(),
+            complianceStub
+        )
+
+        val instances = listOf(
+            ConfidentialProfile("employee-1", "111-11-1111"),
+            ConfidentialProfile("employee-2", "222-22-2222")
+        )
+
+        val released = service.releaseMany(instances)
+
+        assertEquals(instances, released)
+        coVerify(exactly = 2) { complianceStub.release(any(), any()) }
     }
 }

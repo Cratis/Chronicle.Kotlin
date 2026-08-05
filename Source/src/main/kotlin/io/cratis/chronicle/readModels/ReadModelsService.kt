@@ -170,6 +170,8 @@ class ReadModelsService(
         return gson.fromJson(released, instance::class.java) as T
     }
 
+    override suspend fun <T : Any> releaseMany(instances: List<T>): List<T> = instances.map { release(it) }
+
     /** Resolves the compliance subject for [instance] by looking for an `id` property, falling back to none. */
     private fun resolveSubject(instance: Any): String? =
         instance::class.memberProperties
