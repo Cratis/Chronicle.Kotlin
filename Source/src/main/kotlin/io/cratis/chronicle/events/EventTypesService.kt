@@ -5,6 +5,7 @@ package io.cratis.chronicle.events
 
 import Cratis.Chronicle.Contracts.Events.EventTypesGrpcKt
 import Cratis.Chronicle.Contracts.Events.Events
+import io.cratis.chronicle.schemas.JsonSchemaGenerator
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 
@@ -24,7 +25,7 @@ class EventTypesService(
                         .setTombstone(ann.tombstone)
                         .build()
                 )
-                .setSchema("{}")
+                .setSchema(JsonSchemaGenerator.generate(cls))
                 .build()
         }
         if (registrations.isEmpty()) return

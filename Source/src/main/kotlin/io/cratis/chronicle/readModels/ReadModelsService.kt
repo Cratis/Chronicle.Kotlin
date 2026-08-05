@@ -8,10 +8,10 @@ import Cratis.Chronicle.Contracts.ReadModels.Readmodels
 import bcl.Bcl
 import com.google.gson.Gson
 import io.cratis.chronicle.eventSequences.EventSequenceId
+import io.cratis.chronicle.schemas.JsonSchemaGenerator
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.full.memberProperties
 
 private val gson = Gson()
 
@@ -62,7 +62,7 @@ class ReadModelsService(
                     .setTypeId(defaultSinkTypeId)
                     .build()
             )
-            .setSchema(generateSchema(cls))
+            .setSchema(JsonSchemaGenerator.generate(cls))
             .setObserverTypeValue(observerType)
             .setObserverIdentifier(observerIdentifier)
             .build()
@@ -97,29 +97,5 @@ class ReadModelsService(
         } else {
             gson.fromJson(response.readModel, readModelClass.java)
         }
-    }
-
-    /**
-     * Generates a minimal NJsonSchema-compatible JSON schema from a data class's member properties.
-     * The server uses the schema to infer which property is the read model key —
-     * it looks for "id" or "Id" first, then falls back to camel/pascal-case heuristics.
-     */
-    private fun generateSchema(cls: KClass<*>): String {
-        val properties = cls.memberProperties.associate { prop ->
-            val typeName = when (prop.returnType.classifier) {
-                String::class -> "string"
-                Int::class, Long::class, Short::class, Byte::class -> "integer"
-                Double::class, Float::class -> "number"
-                Boolean::class -> "boolean"
-                else -> "string"
-            }
-            prop.name to mapOf("type" to typeName)
-        }
-
-        val schema = mapOf(
-            "type" to "object",
-            "properties" to properties
-        )
-        return gson.toJson(schema)
     }
 }
