@@ -68,6 +68,8 @@ data class EmployeeHired(val firstName: String, val lastName: String, val title:
 suspend fun main() {
     val client = ChronicleClient(ChronicleOptions.development())
     val store = client.getEventStore("MyStore")
+    // Chronicle needs the schema for an event type before it accepts events of that type.
+    store.eventTypes.register(EmployeeHired::class)
     val result = store.eventLog.append("employee-123", EmployeeHired("Jane", "Doe", "Engineer"))
     println("Appended at sequence number ${result.sequenceNumber.value}")
     client.dispose()
@@ -80,6 +82,7 @@ suspend fun main() {
 import io.cratis.chronicle.ChronicleClient;
 import io.cratis.chronicle.ChronicleOptions;
 import io.cratis.chronicle.events.EventType;
+import io.cratis.chronicle.java.EventTypesServiceJavaBridge;
 
 @EventType
 public class EmployeeHired {
@@ -100,6 +103,8 @@ public class Main {
     public static void main(String[] args) throws Exception {
         ChronicleClient client = new ChronicleClient(ChronicleOptions.Companion.development());
         var store = client.getEventStore("MyStore");
+        // Chronicle needs the schema for an event type before it accepts events of that type.
+        EventTypesServiceJavaBridge.register(store.getEventTypes(), EmployeeHired.class);
         var result = store.getEventLog().append("employee-123", 
             new EmployeeHired("Jane", "Doe", "Engineer"));
         System.out.println("Appended at sequence number " + result.getSequenceNumber().getValue());
