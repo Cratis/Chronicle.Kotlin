@@ -35,3 +35,7 @@ build/
 .idea/
 *.iml
 .vscode/
+
+# Python (Documentation/validate-client-snippets.py)
+__pycache__/
+*.pyc

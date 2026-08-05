@@ -18,6 +18,7 @@ import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.eventSequences.ITransactionalEventSequence
 import io.cratis.chronicle.eventSequences.RedactionReason
+import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScopeBuilder
 import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionsService
 import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionBuilder
 import io.cratis.chronicle.externalServices.IExternalServicesService
@@ -125,6 +126,20 @@ object EventLogJavaBridge {
     ): Job = CoroutineScope(Dispatchers.Default).launch {
         eventLog.appendOperations.collect { entries -> callback.accept(entries) }
     }
+}
+
+/**
+ * Java-friendly bridge for [ConcurrencyScopeBuilder] operations.
+ *
+ * [ConcurrencyScopeBuilder.withSequenceNumber] takes an [io.cratis.chronicle.eventSequences.EventSequenceNumber],
+ * a Kotlin value class Java cannot construct directly (its constructor is private on the JVM ABI).
+ * This bridge wraps a raw `long` instead; every other builder method takes plain types and can be
+ * called directly from Java on the returned builder.
+ */
+object ConcurrencyScopeBuilderJavaBridge {
+    @JvmStatic
+    fun withSequenceNumber(builder: ConcurrencyScopeBuilder, sequenceNumber: Long): ConcurrencyScopeBuilder =
+        builder.withSequenceNumber(io.cratis.chronicle.eventSequences.EventSequenceNumber(sequenceNumber))
 }
 
 /**
