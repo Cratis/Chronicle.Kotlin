@@ -5,11 +5,13 @@ package io.cratis.chronicle.eventSequences
 
 import Cratis.Chronicle.Contracts.EventSequences.Eventsequences
 import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
+import bcl.Bcl
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import io.cratis.chronicle.events.EventType
 import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.slot
+import java.util.UUID
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -20,6 +22,26 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+
+private fun UUID.toContractGuid(): Bcl.Guid = Bcl.Guid.newBuilder()
+    .setLo(java.lang.Long.reverseBytes(mostSignificantBits))
+    .setHi(java.lang.Long.reverseBytes(leastSignificantBits))
+    .build()
+
+private fun sampleEventContext(sequenceNumber: Long): Eventsequences.EventContext =
+    Eventsequences.EventContext.newBuilder()
+        .setSequenceNumber(sequenceNumber)
+        .setEventSourceId("source-1")
+        .setEventType(Eventsequences.EventType.newBuilder().setId("ObservedEvent").setGeneration(1))
+        .setOccurred(Eventsequences.SerializableDateTimeOffset.newBuilder().setValue(java.time.Instant.now().toString()))
+        .setCorrelationId(UUID.randomUUID().toContractGuid())
+        .setCausedBy(
+            Eventsequences.Identity.newBuilder()
+                .setSubject("system")
+                .setName("System")
+                .setUserName("system")
+        )
+        .build()
 
 private data class SomethingHappened(val value: String)
 
@@ -337,5 +359,116 @@ class EventSequenceTests {
 
         assertEquals(2, emission.size)
         assertTrue(emission.all { it.result.isSuccess })
+    }
+
+    @Test
+    fun `getForEventSourceIdAndEventTypes sends the event source id and event types on the wire`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val request = slot<Eventsequences.GetForEventSourceIdAndEventTypesRequest>()
+        val appendedEvent = Eventsequences.AppendedEvent.newBuilder()
+            .setContext(sampleEventContext(3))
+            .setContent("""{"value":"hello"}""")
+            .build()
+        coEvery {
+            stub.getForEventSourceIdAndEventTypes(capture(request), any())
+        } returns Eventsequences.GetForEventSourceIdAndEventTypesResponse.newBuilder()
+            .addEvents(appendedEvent)
+            .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        val events = sequence.getForEventSourceIdAndEventTypes("source-1", listOf(ObservedEvent::class))
+
+        assertEquals("source-1", request.captured.eventSourceId)
+        assertEquals(1, request.captured.eventTypesList.size)
+        assertEquals("ObservedEvent", request.captured.eventTypesList.single().id)
+        assertEquals(1, events.size)
+        assertEquals("""{"value":"hello"}""", events.single().content)
+        assertEquals(3L, events.single().context.sequenceNumber)
+    }
+
+    @Test
+    fun `getForEventSourceIdAndEventTypes narrows by stream type, stream id, and source type when supplied`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val request = slot<Eventsequences.GetForEventSourceIdAndEventTypesRequest>()
+        coEvery {
+            stub.getForEventSourceIdAndEventTypes(capture(request), any())
+        } returns Eventsequences.GetForEventSourceIdAndEventTypesResponse.getDefaultInstance()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        sequence.getForEventSourceIdAndEventTypes(
+            "source-1",
+            listOf(ObservedEvent::class),
+            eventStreamType = "Onboarding",
+            eventStreamId = "2026",
+            eventSourceType = "Account"
+        )
+
+        assertEquals("Onboarding", request.captured.eventStreamType)
+        assertEquals("2026", request.captured.eventStreamId)
+        assertEquals("Account", request.captured.eventSourceType)
+    }
+
+    @Test
+    fun `getFromSequenceNumber sends the starting sequence number and returns the mapped events`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val request = slot<Eventsequences.GetFromEventSequenceNumberRequest>()
+        val appendedEvent = Eventsequences.AppendedEvent.newBuilder()
+            .setContext(sampleEventContext(10))
+            .setContent("""{"value":"world"}""")
+            .build()
+        coEvery {
+            stub.getEventsFromEventSequenceNumber(capture(request), any())
+        } returns Eventsequences.GetFromEventSequenceNumberResponse.newBuilder()
+            .addEvents(appendedEvent)
+            .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        val events = sequence.getFromSequenceNumber(EventSequenceNumber(10), eventSourceId = "source-1")
+
+        assertEquals(10L, request.captured.fromEventSequenceNumber)
+        assertEquals("source-1", request.captured.eventSourceId)
+        assertEquals(1, events.size)
+        assertEquals("""{"value":"world"}""", events.single().content)
+    }
+
+    @Test
+    fun `getFromSequenceNumber omits event source id and event types when not supplied`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val request = slot<Eventsequences.GetFromEventSequenceNumberRequest>()
+        coEvery {
+            stub.getEventsFromEventSequenceNumber(capture(request), any())
+        } returns Eventsequences.GetFromEventSequenceNumberResponse.getDefaultInstance()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        sequence.getFromSequenceNumber(EventSequenceNumber(0))
+
+        assertEquals("", request.captured.eventSourceId)
+        assertTrue(request.captured.eventTypesList.isEmpty())
+    }
+
+    @Test
+    fun `getNextSequenceNumber returns the first sequence number when the sequence is empty`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        coEvery { stub.getTailSequenceNumber(any(), any()) } returns Eventsequences.GetTailSequenceNumberResponse.newBuilder()
+            .setSequenceNumber(EventSequenceNumber.unavailable.value)
+            .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        val next = sequence.getNextSequenceNumber()
+
+        assertEquals(EventSequenceNumber.first, next)
+    }
+
+    @Test
+    fun `getNextSequenceNumber returns one past the current tail`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        coEvery { stub.getTailSequenceNumber(any(), any()) } returns Eventsequences.GetTailSequenceNumberResponse.newBuilder()
+            .setSequenceNumber(6)
+            .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        val next = sequence.getNextSequenceNumber()
+
+        assertEquals(EventSequenceNumber(7), next)
     }
 }
