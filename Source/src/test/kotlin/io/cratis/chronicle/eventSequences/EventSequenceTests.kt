@@ -245,4 +245,47 @@ class EventSequenceTests {
 
         assertEquals(CompleteStreamResult.AlreadyCompleted, result)
     }
+
+    @Test
+    fun `redact sends the sequence number and reason on the wire`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val request = slot<Eventsequences.RedactRequest>()
+        coEvery { stub.redact(capture(request), any()) } returns Eventsequences.RedactResponse.getDefaultInstance()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        sequence.redact(EventSequenceNumber(12), RedactionReason("GDPR erasure request"))
+
+        assertEquals(12L, request.captured.sequenceNumber)
+        assertEquals("GDPR erasure request", request.captured.reason)
+        assertEquals("my-store", request.captured.eventStore)
+        assertEquals(EventSequenceId.eventLog.value, request.captured.eventSequenceId)
+    }
+
+    @Test
+    fun `redactForEventSource sends the event source id, reason, and event types on the wire`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val request = slot<Eventsequences.RedactForEventSourceRequest>()
+        coEvery { stub.redactForEventSource(capture(request), any()) } returns com.google.protobuf.Empty.getDefaultInstance()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        sequence.redactForEventSource("source-1", RedactionReason("GDPR erasure request"), listOf(ObservedEvent::class))
+
+        assertEquals("source-1", request.captured.eventSourceId)
+        assertEquals("GDPR erasure request", request.captured.reason)
+        assertEquals(1, request.captured.eventTypesList.size)
+        assertEquals("ObservedEvent", request.captured.eventTypesList.single().id)
+    }
+
+    @Test
+    fun `redactForEventSource with no event types redacts every event type for the event source`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val request = slot<Eventsequences.RedactForEventSourceRequest>()
+        coEvery { stub.redactForEventSource(capture(request), any()) } returns com.google.protobuf.Empty.getDefaultInstance()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        sequence.redactForEventSource("source-1", RedactionReason.unknown)
+
+        assertTrue(request.captured.eventTypesList.isEmpty())
+        assertEquals("Unknown", request.captured.reason)
+    }
 }

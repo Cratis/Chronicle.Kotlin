@@ -108,4 +108,25 @@ interface IEventSequence {
      *   [CompleteStreamResult.AlreadyCompleted] and leaves the stream in its completed state.
      */
     suspend fun completeStream(eventStreamType: String, eventStreamId: String): CompleteStreamResult
+
+    /**
+     * Redacts a specific event instance, permanently rewriting its content.
+     *
+     * This is a destructive content rewrite, not a field mask - the original content is gone
+     * once this returns. Use it for compliance-driven removal of a single event's payload.
+     *
+     * @param sequenceNumber The [EventSequenceNumber] of the event to redact.
+     * @param reason The [RedactionReason] for redacting.
+     */
+    suspend fun redact(sequenceNumber: EventSequenceNumber, reason: RedactionReason)
+
+    /**
+     * Redacts all events for a specific event source, optionally filtered to specific event types.
+     *
+     * @param eventSourceId The event source identifier to redact events for.
+     * @param reason The [RedactionReason] for redacting.
+     * @param eventTypes Optional event types to narrow the redaction to. If empty, all event types
+     *   for the event source are redacted.
+     */
+    suspend fun redactForEventSource(eventSourceId: String, reason: RedactionReason, eventTypes: List<KClass<*>> = emptyList())
 }

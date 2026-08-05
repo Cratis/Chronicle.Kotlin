@@ -210,6 +210,45 @@ open class EventSequence(
         }
     }
 
+    override suspend fun redact(sequenceNumber: EventSequenceNumber, reason: RedactionReason) {
+        val causationChain = causationManager.currentChain
+        val identity = identityProvider.currentIdentity
+        val esName = eventStoreName
+        val ns = this@EventSequence.namespace
+        val request = Eventsequences.RedactRequest.newBuilder().apply {
+            this.eventStore = esName
+            this.namespace = ns
+            this.eventSequenceId = id.value
+            this.sequenceNumber = sequenceNumber.value
+            this.reason = reason.value
+            this.correlationId = correlationIdManager.current.toContractsGuid()
+            addAllCausation(causationChain.map { c -> c.toContractsCausation() })
+            this.causedBy = identity.withoutDuplicates().toContractsIdentity()
+        }.build()
+
+        stub.redact(request)
+    }
+
+    override suspend fun redactForEventSource(eventSourceId: String, reason: RedactionReason, eventTypes: List<KClass<*>>) {
+        val causationChain = causationManager.currentChain
+        val identity = identityProvider.currentIdentity
+        val esName = eventStoreName
+        val ns = this@EventSequence.namespace
+        val request = Eventsequences.RedactForEventSourceRequest.newBuilder().apply {
+            this.eventStore = esName
+            this.namespace = ns
+            this.eventSequenceId = id.value
+            this.eventSourceId = eventSourceId
+            this.reason = reason.value
+            addAllEventTypes(eventTypes.map { resolveEventTypeFor(it).toContractsEventType() })
+            this.correlationId = correlationIdManager.current.toContractsGuid()
+            addAllCausation(causationChain.map { c -> c.toContractsCausation() })
+            this.causedBy = identity.withoutDuplicates().toContractsIdentity()
+        }.build()
+
+        stub.redactForEventSource(request)
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
