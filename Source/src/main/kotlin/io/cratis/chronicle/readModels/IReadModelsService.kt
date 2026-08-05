@@ -3,7 +3,6 @@
 
 package io.cratis.chronicle.readModels
 
-import Cratis.Chronicle.Contracts.ReadModels.Readmodels
 import kotlinx.coroutines.flow.Flow
 import kotlin.reflect.KClass
 
@@ -25,17 +24,17 @@ interface IReadModelsService {
      *
      * @param readModelClass The read model type.
      * @param key The read model key to get snapshots for.
-     * @return The matching snapshots.
+     * @return The matching [ReadModelSnapshot]s, with their read model instance deserialized into [T].
      */
-    suspend fun getSnapshotsById(readModelClass: KClass<*>, key: String): List<Readmodels.ReadModelSnapshot>
+    suspend fun <T : Any> getSnapshotsById(readModelClass: KClass<T>, key: String): List<ReadModelSnapshot<T>>
 
     /**
      * Observe changes for a specific read model instance.
      *
      * @param readModelClass The read model type.
-     * @return A [Flow] of [Readmodels.ReadModelChangeset].
+     * @return A [Flow] of [ReadModelChangeset], with the read model instance deserialized into [T].
      */
-    fun watch(readModelClass: KClass<*>): Flow<Readmodels.ReadModelChangeset>
+    fun <T : Any> watch(readModelClass: KClass<T>): Flow<ReadModelChangeset<T>>
 
     /**
      * Dehydrate a session, releasing any session-scoped state held for a read model instance.

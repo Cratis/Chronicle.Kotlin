@@ -14,6 +14,9 @@ import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.schemas.JsonSchemaGenerator
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import java.time.Instant
+import java.util.UUID
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
@@ -122,7 +125,7 @@ class ReadModelsService(
         return stub.getAllInstances(builder.build()).instancesList.map { gson.fromJson(it, readModelClass.java) }
     }
 
-    override suspend fun getSnapshotsById(readModelClass: KClass<*>, key: String): List<Readmodels.ReadModelSnapshot> {
+    override suspend fun <T : Any> getSnapshotsById(readModelClass: KClass<T>, key: String): List<ReadModelSnapshot<T>> {
         val request = Readmodels.GetSnapshotsByKeyRequest.newBuilder()
             .setEventStore(eventStoreName)
             .setNamespace(namespace)
@@ -131,10 +134,10 @@ class ReadModelsService(
             .setReadModelKey(key)
             .build()
 
-        return stub.getSnapshotsByKey(request).snapshotsList
+        return stub.getSnapshotsByKey(request).snapshotsList.map { it.toTyped(readModelClass) }
     }
 
-    override fun watch(readModelClass: KClass<*>): Flow<Readmodels.ReadModelChangeset> {
+    override fun <T : Any> watch(readModelClass: KClass<T>): Flow<ReadModelChangeset<T>> {
         val request = Readmodels.WatchRequest.newBuilder()
             .setEventStore(eventStoreName)
             .setNamespace(namespace)
@@ -142,7 +145,7 @@ class ReadModelsService(
             .setEventSequenceId(EventSequenceId.eventLog.value)
             .build()
 
-        return stub.watch(request)
+        return stub.watch(request).map { it.toTyped(readModelClass) }
     }
 
     override suspend fun dehydrateSession(readModelClass: KClass<*>, key: String, sessionId: String) {
@@ -173,4 +176,50 @@ class ReadModelsService(
             .firstOrNull { it.name.equals("id", ignoreCase = true) }
             ?.call(instance)
             ?.toString()
+
+    private fun <T : Any> Readmodels.ReadModelSnapshot.toTyped(readModelClass: KClass<T>): ReadModelSnapshot<T> =
+        ReadModelSnapshot(
+            instance = gson.fromJson(readModel, readModelClass.java),
+            events = eventsList,
+            occurred = if (hasOccurred()) occurred.value.toInstantOrNull() else null,
+            correlationId = if (hasCorrelationId()) correlationId.toUUID() else null
+        )
+
+    private fun <T : Any> Readmodels.ReadModelChangeset.toTyped(readModelClass: KClass<T>): ReadModelChangeset<T> =
+        ReadModelChangeset(
+            namespace = namespace,
+            modelKey = modelKey,
+            readModel = if (removed || readModel.isNullOrBlank() || readModel == "null") {
+                null
+            } else {
+                gson.fromJson(readModel, readModelClass.java)
+            },
+            removed = removed,
+            changeType = changeType.toClient(),
+            eventSequenceNumber = eventSequenceNumber,
+            occurred = if (hasOccurred()) occurred.value.toInstantOrNull() else null,
+            correlationId = if (hasCorrelationId()) correlationId.toUUID() else null
+        )
+}
+
+private fun String.toInstantOrNull(): Instant? = try {
+    Instant.parse(this)
+} catch (e: Exception) {
+    null
+}
+
+private fun Readmodels.ReadModelChangeType.toClient(): ReadModelChangeType = when (this) {
+    Readmodels.ReadModelChangeType.Added -> ReadModelChangeType.Added
+    Readmodels.ReadModelChangeType.Removed -> ReadModelChangeType.Removed
+    else -> ReadModelChangeType.Modified
+}
+
+/**
+ * Converts a wire [Bcl.Guid] (lo/hi, little-endian halves) back to a Java [UUID] (big-endian halves) -
+ * the inverse of the `UUID.toContractsGuid()` conversion used when appending events.
+ */
+private fun Bcl.Guid.toUUID(): UUID {
+    val mostSignificantBits = java.lang.Long.reverseBytes(lo)
+    val leastSignificantBits = java.lang.Long.reverseBytes(hi)
+    return UUID(mostSignificantBits, leastSignificantBits)
 }

@@ -7,7 +7,6 @@ import Cratis.Chronicle.Contracts.Events.Events
 import Cratis.Chronicle.Contracts.Jobs.JobsOuterClass
 import Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.ObservationEventstoresubscriptions
 import Cratis.Chronicle.Contracts.Observation.Webhooks.ObservationWebhooks
-import Cratis.Chronicle.Contracts.ReadModels.Readmodels
 import io.cratis.chronicle.auditing.CausationManager
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.compliance.IComplianceService
@@ -26,6 +25,7 @@ import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
 import io.cratis.chronicle.projections.IProjectionsService
 import io.cratis.chronicle.readModels.IReadModelsService
+import io.cratis.chronicle.readModels.ReadModelSnapshot
 import io.cratis.chronicle.constraints.IConstraintBuilder
 import io.cratis.chronicle.constraints.IConstraintsService
 import io.cratis.chronicle.constraints.IUniqueConstraintBuilder
@@ -92,7 +92,7 @@ object ReadModelsJavaBridge {
         runBlocking { service.getInstances(readModelClass.kotlin) }
 
     @JvmStatic
-    fun getSnapshotsById(service: IReadModelsService, readModelClass: Class<*>, key: String): List<Readmodels.ReadModelSnapshot> =
+    fun <T : Any> getSnapshotsById(service: IReadModelsService, readModelClass: Class<T>, key: String): List<ReadModelSnapshot<T>> =
         runBlocking { service.getSnapshotsById(readModelClass.kotlin, key) }
 
     @JvmStatic
