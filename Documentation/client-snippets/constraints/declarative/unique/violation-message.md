@@ -10,7 +10,7 @@ class ConstraintsUniqueMessageProjectName : IConstraint {
     override fun define(builder: IConstraintBuilder) {
         builder.unique { unique ->
             unique
-                .on(ConstraintsUniqueMessageProjectCreated::class) { it.name }
+                .on(ConstraintsUniqueMessageProjectCreated::class, ConstraintsUniqueMessageProjectCreated::name)
                 .withMessage("A project with this name already exists.")
         }
     }
