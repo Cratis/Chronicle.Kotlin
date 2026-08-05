@@ -4,6 +4,7 @@
 package io.cratis.chronicle.samples.console
 
 import io.cratis.chronicle.projections.FromEvent
+import io.cratis.chronicle.projections.Increment
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
@@ -26,5 +27,7 @@ data class EmployeeDetails(
     val address: String = "",
     val city: String = "",
     val zipCode: String = "",
-    val country: String = ""
+    val country: String = "",
+    /** Bumped by one every time this employee is promoted — demonstrates [Increment]. */
+    @Increment(EmployeePromoted::class) val promotionCount: Int = 0
 )

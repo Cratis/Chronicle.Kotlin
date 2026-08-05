@@ -38,3 +38,14 @@ data class EmployeeMoved(
     val zipCode: String = "",
     val country: String = ""
 )
+
+/** A welcome package has been requested for a newly hired employee — a reactor side effect of [EmployeeHired]. */
+@EventType
+data class WelcomePackageRequested(val employeeId: String = "")
+
+/**
+ * A promotion has been recorded in the shared HR audit log — a reactor side effect of [EmployeePromoted],
+ * appended to a constant event source rather than the promoted employee's own stream.
+ */
+@EventType
+data class PromotionAudited(val employeeId: String = "", val newTitle: String = "")
