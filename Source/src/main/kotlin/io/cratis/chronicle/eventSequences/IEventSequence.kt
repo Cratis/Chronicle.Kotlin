@@ -87,4 +87,25 @@ interface IEventSequence {
      * @return The next [EventSequenceNumber].
      */
     suspend fun getNextSequenceNumber(): EventSequenceNumber
+
+    /**
+     * Gets the sequence number of the last (tail) event relevant to a specific observer type.
+     *
+     * @param observerType The reactor or reducer type to get the tail for.
+     * @return The tail [EventSequenceNumber], based on the tail of the event types the observer handles.
+     */
+    suspend fun getTailSequenceNumberForObserver(observerType: KClass<*>): EventSequenceNumber
+
+    /**
+     * Completes a stream so that no further events can be appended to it.
+     *
+     * @param eventStreamType The event stream type identifying the stream's type.
+     * @param eventStreamId The event stream id identifying the stream within the type.
+     * @return A [CompleteStreamResult] — [CompleteStreamResult.Success] with the tail sequence number
+     *   on success, or one of the error cases describing why the operation was rejected.
+     * @remarks The default stream — event stream type `"Default"` paired with the default event stream
+     *   id — can never be completed. Completing an already-completed stream returns
+     *   [CompleteStreamResult.AlreadyCompleted] and leaves the stream in its completed state.
+     */
+    suspend fun completeStream(eventStreamType: String, eventStreamId: String): CompleteStreamResult
 }

@@ -19,6 +19,7 @@ import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 import kotlin.reflect.KClass
+import kotlin.reflect.full.memberFunctions
 
 private val gson = Gson()
 
@@ -132,19 +133,8 @@ open class EventSequence(
         return response.hasEvents
     }
 
-    override suspend fun getTailSequenceNumber(eventSourceId: String?): EventSequenceNumber {
-        val esName = eventStoreName
-        val ns = this@EventSequence.namespace
-        val request = Eventsequences.GetTailSequenceNumberRequest.newBuilder().apply {
-            this.eventStore = esName
-            this.namespace = ns
-            this.eventSequenceId = id.value
-            eventSourceId?.let { this.eventSourceId = it }
-        }.build()
-
-        val response = stub.getTailSequenceNumber(request)
-        return EventSequenceNumber(response.sequenceNumber)
-    }
+    override suspend fun getTailSequenceNumber(eventSourceId: String?): EventSequenceNumber =
+        getTailSequenceNumberInternal(eventSourceId = eventSourceId, filterEventTypes = emptyList())
 
     override suspend fun getForEventSourceIdAndEventTypes(
         eventSourceId: String,
@@ -195,9 +185,70 @@ open class EventSequence(
         return if (tail.isUnavailable) EventSequenceNumber.first else EventSequenceNumber(tail.value + 1)
     }
 
+    override suspend fun getTailSequenceNumberForObserver(observerType: KClass<*>): EventSequenceNumber =
+        getTailSequenceNumberInternal(eventSourceId = null, filterEventTypes = resolveObserverEventTypes(observerType))
+
+    override suspend fun completeStream(eventStreamType: String, eventStreamId: String): CompleteStreamResult {
+        val esName = eventStoreName
+        val ns = this@EventSequence.namespace
+        val request = Eventsequences.CompleteStreamRequest.newBuilder().apply {
+            this.eventStore = esName
+            this.namespace = ns
+            this.eventSequenceId = id.value
+            this.eventStreamType = eventStreamType
+            this.eventStreamId = eventStreamId
+        }.build()
+
+        val response = stub.completeStream(request)
+        if (response.isSuccess) {
+            return CompleteStreamResult.Success(EventSequenceNumber(response.sequenceNumber))
+        }
+
+        return when (response.error) {
+            Eventsequences.CompleteStreamError.DefaultStreamCannotBeCompleted -> CompleteStreamResult.DefaultStreamCannotBeCompleted
+            else -> CompleteStreamResult.AlreadyCompleted
+        }
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
+
+    private suspend fun getTailSequenceNumberInternal(
+        eventSourceId: String?,
+        filterEventTypes: List<EventTypeDescriptor>
+    ): EventSequenceNumber {
+        val esName = eventStoreName
+        val ns = this@EventSequence.namespace
+        val request = Eventsequences.GetTailSequenceNumberRequest.newBuilder().apply {
+            this.eventStore = esName
+            this.namespace = ns
+            this.eventSequenceId = id.value
+            eventSourceId?.let { this.eventSourceId = it }
+            addAllEventTypes(filterEventTypes.map { it.toContractsEventType() })
+        }.build()
+
+        val response = stub.getTailSequenceNumber(request)
+        return EventSequenceNumber(response.sequenceNumber)
+    }
+
+    /**
+     * Reflects over an observer type's handler methods to find the event types it handles, the same
+     * way [io.cratis.chronicle.observation.ReactorsService] discovers them for registration - the
+     * second parameter of each candidate handler method, when annotated with `@EventType`.
+     */
+    private fun resolveObserverEventTypes(observerType: KClass<*>): List<EventTypeDescriptor> {
+        val eventTypes = mutableListOf<EventTypeDescriptor>()
+        for (fn in observerType.memberFunctions) {
+            val params = fn.parameters
+            if (params.size < 2) continue
+            val eventKClass = params[1].type.classifier as? KClass<*> ?: continue
+            if (eventKClass.java.getAnnotation(EventType::class.java) != null) {
+                eventTypes.add(resolveEventTypeFor(eventKClass))
+            }
+        }
+        return eventTypes.distinct()
+    }
 
     private fun resolveEventType(event: Any): EventTypeDescriptor = resolveEventTypeFor(event::class)
 

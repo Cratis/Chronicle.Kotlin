@@ -6,6 +6,7 @@ package io.cratis.chronicle.eventSequences
 import Cratis.Chronicle.Contracts.EventSequences.Eventsequences
 import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
+import io.cratis.chronicle.events.EventType
 import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.slot
@@ -17,6 +18,14 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 private data class SomethingHappened(val value: String)
+
+@EventType
+private data class ObservedEvent(val value: String)
+
+private class ObserverWithHandler {
+    @Suppress("UNUSED_PARAMETER")
+    fun handle(event: ObservedEvent) {}
+}
 
 class EventSequenceTests {
 
@@ -177,5 +186,63 @@ class EventSequenceTests {
 
         assertEquals(EventSequenceNumber(9), tail)
         assertEquals("", request.captured.eventSourceId)
+    }
+
+    @Test
+    fun `getTailSequenceNumberForObserver filters by the event types the observer handles`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val request = slot<Eventsequences.GetTailSequenceNumberRequest>()
+        coEvery { stub.getTailSequenceNumber(capture(request), any()) } returns Eventsequences.GetTailSequenceNumberResponse.newBuilder()
+            .setSequenceNumber(3)
+            .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        val tail = sequence.getTailSequenceNumberForObserver(ObserverWithHandler::class)
+
+        assertEquals(EventSequenceNumber(3), tail)
+        assertEquals(1, request.captured.eventTypesList.size)
+        assertEquals("ObservedEvent", request.captured.eventTypesList.single().id)
+    }
+
+    @Test
+    fun `completeStream returns Success with the tail sequence number on success`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        coEvery { stub.completeStream(any(), any()) } returns Eventsequences.CompleteStreamResponse.newBuilder()
+            .setIsSuccess(true)
+            .setSequenceNumber(9)
+            .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        val result = sequence.completeStream("Onboarding", "2026")
+
+        assertEquals(CompleteStreamResult.Success(EventSequenceNumber(9)), result)
+    }
+
+    @Test
+    fun `completeStream returns DefaultStreamCannotBeCompleted when the kernel rejects the default stream`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        coEvery { stub.completeStream(any(), any()) } returns Eventsequences.CompleteStreamResponse.newBuilder()
+            .setIsSuccess(false)
+            .setError(Eventsequences.CompleteStreamError.DefaultStreamCannotBeCompleted)
+            .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        val result = sequence.completeStream("Default", "")
+
+        assertEquals(CompleteStreamResult.DefaultStreamCannotBeCompleted, result)
+    }
+
+    @Test
+    fun `completeStream returns AlreadyCompleted when the stream was already completed`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        coEvery { stub.completeStream(any(), any()) } returns Eventsequences.CompleteStreamResponse.newBuilder()
+            .setIsSuccess(false)
+            .setError(Eventsequences.CompleteStreamError.AlreadyCompleted)
+            .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        val result = sequence.completeStream("Onboarding", "2026")
+
+        assertEquals(CompleteStreamResult.AlreadyCompleted, result)
     }
 }

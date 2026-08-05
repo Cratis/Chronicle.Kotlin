@@ -24,4 +24,6 @@ interface IEventLog : IEventSequence {
         eventTypes: List<KClass<*>>?
     ): List<AppendedEvent>
     override suspend fun getNextSequenceNumber(): EventSequenceNumber
+    override suspend fun getTailSequenceNumberForObserver(observerType: KClass<*>): EventSequenceNumber
+    override suspend fun completeStream(eventStreamType: String, eventStreamId: String): CompleteStreamResult
 }
