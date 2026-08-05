@@ -21,7 +21,7 @@ The client is published to Maven Central as `io.cratis:chronicle`.
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.cratis:chronicle:2.1.1")
+    implementation("io.cratis:chronicle:2.1.2")
 }
 ```
 
@@ -30,7 +30,7 @@ dependencies {
 ```groovy
 // build.gradle
 dependencies {
-    implementation 'io.cratis:chronicle:2.1.1'
+    implementation 'io.cratis:chronicle:2.1.2'
 }
 ```
 

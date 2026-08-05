@@ -86,7 +86,7 @@ Then add the client to your Gradle build:
 
 ```kotlin
 dependencies {
-    implementation("io.cratis:chronicle:2.1.1")
+    implementation("io.cratis:chronicle:2.1.2")
 }
 ```
 
