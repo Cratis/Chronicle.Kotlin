@@ -15,6 +15,8 @@ import java.util.stream.Collectors;
 
 import io.cratis.chronicle.java.EventLogJavaBridge;
 import io.cratis.chronicle.java.ReadModelsJavaBridge;
+import io.cratis.chronicle.java.ComplianceServiceJavaBridge;
+import io.cratis.chronicle.EventStore;
 
 @EventType
 record CustomerRegistered(
@@ -246,6 +248,17 @@ public class Compliance {
         System.out.println(fmt("Postal code", customer.getPostalCode(), true));
         System.out.println(fmt("Country", customer.getCountry(), false));
         System.out.println("  PII fields are stored encrypted at rest — values above are the encrypted form.");
+    }
+
+    /**
+     * Deletes the encryption key used for the sample customer's PII — a real "right to be forgotten" erasure.
+     * Existing encrypted PII values become permanently unreadable; no re-encryption or rollback is possible.
+     */
+    public static void deleteCustomerEncryptionKey(EventStore store) {
+        SampleCustomerData sampleCustomer = SampleCustomerData.instance;
+        ComplianceServiceJavaBridge.deleteEncryptionKey(store.getCompliance(), sampleCustomer.id);
+        System.out.println("[pii] Deleted the encryption key for " + sampleCustomer.fullName + " (" +
+                          sampleCustomer.id + "). Its encrypted PII can no longer be decrypted.");
     }
 
     private static String fmt(String label, String value, boolean isPii) {
