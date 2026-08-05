@@ -10,10 +10,13 @@ import Cratis.Chronicle.Contracts.Observation.Webhooks.ObservationWebhooks
 import io.cratis.chronicle.auditing.CausationManager
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.compliance.IComplianceService
+import io.cratis.chronicle.eventSequences.AppendedEvent
 import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.AppendResult
+import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.eventSequences.ITransactionalEventSequence
+import io.cratis.chronicle.eventSequences.RedactionReason
 import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionsService
 import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionBuilder
 import io.cratis.chronicle.externalServices.IExternalServicesService
@@ -25,6 +28,7 @@ import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
 import io.cratis.chronicle.projections.IProjectionsService
 import io.cratis.chronicle.readModels.IReadModelsService
+import io.cratis.chronicle.readModels.ReadModelChangeset
 import io.cratis.chronicle.readModels.ReadModelSnapshot
 import io.cratis.chronicle.constraints.IConstraintBuilder
 import io.cratis.chronicle.constraints.IConstraintsService
@@ -37,7 +41,11 @@ import io.cratis.chronicle.seeding.IEventSeedingService
 import io.cratis.chronicle.transactions.UnitOfWork
 import io.cratis.chronicle.webhooks.IWebhookDefinitionBuilder
 import io.cratis.chronicle.webhooks.IWebhooksService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -59,6 +67,28 @@ object EventLogJavaBridge {
 
     @JvmStatic
     fun getSequenceNumber(result: AppendResult): Long = result.sequenceNumber.value
+
+    @JvmStatic
+    fun getForEventSourceIdAndEventTypes(eventLog: IEventLog, eventSourceId: String, eventTypes: List<Class<*>>): List<AppendedEvent> =
+        runBlocking { eventLog.getForEventSourceIdAndEventTypes(eventSourceId, eventTypes.map { it.kotlin }) }
+
+    /**
+     * Permanently redacts a specific event instance, identified by its raw sequence number (as
+     * returned by [AppendedEvent.getContext] via [io.cratis.chronicle.events.EventContext.getSequenceNumber]).
+     *
+     * This is a destructive content rewrite, not a field mask — the original content is gone once
+     * this returns.
+     */
+    @JvmStatic
+    fun redact(eventLog: IEventLog, sequenceNumber: Long, reason: String) {
+        runBlocking { eventLog.redact(EventSequenceNumber(sequenceNumber), RedactionReason(reason)) }
+    }
+
+    /** Permanently redacts all events for [eventSourceId], optionally narrowed to [eventTypes]. */
+    @JvmStatic
+    fun redactForEventSource(eventLog: IEventLog, eventSourceId: String, reason: String, eventTypes: List<Class<*>>) {
+        runBlocking { eventLog.redactForEventSource(eventSourceId, RedactionReason(reason), eventTypes.map { it.kotlin }) }
+    }
 }
 
 /**
@@ -96,6 +126,21 @@ object ReadModelsJavaBridge {
     @JvmStatic
     fun <T : Any> getSnapshotsById(service: IReadModelsService, readModelClass: Class<T>, key: String): List<ReadModelSnapshot<T>> =
         runBlocking { service.getSnapshotsById(readModelClass.kotlin, key) }
+
+    /**
+     * Subscribes [callback] to live changes for [readModelClass] via the typed
+     * [IReadModelsService.watch] `Flow`, deserializing each changeset into [T]. Java cannot collect
+     * a Kotlin `Flow` directly, so this launches a background coroutine and hands each changeset to
+     * [callback] as it arrives. Returns the [Job] backing the subscription so it can be cancelled.
+     */
+    @JvmStatic
+    fun <T : Any> watch(
+        service: IReadModelsService,
+        readModelClass: Class<T>,
+        callback: java.util.function.Consumer<ReadModelChangeset<T>>
+    ): Job = CoroutineScope(Dispatchers.Default).launch {
+        service.watch(readModelClass.kotlin).collect { changeset -> callback.accept(changeset) }
+    }
 
     @JvmStatic
     fun dehydrateSession(service: IReadModelsService, readModelClass: Class<*>, key: String, sessionId: String) {
