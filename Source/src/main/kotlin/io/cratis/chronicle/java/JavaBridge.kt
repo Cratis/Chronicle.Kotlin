@@ -10,17 +10,17 @@ import Cratis.Chronicle.Contracts.Observation.Webhooks.ObservationWebhooks
 import Cratis.Chronicle.Contracts.ReadModels.Readmodels
 import io.cratis.chronicle.auditing.CausationManager
 import io.cratis.chronicle.auditing.CausationType
-import io.cratis.chronicle.compliance.ComplianceService
+import io.cratis.chronicle.compliance.IComplianceService
 import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.eventSequences.ITransactionalEventSequence
-import io.cratis.chronicle.eventStoreSubscriptions.EventStoreSubscriptionsService
+import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionsService
 import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionBuilder
-import io.cratis.chronicle.externalServices.ExternalServicesService
+import io.cratis.chronicle.externalServices.IExternalServicesService
 import io.cratis.chronicle.externalServices.IExternalServiceBuilder
-import io.cratis.chronicle.jobs.JobsService
-import io.cratis.chronicle.namespaces.NamespacesService
+import io.cratis.chronicle.jobs.IJobsService
+import io.cratis.chronicle.namespaces.INamespacesService
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
 import io.cratis.chronicle.projections.IProjectionsService
@@ -29,11 +29,11 @@ import io.cratis.chronicle.constraints.IConstraintBuilder
 import io.cratis.chronicle.constraints.IConstraintsService
 import io.cratis.chronicle.constraints.IUniqueConstraintBuilder
 import io.cratis.chronicle.projections.IProjectionBuilderFor
-import io.cratis.chronicle.events.EventTypesService
+import io.cratis.chronicle.events.IEventTypesService
 import io.cratis.chronicle.seeding.IEventSeedingService
 import io.cratis.chronicle.transactions.UnitOfWork
 import io.cratis.chronicle.webhooks.IWebhookDefinitionBuilder
-import io.cratis.chronicle.webhooks.WebhooksService
+import io.cratis.chronicle.webhooks.IWebhooksService
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 
@@ -149,19 +149,19 @@ object ProjectionBuilderJavaBridge {
  */
 object EventTypesServiceJavaBridge {
     @JvmStatic
-    fun register(service: EventTypesService, vararg eventClasses: Class<*>) {
+    fun register(service: IEventTypesService, vararg eventClasses: Class<*>) {
         runBlocking {
             service.register(*eventClasses.map { it.kotlin }.toTypedArray())
         }
     }
 
     @JvmStatic
-    fun registerSingle(service: EventTypesService, eventClass: Class<*>) {
+    fun registerSingle(service: IEventTypesService, eventClass: Class<*>) {
         runBlocking { service.registerSingle(eventClass.kotlin) }
     }
 
     @JvmStatic
-    fun getAllGenerationsForEventType(service: EventTypesService, eventTypeId: String): List<Events.EventTypeRegistration> =
+    fun getAllGenerationsForEventType(service: IEventTypesService, eventTypeId: String): List<Events.EventTypeRegistration> =
         runBlocking { service.getAllGenerationsForEventType(eventTypeId) }
 }
 
@@ -225,7 +225,7 @@ object ProjectionsServiceJavaBridge {
  */
 object NamespacesServiceJavaBridge {
     @JvmStatic
-    fun ensure(service: NamespacesService, namespaceName: String) {
+    fun ensure(service: INamespacesService, namespaceName: String) {
         runBlocking { service.ensure(namespaceName) }
     }
 }
@@ -245,7 +245,7 @@ object EventSeedingServiceJavaBridge {
  */
 object ExternalServicesServiceJavaBridge {
     @JvmStatic
-    fun register(service: ExternalServicesService, name: String, configure: (IExternalServiceBuilder) -> Unit) {
+    fun register(service: IExternalServicesService, name: String, configure: (IExternalServiceBuilder) -> Unit) {
         runBlocking { service.register(name, configure) }
     }
 }
@@ -255,30 +255,30 @@ object ExternalServicesServiceJavaBridge {
  */
 object JobsServiceJavaBridge {
     @JvmStatic
-    fun stop(service: JobsService, jobId: String) {
+    fun stop(service: IJobsService, jobId: String) {
         runBlocking { service.stop(jobId) }
     }
 
     @JvmStatic
-    fun resume(service: JobsService, jobId: String) {
+    fun resume(service: IJobsService, jobId: String) {
         runBlocking { service.resume(jobId) }
     }
 
     @JvmStatic
-    fun delete(service: JobsService, jobId: String) {
+    fun delete(service: IJobsService, jobId: String) {
         runBlocking { service.delete(jobId) }
     }
 
     @JvmStatic
-    fun getJob(service: JobsService, jobId: String): JobsOuterClass.Job? =
+    fun getJob(service: IJobsService, jobId: String): JobsOuterClass.Job? =
         runBlocking { service.getJob(jobId) }
 
     @JvmStatic
-    fun getJobs(service: JobsService): List<JobsOuterClass.Job> =
+    fun getJobs(service: IJobsService): List<JobsOuterClass.Job> =
         runBlocking { service.getJobs() }
 
     @JvmStatic
-    fun getJobSteps(service: JobsService, jobId: String): List<JobsOuterClass.JobStep> =
+    fun getJobSteps(service: IJobsService, jobId: String): List<JobsOuterClass.JobStep> =
         runBlocking { service.getJobSteps(jobId) }
 }
 
@@ -297,7 +297,7 @@ object EventStoreSubscriptionBuilderJavaBridge {
 object EventStoreSubscriptionsServiceJavaBridge {
     @JvmStatic
     fun subscribe(
-        service: EventStoreSubscriptionsService,
+        service: IEventStoreSubscriptionsService,
         id: String,
         sourceEventStore: String,
         configure: (IEventStoreSubscriptionBuilder) -> Unit
@@ -306,12 +306,12 @@ object EventStoreSubscriptionsServiceJavaBridge {
     }
 
     @JvmStatic
-    fun unsubscribe(service: EventStoreSubscriptionsService, id: String) {
+    fun unsubscribe(service: IEventStoreSubscriptionsService, id: String) {
         runBlocking { service.unsubscribe(id) }
     }
 
     @JvmStatic
-    fun getAll(service: EventStoreSubscriptionsService): List<ObservationEventstoresubscriptions.EventStoreSubscriptionDefinition> =
+    fun getAll(service: IEventStoreSubscriptionsService): List<ObservationEventstoresubscriptions.EventStoreSubscriptionDefinition> =
         runBlocking { service.getAll() }
 }
 
@@ -329,21 +329,21 @@ object WebhookDefinitionBuilderJavaBridge {
  */
 object WebhooksServiceJavaBridge {
     @JvmStatic
-    fun register(service: WebhooksService, vararg definers: Any) {
+    fun register(service: IWebhooksService, vararg definers: Any) {
         runBlocking { service.register(*definers) }
     }
 
     @JvmStatic
-    fun register(service: WebhooksService, id: String, targetUrl: String, configure: (IWebhookDefinitionBuilder) -> Unit) {
+    fun register(service: IWebhooksService, id: String, targetUrl: String, configure: (IWebhookDefinitionBuilder) -> Unit) {
         runBlocking { service.register(id, targetUrl, configure) }
     }
 
     @JvmStatic
-    fun getAll(service: WebhooksService): List<ObservationWebhooks.WebhookDefinition> =
+    fun getAll(service: IWebhooksService): List<ObservationWebhooks.WebhookDefinition> =
         runBlocking { service.getAll() }
 
     @JvmStatic
-    fun remove(service: WebhooksService, id: String) {
+    fun remove(service: IWebhooksService, id: String) {
         runBlocking { service.remove(id) }
     }
 }
@@ -363,11 +363,11 @@ object CausationManagerJavaBridge {
  */
 object ComplianceServiceJavaBridge {
     @JvmStatic
-    fun release(service: ComplianceService, subject: String, schema: String, payload: String): String =
+    fun release(service: IComplianceService, subject: String, schema: String, payload: String): String =
         runBlocking { service.release(subject, schema, payload) }
 
     @JvmStatic
-    fun deleteEncryptionKey(service: ComplianceService, identifier: String) {
+    fun deleteEncryptionKey(service: IComplianceService, identifier: String) {
         runBlocking { service.deleteEncryptionKey(identifier) }
     }
 }

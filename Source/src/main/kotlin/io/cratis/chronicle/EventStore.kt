@@ -4,16 +4,23 @@
 package io.cratis.chronicle
 
 import io.cratis.chronicle.compliance.ComplianceService
+import io.cratis.chronicle.compliance.IComplianceService
 import io.cratis.chronicle.connection.ChronicleServices
 import io.cratis.chronicle.constraints.ConstraintsService
 import io.cratis.chronicle.constraints.IConstraintsService
 import io.cratis.chronicle.events.EventTypesService
+import io.cratis.chronicle.events.IEventTypesService
 import io.cratis.chronicle.eventSequences.EventLog
 import io.cratis.chronicle.eventStoreSubscriptions.EventStoreSubscriptionsService
+import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionsService
 import io.cratis.chronicle.externalServices.ExternalServicesService
+import io.cratis.chronicle.externalServices.IExternalServicesService
+import io.cratis.chronicle.jobs.IJobsService
 import io.cratis.chronicle.jobs.JobsService
 import io.cratis.chronicle.eventSequences.IEventLog
+import io.cratis.chronicle.namespaces.INamespacesService
 import io.cratis.chronicle.namespaces.NamespacesService
+import io.cratis.chronicle.webhooks.IWebhooksService
 import io.cratis.chronicle.webhooks.WebhooksService
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
@@ -70,31 +77,31 @@ class EventStore(
         EventSeedingService(name, namespace, services.eventSeeding)
     }
 
-    val compliance by lazy {
+    override val compliance: IComplianceService by lazy {
         ComplianceService(name, namespace, services.compliance)
     }
 
-    val eventTypes by lazy {
+    override val eventTypes: IEventTypesService by lazy {
         EventTypesService(name, services.eventTypes)
     }
 
-    val namespaces by lazy {
+    override val namespaces: INamespacesService by lazy {
         NamespacesService(name, services.namespaces)
     }
 
-    val externalServices by lazy {
+    override val externalServices: IExternalServicesService by lazy {
         ExternalServicesService(name, services.externalServices)
     }
 
-    val jobs by lazy {
+    override val jobs: IJobsService by lazy {
         JobsService(name, namespace, services.jobs)
     }
 
-    val eventStoreSubscriptions by lazy {
+    override val eventStoreSubscriptions: IEventStoreSubscriptionsService by lazy {
         EventStoreSubscriptionsService(name, services.eventStoreSubscriptions)
     }
 
-    val webhooks by lazy {
+    override val webhooks: IWebhooksService by lazy {
         WebhooksService(name, services.webhooks)
     }
 }

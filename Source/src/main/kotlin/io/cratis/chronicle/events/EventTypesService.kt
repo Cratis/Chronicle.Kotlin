@@ -16,14 +16,14 @@ import kotlin.reflect.full.isSubclassOf
 class EventTypesService(
     private val eventStoreName: String,
     private val stub: EventTypesGrpcKt.EventTypesCoroutineStub
-) {
+) : IEventTypesService {
     /**
      * Register one or more event types with the event store. [eventClasses] may contain plain
      * `@EventType`-annotated classes and/or [IEventTypeMigration] classes describing how to
      * migrate between two generations of the same event type — both are discovered by reflection
      * and merged into a single registration per event type id.
      */
-    suspend fun register(vararg eventClasses: KClass<*>) {
+    override suspend fun register(vararg eventClasses: KClass<*>) {
         val registrations = buildRegistrations(eventClasses.toList())
         if (registrations.isEmpty()) return
         val request = Events.RegisterEventTypesRequest.newBuilder()
@@ -35,7 +35,7 @@ class EventTypesService(
     }
 
     /** Register a single event type with the event store. */
-    suspend fun registerSingle(eventClass: KClass<*>) {
+    override suspend fun registerSingle(eventClass: KClass<*>) {
         val registration = buildRegistrations(listOf(eventClass)).firstOrNull() ?: return
         val request = Events.RegisterSingleEventTypeRequest.newBuilder()
             .setEventStore(eventStoreName)
@@ -45,7 +45,7 @@ class EventTypesService(
     }
 
     /** Get all known generations, and their migrations, for the given [eventTypeId]. */
-    suspend fun getAllGenerationsForEventType(eventTypeId: String): List<Events.EventTypeRegistration> {
+    override suspend fun getAllGenerationsForEventType(eventTypeId: String): List<Events.EventTypeRegistration> {
         val request = Events.GetEventTypeGenerationsRequest.newBuilder()
             .setEventStore(eventStoreName)
             .setEventTypeId(eventTypeId)
