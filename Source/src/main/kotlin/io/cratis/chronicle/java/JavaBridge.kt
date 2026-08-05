@@ -119,14 +119,18 @@ object ConstraintBuilderJavaBridge {
 
 /**
  * Java-friendly bridge for unique constraint builder operations.
+ *
+ * Java has no equivalent of a Kotlin property reference (`SomeEvent::email`), so this bridge
+ * takes the property name as a plain [String] and resolves it via [IUniqueConstraintBuilder.onWithPropertyName]
+ * rather than [IUniqueConstraintBuilder.on].
  */
 object UniqueConstraintBuilderJavaBridge {
     @JvmStatic
-    fun <TEvent : Any, TValue : Any> on(
+    fun <TEvent : Any> on(
         builder: IUniqueConstraintBuilder,
         eventClass: Class<TEvent>,
-        property: (TEvent) -> TValue?
-    ): IUniqueConstraintBuilder = builder.on(eventClass.kotlin, property)
+        propertyName: String
+    ): IUniqueConstraintBuilder = builder.onWithPropertyName(eventClass.kotlin, propertyName)
 }
 
 /**

@@ -19,7 +19,7 @@ class UniqueEmployeeEmail : IConstraint {
     override fun define(builder: IConstraintBuilder) {
         builder.unique { unique ->
             unique
-                .on(EmployeeEmailSet::class) { it.email }
+                .on(EmployeeEmailSet::class, EmployeeEmailSet::email)
                 .ignoreCasing()
                 .withMessage("That email address is already in use by another employee.")
         }

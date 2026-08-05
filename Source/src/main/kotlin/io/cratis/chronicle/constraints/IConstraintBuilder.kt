@@ -4,6 +4,7 @@
 package io.cratis.chronicle.constraints
 
 import kotlin.reflect.KClass
+import kotlin.reflect.KProperty1
 
 interface IConstraintBuilder {
     fun <TEvent : Any> uniqueFor(eventClass: KClass<TEvent>, message: String = ""): IConstraintBuilder
@@ -11,7 +12,21 @@ interface IConstraintBuilder {
 }
 
 interface IUniqueConstraintBuilder {
-    fun <TEvent : Any, TValue : Any> on(eventClass: KClass<TEvent>, property: (TEvent) -> TValue?): IUniqueConstraintBuilder
+    /**
+     * Specifies the event type and property the uniqueness constraint applies to.
+     *
+     * [property] must be an actual property reference (e.g. `SomeEvent::email`), not an arbitrary
+     * lambda — a lambda cannot be reflected back to the property it reads, so passing one would
+     * silently produce a constraint keyed on the wrong property.
+     */
+    fun <TEvent : Any, TValue : Any> on(eventClass: KClass<TEvent>, property: KProperty1<TEvent, TValue>): IUniqueConstraintBuilder
+
+    /**
+     * Java-friendly alternative to [on] — Java has no equivalent of a Kotlin property reference,
+     * so Java callers (via [io.cratis.chronicle.java.UniqueConstraintBuilderJavaBridge]) specify
+     * the property by name instead.
+     */
+    fun <TEvent : Any> onWithPropertyName(eventClass: KClass<TEvent>, propertyName: String): IUniqueConstraintBuilder
     fun ignoreCasing(): IUniqueConstraintBuilder
     fun withMessage(message: String): IUniqueConstraintBuilder
 }

@@ -4,6 +4,7 @@
 package io.cratis.chronicle.constraints
 
 import kotlin.reflect.KClass
+import kotlin.reflect.KProperty1
 
 class ConstraintBuilder : IConstraintBuilder {
     private val entries = mutableListOf<ConstraintBuilderEntry>()
@@ -31,22 +32,16 @@ class UniqueConstraintBuilder : IUniqueConstraintBuilder {
 
     override fun <TEvent : Any, TValue : Any> on(
         eventClass: KClass<TEvent>,
-        property: (TEvent) -> TValue?
+        property: KProperty1<TEvent, TValue>
     ): IUniqueConstraintBuilder {
         this.eventClass = eventClass
-        // Extract property name via reflection by looking at the lambda
-        // We use a dummy instance approach — fall back to index 0 property name
-        val props = eventClass.java.declaredFields
-        // Try to figure out the property name by index — we'll use a workaround:
-        // Create a tiny test instance to capture which field was accessed
-        // For now, store the property accessor and extract name at build time
-        this.propertyName = props.firstOrNull()?.name ?: ""
+        this.propertyName = property.name
         return this
     }
 
-    fun onWithPropertyName(cls: KClass<*>, propName: String): UniqueConstraintBuilder {
-        this.eventClass = cls
-        this.propertyName = propName
+    override fun <TEvent : Any> onWithPropertyName(eventClass: KClass<TEvent>, propertyName: String): IUniqueConstraintBuilder {
+        this.eventClass = eventClass
+        this.propertyName = propertyName
         return this
     }
 

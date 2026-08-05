@@ -23,7 +23,7 @@ class UniqueEmployeeEmail implements IConstraint {
     @Override
     public void define(IConstraintBuilder builder) {
         builder.unique(unique -> {
-            UniqueConstraintBuilderJavaBridge.on(unique, EmployeeEmailSet.class, EmployeeEmailSet::email)
+            UniqueConstraintBuilderJavaBridge.on(unique, EmployeeEmailSet.class, "email")
                 .ignoreCasing()
                 .withMessage("That email address is already in use by another employee.");
             return null; // Java lambda returning Unit
