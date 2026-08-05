@@ -6,6 +6,8 @@ package io.cratis.chronicle.samples.console
 import io.cratis.chronicle.EventStore
 import io.cratis.chronicle.compliance.Pii
 import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.eventSequences.EventSequenceNumber
+import io.cratis.chronicle.eventSequences.RedactionReason
 import io.cratis.chronicle.readModels.ReadModel
 
 @EventType
@@ -106,6 +108,51 @@ suspend fun registerCustomerWithPii(store: io.cratis.chronicle.IEventStore) {
 suspend fun deleteCustomerEncryptionKey(store: EventStore) {
     store.compliance.deleteEncryptionKey(sampleCustomer.id)
     println("[pii] Deleted the encryption key for ${sampleCustomer.fullName} (${sampleCustomer.id}). Its encrypted PII can no longer be decrypted.")
+}
+
+/**
+ * Permanently redacts the most recent address-change event for [person].
+ *
+ * Redaction is a destructive content rewrite, not a soft delete or a field mask — once this
+ * returns, the original address content for that specific event is gone from the event store for
+ * good. Demonstrates [io.cratis.chronicle.eventSequences.IEventSequence.getForEventSourceIdAndEventTypes]
+ * to locate the event's sequence number, then [io.cratis.chronicle.eventSequences.IEventSequence.redact]
+ * to erase its content.
+ */
+suspend fun redactLastAddressChange(store: io.cratis.chronicle.IEventStore, person: Person) {
+    val addressEvents = store.eventLog.getForEventSourceIdAndEventTypes(
+        person.id,
+        listOf(EmployeeAddressSet::class, EmployeeMoved::class)
+    )
+    val last = addressEvents.maxByOrNull { it.context.sequenceNumber }
+    if (last == null) {
+        println("[redact] ${person.firstName} ${person.lastName} has no address-change events to redact.")
+        return
+    }
+    store.eventLog.redact(
+        EventSequenceNumber(last.context.sequenceNumber),
+        RedactionReason("Sample: erase address history")
+    )
+    println(
+        "[redact] Permanently redacted the address event at sequence ${last.context.sequenceNumber} " +
+            "for ${person.firstName} ${person.lastName}. The original content is gone — this cannot be undone."
+    )
+}
+
+/**
+ * Permanently redacts every event for [sampleCustomer] — a full "right to be forgotten" erasure.
+ *
+ * More thorough than [deleteCustomerEncryptionKey]: instead of leaving encrypted-but-unreadable
+ * content behind, this rewrites every event's content for the event source, gone for good. Like
+ * [redactLastAddressChange], this is destructive and irreversible — only use it for a confirmed
+ * compliance/erasure request.
+ */
+suspend fun redactAllCustomerEvents(store: io.cratis.chronicle.IEventStore) {
+    store.eventLog.redactForEventSource(sampleCustomer.id, RedactionReason("Sample: GDPR erasure request"))
+    println(
+        "[redact] Permanently redacted every event for ${sampleCustomer.fullName} (${sampleCustomer.id}). " +
+            "This cannot be undone."
+    )
 }
 
 suspend fun showCustomerReadModel(store: io.cratis.chronicle.IEventStore) {

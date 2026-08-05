@@ -17,11 +17,16 @@ class UniqueEmployeeHire : IConstraint {
 @Constraint
 class UniqueEmployeeEmail : IConstraint {
     override fun define(builder: IConstraintBuilder) {
-        builder.unique { unique ->
-            unique
-                .on(EmployeeEmailSet::class, EmployeeEmailSet::email)
-                .ignoreCasing()
-                .withMessage("That email address is already in use by another employee.")
-        }
+        builder
+            // Scope uniqueness checking to be per event source type rather than globally across
+            // the whole event store — this keeps employee email uniqueness from ever colliding
+            // with an unrelated event source type (e.g. customers) that also happens to set emails.
+            .perEventSourceType()
+            .unique { unique ->
+                unique
+                    .on(EmployeeEmailSet::class, EmployeeEmailSet::email)
+                    .ignoreCasing()
+                    .withMessage("That email address is already in use by another employee.")
+            }
     }
 }
