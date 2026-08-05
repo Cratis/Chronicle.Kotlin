@@ -8,13 +8,15 @@ import kotlin.reflect.KClass
 sealed class ConstraintBuilderEntry {
     data class UniqueForEntry(
         val eventClass: KClass<*>,
-        val message: String
+        val message: String,
+        val scope: ConstraintScope? = null
     ) : ConstraintBuilderEntry()
 
     data class UniqueEntry(
         val eventClass: KClass<*>,
         val propertyName: String,
         val ignoreCasing: Boolean,
-        val message: String
+        val message: String,
+        val scope: ConstraintScope? = null
     ) : ConstraintBuilderEntry()
 }

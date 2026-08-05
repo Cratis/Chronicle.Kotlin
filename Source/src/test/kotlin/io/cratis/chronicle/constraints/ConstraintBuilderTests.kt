@@ -4,11 +4,14 @@
 package io.cratis.chronicle.constraints
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 private data class EmployeeEmailSet(val email: String, val name: String)
+private data class EmployeeMoved(val address: String)
 
 class ConstraintBuilderTests {
 
@@ -54,5 +57,60 @@ class ConstraintBuilderTests {
         builder.onWithPropertyName(EmployeeEmailSet::class, "name")
 
         assertEquals("name", builder.build().propertyName)
+    }
+
+    @Test
+    fun `a constraint has no scope by default`() {
+        val builder = ConstraintBuilder()
+        builder.unique { it.on(EmployeeEmailSet::class, EmployeeEmailSet::email) }
+
+        val entry = builder.build().single() as ConstraintBuilderEntry.UniqueEntry
+        assertNull(entry.scope)
+    }
+
+    @Test
+    fun `perEventSourceType scopes every constraint subsequently added through the same builder`() {
+        val builder = ConstraintBuilder()
+        builder.perEventSourceType()
+        builder.unique { it.on(EmployeeEmailSet::class, EmployeeEmailSet::email) }
+        builder.uniqueFor(EmployeeMoved::class)
+
+        val entries = builder.build()
+        entries.forEach { entry ->
+            val scope = when (entry) {
+                is ConstraintBuilderEntry.UniqueEntry -> entry.scope
+                is ConstraintBuilderEntry.UniqueForEntry -> entry.scope
+            }
+            assertTrue(scope!!.perEventSourceType)
+            assertFalse(scope.perEventStreamType)
+            assertFalse(scope.perEventStreamId)
+        }
+    }
+
+    @Test
+    fun `perEventStreamType and perEventStreamId can be combined on the same constraint`() {
+        val builder = ConstraintBuilder()
+        builder.perEventStreamType().perEventStreamId()
+        builder.unique { it.on(EmployeeEmailSet::class, EmployeeEmailSet::email) }
+
+        val entry = builder.build().single() as ConstraintBuilderEntry.UniqueEntry
+        assertFalse(entry.scope!!.perEventSourceType)
+        assertTrue(entry.scope.perEventStreamType)
+        assertTrue(entry.scope.perEventStreamId)
+    }
+
+    @Test
+    fun `constraints added before a scoping call remain unscoped`() {
+        val builder = ConstraintBuilder()
+        builder.unique { it.on(EmployeeEmailSet::class, EmployeeEmailSet::email) }
+        builder.perEventSourceType()
+        builder.uniqueFor(EmployeeMoved::class)
+
+        val entries = builder.build()
+        val unscoped = entries.first() as ConstraintBuilderEntry.UniqueEntry
+        val scoped = entries.last() as ConstraintBuilderEntry.UniqueForEntry
+
+        assertNull(unscoped.scope)
+        assertTrue(scoped.scope!!.perEventSourceType)
     }
 }

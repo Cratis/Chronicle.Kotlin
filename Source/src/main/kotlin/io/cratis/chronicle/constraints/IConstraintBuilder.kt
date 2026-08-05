@@ -7,6 +7,30 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 
 interface IConstraintBuilder {
+    /**
+     * Scope every constraint subsequently added through this builder per event source type -
+     * uniqueness is checked separately within each event source type rather than globally.
+     *
+     * @return The builder for continuation.
+     */
+    fun perEventSourceType(): IConstraintBuilder
+
+    /**
+     * Scope every constraint subsequently added through this builder per event stream type -
+     * uniqueness is checked separately within each event stream type rather than globally.
+     *
+     * @return The builder for continuation.
+     */
+    fun perEventStreamType(): IConstraintBuilder
+
+    /**
+     * Scope every constraint subsequently added through this builder per event stream id -
+     * uniqueness is checked separately within each event stream id rather than globally.
+     *
+     * @return The builder for continuation.
+     */
+    fun perEventStreamId(): IConstraintBuilder
+
     fun <TEvent : Any> uniqueFor(eventClass: KClass<TEvent>, message: String = ""): IConstraintBuilder
     fun unique(configure: (IUniqueConstraintBuilder) -> Unit): IConstraintBuilder
 }

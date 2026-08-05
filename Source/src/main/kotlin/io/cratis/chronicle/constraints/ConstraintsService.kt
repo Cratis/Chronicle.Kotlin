@@ -8,8 +8,19 @@ import Cratis.Chronicle.Contracts.Events.Constraints.EventsConstraints
 import io.cratis.chronicle.events.EventType
 import kotlin.reflect.full.findAnnotation
 
-private fun defaultScope(): EventsConstraints.ConstraintScope =
-    EventsConstraints.ConstraintScope.newBuilder().build()
+/**
+ * The wire encoding for [ConstraintScope] uses the mere presence of a non-empty string in each
+ * `ConstraintScope` field as the "this dimension is scoped" flag - the kernel does not match
+ * against the literal value, so any non-empty marker works.
+ */
+private const val SCOPED_MARKER = "_scoped_"
+
+private fun ConstraintScope?.toContractScope(): EventsConstraints.ConstraintScope =
+    EventsConstraints.ConstraintScope.newBuilder().apply {
+        if (this@toContractScope?.perEventSourceType == true) eventSourceType = SCOPED_MARKER
+        if (this@toContractScope?.perEventStreamType == true) eventStreamType = SCOPED_MARKER
+        if (this@toContractScope?.perEventStreamId == true) eventStreamId = SCOPED_MARKER
+    }.build()
 
 class ConstraintsService(
     private val eventStoreName: String,
@@ -43,7 +54,7 @@ class ConstraintsService(
                                     )
                                     .build()
                             )
-                            .setScope(defaultScope())
+                            .setScope(entry.scope.toContractScope())
                             .build()
                     }
                     is ConstraintBuilderEntry.UniqueEntry -> {
@@ -66,7 +77,7 @@ class ConstraintsService(
                                     )
                                     .build()
                             )
-                            .setScope(defaultScope())
+                            .setScope(entry.scope.toContractScope())
                             .build()
                     }
                 }
