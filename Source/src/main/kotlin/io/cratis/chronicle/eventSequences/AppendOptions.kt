@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.eventSequences
 
+import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import java.util.UUID
 
 /**
@@ -10,7 +11,10 @@ import java.util.UUID
  *
  * @property correlationId Optional correlation identifier to use for this operation.
  *   If null, the current [io.cratis.chronicle.correlation.CorrelationIdManager] value is used.
+ * @property concurrencyScope Optional [ConcurrencyScope] to use for concurrency control.
+ *   If null, [ConcurrencyScope.none] is used and the append is not concurrency-checked.
  */
 data class AppendOptions(
-    val correlationId: UUID? = null
+    val correlationId: UUID? = null,
+    val concurrencyScope: ConcurrencyScope? = null
 )

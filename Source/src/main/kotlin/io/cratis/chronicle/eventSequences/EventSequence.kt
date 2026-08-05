@@ -10,6 +10,7 @@ import com.google.gson.Gson
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.auditing.causationManager
 import io.cratis.chronicle.correlation.correlationIdManager
+import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.events.EventTypeDescriptor
 import io.cratis.chronicle.identity.Identity as ChronicleIdentity
@@ -32,6 +33,7 @@ open class EventSequence(
     override suspend fun append(eventSourceId: String, event: Any, options: AppendOptions?): AppendResult {
         val eventType = resolveEventType(event)
         val correlationId = options?.correlationId ?: correlationIdManager.current
+        val concurrencyScope = options?.concurrencyScope ?: ConcurrencyScope.none
         val content = gson.toJson(event)
 
         causationManager.add(CausationType.appendEvent, mapOf("eventType" to eventType.id.value))
@@ -54,10 +56,7 @@ open class EventSequence(
             addAllCausation(causationChain.map { c -> c.toContractsCausation() })
             this.causedBy = identity.withoutDuplicates().toContractsIdentity()
             this.subject = eventSourceId
-            // sequenceNumber = -1L encodes as ulong.MaxValue (Unavailable) — disables concurrency validation on the server.
-            this.concurrencyScope = Eventsequences.ConcurrencyScope.newBuilder()
-                .setSequenceNumber(-1L)
-                .build()
+            this.concurrencyScope = concurrencyScope.toContract()
         }.build()
 
         val response = stub.append(request)
@@ -65,7 +64,8 @@ open class EventSequence(
         return mapAppendResponse(
             sequenceNumber = response.sequenceNumber,
             constraintViolations = response.constraintViolationsList,
-            errors = response.errorsList
+            errors = response.errorsList,
+            concurrencyViolation = if (response.hasConcurrencyViolation()) response.concurrencyViolation else null
         )
     }
 
@@ -75,8 +75,45 @@ open class EventSequence(
         options: AppendOptions?
     ): List<AppendResult> {
         if (events.isEmpty()) return emptyList()
+
+        val correlationId = options?.correlationId ?: correlationIdManager.current
+        val concurrencyScope = options?.concurrencyScope ?: ConcurrencyScope.none
+
         causationManager.add(CausationType.appendManyEvents, mapOf("count" to events.size.toString()))
-        return events.map { event -> append(eventSourceId, event, options) }
+        val causationChain = causationManager.currentChain
+        val identity = identityProvider.currentIdentity
+
+        val eventsToAppend = events.map { event ->
+            val eventType = resolveEventType(event)
+            Eventsequences.EventToAppend.newBuilder().apply {
+                this.eventSourceType = "Default"
+                this.eventSourceId = eventSourceId
+                this.eventStreamType = "Default"
+                this.eventStreamId = eventSourceId
+                this.eventType = eventType.toContractsEventType()
+                this.content = gson.toJson(event)
+                this.subject = eventSourceId
+            }.build()
+        }
+
+        val esName = eventStoreName
+        val ns = this@EventSequence.namespace
+        val request = Eventsequences.AppendManyRequest.newBuilder().apply {
+            this.eventStore = esName
+            this.namespace = ns
+            this.eventSequenceId = id.value
+            this.correlationId = correlationId.toContractsGuid()
+            addAllEvents(eventsToAppend)
+            addAllCausation(causationChain.map { c -> c.toContractsCausation() })
+            this.causedBy = identity.withoutDuplicates().toContractsIdentity()
+            putConcurrencyScopes(eventSourceId, concurrencyScope.toContract())
+        }.build()
+
+        // A single AppendMany RPC call commits all events as one atomic operation on the kernel side,
+        // rather than issuing one Append RPC per event (which would neither be atomic nor efficient).
+        val response = stub.appendMany(request)
+
+        return mapAppendManyResponse(events.size, response)
     }
 
     override suspend fun hasEventsFor(eventSourceId: String): Boolean {
@@ -117,27 +154,50 @@ open class EventSequence(
     private fun mapAppendResponse(
         sequenceNumber: Long,
         constraintViolations: List<Eventsequences.ConstraintViolation>,
-        errors: List<String>
+        errors: List<String>,
+        concurrencyViolation: Eventsequences.ConcurrencyViolation?
     ): AppendResult {
-        val safeSequenceNumber = if (sequenceNumber == Long.MAX_VALUE || sequenceNumber < 0) 0L else sequenceNumber
-
-        val mappedViolations = constraintViolations.map { v ->
-            ConstraintViolation(
-                constraintId = v.constraintName,
-                message = v.message,
-                details = v.detailsMap.toMap()
-            )
-        }
-
+        val mappedViolations = constraintViolations.map { it.toClient() }
         val mappedErrors = errors.map { AppendError(it) }
+        val mappedConcurrencyViolation = concurrencyViolation?.toClient()
 
         return AppendResult(
-            sequenceNumber = EventSequenceNumber(safeSequenceNumber),
+            sequenceNumber = EventSequenceNumber(sanitizeSequenceNumber(sequenceNumber)),
             constraintViolations = mappedViolations,
             errors = mappedErrors,
-            isSuccess = mappedViolations.isEmpty() && mappedErrors.isEmpty()
+            concurrencyViolation = mappedConcurrencyViolation,
+            isSuccess = mappedViolations.isEmpty() && mappedErrors.isEmpty() && mappedConcurrencyViolation == null
         )
     }
+
+    private fun mapAppendManyResponse(eventCount: Int, response: Eventsequences.AppendManyResponse): List<AppendResult> {
+        val mappedViolations = response.constraintViolationsList.map { it.toClient() }
+        val mappedErrors = response.errorsList.map { AppendError(it) }
+        val mappedConcurrencyViolation = response.concurrencyViolationsList.firstOrNull()?.toClient()
+        val isSuccess = mappedViolations.isEmpty() && mappedErrors.isEmpty() && mappedConcurrencyViolation == null
+        val sequenceNumbers = response.sequenceNumbersList
+
+        return (0 until eventCount).map { index ->
+            if (isSuccess) {
+                AppendResult(
+                    sequenceNumber = EventSequenceNumber(sanitizeSequenceNumber(sequenceNumbers.getOrElse(index) { -1L })),
+                    constraintViolations = emptyList(),
+                    errors = emptyList(),
+                    isSuccess = true
+                )
+            } else {
+                AppendResult(
+                    sequenceNumber = EventSequenceNumber.unavailable,
+                    constraintViolations = mappedViolations,
+                    errors = mappedErrors,
+                    concurrencyViolation = mappedConcurrencyViolation,
+                    isSuccess = false
+                )
+            }
+        }
+    }
+
+    private fun sanitizeSequenceNumber(raw: Long): Long = if (raw == Long.MAX_VALUE || raw < 0) 0L else raw
 }
 
 // -------------------------------------------------------------------------
@@ -159,6 +219,31 @@ private fun EventTypeDescriptor.toContractsEventType(): Eventsequences.EventType
         .setGeneration(generation.value)
         .setTombstone(tombstone)
         .build()
+
+private fun Eventsequences.ConstraintViolation.toClient(): ConstraintViolation = ConstraintViolation(
+    constraintId = constraintName,
+    message = message,
+    details = detailsMap.toMap()
+)
+
+private fun Eventsequences.ConcurrencyViolation.toClient(): io.cratis.chronicle.eventSequences.concurrency.ConcurrencyViolation =
+    io.cratis.chronicle.eventSequences.concurrency.ConcurrencyViolation(
+        eventSourceId = eventSourceId,
+        expectedSequenceNumber = EventSequenceNumber(expectedSequenceNumber),
+        actualSequenceNumber = EventSequenceNumber(actualSequenceNumber)
+    )
+
+private fun ConcurrencyScope.toContract(): Eventsequences.ConcurrencyScope {
+    val scope = this
+    return Eventsequences.ConcurrencyScope.newBuilder().apply {
+        this.sequenceNumber = scope.sequenceNumber.value
+        this.eventSourceId = scope.eventSourceId
+        scope.eventStreamType?.let { this.eventStreamType = it }
+        scope.eventStreamId?.let { this.eventStreamId = it }
+        scope.eventSourceType?.let { this.eventSourceType = it }
+        addAllEventTypes(scope.eventTypes.map { it.toContractsEventType() })
+    }.build()
+}
 
 private fun io.cratis.chronicle.auditing.Causation.toContractsCausation(): Eventsequences.Causation =
     Eventsequences.Causation.newBuilder()
