@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle
 
+import com.google.protobuf.Empty
 import io.cratis.chronicle.connection.ChronicleConnection
 import java.util.concurrent.ConcurrentHashMap
 
@@ -14,6 +15,15 @@ class ChronicleClient(private val options: ChronicleOptions) : IChronicleClient 
         return eventStores.getOrPut("$name/$namespace") {
             EventStore(name, namespace, connection.services, connection.lifecycle, options.defaultSinkTypeId)
         }
+    }
+
+    override suspend fun getEventStores(): List<String> {
+        val request = Empty.getDefaultInstance()
+        return connection.services.eventStores.getEventStores(request).itemsList
+    }
+
+    override fun evictEventStores() {
+        eventStores.clear()
     }
 
     override fun dispose() {
