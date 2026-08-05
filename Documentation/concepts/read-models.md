@@ -29,8 +29,15 @@ richer surface for reading and managing read model instances:
 | `getSnapshotsById` | Snapshots of a read model grouped by correlation id. |
 | `watch` | A `Flow` of changesets for a read model — a live view. |
 | `dehydrateSession` | Releasing session-scoped state for an instance. |
-| `release` | Decrypting `@Pii`-annotated properties on an instance. |
+| `release`/`releaseMany` | Decrypts `@Pii` properties, one or many. |
 | `materialized` | Paginated, server-materialized reads — see below. |
+
+`getSnapshotsById` and `watch` both deserialize straight into the read
+model type you ask for — `getSnapshotsById(EmployeeProfile::class, key)`
+returns `List<ReadModelSnapshot<EmployeeProfile>>`, and
+`watch(EmployeeProfile::class)` returns
+`Flow<ReadModelChangeset<EmployeeProfile>>` — no manual JSON parsing
+either way.
 
 <!-- validate: body needs=store -->
 
