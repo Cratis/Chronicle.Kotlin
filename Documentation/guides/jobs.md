@@ -12,6 +12,8 @@ client — jobs are created by the kernel in response to server-side work.
 `getJobs` returns every job currently tracked for the event store and
 namespace:
 
+<!-- validate: body needs=store -->
+
 ```kotlin
 val jobs = store.jobs.getJobs()
 jobs.forEach { job ->
@@ -21,7 +23,10 @@ jobs.forEach { job ->
 
 ## Getting a single job
 
+<!-- validate: body needs=store -->
+
 ```kotlin
+val jobId = "reindex-job-id"
 val job = store.jobs.getJob(jobId)
 if (job != null) {
     println("${job.type}: ${job.status}")
@@ -35,7 +40,10 @@ if (job != null) {
 A job is made up of steps that run — and can fail or stop — independently.
 `getJobSteps` returns them in order:
 
+<!-- validate: body needs=store -->
+
 ```kotlin
+val jobId = "reindex-job-id"
 val steps = store.jobs.getJobSteps(jobId)
 steps.forEach { step ->
     println("${step.name}: ${step.status}")
@@ -47,7 +55,10 @@ steps.forEach { step ->
 Stop a running job, resume a stopped one, or delete it once you no longer
 need its history:
 
+<!-- validate: body needs=store -->
+
 ```kotlin
+val jobId = "reindex-job-id"
 store.jobs.stop(jobId)
 store.jobs.resume(jobId)
 store.jobs.delete(jobId)

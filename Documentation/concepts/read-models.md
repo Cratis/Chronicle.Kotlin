@@ -32,8 +32,10 @@ richer surface for reading and managing read model instances:
 | `release` | Decrypting `@Pii`-annotated properties on an instance. |
 | `materialized` | Paginated, server-materialized reads — see below. |
 
+<!-- validate: body needs=store -->
+
 ```kotlin
-val employees = store.readModels.getInstances(EmployeeDetails::class)
+val employees = store.readModels.getInstances(EmployeeProfile::class)
 employees.forEach { employee ->
     println("${employee.firstName} ${employee.lastName}")
 }
@@ -45,16 +47,18 @@ employees.forEach { employee ->
 sink has already materialized server-side, instead of replaying events
 in-process:
 
+<!-- validate: body needs=store -->
+
 ```kotlin
 val page = store.readModels.materialized.getInstances(
-    EmployeeDetails::class,
+    EmployeeProfile::class,
     skip = 0,
     take = 50
 )
 
 store.readModels.materialized
-    .observeInstances(EmployeeDetails::class, skip = 0, take = 50)
-    .collect { page -> /* re-render whenever the page changes */ }
+    .observeInstances(EmployeeProfile::class, skip = 0, take = 50)
+    .collect { updatedPage -> /* re-render whenever the page changes */ }
 ```
 
 `getInstances` returns a single page; `observeInstances` returns a `Flow`

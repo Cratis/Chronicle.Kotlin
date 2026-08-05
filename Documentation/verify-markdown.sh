@@ -32,8 +32,8 @@ if ! command -v npx &> /dev/null; then
     exit 1
 fi
 
-npx markdownlint-cli2 "Documentation/**/*.md"
-LINT_EXIT_CODE=$?
+LINT_EXIT_CODE=0
+npx markdownlint-cli2 "Documentation/**/*.md" || LINT_EXIT_CODE=$?
 
 echo ""
 if [ $LINT_EXIT_CODE -eq 0 ]; then
@@ -51,8 +51,22 @@ echo ""
 echo "This may take a few minutes to check all links..."
 echo ""
 
-npx linkinator "Documentation/**/*.md" --markdown --recurse --verbosity error --status-code "403:ok" --skip "^(https?:\\/\\/)?(localhost|127\\.0\\.0\\.1)(:\\d+)?(\\/|$)"
-LINK_EXIT_CODE=$?
+# linkinator serves the local files over http://localhost:<port>/, so a blanket
+# "skip localhost" pattern silently skips the entire crawl and reports success
+# after scanning zero links. Skip only what genuinely cannot resolve locally:
+#   /chronicle/    cross-product links into the aggregated docs site
+#   .../<folder>/  directory links the site resolves to that folder's index page
+LINK_EXIT_CODE=0
+LINK_OUTPUT=$(npx linkinator "Documentation/**/*.md" --markdown --recurse --verbosity error --status-code "403:ok" --skip "/chronicle/ ^https?://[^/]+/Documentation/[A-Za-z0-9._-]+/$" 2>&1) || LINK_EXIT_CODE=$?
+echo "$LINK_OUTPUT"
+
+# linkinator exits 0 when it scans nothing at all, which is indistinguishable
+# from "everything passed" — guard against the checker silently going no-op.
+LINK_COUNT=$(echo "$LINK_OUTPUT" | grep -oiE "scanned [0-9]+ links" | grep -oE "[0-9]+" | head -1)
+if [ -z "$LINK_COUNT" ] || [ "$LINK_COUNT" -eq 0 ]; then
+    echo "✗ Link verification scanned 0 links — the checker itself is broken."
+    LINK_EXIT_CODE=1
+fi
 
 echo ""
 if [ $LINK_EXIT_CODE -eq 0 ]; then

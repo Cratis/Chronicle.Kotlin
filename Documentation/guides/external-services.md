@@ -12,6 +12,8 @@ for the concept this page assumes.
 `register` takes a name — also used as the service's identifier — and a
 callback for configuring the endpoint:
 
+<!-- validate: body needs=store -->
+
 ```kotlin
 store.externalServices.register("payroll-provider") { builder ->
     builder
@@ -25,6 +27,8 @@ store.externalServices.register("payroll-provider") { builder ->
 `IExternalServiceBuilder` supports the same three authentication schemes as
 webhooks, plus arbitrary headers:
 
+<!-- validate: skip -->
+
 ```kotlin
 builder.withBasicAuth("username", "password")
 builder.withBearerToken("token")
@@ -36,6 +40,8 @@ builder.withHeader("X-Custom-Header", "value")
 
 Use `msSql` or `postgreSql` instead of `http` to describe a database
 endpoint. `port` defaults to the provider's standard port when left at `0`:
+
+<!-- validate: body needs=store -->
 
 ```kotlin
 store.externalServices.register("payroll-database") { builder ->
@@ -49,6 +55,8 @@ store.externalServices.register("payroll-database") { builder ->
 ```
 
 Add provider-specific connection options with `withOption`:
+
+<!-- validate: skip -->
 
 ```kotlin
 builder

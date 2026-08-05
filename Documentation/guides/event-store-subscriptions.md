@@ -13,12 +13,18 @@ assumes.
 source event store, and a callback for configuring which event types to
 pull in:
 
+<!-- validate: declarations -->
+
 ```kotlin
 import io.cratis.chronicle.events.EventType
 
 @EventType(id = "payroll-run-completed")
 data class PayrollRunCompleted(val employeeId: String, val amount: Double)
+```
 
+<!-- validate: body needs=store -->
+
+```kotlin
 store.eventStoreSubscriptions.subscribe(
     "payroll-inbox",
     "PayrollEventStore"
@@ -34,6 +40,8 @@ Call `withEventType` once per event type you want to receive.
 Leave the builder unconfigured to subscribe to every event type in the
 source outbox:
 
+<!-- validate: body needs=store -->
+
 ```kotlin
 store.eventStoreSubscriptions.subscribe(
     "payroll-firehose",
@@ -48,6 +56,8 @@ store.eventStoreSubscriptions.subscribe(
 The subscription id should be stable and descriptive — it's how you target
 the subscription later with `unsubscribe`, and it survives service restarts:
 
+<!-- validate: body needs=store -->
+
 ```kotlin
 store.eventStoreSubscriptions.subscribe(
     "payroll-inbox-v1",
@@ -59,11 +69,15 @@ store.eventStoreSubscriptions.subscribe(
 
 ## Unsubscribing
 
+<!-- validate: body needs=store -->
+
 ```kotlin
 store.eventStoreSubscriptions.unsubscribe("payroll-inbox")
 ```
 
 ## Listing subscriptions
+
+<!-- validate: body needs=store -->
 
 ```kotlin
 val subscriptions = store.eventStoreSubscriptions.getAll()
@@ -76,6 +90,8 @@ subscriptions.forEach { subscription ->
 
 Once events start arriving through the subscription's inbox, a normal
 `@Reactor` handles them exactly like locally-appended events:
+
+<!-- validate: declarations -->
 
 ```kotlin
 import io.cratis.chronicle.events.EventContext

@@ -7,6 +7,8 @@ Seeding](/chronicle/event-seeding/) for the concept this page assumes.
 
 ## Define events
 
+<!-- validate: declarations -->
+
 ```kotlin
 import io.cratis.chronicle.events.EventType
 
@@ -25,6 +27,8 @@ data class FundsDeposited(val accountId: String, val amount: Double)
 
 Annotate a class with `@Seeder`, implement `ICanSeedEvents`, and use
 `IEventSeedingBuilder.forEventSource` to accumulate events:
+
+<!-- validate: declarations -->
 
 ```kotlin
 import io.cratis.chronicle.seeding.ICanSeedEvents
@@ -47,37 +51,49 @@ class AccountSeeder : ICanSeedEvents {
 `forEventSource` takes a list of any event types, so mixing types for the
 same event source is the same call:
 
+<!-- validate: declarations -->
+
 ```kotlin
-override fun seed(builder: IEventSeedingBuilder) {
-    builder.forEventSource(
-        "account-1",
-        listOf(
-            AccountOpened("account-1", "Alice", 1000.0),
-            FundsDeposited("account-1", 500.0)
+@Seeder
+class MixedAccountSeeder : ICanSeedEvents {
+    override fun seed(builder: IEventSeedingBuilder) {
+        builder.forEventSource(
+            "account-1",
+            listOf(
+                AccountOpened("account-1", "Alice", 1000.0),
+                FundsDeposited("account-1", 500.0)
+            )
         )
-    )
+    }
 }
 ```
 
 Chain multiple calls to seed several event sources:
 
+<!-- validate: declarations -->
+
 ```kotlin
-override fun seed(builder: IEventSeedingBuilder) {
-    builder
-        .forEventSource(
-            "account-1",
-            listOf(AccountOpened("account-1", "Alice", 1000.0))
-        )
-        .forEventSource(
-            "account-2",
-            listOf(AccountOpened("account-2", "Bob", 500.0))
-        )
+@Seeder
+class MultiAccountSeeder : ICanSeedEvents {
+    override fun seed(builder: IEventSeedingBuilder) {
+        builder
+            .forEventSource(
+                "account-1",
+                listOf(AccountOpened("account-1", "Alice", 1000.0))
+            )
+            .forEventSource(
+                "account-2",
+                listOf(AccountOpened("account-2", "Bob", 500.0))
+            )
+    }
 }
 ```
 
 ## Running seeders
 
 Pass seeder instances to the event store's `seeding` service:
+
+<!-- validate: declarations -->
 
 ```kotlin
 import io.cratis.chronicle.IEventStore

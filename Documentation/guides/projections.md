@@ -41,17 +41,23 @@ parameter tables are in the [annotation reference](../reference/annotations.md).
 can't reliably be redelivered — e.g. from an
 [event store subscription](event-store-subscriptions.md).
 
+<!-- validate: declarations -->
+
 ```kotlin
+import io.cratis.chronicle.projections.Increment
+import io.cratis.chronicle.projections.Join
+import io.cratis.chronicle.readModels.ReadModel
+
 @ReadModel
-data class OrderSummary(
+data class OrderOverview(
     val id: String = "",
     @Increment(OrderShipped::class) val shipmentCount: Int = 0,
     @Join(
         eventType = CustomerRegistered::class,
         on = "customerId",
-        eventPropertyName = "fullName"
+        eventPropertyName = "email"
     )
-    val customerName: String = ""
+    val customerEmail: String = ""
 )
 ```
 
@@ -63,13 +69,20 @@ data class OrderSummary(
 projections defined with a separate `IProjectionFor<T>` class instead of
 model-bound annotations:
 
+<!-- validate: declarations -->
+
 ```kotlin
-class OrderSummaryProjection : IProjectionFor<OrderSummary> {
-    override fun define(builder: IProjectionBuilderFor<OrderSummary>) {
+import io.cratis.chronicle.projections.IProjectionBuilderFor
+import io.cratis.chronicle.projections.IProjectionFor
+
+class OrderOverviewProjection : IProjectionFor<OrderOverview> {
+    override fun define(builder: IProjectionBuilderFor<OrderOverview>) {
         builder
             .from(OrderPlaced::class)
             .join(CustomerRegistered::class) { join ->
-                join.on(OrderSummary::customerName).set(OrderSummary::customerName)
+                join.on(OrderOverview::customerEmail)
+                    .set(OrderOverview::customerEmail)
+                    .toProperty("email")
             }
             .notRewindable()
     }

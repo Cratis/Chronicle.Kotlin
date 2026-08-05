@@ -11,6 +11,8 @@ Annotate a class with `@Webhook`, implement `IWebhookDefiner`, and configure
 the target event types and authentication with the builder passed to
 `define`:
 
+<!-- validate: declarations -->
+
 ```kotlin
 import io.cratis.chronicle.webhooks.IWebhookDefiner
 import io.cratis.chronicle.webhooks.IWebhookDefinitionBuilder
@@ -29,6 +31,8 @@ class EmployeeHiredWebhook : IWebhookDefiner {
 Pass instances to `register` — Chronicle discovers the `@Webhook` annotation
 and calls `define` for you:
 
+<!-- validate: body needs=store -->
+
 ```kotlin
 store.webhooks.register(EmployeeHiredWebhook())
 ```
@@ -40,6 +44,8 @@ the event store.
 
 You can also register a webhook without a dedicated class, supplying the id
 and target URL directly:
+
+<!-- validate: body needs=store -->
 
 ```kotlin
 store.webhooks.register(
@@ -57,6 +63,8 @@ store.webhooks.register(
 `IWebhookDefinitionBuilder` supports basic, bearer token, and OAuth
 authentication, plus arbitrary headers:
 
+<!-- validate: skip -->
+
 ```kotlin
 builder.withBasicAuth("username", "password")
 builder.withBearerToken("token")
@@ -69,6 +77,8 @@ builder.withHeader("X-Custom-Header", "value")
 By default a webhook observes the event log. Use `onEventSequence` to
 target a different sequence:
 
+<!-- validate: skip -->
+
 ```kotlin
 import io.cratis.chronicle.eventSequences.EventSequenceId
 
@@ -80,12 +90,16 @@ builder.onEventSequence(EventSequenceId("outbox"))
 A webhook is replayable and active by default. Opt out of either with
 `notReplayable()` and `notActive()`:
 
+<!-- validate: skip -->
+
 ```kotlin
 builder.notReplayable()
 builder.notActive()
 ```
 
 ## Listing and removing webhooks
+
+<!-- validate: body needs=store -->
 
 ```kotlin
 val webhooks = store.webhooks.getAll()
