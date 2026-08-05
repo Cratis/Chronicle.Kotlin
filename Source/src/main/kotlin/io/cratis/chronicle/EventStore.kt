@@ -49,7 +49,7 @@ class EventStore(
     private val defaultSinkTypeId: String = io.cratis.chronicle.sinks.WellKnownSinkTypes.MONGODB
 ) : IEventStore {
 
-    override val unitOfWorkManager: UnitOfWorkManager = UnitOfWorkManager()
+    override val unitOfWorkManager: UnitOfWorkManager = UnitOfWorkManager(this)
 
     override val eventLog: IEventLog by lazy {
         EventLog(name, namespace, services.eventSequences, unitOfWorkManager)
@@ -118,7 +118,14 @@ class EventStore(
     private val eventSequences = ConcurrentHashMap<EventSequenceId, IEventSequence>()
 
     override fun getEventSequence(id: EventSequenceId): IEventSequence =
-        eventSequences.getOrPut(id) {
-            EventSequence(id, name, namespace, services.eventSequences)
+        // The default event log is special-cased so that anything resolving it by id - such as a
+        // UnitOfWork committing staged events - gets the same instance as `eventLog`, sharing its
+        // appendOperations flow and transactional wiring rather than a disconnected duplicate.
+        if (id == EventSequenceId.eventLog) {
+            eventLog
+        } else {
+            eventSequences.getOrPut(id) {
+                EventSequence(id, name, namespace, services.eventSequences)
+            }
         }
 }

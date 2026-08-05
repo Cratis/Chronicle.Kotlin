@@ -4,13 +4,13 @@
 package io.cratis.chronicle.eventSequences
 
 import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
-import io.cratis.chronicle.transactions.UnitOfWorkManager
+import io.cratis.chronicle.transactions.IUnitOfWorkManager
 
 class EventLog(
     name: String,
     namespace: String,
     stub: EventSequencesGrpcKt.EventSequencesCoroutineStub,
-    private val unitOfWorkManager: UnitOfWorkManager = UnitOfWorkManager()
+    private val unitOfWorkManager: IUnitOfWorkManager
 ) : EventSequence(EventSequenceId.eventLog, name, namespace, stub), IEventLog {
 
     override val transactional: ITransactionalEventSequence by lazy {
