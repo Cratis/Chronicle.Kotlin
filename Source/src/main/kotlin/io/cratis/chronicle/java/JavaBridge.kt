@@ -13,6 +13,7 @@ import io.cratis.chronicle.compliance.IComplianceService
 import io.cratis.chronicle.eventSequences.AppendedEvent
 import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.AppendResult
+import io.cratis.chronicle.eventSequences.CompleteStreamResult
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.eventSequences.ITransactionalEventSequence
@@ -72,6 +73,27 @@ object EventLogJavaBridge {
     fun getForEventSourceIdAndEventTypes(eventLog: IEventLog, eventSourceId: String, eventTypes: List<Class<*>>): List<AppendedEvent> =
         runBlocking { eventLog.getForEventSourceIdAndEventTypes(eventSourceId, eventTypes.map { it.kotlin }) }
 
+    @JvmStatic
+    fun getFromSequenceNumber(eventLog: IEventLog, sequenceNumber: Long, eventSourceId: String?, eventTypes: List<Class<*>>?): List<AppendedEvent> =
+        runBlocking { eventLog.getFromSequenceNumber(EventSequenceNumber(sequenceNumber), eventSourceId, eventTypes?.map { it.kotlin }) }
+
+    @JvmStatic
+    fun getTailSequenceNumber(eventLog: IEventLog, eventSourceId: String?): Long =
+        runBlocking { eventLog.getTailSequenceNumber(eventSourceId).value }
+
+    @JvmStatic
+    fun getNextSequenceNumber(eventLog: IEventLog): Long =
+        runBlocking { eventLog.getNextSequenceNumber().value }
+
+    /**
+     * Completes a stream so no further events can be appended to it. Returns `true` when the
+     * stream was completed, `false` when it was already completed or is the default stream (which
+     * can never be completed).
+     */
+    @JvmStatic
+    fun completeStream(eventLog: IEventLog, eventStreamType: String, eventStreamId: String): Boolean =
+        runBlocking { eventLog.completeStream(eventStreamType, eventStreamId) is CompleteStreamResult.Success }
+
     /**
      * Permanently redacts a specific event instance, identified by its raw sequence number (as
      * returned by [AppendedEvent.getContext] via [io.cratis.chronicle.events.EventContext.getSequenceNumber]).
@@ -88,6 +110,20 @@ object EventLogJavaBridge {
     @JvmStatic
     fun redactForEventSource(eventLog: IEventLog, eventSourceId: String, reason: String, eventTypes: List<Class<*>>) {
         runBlocking { eventLog.redactForEventSource(eventSourceId, RedactionReason(reason), eventTypes.map { it.kotlin }) }
+    }
+
+    /**
+     * Subscribes [callback] to [IEventLog.getAppendOperations], the hot flow that emits after every
+     * completed append made through this instance. Java cannot collect a Kotlin `Flow` directly, so
+     * this launches a background coroutine and hands each emission to [callback] as it arrives.
+     * Returns the [Job] backing the subscription so it can be cancelled.
+     */
+    @JvmStatic
+    fun watchAppendOperations(
+        eventLog: IEventLog,
+        callback: java.util.function.Consumer<List<io.cratis.chronicle.eventSequences.AppendedEventWithResult>>
+    ): Job = CoroutineScope(Dispatchers.Default).launch {
+        eventLog.appendOperations.collect { entries -> callback.accept(entries) }
     }
 }
 
