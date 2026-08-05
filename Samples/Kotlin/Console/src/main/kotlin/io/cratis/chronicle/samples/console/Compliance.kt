@@ -99,6 +99,15 @@ suspend fun registerCustomerWithPii(store: io.cratis.chronicle.IEventStore) {
     println("[pii] Registered ${sampleCustomer.fullName} (${sampleCustomer.id}) with PII events up to sequence $lastSeq")
 }
 
+/**
+ * Deletes the encryption key used for [sampleCustomer]'s PII — a real "right to be forgotten" erasure.
+ * Existing encrypted PII values become permanently unreadable; no re-encryption or rollback is possible.
+ */
+suspend fun deleteCustomerEncryptionKey(store: EventStore) {
+    store.compliance.deleteEncryptionKey(sampleCustomer.id)
+    println("[pii] Deleted the encryption key for ${sampleCustomer.fullName} (${sampleCustomer.id}). Its encrypted PII can no longer be decrypted.")
+}
+
 suspend fun showCustomerReadModel(store: io.cratis.chronicle.IEventStore) {
     val customer = store.readModels.getInstanceByKey(CustomerDetails::class, sampleCustomer.id)
     if (customer == null || customer.id.isEmpty()) {

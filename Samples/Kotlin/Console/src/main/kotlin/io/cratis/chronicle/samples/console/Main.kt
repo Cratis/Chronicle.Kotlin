@@ -145,6 +145,19 @@ private suspend fun readModel(store: IEventStore, person: Person) {
     }
 }
 
+/** Lists every EmployeeDetails instance by replaying events in-process — demonstrates [io.cratis.chronicle.readModels.IReadModelsService.getInstances]. */
+private suspend fun listEmployeeDetails(store: IEventStore) {
+    val details = store.readModels.getInstances(EmployeeDetails::class)
+    if (details.isEmpty()) {
+        println("[read-models] No EmployeeDetails instances yet.")
+        return
+    }
+    println("[read-models] ${details.size} employee detail(s) (via getInstances, replayed in-process):")
+    details.forEach { detail ->
+        println("  ${detail.firstName} ${detail.lastName} - ${detail.title} (${detail.promotionCount} promotion(s)) @ ${detail.city}, ${detail.country}")
+    }
+}
+
 private fun writeInstructions() {
     println("""
 
@@ -152,7 +165,10 @@ Use 1-3 to select an employee. Then:
   P = Promote          A = Move (change address)
   E = Set email        U = Try to take the next employee's email (constraint violation)
   R = Read model       T = Transactional update
+  L = List employees (read models via getInstances)
   C = Register customer with PII   V = View customer PII read model
+  K = Delete customer's PII encryption key (right to be forgotten)
+  W = List webhooks    J = List jobs    S = List event store subscriptions
   I = Switch user (cycle: Alice Smith -> Bob Jones -> System)
   H or ? = Show this menu          Q = Quit
 """.trimIndent())
@@ -199,7 +215,13 @@ fun main() = runBlocking {
             EmployeeEmailSet::class,
             EmployeeMoved::class,
             CustomerRegistered::class,
-            CustomerAddressUpdated::class
+            CustomerAddressUpdated::class,
+            // Reactor side-effect events appended by HrNotificationReactor.
+            WelcomePackageRequested::class,
+            PromotionAudited::class,
+            // Owned by the external payroll event store, but this store still needs the schema
+            // to store events arriving through the payroll-inbox subscription.
+            PayrollRunCompleted::class
         )
 
         // Customer has no reducer or projection — register it explicitly so Chronicle knows its schema.
@@ -212,6 +234,12 @@ fun main() = runBlocking {
         store.projections.register(EmployeeListProjection())
         // Model-bound projection: EmployeeDetails carries @FromEvent/@SetFrom — no separate projection class needed.
         store.projections.register(EmployeeDetails::class)
+        // External service: an HTTP payroll provider secured with a bearer token.
+        registerPayrollExternalService(store)
+        // Discoverable webhook: notifies an external HR system whenever an employee is hired.
+        store.webhooks.register(EmployeeHiredWebhook())
+        // Event store subscription: ingest payroll runs from the external payroll event store's outbox.
+        setupPayrollIntegration(store)
         // Ensure the Default namespace exists so the seeding grain can distribute seeds to it.
         store.namespaces.ensure("Default")
         store.seeding.seed(EmployeeSeeder())
@@ -245,8 +273,13 @@ fun main() = runBlocking {
                 "u" -> stealEmail(store, selectedIndex, users[userIndex])
                 "r" -> readModel(store, employees[selectedIndex])
                 "t" -> transact(store, selectedIndex, users[userIndex], random)
+                "l" -> listEmployeeDetails(store)
                 "c" -> registerCustomerWithPii(store)
                 "v" -> showCustomerReadModel(store)
+                "k" -> deleteCustomerEncryptionKey(store)
+                "w" -> listWebhooks(store)
+                "j" -> listJobs(store)
+                "s" -> listEventStoreSubscriptions(store)
                 "h", "?" -> writeInstructions()
             }
         }
