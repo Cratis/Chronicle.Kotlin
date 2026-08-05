@@ -15,8 +15,10 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.events.EventTypeDescriptor
 import io.cratis.chronicle.identity.Identity as ChronicleIdentity
 import io.cratis.chronicle.identity.identityProvider
+import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.UUID
+import kotlin.reflect.KClass
 
 private val gson = Gson()
 
@@ -144,14 +146,65 @@ open class EventSequence(
         return EventSequenceNumber(response.sequenceNumber)
     }
 
+    override suspend fun getForEventSourceIdAndEventTypes(
+        eventSourceId: String,
+        eventTypes: List<KClass<*>>,
+        eventStreamType: String?,
+        eventStreamId: String?,
+        eventSourceType: String?
+    ): List<AppendedEvent> {
+        val esName = eventStoreName
+        val ns = this@EventSequence.namespace
+        val request = Eventsequences.GetForEventSourceIdAndEventTypesRequest.newBuilder().apply {
+            this.eventStore = esName
+            this.namespace = ns
+            this.eventSequenceId = id.value
+            this.eventSourceId = eventSourceId
+            eventStreamType?.let { this.eventStreamType = it }
+            eventStreamId?.let { this.eventStreamId = it }
+            eventSourceType?.let { this.eventSourceType = it }
+            addAllEventTypes(eventTypes.map { resolveEventTypeFor(it).toContractsEventType() })
+        }.build()
+
+        val response = stub.getForEventSourceIdAndEventTypes(request)
+        return response.eventsList.map { it.toClient() }
+    }
+
+    override suspend fun getFromSequenceNumber(
+        sequenceNumber: EventSequenceNumber,
+        eventSourceId: String?,
+        eventTypes: List<KClass<*>>?
+    ): List<AppendedEvent> {
+        val esName = eventStoreName
+        val ns = this@EventSequence.namespace
+        val request = Eventsequences.GetFromEventSequenceNumberRequest.newBuilder().apply {
+            this.eventStore = esName
+            this.namespace = ns
+            this.eventSequenceId = id.value
+            this.fromEventSequenceNumber = sequenceNumber.value
+            eventSourceId?.let { this.eventSourceId = it }
+            eventTypes?.let { addAllEventTypes(it.map { t -> resolveEventTypeFor(t).toContractsEventType() }) }
+        }.build()
+
+        val response = stub.getEventsFromEventSequenceNumber(request)
+        return response.eventsList.map { it.toClient() }
+    }
+
+    override suspend fun getNextSequenceNumber(): EventSequenceNumber {
+        val tail = getTailSequenceNumber()
+        return if (tail.isUnavailable) EventSequenceNumber.first else EventSequenceNumber(tail.value + 1)
+    }
+
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
 
-    private fun resolveEventType(event: Any): EventTypeDescriptor {
-        val annotation = event::class.java.getAnnotation(EventType::class.java)
+    private fun resolveEventType(event: Any): EventTypeDescriptor = resolveEventTypeFor(event::class)
+
+    private fun resolveEventTypeFor(eventClass: KClass<*>): EventTypeDescriptor {
+        val annotation = eventClass.java.getAnnotation(EventType::class.java)
         return if (annotation != null) {
-            val idValue = annotation.id.ifEmpty { event::class.java.simpleName }
+            val idValue = annotation.id.ifEmpty { eventClass.java.simpleName }
             EventTypeDescriptor(
                 id = io.cratis.chronicle.events.EventTypeId(idValue),
                 generation = io.cratis.chronicle.events.EventTypeGeneration(annotation.generation),
@@ -159,7 +212,7 @@ open class EventSequence(
             )
         } else {
             EventTypeDescriptor(
-                id = io.cratis.chronicle.events.EventTypeId(event::class.java.simpleName),
+                id = io.cratis.chronicle.events.EventTypeId(eventClass.java.simpleName),
                 generation = io.cratis.chronicle.events.EventTypeGeneration.first
             )
         }
@@ -278,3 +331,41 @@ private fun ChronicleIdentity.toContractsIdentity(): Eventsequences.Identity {
     onBehalfOf?.let { builder.setOnBehalfOf(it.toContractsIdentity()) }
     return builder.build()
 }
+
+private fun Bcl.Guid.toUUID(): UUID {
+    // Inverse of UUID.toContractsGuid(): reverse each half back to Java's big-endian representation.
+    val mostSignificantBits = java.lang.Long.reverseBytes(lo)
+    val leastSignificantBits = java.lang.Long.reverseBytes(hi)
+    return UUID(mostSignificantBits, leastSignificantBits)
+}
+
+private fun Eventsequences.Identity.toClient(): ChronicleIdentity = ChronicleIdentity(
+    subject = subject,
+    name = name,
+    userName = userName,
+    onBehalfOf = if (hasOnBehalfOf()) onBehalfOf.toClient() else null
+)
+
+private fun Eventsequences.EventContext.toClient(): io.cratis.chronicle.events.EventContext {
+    val occurredInstant = try {
+        Instant.parse(occurred.value)
+    } catch (e: Exception) {
+        Instant.now()
+    }
+    return io.cratis.chronicle.events.EventContext(
+        sequenceNumber = sequenceNumber,
+        eventSourceId = eventSourceId,
+        eventType = EventTypeDescriptor(
+            id = io.cratis.chronicle.events.EventTypeId(eventType.id),
+            generation = io.cratis.chronicle.events.EventTypeGeneration(eventType.generation)
+        ),
+        occurred = occurredInstant,
+        correlationId = correlationId.toUUID(),
+        causedBy = causedBy.toClient()
+    )
+}
+
+private fun Eventsequences.AppendedEvent.toClient(): AppendedEvent = AppendedEvent(
+    context = context.toClient(),
+    content = content
+)

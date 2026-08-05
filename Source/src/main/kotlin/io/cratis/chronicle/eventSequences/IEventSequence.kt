@@ -3,6 +3,8 @@
 
 package io.cratis.chronicle.eventSequences
 
+import kotlin.reflect.KClass
+
 /**
  * Defines the API surface for an event sequence.
  */
@@ -46,4 +48,43 @@ interface IEventSequence {
      * @return The tail [EventSequenceNumber].
      */
     suspend fun getTailSequenceNumber(eventSourceId: String? = null): EventSequenceNumber
+
+    /**
+     * Gets all events for a specific event source, optionally filtered and narrowed further.
+     *
+     * @param eventSourceId The event source identifier to get events for.
+     * @param eventTypes The event types to filter for.
+     * @param eventStreamType Optional event stream type to narrow to. Defaults to all stream types.
+     * @param eventStreamId Optional event stream identifier to narrow to. Defaults to all streams.
+     * @param eventSourceType Optional event source type to narrow to. Defaults to all source types.
+     * @return A list of [AppendedEvent].
+     */
+    suspend fun getForEventSourceIdAndEventTypes(
+        eventSourceId: String,
+        eventTypes: List<KClass<*>>,
+        eventStreamType: String? = null,
+        eventStreamId: String? = null,
+        eventSourceType: String? = null
+    ): List<AppendedEvent>
+
+    /**
+     * Gets all events after and including the given sequence number, with optional narrowing.
+     *
+     * @param sequenceNumber The [EventSequenceNumber] of the first event to get from.
+     * @param eventSourceId Optional event source identifier to filter by.
+     * @param eventTypes Optional event types to filter by.
+     * @return A list of [AppendedEvent].
+     */
+    suspend fun getFromSequenceNumber(
+        sequenceNumber: EventSequenceNumber,
+        eventSourceId: String? = null,
+        eventTypes: List<KClass<*>>? = null
+    ): List<AppendedEvent>
+
+    /**
+     * Gets the sequence number that will be assigned to the next appended event.
+     *
+     * @return The next [EventSequenceNumber].
+     */
+    suspend fun getNextSequenceNumber(): EventSequenceNumber
 }
