@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.eventSequences
 
+import kotlinx.coroutines.flow.SharedFlow
 import kotlin.reflect.KClass
 
 interface IEventLog : IEventSequence {
@@ -28,4 +29,5 @@ interface IEventLog : IEventSequence {
     override suspend fun completeStream(eventStreamType: String, eventStreamId: String): CompleteStreamResult
     override suspend fun redact(sequenceNumber: EventSequenceNumber, reason: RedactionReason)
     override suspend fun redactForEventSource(eventSourceId: String, reason: RedactionReason, eventTypes: List<KClass<*>>)
+    override val appendOperations: SharedFlow<List<AppendedEventWithResult>>
 }

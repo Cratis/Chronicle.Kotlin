@@ -20,6 +20,10 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberFunctions
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 private val gson = Gson()
 
@@ -32,6 +36,13 @@ open class EventSequence(
     private val namespace: String,
     private val stub: EventSequencesGrpcKt.EventSequencesCoroutineStub
 ) : IEventSequence {
+
+    private val _appendOperations = MutableSharedFlow<List<AppendedEventWithResult>>(
+        extraBufferCapacity = 64,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
+    override val appendOperations: SharedFlow<List<AppendedEventWithResult>> = _appendOperations.asSharedFlow()
 
     override suspend fun append(eventSourceId: String, event: Any, options: AppendOptions?): AppendResult {
         val eventType = resolveEventType(event)
@@ -64,12 +75,16 @@ open class EventSequence(
 
         val response = stub.append(request)
 
-        return mapAppendResponse(
+        val result = mapAppendResponse(
             sequenceNumber = response.sequenceNumber,
             constraintViolations = response.constraintViolationsList,
             errors = response.errorsList,
             concurrencyViolation = if (response.hasConcurrencyViolation()) response.concurrencyViolation else null
         )
+
+        emitAppendOperations(eventSourceId, listOf(event), listOf(result), correlationId, identity)
+
+        return result
     }
 
     override suspend fun appendMany(
@@ -116,7 +131,11 @@ open class EventSequence(
         // rather than issuing one Append RPC per event (which would neither be atomic nor efficient).
         val response = stub.appendMany(request)
 
-        return mapAppendManyResponse(events.size, response)
+        val results = mapAppendManyResponse(events.size, response)
+
+        emitAppendOperations(eventSourceId, events, results, correlationId, identity)
+
+        return results
     }
 
     override suspend fun hasEventsFor(eventSourceId: String): Boolean {
@@ -252,6 +271,33 @@ open class EventSequence(
     // -------------------------------------------------------------------------
     // Private helpers
     // -------------------------------------------------------------------------
+
+    /**
+     * Publishes to [appendOperations] after a completed append through this instance, whether it
+     * succeeded or failed. The occurred time is approximated client-side as the server does not echo
+     * it back on [Eventsequences.AppendResponse]/[Eventsequences.AppendManyResponse].
+     */
+    private fun emitAppendOperations(
+        eventSourceId: String,
+        events: List<Any>,
+        results: List<AppendResult>,
+        correlationId: UUID,
+        causedBy: ChronicleIdentity
+    ) {
+        val occurred = Instant.now()
+        val entries = events.mapIndexed { index, event ->
+            val context = io.cratis.chronicle.events.EventContext(
+                sequenceNumber = results[index].sequenceNumber.value,
+                eventSourceId = eventSourceId,
+                eventType = resolveEventType(event),
+                occurred = occurred,
+                correlationId = correlationId,
+                causedBy = causedBy
+            )
+            AppendedEventWithResult(context, event, results[index])
+        }
+        _appendOperations.tryEmit(entries)
+    }
 
     private suspend fun getTailSequenceNumberInternal(
         eventSourceId: String?,

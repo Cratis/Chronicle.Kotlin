@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.eventSequences
 
+import kotlinx.coroutines.flow.SharedFlow
 import kotlin.reflect.KClass
 
 /**
@@ -11,6 +12,17 @@ import kotlin.reflect.KClass
 interface IEventSequence {
     /** The unique identifier of this event sequence. */
     val id: EventSequenceId
+
+    /**
+     * A hot [SharedFlow] that emits a list of [AppendedEventWithResult] after each append operation
+     * made through this specific [IEventSequence] instance.
+     *
+     * A single-event [append] emits a list of one element; a batch [appendMany] emits the full
+     * batch. Subscribers receive the emission after the operation has completed, whether it
+     * succeeded or failed. This flow does not emit for transactional appends through
+     * [ITransactionalEventSequence].
+     */
+    val appendOperations: SharedFlow<List<AppendedEventWithResult>>
 
     /**
      * Appends a single event to the event sequence.

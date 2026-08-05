@@ -10,7 +10,11 @@ import io.cratis.chronicle.events.EventType
 import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -287,5 +291,51 @@ class EventSequenceTests {
 
         assertTrue(request.captured.eventTypesList.isEmpty())
         assertEquals("Unknown", request.captured.reason)
+    }
+
+    @Test
+    fun `appendOperations emits after a successful append through this instance`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        coEvery { stub.append(any(), any()) } returns Eventsequences.AppendResponse.newBuilder()
+            .setSequenceNumber(4)
+            .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        val received = CompletableDeferred<List<AppendedEventWithResult>>()
+        val job = launch { sequence.appendOperations.collect { received.complete(it) } }
+        yield() // let the collector subscribe before the append happens
+
+        sequence.append("source-1", SomethingHappened("hello"))
+
+        val emission = withTimeout(2000) { received.await() }
+        job.cancel()
+
+        assertEquals(1, emission.size)
+        val entry = emission.single()
+        assertEquals("source-1", entry.context.eventSourceId)
+        assertTrue(entry.result.isSuccess)
+        assertEquals(EventSequenceNumber(4), entry.result.sequenceNumber)
+        assertEquals(SomethingHappened("hello"), entry.event)
+    }
+
+    @Test
+    fun `appendOperations emits the full batch as a single entry for appendMany`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        coEvery { stub.appendMany(any(), any()) } returns Eventsequences.AppendManyResponse.newBuilder()
+            .addAllSequenceNumbers(listOf(0L, 1L))
+            .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        val received = CompletableDeferred<List<AppendedEventWithResult>>()
+        val job = launch { sequence.appendOperations.collect { received.complete(it) } }
+        yield()
+
+        sequence.appendMany("source-1", listOf(SomethingHappened("a"), SomethingHappened("b")))
+
+        val emission = withTimeout(2000) { received.await() }
+        job.cancel()
+
+        assertEquals(2, emission.size)
+        assertTrue(emission.all { it.result.isSuccess })
     }
 }
