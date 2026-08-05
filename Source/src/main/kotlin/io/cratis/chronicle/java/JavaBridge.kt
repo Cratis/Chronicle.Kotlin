@@ -31,6 +31,8 @@ import io.cratis.chronicle.constraints.IConstraintsService
 import io.cratis.chronicle.constraints.IUniqueConstraintBuilder
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.events.IEventTypesService
+import io.cratis.chronicle.seeding.IEventSeedingBuilder
+import io.cratis.chronicle.seeding.IEventSeedingScopeBuilder
 import io.cratis.chronicle.seeding.IEventSeedingService
 import io.cratis.chronicle.transactions.UnitOfWork
 import io.cratis.chronicle.webhooks.IWebhookDefinitionBuilder
@@ -257,6 +259,32 @@ object EventSeedingServiceJavaBridge {
     fun seed(service: IEventSeedingService, vararg seeders: Any) {
         runBlocking { service.seed(*seeders) }
     }
+}
+
+/**
+ * Java-friendly bridge for IEventSeedingBuilder operations.
+ */
+object EventSeedingBuilderJavaBridge {
+    @JvmStatic
+    fun <TEvent : Any> forEventType(
+        builder: IEventSeedingBuilder,
+        eventClass: Class<TEvent>,
+        eventSourceId: String,
+        events: List<TEvent>
+    ): IEventSeedingBuilder = builder.forEventType(eventClass.kotlin, eventSourceId, events)
+}
+
+/**
+ * Java-friendly bridge for IEventSeedingScopeBuilder operations.
+ */
+object EventSeedingScopeBuilderJavaBridge {
+    @JvmStatic
+    fun <TEvent : Any> forEventType(
+        builder: IEventSeedingScopeBuilder,
+        eventClass: Class<TEvent>,
+        eventSourceId: String,
+        events: List<TEvent>
+    ): IEventSeedingScopeBuilder = builder.forEventType(eventClass.kotlin, eventSourceId, events)
 }
 
 /**

@@ -18,7 +18,9 @@ class EventSeedingService(
 ) : IEventSeedingService {
 
     override suspend fun seed(vararg seeders: Any) {
-        val allEventSourceEntries = mutableListOf<Seeding.EventSourceSeedEntries>()
+        // Keyed by target namespace - entries with no explicit IEventSeedingBuilder.forNamespace()
+        // fall under this service's own namespace, matching the previous single-namespace behavior.
+        val entriesByNamespace = linkedMapOf<String, MutableList<Seeding.EventSourceSeedEntries>>()
 
         for (seeder in seeders) {
             if (seeder !is ICanSeedEvents) continue
@@ -37,7 +39,8 @@ class EventSeedingService(
                 }
 
                 if (seedingEntries.isNotEmpty()) {
-                    allEventSourceEntries.add(
+                    val targetNamespace = entry.namespace ?: namespace
+                    entriesByNamespace.getOrPut(targetNamespace) { mutableListOf() }.add(
                         Seeding.EventSourceSeedEntries.newBuilder()
                             .setEventSourceId(entry.eventSourceId)
                             .addAllEntries(seedingEntries)
@@ -47,18 +50,18 @@ class EventSeedingService(
             }
         }
 
-        if (allEventSourceEntries.isEmpty()) return
+        if (entriesByNamespace.isEmpty()) return
 
-        val namespacedEntries = Seeding.NamespacedSeedEntries.newBuilder()
-            .setNamespace(namespace)
-            .addAllByEventSource(allEventSourceEntries)
-            .build()
+        val requestBuilder = Seeding.SeedRequest.newBuilder().setEventStore(eventStoreName)
+        entriesByNamespace.forEach { (targetNamespace, eventSourceEntries) ->
+            requestBuilder.addNamespacedEntries(
+                Seeding.NamespacedSeedEntries.newBuilder()
+                    .setNamespace(targetNamespace)
+                    .addAllByEventSource(eventSourceEntries)
+                    .build()
+            )
+        }
 
-        val request = Seeding.SeedRequest.newBuilder()
-            .setEventStore(eventStoreName)
-            .addNamespacedEntries(namespacedEntries)
-            .build()
-
-        stub.seed(request)
+        stub.seed(requestBuilder.build())
     }
 }
