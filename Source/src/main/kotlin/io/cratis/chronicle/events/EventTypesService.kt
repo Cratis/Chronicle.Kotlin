@@ -7,6 +7,7 @@ import Cratis.Chronicle.Contracts.Events.EventTypesGrpcKt
 import Cratis.Chronicle.Contracts.Events.Events
 import io.cratis.chronicle.events.migrations.EventTypeMigrationBuilder
 import io.cratis.chronicle.events.migrations.IEventTypeMigration
+import io.cratis.chronicle.schemas.JsonSchemaGenerator
 import kotlin.reflect.KClass
 import kotlin.reflect.full.createInstance
 import kotlin.reflect.full.findAnnotation
@@ -73,9 +74,11 @@ class EventTypesService(
         val latest = eventEntries.maxByOrNull { (ann, _) -> ann.generation }
         val generation = latest?.first?.generation ?: migrations.maxOf { it.targetGeneration() }
         val tombstone = latest?.first?.tombstone ?: false
+        val latestClass = latest?.second ?: migrations.maxByOrNull { it.targetGeneration() }?.targetClass
+        val schema = latestClass?.let { JsonSchemaGenerator.generate(it) } ?: "{}"
 
         val builder = Events.EventTypeRegistration.newBuilder()
-            .setSchema("{}")
+            .setSchema(schema)
             .setType(
                 Events.EventType.newBuilder()
                     .setId(id)
@@ -85,7 +88,7 @@ class EventTypesService(
             )
 
         val addedGenerations = mutableSetOf<Int>()
-        eventEntries.forEach { (ann, _) -> builder.addGenerationIfAbsent(addedGenerations, ann.generation) }
+        eventEntries.forEach { (ann, cls) -> builder.addGenerationIfAbsent(addedGenerations, ann.generation, cls) }
 
         migrations.forEach { migration ->
             val fromGeneration = migration.sourceGeneration()
@@ -109,19 +112,19 @@ class EventTypesService(
                     .build()
             )
 
-            builder.addGenerationIfAbsent(addedGenerations, fromGeneration)
-            builder.addGenerationIfAbsent(addedGenerations, toGeneration)
+            builder.addGenerationIfAbsent(addedGenerations, fromGeneration, migration.sourceClass)
+            builder.addGenerationIfAbsent(addedGenerations, toGeneration, migration.targetClass)
         }
 
         return builder.build()
     }
 
-    private fun Events.EventTypeRegistration.Builder.addGenerationIfAbsent(added: MutableSet<Int>, generation: Int) {
+    private fun Events.EventTypeRegistration.Builder.addGenerationIfAbsent(added: MutableSet<Int>, generation: Int, cls: KClass<*>?) {
         if (added.add(generation)) {
             addGenerations(
                 Events.EventTypeGenerationDefinition.newBuilder()
                     .setGeneration(generation)
-                    .setSchema("{}")
+                    .setSchema(cls?.let { JsonSchemaGenerator.generate(it) } ?: "{}")
                     .build()
             )
         }
