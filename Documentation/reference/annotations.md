@@ -32,10 +32,15 @@ for the event type of its first parameter.
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `id` | `String` | `""` | Stable identifier. Defaults to class name. |
+| `eventSequence` | `String` | event log | The event sequence to observe. |
+
+A handler takes the event, and optionally an `EventContext` carrying the event's
+metadata:
 
 <!-- validate: declarations -->
 
 ```kotlin
+import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.observation.Reactor
 
 @Reactor
@@ -43,10 +48,71 @@ class OrderNotifications {
     fun orderPlaced(event: OrderPlaced) {
         println("Order ${event.orderId} placed")
     }
+
+    fun orderShipped(event: OrderShipped, context: EventContext) {
+        println("Order ${event.orderId} shipped at ${context.occurred}")
+    }
 }
 ```
 
 Supply an explicit `id` only when you need the identifier to survive class renames.
+
+---
+
+## @OnceOnly
+
+Excludes a reactor, or a single handler, from replay. Put it on the class and the
+whole reactor is registered as non-replayable, so redaction, revision, and observer
+rewind never replay it. Put it on one method and only that handler is skipped when
+an event arrives as part of a replay — the reactor's other handlers still replay.
+
+Use it for side effects where running again is worse than never running again.
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.observation.OnceOnly
+import io.cratis.chronicle.observation.Reactor
+
+@Reactor
+class PaymentNotifications {
+    @OnceOnly
+    fun orderPlaced(event: OrderPlaced) {
+        println("Charging for ${event.orderId} - never repeated on replay")
+    }
+}
+```
+
+---
+
+## @Replay
+
+Marks a reactor handler as the one to run while events are being replayed. When
+an event type has a handler marked with this, it takes over for the duration of
+the replay and the everyday handler does not also run. Without one, the everyday
+handler keeps running during replay.
+
+Use [@OnceOnly](#onceonly) instead when the side effect should simply not happen
+again on replay.
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.observation.Reactor
+import io.cratis.chronicle.observation.Replay
+
+@Reactor
+class ShippingNotifications {
+    fun orderPlaced(event: OrderPlaced) {
+        println("Emailing the customer about ${event.orderId}")
+    }
+
+    @Replay
+    fun orderPlacedDuringReplay(event: OrderPlaced) {
+        println("Rebuilding ${event.orderId} without emailing anyone")
+    }
+}
+```
 
 ---
 
@@ -58,16 +124,28 @@ read model.
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `id` | `String` | `""` | Stable identifier. Defaults to class name. |
+| `eventSequence` | `String` | event log | The event sequence to observe. |
+| `isActive` | `Boolean` | `true` | Whether the kernel runs the reducer. |
+
+A handler takes the event, the state so far, and optionally an `EventContext`.
+The state is `null` until the first event for an event source has been folded in.
 
 <!-- validate: declarations -->
 
 ```kotlin
+import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.observation.Reducer
 
 @Reducer
 class OrderSummaryReducer {
     fun orderPlaced(event: OrderPlaced, state: OrderSummary?): OrderSummary =
         (state ?: OrderSummary()).copy(orderId = event.orderId)
+
+    fun orderShipped(
+        event: OrderShipped,
+        state: OrderSummary?,
+        context: EventContext
+    ): OrderSummary = (state ?: OrderSummary()).copy(status = "shipped at ${context.occurred}")
 }
 ```
 

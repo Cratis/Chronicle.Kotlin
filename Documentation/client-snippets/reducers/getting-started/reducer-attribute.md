@@ -5,6 +5,6 @@ import io.cratis.chronicle.readModels.ReadModel
 @ReadModel
 data class ReducersGettingStartedAttributeOrderSummary(val orderId: String = "")
 
-@Reducer(id = "order-summary")
+@Reducer(id = "order-summary", eventSequence = "outbox", isActive = false)
 class ReducersGettingStartedAttributeOrderSummaryReducer
 ```
