@@ -18,4 +18,7 @@ enum class LoadBalancer {
             else -> throw IllegalArgumentException("Unknown loadBalancer strategy: '$value'.")
         }
     }
+
+    /** Renders this strategy as the `loadBalancer` connection string option value [parse] understands. */
+    fun toConnectionStringValue(): String = name.lowercase().replace('_', '-')
 }

@@ -254,4 +254,79 @@ class ChronicleConnectionStringTests {
         // trustManagers null/empty, meaning "use the platform default trust manager".
         assertTrue(credentials.trustManagers.orEmpty().none { it is InsecureTrustManager })
     }
+
+    // toString round-trip
+
+    @Test
+    fun `toString renders a plain host and port`() {
+        val cs = ChronicleConnectionString.parse("chronicle://myserver:12345")
+        assertEquals("chronicle://myserver:12345", cs.toString())
+    }
+
+    @Test
+    fun `toString renders username and password`() {
+        val cs = ChronicleConnectionString.parse("chronicle://alice:secret@myserver:35000")
+        assertEquals("chronicle://alice:secret@myserver:35000", cs.toString())
+    }
+
+    @Test
+    fun `toString renders a multi-host list`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host1:35000,host2:35001,host3:35002")
+        assertEquals("chronicle://host1:35000,host2:35001,host3:35002", cs.toString())
+    }
+
+    @Test
+    fun `toString renders an IPv6 host in bracket notation`() {
+        val cs = ChronicleConnectionString.parse("chronicle://[::1]:35000")
+        assertEquals("chronicle://[::1]:35000", cs.toString())
+    }
+
+    @Test
+    fun `toString omits query parameters that are at their default value`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000")
+        assertEquals("chronicle://host:35000", cs.toString())
+    }
+
+    @Test
+    fun `toString renders disableTls, apiKey and a non-default loadBalancer`() {
+        val cs = ChronicleConnectionString.parse(
+            "chronicle://host:35000?disableTls=true&apiKey=my-key&loadBalancer=round-robin"
+        )
+        assertEquals(
+            "chronicle://host:35000?disableTls=true&apiKey=my-key&loadBalancer=round-robin",
+            cs.toString()
+        )
+    }
+
+    @Test
+    fun `toString renders skipTlsValidation only when explicitly false`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000?skipTlsValidation=false")
+        assertEquals("chronicle://host:35000?skipTlsValidation=false", cs.toString())
+    }
+
+    @Test
+    fun `toString renders the chronicle+srv scheme and its options`() {
+        val cs = ChronicleConnectionString.parse("chronicle+srv://example.com?srvNameServer=1.1.1.1&loadBalancer=random")
+        assertEquals("chronicle+srv://example.com:35000?loadBalancer=random&srvNameServer=1.1.1.1", cs.toString())
+    }
+
+    @Test
+    fun `parsing toString's output reproduces the same connection string for a variety of inputs`() {
+        val connectionStrings = listOf(
+            "chronicle://myserver:12345",
+            "chronicle://alice:secret@myserver:35000",
+            "chronicle://host1:35000,host2:35001,host3:35002",
+            "chronicle://[::1]:35000",
+            "chronicle://host:35000?disableTls=true&apiKey=my-key&loadBalancer=round-robin",
+            "chronicle://host:35000?skipTlsValidation=false",
+            "chronicle+srv://example.com?srvNameServer=1.1.1.1&loadBalancer=random",
+            ChronicleConnectionString.DEVELOPMENT.toString()
+        )
+
+        connectionStrings.forEach { original ->
+            val parsed = ChronicleConnectionString.parse(original)
+            val roundTripped = ChronicleConnectionString.parse(parsed.toString())
+            assertEquals(parsed, roundTripped, "Round-tripping '$original' should preserve every field")
+        }
+    }
 }

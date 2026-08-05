@@ -184,4 +184,32 @@ data class ChronicleConnectionString(
 
     /** Renders the first configured server address as `host:port` (IPv6 hosts in bracket notation). */
     val target: String get() = addresses.first().toString()
+
+    /**
+     * Renders this connection string back to its `chronicle://`/`chronicle+srv://` textual form.
+     *
+     * The result is not guaranteed to be byte-identical to whatever string was originally
+     * [parse]d (e.g. a host without an explicit port is rendered with the resolved default
+     * port), but re-parsing it always yields an equal [ChronicleConnectionString].
+     */
+    override fun toString(): String = buildString {
+        append(if (isSrv) SRV_SCHEME else SCHEME)
+
+        if (username != null || password != null) {
+            append(username ?: "")
+            if (password != null) append(':').append(password)
+            append('@')
+        }
+
+        append(addresses.joinToString(","))
+
+        val params = buildList {
+            if (disableTls) add("disableTls=true")
+            if (!skipTlsValidation) add("skipTlsValidation=false")
+            apiKey?.let { add("apiKey=$it") }
+            if (loadBalancer != LoadBalancer.LEAST_CONNECTIONS) add("loadBalancer=${loadBalancer.toConnectionStringValue()}")
+            srvNameServer?.let { add("srvNameServer=$it") }
+        }
+        if (params.isNotEmpty()) append('?').append(params.joinToString("&"))
+    }
 }
