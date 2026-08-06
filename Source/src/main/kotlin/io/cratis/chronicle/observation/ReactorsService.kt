@@ -8,14 +8,8 @@ import Cratis.Chronicle.Contracts.Observation.Reactors.ReactorsGrpcKt
 import com.google.gson.Gson
 import io.cratis.chronicle.connection.ConnectionLifecycle
 import io.cratis.chronicle.eventSequences.EventForEventSourceId
-import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.eventSequences.IEventLog
-import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.events.EventType
-import io.cratis.chronicle.events.EventTypeDescriptor
-import io.cratis.chronicle.events.EventTypeGeneration
-import io.cratis.chronicle.events.EventTypeId
-import io.cratis.chronicle.identity.Identity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,11 +20,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.util.UUID
-import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.full.memberFunctions
 
 private val gson = Gson()
 
@@ -43,25 +33,9 @@ class ReactorsService(
 ) : IReactorsService {
 
     override suspend fun register(reactor: Any): Job {
-        val reactorClass = reactor::class
-        val annotation = reactorClass.findAnnotation<Reactor>()
-        val reactorId = annotation?.id?.ifEmpty { reactorClass.simpleName!! }
-            ?: reactorClass.simpleName!!
+        val registration = ReactorRegistration.from(reactor::class)
 
-        // Map event type ID -> handler function + event KClass
-        val handlersByEventTypeId = mutableMapOf<String, Pair<kotlin.reflect.KFunction<*>, KClass<*>>>()
-        for (fn in reactorClass.memberFunctions) {
-            val params = fn.parameters
-            if (params.size < 2) continue
-            val eventParam = params[1]
-            val eventKClass = eventParam.type.classifier as? KClass<*> ?: continue
-            val eventAnnotation = eventKClass.findAnnotation<EventType>() ?: continue
-            val eventTypeId = eventAnnotation.id.ifEmpty { eventKClass.simpleName!! }
-            handlersByEventTypeId[eventTypeId] = fn to eventKClass
-        }
-
-        val eventTypes = handlersByEventTypeId.map { (id, pair) ->
-            val (_, eventKClass) = pair
+        val eventTypes = registration.handlers.eventTypes.map { (id, eventKClass) ->
             val ann = eventKClass.findAnnotation<EventType>()!!
             ObservationReactors.EventTypeWithKeyExpression.newBuilder()
                 .setEventType(
@@ -81,11 +55,11 @@ class ReactorsService(
             lifecycle.connections().collectLatest { connectionId ->
                 while (isActive) {
                     try {
-                        observe(reactorId, reactor, connectionId, eventTypes, handlersByEventTypeId)
+                        observe(registration, reactor, connectionId, eventTypes)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        System.err.println("[ReactorsService] '$reactorId' failed: ${e.message}")
+                        System.err.println("[ReactorsService] '${registration.id}' failed: ${e.message}")
                     }
 
                     // The kernel closes a cross-store (inbox) stream rather than tailing it
@@ -97,11 +71,10 @@ class ReactorsService(
     }
 
     private suspend fun observe(
-        reactorId: String,
+        registration: ReactorRegistration,
         reactor: Any,
         connectionId: String,
-        eventTypes: List<ObservationReactors.EventTypeWithKeyExpression>,
-        handlersByEventTypeId: Map<String, Pair<kotlin.reflect.KFunction<*>, KClass<*>>>
+        eventTypes: List<ObservationReactors.EventTypeWithKeyExpression>
     ) {
         // Use a Channel instead of MutableSharedFlow so that messages sent before
         // the gRPC stub starts collecting are buffered and not dropped.
@@ -119,9 +92,9 @@ class ReactorsService(
                                     .setNamespace(namespace)
                                     .setReactor(
                                         ObservationReactors.ReactorDefinition.newBuilder()
-                                            .setReactorId(reactorId)
-                                            .setEventSequenceId(EventSequenceId.eventLog.value)
-                                            .setIsReplayable(true)
+                                            .setReactorId(registration.id)
+                                            .setEventSequenceId(registration.eventSequenceId)
+                                            .setIsReplayable(registration.isReplayable)
                                             .addAllEventTypes(eventTypes)
                                             .build()
                                     )
@@ -139,27 +112,32 @@ class ReactorsService(
                 var lastSuccessfulSequenceNumber = 0L
 
                 for (appendedEvent in eventsToObserve.eventsList) {
-                    val eventTypeId = appendedEvent.context.eventType.id
-                    val handlerPair = handlersByEventTypeId[eventTypeId]
-                    if (handlerPair != null) {
-                        val (fn, eventKClass) = handlerPair
-                        try {
-                            val event = gson.fromJson(appendedEvent.content, eventKClass.java)
-                            val ctx = buildEventContext(appendedEvent.context)
-                            val params = fn.parameters
-                            val result = if (params.size == 3) {
-                                fn.call(reactor, event, ctx)
-                            } else {
-                                fn.call(reactor, event)
-                            }
-                            appendSideEffects(result, appendedEvent.context.eventSourceId)
-                            lastSuccessfulSequenceNumber = appendedEvent.context.sequenceNumber
-                        } catch (e: Exception) {
-                            exceptions.add(e.message ?: "Error in ${fn.name}")
-                            stackTrace = e.stackTraceToString()
+                    val context = appendedEvent.context.toEventContext()
+                    val resolution =
+                        registration.handlers.resolve(context.eventType.id.value, context.observationState)
+
+                    if (resolution !is ReactorHandlerResolution.Invoke) {
+                        // A handler deliberately skipped for replay and an event no handler wants
+                        // are both fully observed - the reactor is caught up past them either way.
+                        // A skipped @OnceOnly handler produces no side effects either, which is the
+                        // whole point of taking it out of the replay.
+                        lastSuccessfulSequenceNumber = context.sequenceNumber
+                        continue
+                    }
+
+                    val handler = resolution.handler
+                    try {
+                        val event = gson.fromJson(appendedEvent.content, handler.eventClass.java)
+                        val result = if (handler.function.parameters.size == 3) {
+                            handler.function.call(reactor, event, context)
+                        } else {
+                            handler.function.call(reactor, event)
                         }
-                    } else {
-                        lastSuccessfulSequenceNumber = appendedEvent.context.sequenceNumber
+                        appendSideEffects(result, context.eventSourceId)
+                        lastSuccessfulSequenceNumber = context.sequenceNumber
+                    } catch (e: Exception) {
+                        exceptions.add(e.message ?: "Error in ${handler.function.name}")
+                        stackTrace = e.stackTraceToString()
                     }
                 }
 
@@ -228,24 +206,5 @@ class ReactorsService(
     private companion object {
         /** How long to wait before re-establishing an observation whose stream ended. */
         const val REOBSERVE_DELAY_MS = 2_000L
-    }
-
-    private fun buildEventContext(ctx: ObservationReactors.EventContext): EventContext {
-        val occurred = try {
-            Instant.parse(ctx.occurred.value)
-        } catch (e: Exception) {
-            Instant.now()
-        }
-        return EventContext(
-            sequenceNumber = ctx.sequenceNumber,
-            eventSourceId = ctx.eventSourceId,
-            eventType = EventTypeDescriptor(
-                id = EventTypeId(ctx.eventType.id),
-                generation = EventTypeGeneration(ctx.eventType.generation)
-            ),
-            occurred = occurred,
-            correlationId = UUID.randomUUID(),
-            causedBy = Identity.unknown
-        )
     }
 }

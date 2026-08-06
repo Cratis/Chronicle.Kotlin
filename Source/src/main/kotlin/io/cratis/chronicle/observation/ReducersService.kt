@@ -7,9 +7,7 @@ import Cratis.Chronicle.Contracts.Observation.Reducers.ObservationReducers
 import Cratis.Chronicle.Contracts.Observation.Reducers.ReducersGrpcKt
 import com.google.gson.Gson
 import io.cratis.chronicle.connection.ConnectionLifecycle
-import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.events.EventType
-import io.cratis.chronicle.readModels.ReadModel
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -21,10 +19,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.full.memberFunctions
-import kotlin.reflect.full.primaryConstructor
 
 private val gson = Gson()
 
@@ -38,42 +33,14 @@ class ReducersService(
 ) : IReducersService {
 
     override suspend fun register(reducer: Any): Job {
-        val reducerClass = reducer::class
-        val annotation = reducerClass.findAnnotation<Reducer>()
-        val reducerId = annotation?.id?.ifEmpty { reducerClass.simpleName!! }
-            ?: reducerClass.simpleName!!
-
-        // Find the read model type from Reducer or by inspecting return types
-        var readModelClass: KClass<*>? = null
-        val handlersByEventTypeId = mutableMapOf<String, Pair<kotlin.reflect.KFunction<*>, KClass<*>>>()
-
-        for (fn in reducerClass.memberFunctions) {
-            val params = fn.parameters
-            if (params.size < 2) continue
-            val eventParam = params[1]
-            val eventKClass = eventParam.type.classifier as? KClass<*> ?: continue
-            val eventAnnotation = eventKClass.findAnnotation<EventType>() ?: continue
-            val eventTypeId = eventAnnotation.id.ifEmpty { eventKClass.simpleName!! }
-            handlersByEventTypeId[eventTypeId] = fn to eventKClass
-            // Infer read model from return type
-            if (readModelClass == null) {
-                readModelClass = fn.returnType.classifier as? KClass<*>
-            }
-        }
-
-        val readModelAnn = readModelClass?.findAnnotation<ReadModel>()
-        val readModelName = readModelAnn?.id?.ifEmpty { readModelClass?.simpleName ?: "" }
-            ?: readModelClass?.simpleName ?: ""
+        val registration = ReducerRegistration.from(reducer::class)
 
         // Auto-register the read model so the observer type (Reducer) and identifier are derived
         // from this reducer rather than from the @ReadModel annotation.
-        if (readModelClass != null) {
-            readModels?.registerWithObserver(readModelClass, 1, reducerId)
-        }
+        registration.readModelClass?.let { readModels?.registerWithObserver(it, 1, registration.id) }
 
-        val eventTypes = handlersByEventTypeId.map { (id, pair) ->
-            val (_, eventKClass) = pair
-            val ann = eventKClass.findAnnotation<EventType>()!!
+        val eventTypes = registration.handlers.map { (id, handler) ->
+            val ann = handler.eventClass.findAnnotation<EventType>()!!
             ObservationReducers.EventTypeWithKeyExpression.newBuilder()
                 .setEventType(
                     ObservationReducers.EventType.newBuilder()
@@ -92,11 +59,11 @@ class ReducersService(
             lifecycle.connections().collectLatest { connectionId ->
                 while (isActive) {
                     try {
-                        doObserve(connectionId, eventTypes, reducer, reducerId, readModelClass, readModelName, handlersByEventTypeId)
+                        doObserve(connectionId, eventTypes, reducer, registration)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
-                        System.err.println("[ReducersService] '$reducerId' failed: ${e.message}")
+                        System.err.println("[ReducersService] '${registration.id}' failed: ${e.message}")
                     }
 
                     // The kernel closes a cross-store (inbox) stream rather than tailing it
@@ -111,10 +78,7 @@ class ReducersService(
         connectionId: String,
         eventTypes: List<ObservationReducers.EventTypeWithKeyExpression>,
         reducer: Any,
-        reducerId: String,
-        readModelClass: KClass<*>?,
-        readModelName: String,
-        handlersByEventTypeId: Map<String, Pair<kotlin.reflect.KFunction<*>, KClass<*>>>
+        registration: ReducerRegistration
     ) {
         // Use a Channel instead of MutableSharedFlow so that messages sent before
         // the gRPC stub starts collecting are buffered and not dropped.
@@ -131,10 +95,10 @@ class ReducersService(
                                     .setNamespace(namespace)
                                     .setReducer(
                                         ObservationReducers.ReducerDefinition.newBuilder()
-                                            .setReducerId(reducerId)
-                                            .setEventSequenceId(EventSequenceId.eventLog.value)
-                                            .setReadModel(readModelName)
-                                            .setIsActive(true)
+                                            .setReducerId(registration.id)
+                                            .setEventSequenceId(registration.eventSequenceId)
+                                            .setReadModel(registration.readModelName)
+                                            .setIsActive(registration.isActive)
                                             .addAllEventTypes(eventTypes)
                                             .build()
                                     )
@@ -154,6 +118,7 @@ class ReducersService(
                 var lastSuccessfulSequenceNumber = 0L
 
                 // Deserialize initial state if present
+                val readModelClass = registration.readModelClass
                 if (initialStateJson.isNotBlank() && readModelClass != null) {
                     try {
                         currentState = gson.fromJson(initialStateJson, readModelClass.java)
@@ -161,25 +126,30 @@ class ReducersService(
                 }
 
                 for (appendedEvent in operation.eventsList) {
-                    val eventTypeId = appendedEvent.context.eventType.id
-                    val handlerPair = handlersByEventTypeId[eventTypeId]
-                    if (handlerPair != null) {
-                        val (fn, eventKClass) = handlerPair
-                        try {
-                            val event = gson.fromJson(appendedEvent.content, eventKClass.java)
-                            val params = fn.parameters
-                            currentState = when (params.size) {
-                                2 -> fn.call(reducer, event)
-                                3 -> fn.call(reducer, event, currentState)
-                                else -> fn.call(reducer, event)
-                            }
-                            lastSuccessfulSequenceNumber = appendedEvent.context.sequenceNumber
-                        } catch (e: Exception) {
-                            exceptions.add(e.message ?: "Error in ${fn.name}")
-                            stackTrace = e.stackTraceToString()
-                        }
-                    } else {
+                    val handler = registration.handlers[appendedEvent.context.eventType.id]
+                    if (handler == null) {
                         lastSuccessfulSequenceNumber = appendedEvent.context.sequenceNumber
+                        continue
+                    }
+
+                    try {
+                        val event = gson.fromJson(appendedEvent.content, handler.eventClass.java)
+                        // Index 0 is the instance receiver: (event), (event, state), or
+                        // (event, state, context) - the same shapes the C# client accepts.
+                        currentState = when (handler.function.parameters.size) {
+                            2 -> handler.function.call(reducer, event)
+                            4 -> handler.function.call(
+                                reducer,
+                                event,
+                                currentState,
+                                appendedEvent.context.toEventContext()
+                            )
+                            else -> handler.function.call(reducer, event, currentState)
+                        }
+                        lastSuccessfulSequenceNumber = appendedEvent.context.sequenceNumber
+                    } catch (e: Exception) {
+                        exceptions.add(e.message ?: "Error in ${handler.function.name}")
+                        stackTrace = e.stackTraceToString()
                     }
                 }
 

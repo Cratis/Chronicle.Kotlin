@@ -1,0 +1,13 @@
+// Copyright (c) Cratis. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+package io.cratis.chronicle.observation;
+
+/** A Java reactor marked non-replayable at the class level. */
+@Reactor
+@OnceOnly
+public class JavaOnceOnlyReactor {
+
+    public void bookAdded(JavaBookAdded event) {
+    }
+}

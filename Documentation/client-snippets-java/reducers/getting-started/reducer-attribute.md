@@ -9,7 +9,7 @@ record ReducersGettingStartedAttributeOrderSummary(String orderId) {
     }
 }
 
-@Reducer(id = "order-summary")
+@Reducer(id = "order-summary", eventSequence = "outbox", isActive = false)
 class ReducersGettingStartedAttributeOrderSummaryReducer {
 }
 ```
