@@ -5,7 +5,6 @@ public final class io/cratis/chronicle/testing/EventScenario {
 	public final fun eventSourceIds ()Ljava/util/List;
 	public final fun eventsOf (Lkotlin/reflect/KClass;)Ljava/util/List;
 	public final fun eventsOf (Lkotlin/reflect/KClass;Ljava/lang/String;)Ljava/util/List;
-	public final fun getAppended ()Ljava/util/List;
 	public final fun getEventLog ()Lio/cratis/chronicle/testing/InMemoryEventSequence;
 	public final fun getEventSequence ()Lio/cratis/chronicle/eventSequences/IEventSequence;
 	public final fun given (Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;

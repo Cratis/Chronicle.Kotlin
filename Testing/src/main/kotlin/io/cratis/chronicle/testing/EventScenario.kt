@@ -45,9 +45,6 @@ class EventScenario(
     /** The same, as the interface the code under test should be taking. */
     val eventSequence: IEventSequence get() = eventLog
 
-    /** Everything appended so far, deserialized back into the types that were appended. */
-    val appended: List<Any> get() = eventLog.events.map { it }
-
     /** Forgets everything, so one scenario can serve several specs. */
     fun reset() = eventLog.clear()
 
