@@ -8,9 +8,9 @@ import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.Readmodels
 import bcl.Bcl
-import com.google.gson.Gson
 import io.cratis.chronicle.compliance.ComplianceService
 import io.cratis.chronicle.eventSequences.EventSequenceId
+import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.schemas.JsonSchemaGenerator
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import kotlinx.coroutines.flow.Flow
@@ -20,8 +20,6 @@ import java.util.UUID
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.memberProperties
-
-private val gson = Gson()
 
 /** Resolves the read model identifier for [this] class: the [ReadModel.id] override, or the class simple name. */
 internal fun KClass<*>.readModelIdentifier(): String {
@@ -110,7 +108,7 @@ class ReadModelsService(
         return if (response.readModel.isNullOrBlank() || response.readModel == "null") {
             null
         } else {
-            gson.fromJson(response.readModel, readModelClass.java)
+            chronicleGson.fromJson(response.readModel, readModelClass.java)
         }
     }
 
@@ -122,7 +120,7 @@ class ReadModelsService(
             .setEventSequenceId(EventSequenceId.eventLog.value)
         if (eventCount != null) builder.setEventCount(eventCount)
 
-        return stub.getAllInstances(builder.build()).instancesList.map { gson.fromJson(it, readModelClass.java) }
+        return stub.getAllInstances(builder.build()).instancesList.map { chronicleGson.fromJson(it, readModelClass.java) }
     }
 
     override suspend fun <T : Any> getSnapshotsById(readModelClass: KClass<T>, key: String): List<ReadModelSnapshot<T>> {
@@ -164,10 +162,10 @@ class ReadModelsService(
     override suspend fun <T : Any> release(instance: T, subject: String?): T {
         val resolvedSubject = subject ?: resolveSubject(instance) ?: return instance
         val schema = JsonSchemaGenerator.generate(instance::class)
-        val payload = gson.toJson(instance)
+        val payload = chronicleGson.toJson(instance)
         val released = compliance.release(resolvedSubject, schema, payload)
         @Suppress("UNCHECKED_CAST")
-        return gson.fromJson(released, instance::class.java) as T
+        return chronicleGson.fromJson(released, instance::class.java) as T
     }
 
     override suspend fun <T : Any> releaseMany(instances: List<T>): List<T> = instances.map { release(it) }
@@ -181,7 +179,7 @@ class ReadModelsService(
 
     private fun <T : Any> Readmodels.ReadModelSnapshot.toTyped(readModelClass: KClass<T>): ReadModelSnapshot<T> =
         ReadModelSnapshot(
-            instance = gson.fromJson(readModel, readModelClass.java),
+            instance = chronicleGson.fromJson(readModel, readModelClass.java),
             events = eventsList,
             occurred = if (hasOccurred()) occurred.value.toInstantOrNull() else null,
             correlationId = if (hasCorrelationId()) correlationId.toUUID() else null
@@ -194,7 +192,7 @@ class ReadModelsService(
             readModel = if (removed || readModel.isNullOrBlank() || readModel == "null") {
                 null
             } else {
-                gson.fromJson(readModel, readModelClass.java)
+                chronicleGson.fromJson(readModel, readModelClass.java)
             },
             removed = removed,
             changeType = changeType.toClient(),

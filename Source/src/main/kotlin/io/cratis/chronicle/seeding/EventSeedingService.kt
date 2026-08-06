@@ -5,11 +5,9 @@ package io.cratis.chronicle.seeding
 
 import Cratis.Chronicle.Contracts.Seeding.EventSeedingGrpcKt
 import Cratis.Chronicle.Contracts.Seeding.Seeding
-import com.google.gson.Gson
 import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.json.chronicleGson
 import kotlin.reflect.full.findAnnotation
-
-private val gson = Gson()
 
 class EventSeedingService(
     private val eventStoreName: String,
@@ -34,7 +32,7 @@ class EventSeedingService(
                     Seeding.SeedingEntry.newBuilder()
                         .setEventSourceId(entry.eventSourceId)
                         .setEventTypeId(eventTypeId)
-                        .setContent(gson.toJson(event))
+                        .setContent(chronicleGson.toJson(event))
                         .build()
                 }
 

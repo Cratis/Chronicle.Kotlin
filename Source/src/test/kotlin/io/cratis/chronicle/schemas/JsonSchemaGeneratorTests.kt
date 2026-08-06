@@ -5,6 +5,9 @@ package io.cratis.chronicle.schemas
 
 import com.google.gson.Gson
 import io.cratis.chronicle.compliance.Pii
+import io.cratis.chronicle.geospatial.LineString
+import io.cratis.chronicle.geospatial.Point
+import io.cratis.chronicle.geospatial.Polygon
 import kotlin.reflect.KClass
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -48,6 +51,13 @@ private data class PersonWithPiiList(
 
 @Pii(description = "Every property is sensitive")
 private data class FullyPiiClass(val value: String)
+
+private data class Territory(
+    val name: String,
+    val center: Point,
+    val route: LineString,
+    val area: Polygon
+)
 
 class JsonSchemaGeneratorTests {
 
@@ -141,6 +151,22 @@ class JsonSchemaGeneratorTests {
         assertEquals("PII", compliance[0]["metadataType"])
     }
 
+    @Test
+    fun `generate marks geospatial properties with the format the kernel recognizes`() {
+        val properties = propertiesOf(Territory::class)
+        assertEquals("point", formatOf(properties, "center"))
+        assertEquals("linestring", formatOf(properties, "route"))
+        assertEquals("polygon", formatOf(properties, "area"))
+    }
+
+    @Test
+    fun `generate keeps geospatial properties as leaf objects instead of flattening their coordinates`() {
+        val properties = propertiesOf(Territory::class)
+        val area = properties["area"] as Map<*, *>
+        assertEquals("object", area["type"])
+        assertFalse(area.containsKey("properties"))
+    }
+
     private fun parse(cls: KClass<*>): Map<String, Any?> {
         @Suppress("UNCHECKED_CAST")
         return gson.fromJson(JsonSchemaGenerator.generate(cls), Map::class.java) as Map<String, Any?>
@@ -154,6 +180,11 @@ class JsonSchemaGeneratorTests {
     private fun typeOf(properties: Map<String, Any?>, key: String): String? {
         val prop = properties[key] as Map<*, *>
         return prop["type"] as String?
+    }
+
+    private fun formatOf(properties: Map<String, Any?>, key: String): String? {
+        val prop = properties[key] as Map<*, *>
+        return prop["format"] as String?
     }
 
     private fun complianceOf(schemaNode: Map<*, *>): List<Map<String, String>> {

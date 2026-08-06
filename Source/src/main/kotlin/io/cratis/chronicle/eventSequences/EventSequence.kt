@@ -6,7 +6,6 @@ package io.cratis.chronicle.eventSequences
 import Cratis.Chronicle.Contracts.EventSequences.Eventsequences
 import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
 import bcl.Bcl
-import com.google.gson.Gson
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.auditing.causationManager
 import io.cratis.chronicle.correlation.correlationIdManager
@@ -15,6 +14,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.events.EventTypeDescriptor
 import io.cratis.chronicle.identity.Identity as ChronicleIdentity
 import io.cratis.chronicle.identity.identityProvider
+import io.cratis.chronicle.json.chronicleGson
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -24,8 +24,6 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
-
-private val gson = Gson()
 
 /**
  * Implements [IEventSequence] by communicating with the Chronicle Kernel via gRPC.
@@ -48,7 +46,7 @@ open class EventSequence(
         val eventType = resolveEventType(event)
         val correlationId = options?.correlationId ?: correlationIdManager.current
         val concurrencyScope = options?.concurrencyScope ?: ConcurrencyScope.none
-        val content = gson.toJson(event)
+        val content = chronicleGson.toJson(event)
 
         causationManager.add(CausationType.appendEvent, mapOf("eventType" to eventType.id.value))
         val causationChain = causationManager.currentChain
@@ -320,7 +318,7 @@ open class EventSequence(
             this.eventStreamType = this@toContract.eventStreamType ?: AppendOptions.DEFAULT_EVENT_STREAM_TYPE
             this.eventStreamId = this@toContract.eventStreamId ?: this@toContract.eventSourceId
             this.eventType = resolveEventType(this@toContract.event).toContractsEventType()
-            this.content = gson.toJson(this@toContract.event)
+            this.content = chronicleGson.toJson(this@toContract.event)
             this.subject = this@toContract.subject ?: this@toContract.eventSourceId
             addAllTags(this@toContract.tags)
             this@toContract.occurred?.let { this.occurred = it.toContractsDateTimeOffset() }
