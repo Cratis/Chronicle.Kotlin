@@ -360,6 +360,49 @@ public class EmployeeSeeder implements ICanSeedEvents {
 store.getSeeding().seed(new EmployeeSeeder());
 ```
 
+## Geospatial
+
+`Point`, `LineString`, and `Polygon` serialize as GeoJSON, which is how
+Chronicle recognizes a value as geospatial and how the sink is able to index and
+query it. Use them on any event, read model, or reducer state.
+
+### Kotlin
+
+```kotlin
+import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.geospatial.Point
+
+@EventType
+data class WarehouseInspected(val warehouseId: String, val inspectedAt: Point)
+
+store.eventLog.append("warehouse-1", WarehouseInspected("warehouse-1", Point(10.75, 59.91)))
+```
+
+### Java
+
+```java
+import io.cratis.chronicle.events.EventType;
+import io.cratis.chronicle.geospatial.Point;
+
+@EventType
+public record WarehouseInspected(String warehouseId, Point inspectedAt) {}
+
+var event = new WarehouseInspected("warehouse-1", new Point(10.75, 59.91));
+var result = store.getEventLog().append("warehouse-1", event);
+```
+
+The event content on the wire carries the GeoJSON shape the kernel looks for:
+
+```json
+{
+  "warehouseId": "warehouse-1",
+  "inspectedAt": { "type": "Point", "coordinates": [10.75, 59.91] }
+}
+```
+
+See [Geospatial types](Documentation/reference/geospatial.md) for the full
+reference, including polygons with holes.
+
 ## Building
 
 ```bash
