@@ -32,6 +32,10 @@ richer surface for reading and managing read model instances:
 | `release`/`releaseMany` | Decrypts `@Pii` properties, one or many. |
 | `materialized` | Paginated, server-materialized reads — see below. |
 
+To react to changes without collecting a `Flow` yourself, write a
+convention-dispatched reactor instead — see [Read Model
+Reactors](../guides/read-model-reactors.md).
+
 `getSnapshotsById` and `watch` both deserialize straight into the read
 model type you ask for — `getSnapshotsById(EmployeeProfile::class, key)`
 returns `List<ReadModelSnapshot<EmployeeProfile>>`, and

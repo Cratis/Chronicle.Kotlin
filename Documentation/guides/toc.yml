@@ -4,6 +4,8 @@
   href: appending-events.md
 - name: Reactors
   href: reactors.md
+- name: Read Model Reactors
+  href: read-model-reactors.md
 - name: Reducers
   href: reducers.md
 - name: Projections
