@@ -167,26 +167,38 @@ public record EmployeeHired(
 ) {}
 ```
 
-## 5. Register the event types
+## 5. Let the client register everything
 
 Chronicle needs the schema for an event type before it will accept events
-of that type. Register them once at startup, before appending anything.
+of that type, and the same goes for every other artifact your application
+owns. The client finds them all on the classpath and registers them with
+the kernel as soon as it connects, so there is nothing to write.
 
-### Kotlin Event Type Registration
+Wait for that first pass to finish and the very next append is guaranteed
+to hit a kernel that already knows the event type:
+
+### Kotlin Registration
 
 <!-- validate: body needs=store -->
 
 ```kotlin
-store.eventTypes.register(EmployeeHired::class)
+store.awaitRegistration()
 ```
 
-### Java Event Type Registration
+### Java Registration
 
 <!-- validate: body needs=store -->
 
 ```java
-EventTypesServiceJavaBridge.register(store.getEventTypes(), EmployeeHired.class);
+io.cratis.chronicle.java.EventStoreJavaBridge.awaitRegistration(store);
 ```
+
+Prefer to register by hand? Turn discovery off with
+`ChronicleOptions.development().withoutAutoRegistration()` and call the
+services yourself — `store.eventTypes.register(EmployeeHired::class)` and
+friends. See
+[Artifact Registration](../guides/artifact-registration.md) for both paths
+in full.
 
 ## 6. Append an event
 
@@ -273,7 +285,8 @@ class HrNotifications {
 }
 ```
 
-Register it to start observing:
+The client finds it and starts the observation on connect. To register it
+by hand instead:
 
 <!-- validate: body needs=store -->
 
@@ -298,7 +311,8 @@ public class HrNotifications {
 }
 ```
 
-Register it to start observing:
+The client finds it and starts the observation on connect. To register it
+by hand instead:
 
 <!-- validate: body needs=store -->
 
@@ -316,8 +330,10 @@ A reducer method takes the event, and optionally the current state. The
 state is `null` for the first event of an event source, so declare that
 parameter as nullable and fall back to a fresh instance.
 
-Registering a reducer registers its read model too — you only need to
-register a read model explicitly when nothing projects into it.
+A reducer registers its read model too, tagged with the reducer that
+produces it — so a read model only needs registering on its own when
+nothing projects into it. All of it happens automatically; the calls
+below are what you would write with discovery turned off.
 
 ### Kotlin Read Model
 

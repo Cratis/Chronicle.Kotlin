@@ -8,7 +8,10 @@
 data class ChronicleOptions(
     val connectionString: ChronicleConnectionString,
     val programIdentifier: String = "Unknown",
-    val defaultSinkTypeId: String = System.getenv("CHRONICLE_SINK_TYPE") ?: WellKnownSinkTypes.MONGODB
+    val defaultSinkTypeId: String = System.getenv("CHRONICLE_SINK_TYPE") ?: WellKnownSinkTypes.MONGODB,
+    val autoDiscoverAndRegister: Boolean = true,
+    val artifacts: IClientArtifacts = ClientArtifacts.default,
+    val artifactActivator: IArtifactActivator = ArtifactActivator
 )
 ```
 
@@ -17,11 +20,25 @@ data class ChronicleOptions(
 | `connectionString` | *(required)* | Parsed address of the server |
 | `programIdentifier` | `"Unknown"` | Name of the connecting program |
 | `defaultSinkTypeId` | `MongoDB` | Sink for reducers and projections |
+| `autoDiscoverAndRegister` | `true` | Register artifacts on connect |
+| `artifacts` | `ClientArtifacts.default` | What the application is made of |
+| `artifactActivator` | `ArtifactActivator` | How artifacts are created |
 
 `programIdentifier` is a human-readable label that shows up in diagnostics.
 `defaultSinkTypeId` defaults to `WellKnownSinkTypes.MONGODB`, and can be
 overridden per process with the `CHRONICLE_SINK_TYPE` environment variable
 — for example `CHRONICLE_SINK_TYPE=SQL`.
+
+The last three control artifact discovery and registration. Two helpers cover
+the common adjustments — see
+[Artifact Registration](../guides/artifact-registration.md) for the full picture:
+
+<!-- validate: body -->
+
+```kotlin
+ChronicleOptions.development().withoutAutoRegistration()
+ChronicleOptions.development().withArtifactsFrom("com.acme.ordering")
+```
 
 There are two factories on the companion object:
 

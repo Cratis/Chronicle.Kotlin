@@ -1,5 +1,7 @@
 - name: Guides
   href: index.md
+- name: Artifact Registration
+  href: artifact-registration.md
 - name: Appending Events
   href: appending-events.md
 - name: Reactors
