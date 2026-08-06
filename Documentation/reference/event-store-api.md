@@ -728,8 +728,52 @@ worked Kotlin and Java examples.
 ```kotlin
 interface IProjectionsService {
     suspend fun register(vararg projections: Any)
+    suspend fun query(
+        declaration: String,
+        eventSequenceId: EventSequenceId = EventSequenceId.eventLog
+    ): ProjectionQueryResult
 }
 ```
+
+### Ad-hoc queries
+
+A registered projection is the right answer when a read model is part of the
+system: the kernel keeps it up to date and the client hands you a type. `query`
+is for the questions that are not part of the system — a one-off question of the
+event log during an incident, a report nobody wants to deploy a projection for,
+a declaration being written in an editor and tried out as it is typed.
+
+Nothing is registered, nothing is persisted, and nothing observes afterwards.
+The kernel projects over the sequence and hands back the result.
+
+<!-- validate: skip -->
+
+```kotlin
+val result = store.projections.query(
+    """
+    from EmployeeHired
+        set name to firstName
+    """
+)
+
+when (result) {
+    is ProjectionQueryResult.Projected ->
+        result.instancesOf(EmployeeName::class).forEach(::println)
+    is ProjectionQueryResult.Invalid ->
+        result.errors.forEach(::println)
+}
+```
+
+A declaration is a piece of text, so the first thing that can go wrong is that
+the kernel cannot parse it. That is an ordinary outcome of asking a question in
+a language rather than an exception, so it comes back as `Invalid` carrying a
+line and column per error — which is what you show whoever wrote it.
+
+An ad-hoc declaration has no registered read model type, so `entries` is raw
+JSON and `instancesOf` deserializes it into whatever shape the declaration
+produced.
+
+From Java, use `ProjectionsServiceJavaBridge.query(...)`.
 
 ---
 

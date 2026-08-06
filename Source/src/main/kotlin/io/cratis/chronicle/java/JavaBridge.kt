@@ -29,7 +29,9 @@ import io.cratis.chronicle.jobs.IJobsService
 import io.cratis.chronicle.namespaces.INamespacesService
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
+import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.projections.IProjectionsService
+import io.cratis.chronicle.projections.ProjectionQueryResult
 import io.cratis.chronicle.readModels.IReadModelsService
 import io.cratis.chronicle.readModels.ReadModelChangeset
 import io.cratis.chronicle.readModels.ReadModelSnapshot
@@ -337,6 +339,20 @@ object ProjectionsServiceJavaBridge {
     fun register(service: IProjectionsService, vararg projections: Any) {
         runBlocking { service.register(*projections) }
     }
+
+    /** Runs a projection declaration over the event log. */
+    @JvmStatic
+    fun query(service: IProjectionsService, declaration: String): ProjectionQueryResult =
+        runBlocking { service.query(declaration) }
+
+    /** Runs a projection declaration over a named event sequence. */
+    @JvmStatic
+    fun query(
+        service: IProjectionsService,
+        declaration: String,
+        eventSequenceId: String
+    ): ProjectionQueryResult =
+        runBlocking { service.query(declaration, EventSequenceId(eventSequenceId)) }
 }
 
 /**

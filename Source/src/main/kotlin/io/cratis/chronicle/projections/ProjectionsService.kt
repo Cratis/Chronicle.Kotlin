@@ -5,6 +5,7 @@ package io.cratis.chronicle.projections
 
 import Cratis.Chronicle.Contracts.Projections.ProjectionsGrpcKt
 import Cratis.Chronicle.Contracts.Projections.ProjectionsOuterClass
+import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.readModels.ReadModelsService
@@ -21,8 +22,33 @@ private const val EVENT_SOURCE_ID_KEY = "EventSourceId"
 class ProjectionsService(
     private val eventStoreName: String,
     private val stub: ProjectionsGrpcKt.ProjectionsCoroutineStub,
-    private val readModels: ReadModelsService
+    private val readModels: ReadModelsService,
+    private val namespace: String = io.cratis.chronicle.EventStoreNamespaceName.default.value
 ) : IProjectionsService {
+
+    override suspend fun query(declaration: String, eventSequenceId: EventSequenceId): ProjectionQueryResult {
+        val request = ProjectionsOuterClass.PreviewProjectionRequest.newBuilder()
+            .setEventStore(eventStoreName)
+            .setNamespace(namespace)
+            .setEventSequenceId(eventSequenceId.value)
+            .setDeclaration(declaration)
+            .build()
+
+        val response = stub.preview(request)
+
+        // The kernel answers with one of two things. A declaration it could not parse is an ordinary
+        // outcome of asking a question in a language, not an exception - the errors are what you show
+        // whoever wrote it.
+        return if (response.hasValue1() && response.value1.errorsCount > 0) {
+            ProjectionQueryResult.Invalid(
+                response.value1.errorsList.map {
+                    ProjectionDeclarationError(it.message, it.line, it.column)
+                }
+            )
+        } else {
+            ProjectionQueryResult.Projected(response.value0.readModelEntriesList.toList())
+        }
+    }
 
     override suspend fun register(vararg projections: Any) {
         val definitions = projections.mapNotNull { projection ->

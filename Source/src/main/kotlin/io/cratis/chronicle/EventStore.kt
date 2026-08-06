@@ -155,7 +155,7 @@ class EventStore(
     }
 
     override val projections: IProjectionsService by lazy {
-        ProjectionsService(name, services.projections, readModelsService)
+        ProjectionsService(name, services.projections, readModelsService, namespace)
     }
 
     override val constraints: IConstraintsService by lazy {
