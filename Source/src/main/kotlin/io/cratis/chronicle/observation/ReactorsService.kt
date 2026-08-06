@@ -5,11 +5,11 @@ package io.cratis.chronicle.observation
 
 import Cratis.Chronicle.Contracts.Observation.Reactors.ObservationReactors
 import Cratis.Chronicle.Contracts.Observation.Reactors.ReactorsGrpcKt
-import com.google.gson.Gson
 import io.cratis.chronicle.connection.ConnectionLifecycle
 import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.json.chronicleGson
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,8 +21,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.reflect.full.findAnnotation
-
-private val gson = Gson()
 
 class ReactorsService(
     private val eventStoreName: String,
@@ -135,7 +133,7 @@ class ReactorsService(
 
                     val handler = resolution.handler
                     try {
-                        val event = gson.fromJson(appendedEvent.content, handler.eventClass.java)
+                        val event = chronicleGson.fromJson(appendedEvent.content, handler.eventClass.java)
                         val result = if (handler.function.parameters.size == 3) {
                             handler.function.call(reactor, event, context)
                         } else {

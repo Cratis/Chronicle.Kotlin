@@ -70,6 +70,7 @@ object JsonSchemaGenerator {
     /** Maps a Kotlin [KType] to its JSON schema representation. */
     private fun schemaForType(type: KType, visiting: MutableSet<KClass<*>>): MutableMap<String, Any> {
         val kClass = type.classifier as? KClass<*> ?: return mutableMapOf("type" to "string")
+        val format = TypeFormats.formatFor(kClass)
 
         return when {
             kClass == String::class -> mutableMapOf("type" to "string")
@@ -78,6 +79,11 @@ object JsonSchemaGenerator {
             kClass == Boolean::class -> mutableMapOf("type" to "boolean")
             kClass.java.isEnum -> enumSchema(kClass)
             kClass == Array::class || kClass.isSubclassOf(Collection::class) -> arraySchema(type, visiting)
+            // A formatted type is a leaf, and its properties are deliberately left out. A geospatial
+            // value serializes through its own GeoJSON adapter, so describing its Kotlin properties
+            // would make the kernel flatten it into sub-properties and lose the coordinates. The
+            // format alone tells the kernel what the value is.
+            format != null -> mutableMapOf("type" to "object", "format" to format)
             isForeignType(kClass) -> mutableMapOf("type" to "string")
             else -> generateNode(kClass, visiting).toMutableMap()
         }

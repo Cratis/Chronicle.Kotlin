@@ -4,5 +4,7 @@
   href: annotations.md
 - name: EventStore API
   href: event-store-api.md
+- name: Geospatial types
+  href: geospatial.md
 - name: Configuration
   href: configuration.md
