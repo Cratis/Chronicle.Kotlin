@@ -172,7 +172,8 @@ data class EventForEventSourceId(
     val eventSourceType: String? = null,
     val tags: List<String> = emptyList(),
     val occurred: Instant? = null,
-    val subject: String? = null
+    val subject: String? = null,
+    val causation: List<Causation> = emptyList()
 )
 ```
 
@@ -198,6 +199,7 @@ interface IEventSequenceOperations {
         configure: IEventSourceOperations.() -> Unit
     ): IEventSequenceOperations
     fun withCorrelationId(correlationId: UUID): IEventSequenceOperations
+    fun withCausation(causation: List<Causation>): IEventSequenceOperations
     fun getAppendedEvents(): List<Any>
     fun getEventsToAppend(): List<EventForEventSourceId>
     fun clear()
@@ -336,7 +338,14 @@ Optimistic concurrency is opt-in per append, via
 ```kotlin
 data class AppendOptions(
     val correlationId: UUID? = null,
-    val concurrencyScope: ConcurrencyScope? = null
+    val concurrencyScope: ConcurrencyScope? = null,
+    val eventSourceType: String? = null,
+    val eventStreamType: String? = null,
+    val eventStreamId: String? = null,
+    val subject: String? = null,
+    val tags: List<String> = emptyList(),
+    val occurred: Instant? = null,
+    val causation: List<Causation> = emptyList()
 )
 
 data class ConcurrencyScope(
@@ -357,6 +366,51 @@ check applies to. Leaving `concurrencyScope` unset (the default) is
 equivalent to `ConcurrencyScope.none` — the append is not concurrency
 checked. When the scope no longer matches, the append fails with
 `AppendResult.concurrencyViolation` set instead of throwing.
+
+### Causation
+
+Every append carries a causation chain describing what led to it. By default
+that chain is ambient: `CausationManager` builds one up per thread, and the
+append reads it as it goes. Nearly every append should leave it at that.
+
+Set `AppendOptions.causation` to attribute an append to a different chain —
+an event imported from a legacy system, or a side effect that belongs to a
+chain of its own rather than to the work the current thread happens to be
+doing. An override deliberately leaves the ambient chain untouched, so later
+appends are not attributed to something they had nothing to do with.
+
+<!-- validate: body needs=store -->
+
+```kotlin
+import io.cratis.chronicle.auditing.Causation
+import io.cratis.chronicle.auditing.CausationType
+import io.cratis.chronicle.eventSequences.AppendOptions
+import java.time.Instant
+
+store.eventLog.append(
+    "employee-1",
+    EmployeeHired("Ada", "Lovelace", "Engineer"),
+    AppendOptions(
+        causation = listOf(
+            Causation(
+                Instant.parse("1998-06-01T09:00:00Z"),
+                CausationType("LegacyImport"),
+                mapOf("file" to "1998.csv")
+            )
+        )
+    )
+)
+```
+
+`EventForEventSourceId` carries the same field, which is how a reactor side
+effect names its own chain. One caveat applies to batches: the kernel carries
+a single chain per `appendMany`, not one per event, so a batch whose events
+declare different chains throws `CausationDiffersAcrossBatch` rather than
+silently keeping one of them. Give them the same causation, leave it unset,
+or append them as separate batches. For a composed operation, set it once for
+the whole batch with `withCausation`.
+
+From Java, use `AppendOptionsBuilder.causation(...)`.
 
 ### AppendResult
 

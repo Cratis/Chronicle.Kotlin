@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.java
 
+import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import java.time.Instant
@@ -28,6 +29,7 @@ class AppendOptionsBuilder {
     private var subject: String? = null
     private var tags: MutableList<String> = mutableListOf()
     private var occurred: Instant? = null
+    private var causation: MutableList<Causation> = mutableListOf()
 
     /** Sets the correlation identifier for the operation. */
     fun correlationId(correlationId: UUID): AppendOptionsBuilder = apply { this.correlationId = correlationId }
@@ -57,6 +59,17 @@ class AppendOptionsBuilder {
     /** Sets when the event actually occurred. */
     fun occurred(occurred: Instant): AppendOptionsBuilder = apply { this.occurred = occurred }
 
+    /**
+     * Adds a single [Causation] entry, overriding the ambient chain for this append.
+     *
+     * Leave this alone unless the append genuinely belongs to a different chain than the work the
+     * current thread is doing.
+     */
+    fun causation(causation: Causation): AppendOptionsBuilder = apply { this.causation.add(causation) }
+
+    /** Adds all of [causation] as the chain this append is attributed to. */
+    fun causation(causation: List<Causation>): AppendOptionsBuilder = apply { this.causation.addAll(causation) }
+
     /** Builds the [AppendOptions]. */
     fun build(): AppendOptions = AppendOptions(
         correlationId = correlationId,
@@ -66,6 +79,7 @@ class AppendOptionsBuilder {
         eventStreamId = eventStreamId,
         subject = subject,
         tags = tags.toList(),
-        occurred = occurred
+        occurred = occurred,
+        causation = causation.toList()
     )
 }

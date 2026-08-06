@@ -6,6 +6,7 @@ package io.cratis.chronicle.eventSequences
 import Cratis.Chronicle.Contracts.EventSequences.Eventsequences
 import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
 import bcl.Bcl
+import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.auditing.causationManager
 import io.cratis.chronicle.correlation.correlationIdManager
@@ -48,8 +49,9 @@ open class EventSequence(
         val concurrencyScope = options?.concurrencyScope ?: ConcurrencyScope.none
         val content = chronicleGson.toJson(event)
 
-        causationManager.add(CausationType.appendEvent, mapOf("eventType" to eventType.id.value))
-        val causationChain = causationManager.currentChain
+        val causationChain = causationFor(options?.causation ?: emptyList()) {
+            causationManager.add(CausationType.appendEvent, mapOf("eventType" to eventType.id.value))
+        }
         val identity = identityProvider.currentIdentity
 
         val esName = eventStoreName
@@ -101,7 +103,8 @@ open class EventSequence(
                 eventSourceType = options?.eventSourceType,
                 tags = options?.tags ?: emptyList(),
                 occurred = options?.occurred,
-                subject = options?.subject
+                subject = options?.subject,
+                causation = options?.causation ?: emptyList()
             )
         },
         // The single-source form always sends a scope for its one event source, even when that
@@ -119,8 +122,9 @@ open class EventSequence(
 
         val effectiveCorrelationId = correlationId ?: correlationIdManager.current
 
-        causationManager.add(CausationType.appendManyEvents, mapOf("count" to events.size.toString()))
-        val causationChain = causationManager.currentChain
+        val causationChain = causationFor(batchCausationOf(events)) {
+            causationManager.add(CausationType.appendManyEvents, mapOf("count" to events.size.toString()))
+        }
         val identity = identityProvider.currentIdentity
 
         val esName = eventStoreName
@@ -305,6 +309,38 @@ open class EventSequence(
             AppendedEventWithResult(context, event.event, results[index])
         }
         _appendOperations.tryEmit(entries)
+    }
+
+    /**
+     * The causation chain to send: [override] when the caller supplied one, otherwise the ambient
+     * chain for this thread after [recordAmbient] has noted the append on it.
+     *
+     * An override deliberately leaves the ambient chain alone. The point of overriding is that this
+     * append is not part of the work the current thread is doing, so recording it there would
+     * attribute later appends to something they had nothing to do with.
+     */
+    private fun causationFor(override: List<Causation>, recordAmbient: () -> Unit): List<Causation> {
+        if (override.isNotEmpty()) return override
+        recordAmbient()
+        return causationManager.currentChain
+    }
+
+    /**
+     * The one causation chain a batch is appended under.
+     *
+     * The kernel's AppendMany request carries a single chain for the whole batch rather than one per
+     * event, so events that disagree cannot be expressed. Rejecting that says so plainly, where
+     * quietly picking one event's chain would attribute the rest of the batch to a cause that is not
+     * theirs.
+     */
+    private fun batchCausationOf(events: List<EventForEventSourceId>): List<Causation> {
+        val declared = events.map { it.causation }.filter { it.isNotEmpty() }.distinct()
+
+        if (declared.size > 1) {
+            throw CausationDiffersAcrossBatch(events.size)
+        }
+
+        return declared.singleOrNull() ?: emptyList()
     }
 
     /**
