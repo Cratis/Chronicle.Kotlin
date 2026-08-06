@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.artifacts
 
+import io.cratis.chronicle.captures.ICapture
 import io.cratis.chronicle.constraints.IConstraint
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.events.migrations.IEventTypeMigration
@@ -58,6 +59,7 @@ class ClientArtifacts(
     override val constraints: List<KClass<*>> get() = discovered.constraints
     override val eventSeeders: List<KClass<*>> get() = discovered.eventSeeders
     override val webhooks: List<KClass<*>> get() = discovered.webhooks
+    override val captures: List<KClass<*>> get() = discovered.captures
     override val reactorMiddlewares: List<KClass<*>> get() = discovered.reactorMiddlewares
     override val reactorArgumentResolvers: List<KClass<*>> get() = discovered.reactorArgumentResolvers
 
@@ -79,6 +81,7 @@ class ClientArtifacts(
             constraints = result.implementing(IConstraint::class) { it.isConstraint() },
             eventSeeders = result.implementing(ICanSeedEvents::class) { it.isEventSeeder() },
             webhooks = result.implementing(IWebhookDefiner::class) { it.isWebhookDefiner() },
+            captures = result.implementing(ICapture::class) { it.isCapture() },
             reactorMiddlewares = (
                 result.implementing(IReactorMiddleware::class) { it.isReactorMiddleware() } +
                     result.implementing(BlockingReactorMiddleware::class) { it.isReactorMiddleware() }
@@ -138,6 +141,7 @@ class ClientArtifacts(
         val constraints: List<KClass<*>>,
         val eventSeeders: List<KClass<*>>,
         val webhooks: List<KClass<*>>,
+        val captures: List<KClass<*>>,
         val reactorMiddlewares: List<KClass<*>>,
         val reactorArgumentResolvers: List<KClass<*>>
     )

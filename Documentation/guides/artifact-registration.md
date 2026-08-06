@@ -57,15 +57,16 @@ calling it once at startup makes the first append deterministic.
 | Constraint | Implements `IConstraint` |
 | Event seeder | Implements `ICanSeedEvents` |
 | Webhook | Implements `IWebhookDefiner` |
+| Capture | Implements `ICapture` |
 | Reactor middleware | Implements `IReactorMiddleware` |
 | Reactor argument resolver | Implements `IReactorMethodArgumentResolver` |
 
 Only concrete classes qualify — interfaces and abstract classes are skipped, so
 your own base types never get registered by accident.
 
-The last two are client-side: they are never declared to the kernel, they take
-part in how a reactor handler is invoked. They are discovered here because they
-answer the same question — what is this application made of? See
+The two reactor entries are client-side: they are never declared to the kernel,
+they take part in how a reactor handler is invoked. They are discovered here
+because they answer the same question — what is this application made of? See
 [Reactor middlewares](#reactor-middlewares) below.
 
 External services and event store subscriptions are configuration rather than
@@ -84,7 +85,9 @@ Order matters, and the client gets it right so you do not have to think about it
    the observer's type and identity are known.
 3. **Constraints, projections and webhooks.**
 4. **Reactors and reducers**, which start observing.
-5. **Seeders**, last of all — the kernel appends seeded events immediately, so
+5. **Captures**, which start appending the moment they run, so like seeding they
+   go behind every observer that should see what they bring in.
+6. **Seeders**, last of all — the kernel appends seeded events immediately, so
    every observer that should see them has to be watching first.
 
 Registration runs again on every reconnect, because a kernel that restarted has

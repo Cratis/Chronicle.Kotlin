@@ -29,6 +29,10 @@ import io.cratis.chronicle.jobs.IJobsService
 import io.cratis.chronicle.namespaces.INamespacesService
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
+import io.cratis.chronicle.captures.Capture
+import io.cratis.chronicle.captures.CaptureDeclarationResult
+import io.cratis.chronicle.captures.CaptureValidationMessage
+import io.cratis.chronicle.captures.ICapturesService
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.observation.FailedPartition
 import io.cratis.chronicle.observation.IFailedPartitions
@@ -355,6 +359,42 @@ object ProjectionsServiceJavaBridge {
         eventSequenceId: String
     ): ProjectionQueryResult =
         runBlocking { service.query(declaration, EventSequenceId(eventSequenceId)) }
+}
+
+/**
+ * Java-friendly bridge for captures - sources outside Chronicle, pulled in and appended as events.
+ */
+object CapturesServiceJavaBridge {
+    /** Every capture the event store holds, running or not. */
+    @JvmStatic
+    fun getAll(service: ICapturesService): List<Capture> = runBlocking { service.getAll() }
+
+    /** Saves a declaration under an identifier, replacing whatever was held there. */
+    @JvmStatic
+    fun save(service: ICapturesService, id: String, declaration: String): CaptureDeclarationResult =
+        runBlocking { service.save(id, declaration) }
+
+    /** Checks a declaration without saving anything. */
+    @JvmStatic
+    fun validate(service: ICapturesService, declaration: String): List<CaptureValidationMessage> =
+        runBlocking { service.validate(declaration) }
+
+    /** Starts a capture, so it begins appending what its source produces. */
+    @JvmStatic
+    fun start(service: ICapturesService, id: String): List<CaptureValidationMessage> =
+        runBlocking { service.start(id) }
+
+    /** Stops a capture. It stays saved, and can be started again. */
+    @JvmStatic
+    fun stop(service: ICapturesService, id: String) {
+        runBlocking { service.stop(id) }
+    }
+
+    /** Removes a capture entirely. Events it already appended stay exactly where they are. */
+    @JvmStatic
+    fun delete(service: ICapturesService, id: String) {
+        runBlocking { service.delete(id) }
+    }
 }
 
 /**

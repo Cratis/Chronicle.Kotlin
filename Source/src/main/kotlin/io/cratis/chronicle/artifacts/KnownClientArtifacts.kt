@@ -33,6 +33,7 @@ class KnownClientArtifacts(classes: Iterable<KClass<*>>) : IClientArtifacts {
     override val constraints: List<KClass<*>> = candidates.filter { it.isConstraint() }
     override val eventSeeders: List<KClass<*>> = candidates.filter { it.isEventSeeder() }
     override val webhooks: List<KClass<*>> = candidates.filter { it.isWebhookDefiner() }
+    override val captures: List<KClass<*>> = candidates.filter { it.isCapture() }
     override val reactorMiddlewares: List<KClass<*>> = candidates.filter { it.isReactorMiddleware() }
     override val reactorArgumentResolvers: List<KClass<*>> =
         candidates.filter { it.isReactorMethodArgumentResolver() }

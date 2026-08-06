@@ -6,6 +6,8 @@
   href: concepts.md
 - name: Tracing
   href: tracing.md
+- name: Captures
+  href: captures.md
 - name: Appending Events
   href: appending-events.md
 - name: Reactors

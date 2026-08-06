@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.artifacts
 
+import io.cratis.chronicle.captures.ICapture
 import io.cratis.chronicle.constraints.IConstraint
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.events.migrations.IEventTypeMigration
@@ -88,6 +89,10 @@ internal fun KClass<*>.isConstraint(): Boolean =
 /** Whether this class seeds events. */
 internal fun KClass<*>.isEventSeeder(): Boolean =
     isInstantiableArtifact() && isSubclassOf(ICanSeedEvents::class)
+
+/** Whether this class declares a capture. */
+internal fun KClass<*>.isCapture(): Boolean =
+    isInstantiableArtifact() && isSubclassOf(ICapture::class)
 
 /** Whether this class defines a webhook. */
 internal fun KClass<*>.isWebhookDefiner(): Boolean =

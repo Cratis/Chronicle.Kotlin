@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.artifacts.given
 
+import io.cratis.chronicle.captures.ICapture
 import io.cratis.chronicle.constraints.Constraint
 import io.cratis.chronicle.constraints.IConstraint
 import io.cratis.chronicle.constraints.IConstraintBuilder
@@ -96,6 +97,12 @@ class OrderWebhook : IWebhookDefiner {
     override fun define(builder: IWebhookDefinitionBuilder) {
         builder.withEventType(OrderPlaced::class)
     }
+}
+
+/** Pulls something that is not Chronicle in, and appends what it finds as events. */
+class OrderFeed : ICapture {
+    override val id: String = "order-feed"
+    override val declaration: String = "capture OrderFeed\n    from api \"https://example.com/orders\""
 }
 
 /** Wraps every reactor handler invocation. Client-side only - never declared to the kernel. */

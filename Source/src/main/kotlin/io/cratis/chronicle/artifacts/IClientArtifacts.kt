@@ -47,6 +47,9 @@ interface IClientArtifacts {
     /** Every class implementing [io.cratis.chronicle.webhooks.IWebhookDefiner]. */
     val webhooks: List<KClass<*>>
 
+    /** Every class implementing [io.cratis.chronicle.captures.ICapture]. */
+    val captures: List<KClass<*>>
+
     /**
      * Every class implementing [io.cratis.chronicle.observation.IReactorMiddleware] or its Java
      * counterpart [io.cratis.chronicle.java.BlockingReactorMiddleware].

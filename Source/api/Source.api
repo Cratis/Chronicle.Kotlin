@@ -49,6 +49,7 @@ public final class io/cratis/chronicle/EventStore : io/cratis/chronicle/IEventSt
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ChronicleServices;Lio/cratis/chronicle/connection/ConnectionLifecycle;Ljava/lang/String;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ZLio/cratis/chronicle/diagnostics/ChronicleTraces;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ChronicleServices;Lio/cratis/chronicle/connection/ConnectionLifecycle;Ljava/lang/String;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ZLio/cratis/chronicle/diagnostics/ChronicleTraces;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun awaitRegistration (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun getCaptures ()Lio/cratis/chronicle/captures/ICapturesService;
 	public fun getCompliance ()Lio/cratis/chronicle/compliance/IComplianceService;
 	public fun getConstraints ()Lio/cratis/chronicle/constraints/IConstraintsService;
 	public fun getEventLog ()Lio/cratis/chronicle/eventSequences/IEventLog;
@@ -120,6 +121,7 @@ public final class io/cratis/chronicle/IChronicleClient$DefaultImpls {
 
 public abstract interface class io/cratis/chronicle/IEventStore {
 	public abstract fun awaitRegistration (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getCaptures ()Lio/cratis/chronicle/captures/ICapturesService;
 	public abstract fun getCompliance ()Lio/cratis/chronicle/compliance/IComplianceService;
 	public abstract fun getConstraints ()Lio/cratis/chronicle/constraints/IConstraintsService;
 	public abstract fun getEventLog ()Lio/cratis/chronicle/eventSequences/IEventLog;
@@ -165,6 +167,7 @@ public final class io/cratis/chronicle/artifacts/ClientArtifacts : io/cratis/chr
 	public fun <init> (Ljava/util/List;Ljava/util/List;)V
 	public synthetic fun <init> (Ljava/util/List;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> ([Ljava/lang/String;)V
+	public fun getCaptures ()Ljava/util/List;
 	public fun getConstraints ()Ljava/util/List;
 	public fun getEventSeeders ()Ljava/util/List;
 	public fun getEventTypeMigrations ()Ljava/util/List;
@@ -188,6 +191,7 @@ public abstract interface class io/cratis/chronicle/artifacts/IArtifactActivator
 }
 
 public abstract interface class io/cratis/chronicle/artifacts/IClientArtifacts {
+	public abstract fun getCaptures ()Ljava/util/List;
 	public abstract fun getConstraints ()Ljava/util/List;
 	public abstract fun getEventSeeders ()Ljava/util/List;
 	public abstract fun getEventTypeMigrations ()Ljava/util/List;
@@ -206,6 +210,7 @@ public final class io/cratis/chronicle/artifacts/KnownClientArtifacts : io/crati
 	public static final field Companion Lio/cratis/chronicle/artifacts/KnownClientArtifacts$Companion;
 	public fun <init> (Ljava/lang/Iterable;)V
 	public fun <init> ([Lkotlin/reflect/KClass;)V
+	public fun getCaptures ()Ljava/util/List;
 	public fun getConstraints ()Ljava/util/List;
 	public fun getEventSeeders ()Ljava/util/List;
 	public fun getEventTypeMigrations ()Ljava/util/List;
@@ -284,6 +289,110 @@ public final class io/cratis/chronicle/auditing/CausationType$Companion {
 	public final fun getAppendManyEvents-EJXDx2U ()Ljava/lang/String;
 	public final fun getRoot-EJXDx2U ()Ljava/lang/String;
 	public final fun getUnknown-EJXDx2U ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/captures/Capture {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/captures/CaptureStatus;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Lio/cratis/chronicle/captures/CaptureStatus;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/captures/CaptureStatus;)Lio/cratis/chronicle/captures/Capture;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/captures/Capture;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/captures/CaptureStatus;ILjava/lang/Object;)Lio/cratis/chronicle/captures/Capture;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDeclaration ()Ljava/lang/String;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getStatus ()Lio/cratis/chronicle/captures/CaptureStatus;
+	public fun hashCode ()I
+	public final fun isStarted ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public abstract class io/cratis/chronicle/captures/CaptureDeclarationResult {
+	public abstract fun getMessages ()Ljava/util/List;
+	public abstract fun isSuccess ()Z
+}
+
+public final class io/cratis/chronicle/captures/CaptureDeclarationResult$Accepted : io/cratis/chronicle/captures/CaptureDeclarationResult {
+	public fun <init> (Lio/cratis/chronicle/captures/Capture;Ljava/util/List;)V
+	public synthetic fun <init> (Lio/cratis/chronicle/captures/Capture;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/cratis/chronicle/captures/Capture;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Lio/cratis/chronicle/captures/Capture;Ljava/util/List;)Lio/cratis/chronicle/captures/CaptureDeclarationResult$Accepted;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/captures/CaptureDeclarationResult$Accepted;Lio/cratis/chronicle/captures/Capture;Ljava/util/List;ILjava/lang/Object;)Lio/cratis/chronicle/captures/CaptureDeclarationResult$Accepted;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCapture ()Lio/cratis/chronicle/captures/Capture;
+	public fun getMessages ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun isSuccess ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/captures/CaptureDeclarationResult$Rejected : io/cratis/chronicle/captures/CaptureDeclarationResult {
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lio/cratis/chronicle/captures/CaptureDeclarationResult$Rejected;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/captures/CaptureDeclarationResult$Rejected;Ljava/util/List;ILjava/lang/Object;)Lio/cratis/chronicle/captures/CaptureDeclarationResult$Rejected;
+	public fun equals (Ljava/lang/Object;)Z
+	public fun getMessages ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun isSuccess ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/captures/CaptureStatus : java/lang/Enum {
+	public static final field Started Lio/cratis/chronicle/captures/CaptureStatus;
+	public static final field Stopped Lio/cratis/chronicle/captures/CaptureStatus;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/cratis/chronicle/captures/CaptureStatus;
+	public static fun values ()[Lio/cratis/chronicle/captures/CaptureStatus;
+}
+
+public final class io/cratis/chronicle/captures/CaptureValidationMessage {
+	public fun <init> (Ljava/lang/String;II)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()I
+	public final fun component3 ()I
+	public final fun copy (Ljava/lang/String;II)Lio/cratis/chronicle/captures/CaptureValidationMessage;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/captures/CaptureValidationMessage;Ljava/lang/String;IIILjava/lang/Object;)Lio/cratis/chronicle/captures/CaptureValidationMessage;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getColumn ()I
+	public final fun getLine ()I
+	public final fun getMessage ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/captures/CapturesService : io/cratis/chronicle/captures/ICapturesService {
+	public fun <init> (Ljava/lang/String;LCratis/Chronicle/Contracts/Captures/CapturesGrpcKt$CapturesCoroutineStub;)V
+	public fun delete (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun getAll (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun observeAll ()Lkotlinx/coroutines/flow/Flow;
+	public fun save (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun start (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun stop (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun validate (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public abstract interface class io/cratis/chronicle/captures/ICapture {
+	public abstract fun getDeclaration ()Ljava/lang/String;
+	public abstract fun getId ()Ljava/lang/String;
+	public abstract fun getStartOnRegistration ()Z
+}
+
+public final class io/cratis/chronicle/captures/ICapture$DefaultImpls {
+	public static fun getStartOnRegistration (Lio/cratis/chronicle/captures/ICapture;)Z
+}
+
+public abstract interface class io/cratis/chronicle/captures/ICapturesService {
+	public abstract fun delete (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getAll (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun observeAll ()Lkotlinx/coroutines/flow/Flow;
+	public abstract fun save (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun start (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun stop (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun validate (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class io/cratis/chronicle/compliance/ComplianceService : io/cratis/chronicle/compliance/IComplianceService {
@@ -394,6 +503,7 @@ public final class io/cratis/chronicle/connection/ChronicleServerAddress {
 
 public final class io/cratis/chronicle/connection/ChronicleServices {
 	public fun <init> (Lio/grpc/Channel;)V
+	public final fun getCaptures ()LCratis/Chronicle/Contracts/Captures/CapturesGrpcKt$CapturesCoroutineStub;
 	public final fun getCompliance ()LCratis/Chronicle/Contracts/Compliance/ComplianceGrpcKt$ComplianceCoroutineStub;
 	public final fun getConnection ()LCratis/Chronicle/Contracts/Clients/ConnectionServiceGrpcKt$ConnectionServiceCoroutineStub;
 	public final fun getConstraints ()LCratis/Chronicle/Contracts/Events/Constraints/ConstraintsGrpcKt$ConstraintsCoroutineStub;
@@ -1594,6 +1704,16 @@ public abstract interface class io/cratis/chronicle/java/BlockingReactorMethodAr
 public abstract interface class io/cratis/chronicle/java/BlockingReactorMiddleware {
 	public abstract fun afterInvoke (Lio/cratis/chronicle/events/EventContext;Ljava/lang/Object;)V
 	public abstract fun beforeInvoke (Lio/cratis/chronicle/events/EventContext;Ljava/lang/Object;)V
+}
+
+public final class io/cratis/chronicle/java/CapturesServiceJavaBridge {
+	public static final field INSTANCE Lio/cratis/chronicle/java/CapturesServiceJavaBridge;
+	public static final fun delete (Lio/cratis/chronicle/captures/ICapturesService;Ljava/lang/String;)V
+	public static final fun getAll (Lio/cratis/chronicle/captures/ICapturesService;)Ljava/util/List;
+	public static final fun save (Lio/cratis/chronicle/captures/ICapturesService;Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/captures/CaptureDeclarationResult;
+	public static final fun start (Lio/cratis/chronicle/captures/ICapturesService;Ljava/lang/String;)Ljava/util/List;
+	public static final fun stop (Lio/cratis/chronicle/captures/ICapturesService;Ljava/lang/String;)V
+	public static final fun validate (Lio/cratis/chronicle/captures/ICapturesService;Ljava/lang/String;)Ljava/util/List;
 }
 
 public final class io/cratis/chronicle/java/CausationManagerJavaBridge {

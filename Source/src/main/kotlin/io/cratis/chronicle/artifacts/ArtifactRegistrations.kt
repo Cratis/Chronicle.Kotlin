@@ -4,6 +4,7 @@
 package io.cratis.chronicle.artifacts
 
 import io.cratis.chronicle.IEventStore
+import io.cratis.chronicle.captures.ICapture
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionFor
 import kotlinx.coroutines.CompletableDeferred
@@ -67,12 +68,50 @@ class ArtifactRegistrations(
             artifacts.reducers.forEach { eventStore.reducers.register(activator.activate(it)) }
         }
 
+        // A capture appends events the moment it starts, so like seeding it goes behind every
+        // observer that should see them.
+        saveCaptures()
+
         // Seeded events are appended by the kernel the moment the seed lands, so every observer that
         // should see them has to be registered by now.
         eventStore.seeding.seed(*instancesOf(artifacts.eventSeeders).toTypedArray())
 
         initial.complete(Unit)
         Unit
+    }
+
+    /**
+     * Saves every declared capture, and starts the ones that asked to be started.
+     *
+     * A rejected declaration is reported rather than thrown: one capture the kernel cannot parse
+     * must not take the rest of the application's registration down with it, and the messages name
+     * the line and column so the cause is obvious.
+     */
+    private suspend fun saveCaptures() {
+        for (captureClass in artifacts.captures) {
+            val capture = activator.activate(captureClass) as ICapture
+
+            when (val result = eventStore.captures.save(capture.id, capture.declaration)) {
+                is io.cratis.chronicle.captures.CaptureDeclarationResult.Rejected ->
+                    System.err.println(
+                        "[ArtifactRegistrations] Capture '${capture.id}' was rejected: " +
+                            result.messages.joinToString("; ")
+                    )
+
+                is io.cratis.chronicle.captures.CaptureDeclarationResult.Accepted ->
+                    if (capture.startOnRegistration) startCapture(capture.id)
+            }
+        }
+    }
+
+    private suspend fun startCapture(id: String) {
+        val messages = eventStore.captures.start(id)
+        if (messages.isNotEmpty()) {
+            System.err.println(
+                "[ArtifactRegistrations] Capture '$id' could not be started: " +
+                    messages.joinToString("; ")
+            )
+        }
     }
 
     /**

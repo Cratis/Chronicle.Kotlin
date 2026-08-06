@@ -14,6 +14,7 @@ import io.cratis.chronicle.externalServices.IExternalServicesService
 import io.cratis.chronicle.identities.IIdentityManagerService
 import io.cratis.chronicle.jobs.IJobsService
 import io.cratis.chronicle.namespaces.INamespacesService
+import io.cratis.chronicle.captures.ICapturesService
 import io.cratis.chronicle.observation.IFailedPartitions
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
@@ -50,6 +51,14 @@ interface IEventStore {
      * so a stuck partition is easy to miss. This is how an application finds out.
      */
     val failedPartitions: IFailedPartitions
+
+    /**
+     * Sources outside Chronicle, pulled in and appended as events.
+     *
+     * Declare an [io.cratis.chronicle.captures.ICapture] and discovery saves and starts it on
+     * connect; reach for this when the declaration is not known at build time.
+     */
+    val captures: ICapturesService
 
     /**
      * Gets a non-default [IEventSequence] by its [id].

@@ -5,6 +5,7 @@ package io.cratis.chronicle.artifacts
 
 import io.cratis.chronicle.artifacts.given.OrderArchive
 import io.cratis.chronicle.artifacts.given.OrderClockArgument
+import io.cratis.chronicle.artifacts.given.OrderFeed
 import io.cratis.chronicle.artifacts.given.OrderList
 import io.cratis.chronicle.artifacts.given.OrderListProjection
 import io.cratis.chronicle.artifacts.given.OrderLogging
@@ -84,6 +85,11 @@ class ClientArtifactsTests {
     }
 
     @Test
+    fun `discovers captures`() {
+        assertTrue(artifacts.captures.contains(OrderFeed::class))
+    }
+
+    @Test
     fun `discovers reactor middlewares written in kotlin and in java`() {
         assertTrue(artifacts.reactorMiddlewares.contains(OrderTiming::class))
         assertTrue(artifacts.reactorMiddlewares.contains(OrderLogging::class))
@@ -100,7 +106,7 @@ class ClientArtifactsTests {
             artifacts.modelBoundProjections + artifacts.reactors + artifacts.reducers +
             artifacts.constraints + artifacts.eventSeeders + artifacts.webhooks +
             artifacts.eventTypeMigrations + artifacts.reactorMiddlewares +
-            artifacts.reactorArgumentResolvers
+            artifacts.reactorArgumentResolvers + artifacts.captures
         assertFalse(everything.contains(ShippingLabel::class))
     }
 

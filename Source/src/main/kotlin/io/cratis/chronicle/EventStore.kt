@@ -8,6 +8,8 @@ import io.cratis.chronicle.artifacts.ArtifactRegistrations
 import io.cratis.chronicle.artifacts.IArtifactActivator
 import io.cratis.chronicle.artifacts.IClientArtifacts
 import io.cratis.chronicle.artifacts.KnownClientArtifacts
+import io.cratis.chronicle.captures.CapturesService
+import io.cratis.chronicle.captures.ICapturesService
 import io.cratis.chronicle.compliance.ComplianceService
 import io.cratis.chronicle.compliance.IComplianceService
 import io.cratis.chronicle.connection.ChronicleServices
@@ -154,6 +156,10 @@ class EventStore(
                 )
             }
         }
+
+    override val captures: ICapturesService by lazy {
+        CapturesService(name, services.captures)
+    }
 
     override val failedPartitions: IFailedPartitions by lazy {
         FailedPartitions(name, namespace, services.failedPartitions, services.observers)
