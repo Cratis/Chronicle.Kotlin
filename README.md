@@ -68,6 +68,11 @@ data class EmployeeHired(val firstName: String, val lastName: String, val title:
 suspend fun main() {
     val client = ChronicleClient(ChronicleOptions.development())
     val store = client.getEventStore("MyStore")
+
+    // Chronicle needs the schema for an event type before it will accept events of that type.
+    // Register them once at startup, before appending anything.
+    store.eventTypes.register(EmployeeHired::class)
+
     val result = store.eventLog.append("employee-123", EmployeeHired("Jane", "Doe", "Engineer"))
     println("Appended at sequence number ${result.sequenceNumber.value}")
     client.dispose()
