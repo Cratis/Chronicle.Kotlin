@@ -61,15 +61,17 @@ open class EventSequence(
             this.namespace = ns
             this.eventSequenceId = id.value
             this.correlationId = correlationId.toContractsGuid()
-            this.eventSourceType = "Default"
+            this.eventSourceType = options.eventSourceTypeOrDefault()
             this.eventSourceId = eventSourceId
-            this.eventStreamType = "Default"
-            this.eventStreamId = eventSourceId
+            this.eventStreamType = options.eventStreamTypeOrDefault()
+            this.eventStreamId = options.eventStreamIdOrDefault(eventSourceId)
             this.eventType = eventType.toContractsEventType()
             this.content = content
             addAllCausation(causationChain.map { c -> c.toContractsCausation() })
             this.causedBy = identity.withoutDuplicates().toContractsIdentity()
-            this.subject = eventSourceId
+            this.subject = options.subjectOrDefault(eventSourceId)
+            addAllTags(options?.tags ?: emptyList())
+            options?.occurred?.let { this.occurred = it.toContractsDateTimeOffset() }
             this.concurrencyScope = concurrencyScope.toContract()
         }.build()
 
@@ -104,13 +106,15 @@ open class EventSequence(
         val eventsToAppend = events.map { event ->
             val eventType = resolveEventType(event)
             Eventsequences.EventToAppend.newBuilder().apply {
-                this.eventSourceType = "Default"
+                this.eventSourceType = options.eventSourceTypeOrDefault()
                 this.eventSourceId = eventSourceId
-                this.eventStreamType = "Default"
-                this.eventStreamId = eventSourceId
+                this.eventStreamType = options.eventStreamTypeOrDefault()
+                this.eventStreamId = options.eventStreamIdOrDefault(eventSourceId)
                 this.eventType = eventType.toContractsEventType()
                 this.content = gson.toJson(event)
-                this.subject = eventSourceId
+                this.subject = options.subjectOrDefault(eventSourceId)
+                addAllTags(options?.tags ?: emptyList())
+                options?.occurred?.let { this.occurred = it.toContractsDateTimeOffset() }
             }.build()
         }
 
@@ -406,6 +410,32 @@ open class EventSequence(
 // -------------------------------------------------------------------------
 // Extension functions for proto conversion
 // -------------------------------------------------------------------------
+
+/**
+ * The append-shaping options below are read through these helpers so that `null` options and an
+ * options object with the field unset behave identically, and so the defaults are stated once.
+ */
+private fun AppendOptions?.eventSourceTypeOrDefault(): String =
+    this?.eventSourceType ?: AppendOptions.DEFAULT_EVENT_SOURCE_TYPE
+
+private fun AppendOptions?.eventStreamTypeOrDefault(): String =
+    this?.eventStreamType ?: AppendOptions.DEFAULT_EVENT_STREAM_TYPE
+
+/** The event stream defaults to one per event source, which is how the client has always appended. */
+private fun AppendOptions?.eventStreamIdOrDefault(eventSourceId: String): String =
+    this?.eventStreamId ?: eventSourceId
+
+/**
+ * The compliance subject defaults to the event source, matching the .NET client - the event is
+ * about the thing it happened to unless the caller says otherwise.
+ */
+private fun AppendOptions?.subjectOrDefault(eventSourceId: String): String =
+    this?.subject ?: eventSourceId
+
+private fun Instant.toContractsDateTimeOffset(): Eventsequences.SerializableDateTimeOffset =
+    Eventsequences.SerializableDateTimeOffset.newBuilder()
+        .setValue(DateTimeFormatter.ISO_INSTANT.format(this))
+        .build()
 
 private fun UUID.toContractsGuid(): Bcl.Guid {
     // bcl.Guid: lo = first 8 bytes, hi = second 8 bytes, little-endian.
