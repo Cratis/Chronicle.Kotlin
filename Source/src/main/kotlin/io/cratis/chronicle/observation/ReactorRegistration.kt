@@ -15,6 +15,7 @@ import kotlin.reflect.full.findAnnotation
  * @property tags Descriptive labels for the reactor itself.
  * @property filters Narrows which events the kernel delivers.
  * @property handlers The handler methods, and how they are chosen per event.
+ * @property replayNotifications The replay begin and end methods, when the reactor asked to be told.
  */
 internal data class ReactorRegistration(
     val id: String,
@@ -22,7 +23,8 @@ internal data class ReactorRegistration(
     val isReplayable: Boolean,
     val tags: List<String>,
     val filters: ObserverFilters,
-    val handlers: ReactorHandlers
+    val handlers: ReactorHandlers,
+    val replayNotifications: ReplayNotifications
 ) {
     companion object {
         /**
@@ -49,7 +51,8 @@ internal data class ReactorRegistration(
                 tags = ObserverFilters.tagsOf(reactorClass),
                 filters = ObserverFilters.from(reactorClass),
 
-                handlers = ReactorHandlers.from(reactorClass, arguments)
+                handlers = ReactorHandlers.from(reactorClass, arguments),
+                replayNotifications = ReplayNotifications.from(reactorClass)
             )
         }
     }

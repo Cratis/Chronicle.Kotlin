@@ -65,6 +65,7 @@ interface IEventStore {
     val eventStoreSubscriptions: IEventStoreSubscriptionsService
     val webhooks: IWebhooksService
     val identities: IIdentityManagerService
+    val failedPartitions: IFailedPartitions
 
     fun getEventSequence(id: EventSequenceId): IEventSequence
 }
@@ -527,6 +528,85 @@ interface IReactorsService {
     suspend fun register(reactor: Any): Job
 }
 ```
+
+A handler takes the event first, and after that anything the client can supply
+for it — an `EventContext`, a read model resolved for the event's event source,
+or whatever an `IReactorMethodArgumentResolver` claims. Handlers may suspend.
+`IReactorMiddleware` wraps every invocation. See
+[Artifact Registration](../guides/artifact-registration.md) for both.
+
+### Being told about a replay
+
+Implement `ICanBeNotifiedAboutReplay` and declare `replayBegan` and/or
+`replayEnded`. Each takes a `ReplayContext` or nothing at all, and may suspend.
+Chronicle replays each event source independently, so the notifications arrive
+once per partition rather than once overall.
+
+<!-- validate: skip -->
+
+```kotlin
+data class ReplayContext(
+    val observerId: String,
+    val partition: String,
+    val sequenceNumber: EventSequenceNumber
+)
+```
+
+The kernel flags the first and last event of a replay rather than sending a
+separate signal, so `replayBegan` runs immediately before the first replayed
+event is handled and `replayEnded` immediately after the last. A replay that
+delivers no events produces no notification — there was no first event to flag.
+
+Implementing the interface and declaring neither method is rejected at
+registration: a marker with nothing behind it would silently do nothing.
+
+---
+
+## IFailedPartitions
+
+A handler that throws stops the event source it threw on and leaves every other
+one running. That keeps one bad event from halting the system, and it also means
+a stuck partition announces itself nowhere. `store.failedPartitions` is how an
+application finds out, and how an operator recovers once the cause is fixed.
+
+<!-- validate: skip -->
+
+```kotlin
+interface IFailedPartitions {
+    suspend fun getFor(observerId: String): List<FailedPartition>
+    suspend fun getFor(observerClass: KClass<*>): List<FailedPartition>
+    suspend fun retry(
+        observerId: String,
+        partition: String,
+        eventSequenceId: EventSequenceId = EventSequenceId.eventLog
+    )
+    suspend fun retry(observerClass: KClass<*>, partition: String)
+}
+
+data class FailedPartition(
+    val id: UUID,
+    val observerId: String,
+    val partition: String,
+    val attempts: List<FailedPartitionAttempt>
+) {
+    val lastAttempt: FailedPartitionAttempt?
+}
+
+data class FailedPartitionAttempt(
+    val occurred: Instant,
+    val sequenceNumber: EventSequenceNumber,
+    val messages: List<String>,
+    val stackTrace: String
+)
+```
+
+The overloads taking a `KClass` read the observer's id — and, when retrying, the
+sequence it observes — off the class exactly as registration does, so an observer
+can be asked about by type rather than by remembering what its id came out as.
+
+`attempts` is the history of the problem, oldest first: `lastAttempt` is the one
+still standing in the way. Retrying an observer whose cause has not been fixed
+simply adds another attempt, so fix first and retry after.
 
 ---
 

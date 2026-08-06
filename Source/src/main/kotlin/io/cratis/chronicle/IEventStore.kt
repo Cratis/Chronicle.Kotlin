@@ -14,6 +14,7 @@ import io.cratis.chronicle.externalServices.IExternalServicesService
 import io.cratis.chronicle.identities.IIdentityManagerService
 import io.cratis.chronicle.jobs.IJobsService
 import io.cratis.chronicle.namespaces.INamespacesService
+import io.cratis.chronicle.observation.IFailedPartitions
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
 import io.cratis.chronicle.projections.IProjectionsService
@@ -41,6 +42,14 @@ interface IEventStore {
     val eventStoreSubscriptions: IEventStoreSubscriptionsService
     val webhooks: IWebhooksService
     val identities: IIdentityManagerService
+
+    /**
+     * The partitions observers are currently failing on, and how to get them moving again.
+     *
+     * A handler that throws stops the event source it threw on and leaves every other one running,
+     * so a stuck partition is easy to miss. This is how an application finds out.
+     */
+    val failedPartitions: IFailedPartitions
 
     /**
      * Gets a non-default [IEventSequence] by its [id].
