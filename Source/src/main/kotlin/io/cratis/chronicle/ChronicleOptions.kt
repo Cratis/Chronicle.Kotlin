@@ -9,6 +9,7 @@ import io.cratis.chronicle.artifacts.IArtifactActivator
 import io.cratis.chronicle.artifacts.IClientArtifacts
 import io.cratis.chronicle.connection.ChronicleConnectionString
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
+import io.opentelemetry.api.OpenTelemetry
 
 /**
  * Options used to configure a [ChronicleClient].
@@ -26,6 +27,10 @@ import io.cratis.chronicle.sinks.WellKnownSinkTypes
  *   [io.cratis.chronicle.artifacts.KnownClientArtifacts].
  * @property artifactActivator Creates the instances for discovered artifacts. Replace it to let a
  *   dependency injection container construct them.
+ * @property openTelemetry Where the client's spans go. Defaults to `null`, meaning whatever the
+ *   application registered globally — which is a no-op until an application installs an SDK, so a
+ *   client that is never instrumented produces nothing. Set this when the application holds its own
+ *   [OpenTelemetry] rather than registering it globally.
  */
 data class ChronicleOptions @JvmOverloads constructor(
     val connectionString: ChronicleConnectionString,
@@ -33,7 +38,8 @@ data class ChronicleOptions @JvmOverloads constructor(
     val defaultSinkTypeId: String = System.getenv("CHRONICLE_SINK_TYPE") ?: WellKnownSinkTypes.MONGODB,
     val autoDiscoverAndRegister: Boolean = true,
     val artifacts: IClientArtifacts = ClientArtifacts.default,
-    val artifactActivator: IArtifactActivator = ArtifactActivator
+    val artifactActivator: IArtifactActivator = ArtifactActivator,
+    val openTelemetry: OpenTelemetry? = null
 ) {
     /**
      * The same options with automatic discovery and registration turned off, leaving every artifact to

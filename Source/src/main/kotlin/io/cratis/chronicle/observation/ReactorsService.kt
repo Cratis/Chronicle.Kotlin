@@ -6,6 +6,7 @@ package io.cratis.chronicle.observation
 import Cratis.Chronicle.Contracts.Observation.Reactors.ObservationReactors
 import Cratis.Chronicle.Contracts.Observation.Reactors.ReactorsGrpcKt
 import io.cratis.chronicle.connection.ConnectionLifecycle
+import io.cratis.chronicle.diagnostics.ChronicleTraces
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.events.EventType
 import kotlinx.coroutines.CancellationException
@@ -27,14 +28,15 @@ class ReactorsService(
     private val stub: ReactorsGrpcKt.ReactorsCoroutineStub,
     eventLog: IEventLog,
     private val middlewares: ReactorMiddlewares = ReactorMiddlewares.none,
-    private val arguments: ReactorMethodArguments = ReactorMethodArguments.contextOnly
+    private val arguments: ReactorMethodArguments = ReactorMethodArguments.contextOnly,
+    private val traces: ChronicleTraces = ChronicleTraces.default
 ) : IReactorsService {
 
     private val sideEffects = ReactorSideEffects(eventLog)
 
     override suspend fun register(reactor: Any): Job {
         val registration = ReactorRegistration.from(reactor::class, arguments)
-        val dispatch = ReactorEventDispatch(registration, reactor, middlewares, arguments, sideEffects)
+        val dispatch = ReactorEventDispatch(registration, reactor, middlewares, arguments, sideEffects, traces)
 
         val eventTypes = registration.handlers.eventTypes.map { (id, eventKClass) ->
             val ann = eventKClass.findAnnotation<EventType>()!!

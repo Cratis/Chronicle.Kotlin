@@ -11,7 +11,8 @@ data class ChronicleOptions(
     val defaultSinkTypeId: String = System.getenv("CHRONICLE_SINK_TYPE") ?: WellKnownSinkTypes.MONGODB,
     val autoDiscoverAndRegister: Boolean = true,
     val artifacts: IClientArtifacts = ClientArtifacts.default,
-    val artifactActivator: IArtifactActivator = ArtifactActivator
+    val artifactActivator: IArtifactActivator = ArtifactActivator,
+    val openTelemetry: OpenTelemetry? = null
 )
 ```
 
@@ -23,6 +24,7 @@ data class ChronicleOptions(
 | `autoDiscoverAndRegister` | `true` | Register artifacts on connect |
 | `artifacts` | `ClientArtifacts.default` | What the application is made of |
 | `artifactActivator` | `ArtifactActivator` | How artifacts are created |
+| `openTelemetry` | `null` | Where spans go — see [Tracing](../guides/tracing.md) |
 
 `programIdentifier` is a human-readable label that shows up in diagnostics.
 `defaultSinkTypeId` defaults to `WellKnownSinkTypes.MONGODB`, and can be

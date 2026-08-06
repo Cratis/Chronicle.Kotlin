@@ -11,6 +11,7 @@ import io.cratis.chronicle.artifacts.KnownClientArtifacts
 import io.cratis.chronicle.compliance.ComplianceService
 import io.cratis.chronicle.compliance.IComplianceService
 import io.cratis.chronicle.connection.ChronicleServices
+import io.cratis.chronicle.diagnostics.ChronicleTraces
 import io.cratis.chronicle.constraints.ConstraintsService
 import io.cratis.chronicle.constraints.IConstraintsService
 import io.cratis.chronicle.events.EventTypesService
@@ -69,6 +70,7 @@ import java.util.concurrent.ConcurrentHashMap
  * @param defaultSinkTypeId The sink read models are persisted to by default.
  * @param artifacts What the application consists of. Only consulted when [autoDiscoverAndRegister] is on.
  * @param artifactActivator Creates the instances for discovered artifacts.
+ * @param traces Produces the spans the client reports.
  * @param autoDiscoverAndRegister Whether to register every artifact automatically on connect. Off by
  *   default here so that constructing an event store directly never reaches out to the kernel on its
  *   own; [ChronicleClient] turns it on from [ChronicleOptions.autoDiscoverAndRegister].
@@ -81,7 +83,8 @@ class EventStore(
     private val defaultSinkTypeId: String = io.cratis.chronicle.sinks.WellKnownSinkTypes.MONGODB,
     private val artifacts: IClientArtifacts = KnownClientArtifacts.empty,
     private val artifactActivator: IArtifactActivator = ArtifactActivator,
-    private val autoDiscoverAndRegister: Boolean = false
+    private val autoDiscoverAndRegister: Boolean = false,
+    private val traces: ChronicleTraces = ChronicleTraces.default
 ) : IEventStore {
 
     private val registrations = ArtifactRegistrations(this, artifacts, artifactActivator)
@@ -89,7 +92,7 @@ class EventStore(
     override val unitOfWorkManager: UnitOfWorkManager = UnitOfWorkManager(this)
 
     override val eventLog: IEventLog by lazy {
-        EventLog(name, namespace, services.eventSequences, unitOfWorkManager)
+        EventLog(name, namespace, services.eventSequences, unitOfWorkManager, traces)
     }
 
     // ReadModelsService is shared so that reducers and projections can auto-register their read
@@ -108,7 +111,8 @@ class EventStore(
             services.reactors,
             eventLog,
             ReactorMiddlewares(discoveredMiddlewares()),
-            ReactorMethodArguments(discoveredArgumentResolvers() + ReadModelArgument(readModelsService))
+            ReactorMethodArguments(discoveredArgumentResolvers() + ReadModelArgument(readModelsService)),
+            traces
         )
     }
 
@@ -147,7 +151,7 @@ class EventStore(
     }
 
     override val reducers: IReducersService by lazy {
-        ReducersService(name, namespace, lifecycle, services.reducers, defaultSinkTypeId, readModelsService)
+        ReducersService(name, namespace, lifecycle, services.reducers, defaultSinkTypeId, readModelsService, traces)
     }
 
     override val projections: IProjectionsService by lazy {
@@ -230,7 +234,7 @@ class EventStore(
             eventLog
         } else {
             eventSequences.getOrPut(id) {
-                EventSequence(id, name, namespace, services.eventSequences)
+                EventSequence(id, name, namespace, services.eventSequences, traces)
             }
         }
 }

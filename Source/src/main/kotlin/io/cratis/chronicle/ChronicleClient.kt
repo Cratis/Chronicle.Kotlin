@@ -3,12 +3,18 @@
 
 package io.cratis.chronicle
 
+import io.cratis.chronicle.diagnostics.ChronicleTraces
 import com.google.protobuf.Empty
 import io.cratis.chronicle.connection.ChronicleConnection
 import java.util.concurrent.ConcurrentHashMap
 
 class ChronicleClient(private val options: ChronicleOptions) : IChronicleClient {
     private val connection = ChronicleConnection(options.connectionString).also { it.connect() }
+
+    // Built once per client so every event store shares one tracer. Resolving the global
+    // OpenTelemetry is deferred to first use, so a client constructed before the SDK is installed
+    // still ends up reporting to the real one.
+    private val traces = ChronicleTraces(options.openTelemetry)
     private val eventStores = ConcurrentHashMap<String, EventStore>()
 
     override fun getEventStore(name: String, namespace: String): EventStore {
@@ -21,7 +27,8 @@ class ChronicleClient(private val options: ChronicleOptions) : IChronicleClient 
                 options.defaultSinkTypeId,
                 options.artifacts,
                 options.artifactActivator,
-                options.autoDiscoverAndRegister
+                options.autoDiscoverAndRegister,
+                traces
             )
         }
     }

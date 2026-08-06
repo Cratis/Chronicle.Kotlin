@@ -4,7 +4,11 @@
 package io.cratis.chronicle.observation
 
 import Cratis.Chronicle.Contracts.Observation.Reactors.ObservationReactors
+import io.cratis.chronicle.diagnostics.ChronicleTraces
+import io.cratis.chronicle.events.EventContext
+import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.json.chronicleGson
+import io.opentelemetry.api.common.Attributes
 
 /**
  * Runs one batch of events past a reactor, and reports how far it got.
@@ -19,13 +23,15 @@ import io.cratis.chronicle.json.chronicleGson
  * @param middlewares Wrapped around every handler invocation.
  * @param arguments Supplies the handler parameters past the event.
  * @param sideEffects Appends whatever a handler returned.
+ * @param traces Produces a span per handler invocation.
  */
 internal class ReactorEventDispatch(
     private val registration: ReactorRegistration,
     private val reactor: Any,
     private val middlewares: ReactorMiddlewares,
     private val arguments: ReactorMethodArguments,
-    private val sideEffects: ReactorSideEffects
+    private val sideEffects: ReactorSideEffects,
+    private val traces: ChronicleTraces = ChronicleTraces.default
 ) {
     /**
      * Observes every event in [events] for [partition].
@@ -73,13 +79,18 @@ internal class ReactorEventDispatch(
     private suspend fun invoke(
         handler: EventHandlerMethod,
         appendedEvent: ObservationReactors.AppendedEvent,
-        context: io.cratis.chronicle.events.EventContext,
+        context: EventContext,
         outcome: ReactorObservationOutcome
     ) {
         try {
-            val event = chronicleGson.fromJson(appendedEvent.content, handler.eventClass.java)
-            val result = middlewares.invoke(context, event) {
-                handler.invoke(reactor, event, *arguments.resolve(handler, context).toTypedArray())
+            // The span covers the middlewares as well as the handler, so a middleware that is itself
+            // slow shows up as part of what handling the event cost - which is the number anyone
+            // reading the trace came for.
+            val result = traces.span("Chronicle observe ${context.eventType.id.value}", attributesFor(context)) {
+                val event = chronicleGson.fromJson(appendedEvent.content, handler.eventClass.java)
+                middlewares.invoke(context, event) {
+                    handler.invoke(reactor, event, *arguments.resolve(handler, context).toTypedArray())
+                }
             }
             sideEffects.append(result, context.eventSourceId)
             outcome.observed(context.sequenceNumber)
@@ -88,9 +99,19 @@ internal class ReactorEventDispatch(
         }
     }
 
+    /** What a reader of a trace needs to place this invocation: which observer, which event, where. */
+    private fun attributesFor(context: EventContext): Attributes = Attributes.builder()
+        .put(ChronicleTraces.OBSERVER_ID, registration.id)
+        .put(ChronicleTraces.EVENT_TYPE, context.eventType.id.value)
+        .put(ChronicleTraces.EVENT_SOURCE_ID, context.eventSourceId)
+        .put(ChronicleTraces.EVENT_SEQUENCE_ID, registration.eventSequenceId)
+        .put(ChronicleTraces.SEQUENCE_NUMBER, context.sequenceNumber)
+        .put(ChronicleTraces.IS_REPLAY, context.observationState.isReplay)
+        .build()
+
     private fun replayContextFor(partition: String, sequenceNumber: Long) = ReplayContext(
         observerId = registration.id,
         partition = partition,
-        sequenceNumber = io.cratis.chronicle.eventSequences.EventSequenceNumber(sequenceNumber)
+        sequenceNumber = EventSequenceNumber(sequenceNumber)
     )
 }
