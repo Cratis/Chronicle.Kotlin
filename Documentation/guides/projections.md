@@ -39,7 +39,7 @@ parameter tables are in the [annotation reference](../reference/annotations.md).
 
 `@NotRewindable` is worth considering for projections fed by events that
 can't reliably be redelivered — e.g. from an
-[event store subscription](event-store-subscriptions.md).
+[event store subscription](/chronicle/subscriptions/explicit-subscriptions/).
 
 <!-- validate: declarations -->
 
