@@ -28,4 +28,7 @@ val chronicleGson: Gson = GsonBuilder()
     .registerTypeAdapter(Point::class.java, PointTypeAdapter().nullSafe())
     .registerTypeAdapter(LineString::class.java, LineStringTypeAdapter().nullSafe())
     .registerTypeAdapter(Polygon::class.java, PolygonTypeAdapter().nullSafe())
+    // A concept serializes as the value it wraps, so introducing one into an event that is already
+    // in production changes neither the JSON nor the schema the kernel validates against.
+    .registerTypeAdapterFactory(ConceptTypeAdapterFactory())
     .create()

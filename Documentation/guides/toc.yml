@@ -2,6 +2,8 @@
   href: index.md
 - name: Artifact Registration
   href: artifact-registration.md
+- name: Strongly-typed Identifiers
+  href: concepts.md
 - name: Appending Events
   href: appending-events.md
 - name: Reactors
