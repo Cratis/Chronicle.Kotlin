@@ -453,6 +453,45 @@ interface IReadModelsService {
 
 ---
 
+## IReadModelReactors
+
+<!-- validate: skip -->
+
+```kotlin
+interface IReadModelReactors {
+    fun register(reactor: IReadModelReactor): Job
+    fun stop()
+}
+```
+
+Construct the implementation with the read models to watch through and the
+event log any side-effect events are appended to:
+`ReadModelReactors(store.readModels, store.eventLog)`. It is not reached
+through `IEventStore`.
+
+- `IReadModelReactor` is a marker interface. Dispatch is by convention: a
+  method named `added`, `modified` or `removed` (matched
+  case-insensitively) handles the corresponding `ReadModelChangeType`. Its
+  first parameter is the read model — a single instance or a `List` of them
+  — and that type selects which read model is watched. An optional second
+  parameter of type `ReadModelChangeset` carries the change metadata.
+- A removal never carries an instance, so a Kotlin `removed` handler must
+  declare its read model parameter nullable. Handlers that cannot be
+  dispatched to are rejected at registration with
+  `InvalidHandlerSignature`.
+- A handler may return an event, an `EventForEventSourceId`, or a `List` of
+  either, to be appended as a side effect — bare events use the changed
+  instance's key as the event source id. Return values that are not event
+  types are ignored.
+- `register` is not a suspending function and returns the `Job` backing that
+  reactor's subscriptions; `stop` cancels every reactor registered through
+  the instance.
+
+See the [read model reactors guide](../guides/read-model-reactors.md) for
+worked Kotlin and Java examples.
+
+---
+
 ## IProjectionsService
 
 <!-- validate: skip -->
@@ -577,6 +616,10 @@ bridges that touch them take and return plain `long`/`String` instead.
 - `IdentityManagerServiceJavaBridge` — `rename`
 - `UnitOfWorkJavaBridge` — `commit`, `rollback`
 - `ComplianceServiceJavaBridge` — `release`, `deleteEncryptionKey`
+
+`ReadModelReactors` needs no bridge — its constructor takes plain types and
+neither `register` nor `stop` is a suspending function, so Java calls both
+directly.
 
 <!-- validate: body needs=store -->
 
