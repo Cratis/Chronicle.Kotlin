@@ -5,6 +5,7 @@ package io.cratis.chronicle.spring
 
 import io.cratis.chronicle.IChronicleClient
 import io.cratis.chronicle.IEventStore
+import io.cratis.chronicle.captures.ICapturesService
 import io.cratis.chronicle.compliance.IComplianceService
 import io.cratis.chronicle.constraints.IConstraintsService
 import io.cratis.chronicle.eventSequences.EventSequenceId
@@ -17,6 +18,7 @@ import io.cratis.chronicle.identities.IIdentityManagerService
 import io.cratis.chronicle.jobs.IJobsService
 import io.cratis.chronicle.namespaces.IEventStoreNamespaceResolver
 import io.cratis.chronicle.namespaces.INamespacesService
+import io.cratis.chronicle.observation.IFailedPartitions
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
 import io.cratis.chronicle.projections.IProjectionsService
@@ -66,6 +68,8 @@ class ResolvedEventStore(
     override val eventStoreSubscriptions: IEventStoreSubscriptionsService get() = current.eventStoreSubscriptions
     override val webhooks: IWebhooksService get() = current.webhooks
     override val identities: IIdentityManagerService get() = current.identities
+    override val failedPartitions: IFailedPartitions get() = current.failedPartitions
+    override val captures: ICapturesService get() = current.captures
 
     override fun getEventSequence(id: EventSequenceId): IEventSequence = current.getEventSequence(id)
 
