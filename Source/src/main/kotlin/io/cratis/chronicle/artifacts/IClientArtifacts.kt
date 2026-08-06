@@ -46,4 +46,21 @@ interface IClientArtifacts {
 
     /** Every class implementing [io.cratis.chronicle.webhooks.IWebhookDefiner]. */
     val webhooks: List<KClass<*>>
+
+    /**
+     * Every class implementing [io.cratis.chronicle.observation.IReactorMiddleware] or its Java
+     * counterpart [io.cratis.chronicle.java.BlockingReactorMiddleware].
+     *
+     * Unlike the kinds above, these are never declared to the kernel - they wrap handler invocation
+     * inside the client. They are discovered here because they answer the same question: what is
+     * this application made of?
+     */
+    val reactorMiddlewares: List<KClass<*>>
+
+    /**
+     * Every class implementing [io.cratis.chronicle.observation.IReactorMethodArgumentResolver].
+     *
+     * Client-side like [reactorMiddlewares], and never declared to the kernel.
+     */
+    val reactorArgumentResolvers: List<KClass<*>>
 }

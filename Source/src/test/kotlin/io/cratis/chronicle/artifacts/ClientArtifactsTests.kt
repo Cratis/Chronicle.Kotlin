@@ -4,8 +4,10 @@
 package io.cratis.chronicle.artifacts
 
 import io.cratis.chronicle.artifacts.given.OrderArchive
+import io.cratis.chronicle.artifacts.given.OrderClockArgument
 import io.cratis.chronicle.artifacts.given.OrderList
 import io.cratis.chronicle.artifacts.given.OrderListProjection
+import io.cratis.chronicle.artifacts.given.OrderLogging
 import io.cratis.chronicle.artifacts.given.OrderPlaced
 import io.cratis.chronicle.artifacts.given.OrderReactor
 import io.cratis.chronicle.artifacts.given.OrderSeeder
@@ -14,6 +16,7 @@ import io.cratis.chronicle.artifacts.given.OrderShippedMigration
 import io.cratis.chronicle.artifacts.given.OrderState
 import io.cratis.chronicle.artifacts.given.OrderStateReducer
 import io.cratis.chronicle.artifacts.given.OrderSummary
+import io.cratis.chronicle.artifacts.given.OrderTiming
 import io.cratis.chronicle.artifacts.given.OrderWebhook
 import io.cratis.chronicle.artifacts.given.ShippingLabel
 import io.cratis.chronicle.artifacts.given.UniqueOrderNumber
@@ -81,11 +84,23 @@ class ClientArtifactsTests {
     }
 
     @Test
+    fun `discovers reactor middlewares written in kotlin and in java`() {
+        assertTrue(artifacts.reactorMiddlewares.contains(OrderTiming::class))
+        assertTrue(artifacts.reactorMiddlewares.contains(OrderLogging::class))
+    }
+
+    @Test
+    fun `discovers reactor method argument resolvers`() {
+        assertTrue(artifacts.reactorArgumentResolvers.contains(OrderClockArgument::class))
+    }
+
+    @Test
     fun `leaves classes that are not artifacts alone`() {
         val everything = artifacts.eventTypes + artifacts.readModels + artifacts.projections +
             artifacts.modelBoundProjections + artifacts.reactors + artifacts.reducers +
             artifacts.constraints + artifacts.eventSeeders + artifacts.webhooks +
-            artifacts.eventTypeMigrations
+            artifacts.eventTypeMigrations + artifacts.reactorMiddlewares +
+            artifacts.reactorArgumentResolvers
         assertFalse(everything.contains(ShippingLabel::class))
     }
 

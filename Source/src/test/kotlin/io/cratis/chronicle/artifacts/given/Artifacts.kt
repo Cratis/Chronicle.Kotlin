@@ -8,6 +8,10 @@ import io.cratis.chronicle.constraints.IConstraint
 import io.cratis.chronicle.constraints.IConstraintBuilder
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.events.migrations.IEventTypeMigration
+import io.cratis.chronicle.events.EventContext
+import io.cratis.chronicle.java.BlockingReactorMiddleware
+import io.cratis.chronicle.observation.IReactorMethodArgumentResolver
+import io.cratis.chronicle.observation.IReactorMiddleware
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.projections.FromEvent
@@ -19,6 +23,7 @@ import io.cratis.chronicle.seeding.IEventSeedingBuilder
 import io.cratis.chronicle.webhooks.IWebhookDefiner
 import io.cratis.chronicle.webhooks.IWebhookDefinitionBuilder
 import kotlin.reflect.KClass
+import kotlin.reflect.KParameter
 
 /**
  * One of every kind of artifact, in a package of its own, so discovery can be exercised against a
@@ -91,6 +96,24 @@ class OrderWebhook : IWebhookDefiner {
     override fun define(builder: IWebhookDefinitionBuilder) {
         builder.withEventType(OrderPlaced::class)
     }
+}
+
+/** Wraps every reactor handler invocation. Client-side only - never declared to the kernel. */
+class OrderTiming : IReactorMiddleware {
+    override suspend fun beforeInvoke(context: EventContext, event: Any) = Unit
+    override suspend fun afterInvoke(context: EventContext, event: Any) = Unit
+}
+
+/** The same, written the way Java has to write it. */
+class OrderLogging : BlockingReactorMiddleware {
+    override fun beforeInvoke(context: EventContext, event: Any) = Unit
+    override fun afterInvoke(context: EventContext, event: Any) = Unit
+}
+
+/** Supplies a reactor handler parameter the client knows nothing about. */
+class OrderClockArgument : IReactorMethodArgumentResolver {
+    override fun canResolve(parameter: KParameter): Boolean = false
+    override suspend fun resolve(parameter: KParameter, context: EventContext): Any? = null
 }
 
 /** Not an artifact of any kind — proof that discovery does not simply sweep up everything in the package. */

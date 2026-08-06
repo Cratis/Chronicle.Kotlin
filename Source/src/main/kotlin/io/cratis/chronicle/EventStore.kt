@@ -32,9 +32,16 @@ import io.cratis.chronicle.namespaces.INamespacesService
 import io.cratis.chronicle.namespaces.NamespacesService
 import io.cratis.chronicle.webhooks.IWebhooksService
 import io.cratis.chronicle.webhooks.WebhooksService
+import io.cratis.chronicle.java.BlockingReactorMiddleware
+import io.cratis.chronicle.java.asReactorMiddleware
+import io.cratis.chronicle.observation.IReactorMethodArgumentResolver
+import io.cratis.chronicle.observation.IReactorMiddleware
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
+import io.cratis.chronicle.observation.ReactorMethodArguments
+import io.cratis.chronicle.observation.ReactorMiddlewares
 import io.cratis.chronicle.observation.ReactorsService
+import io.cratis.chronicle.observation.ReadModelArgument
 import io.cratis.chronicle.observation.ReducersService
 import io.cratis.chronicle.projections.IProjectionsService
 import io.cratis.chronicle.projections.ProjectionsService
@@ -70,8 +77,8 @@ class EventStore(
     private val services: ChronicleServices,
     private val lifecycle: ConnectionLifecycle,
     private val defaultSinkTypeId: String = io.cratis.chronicle.sinks.WellKnownSinkTypes.MONGODB,
-    artifacts: IClientArtifacts = KnownClientArtifacts.empty,
-    artifactActivator: IArtifactActivator = ArtifactActivator,
+    private val artifacts: IClientArtifacts = KnownClientArtifacts.empty,
+    private val artifactActivator: IArtifactActivator = ArtifactActivator,
     private val autoDiscoverAndRegister: Boolean = false
 ) : IEventStore {
 
@@ -92,8 +99,46 @@ class EventStore(
     override val readModels: IReadModelsService get() = readModelsService
 
     override val reactors: IReactorsService by lazy {
-        ReactorsService(name, namespace, lifecycle, services.reactors, eventLog)
+        ReactorsService(
+            name,
+            namespace,
+            lifecycle,
+            services.reactors,
+            eventLog,
+            ReactorMiddlewares(discoveredMiddlewares()),
+            ReactorMethodArguments(discoveredArgumentResolvers() + ReadModelArgument(readModelsService))
+        )
     }
+
+    /**
+     * The middlewares wrapped around every reactor handler, in the order they were discovered.
+     *
+     * Unlike the artifacts declared to the kernel, these are created here rather than by
+     * [ArtifactRegistrations] - they are never registered anywhere, they simply take part in
+     * dispatch, and the reactors service needs them before the first event arrives.
+     */
+    private fun discoveredMiddlewares(): List<IReactorMiddleware> =
+        artifacts.reactorMiddlewares.map { middlewareClass ->
+            when (val instance = artifactActivator.activate(middlewareClass)) {
+                is IReactorMiddleware -> instance
+                is BlockingReactorMiddleware -> instance.asReactorMiddleware()
+                else -> throw IllegalStateException(
+                    "'${middlewareClass.simpleName}' was discovered as a reactor middleware but is neither " +
+                        "an IReactorMiddleware nor a BlockingReactorMiddleware"
+                )
+            }
+        }
+
+    /**
+     * The resolvers consulted for handler parameters past the event.
+     *
+     * Discovered ones come first so an application can take over a parameter the built-in read model
+     * resolver would otherwise claim.
+     */
+    private fun discoveredArgumentResolvers(): List<IReactorMethodArgumentResolver> =
+        artifacts.reactorArgumentResolvers.map { resolverClass ->
+            artifactActivator.activate(resolverClass) as IReactorMethodArgumentResolver
+        }
 
     override val reducers: IReducersService by lazy {
         ReducersService(name, namespace, lifecycle, services.reducers, defaultSinkTypeId, readModelsService)

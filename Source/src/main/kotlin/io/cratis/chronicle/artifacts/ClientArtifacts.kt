@@ -6,6 +6,9 @@ package io.cratis.chronicle.artifacts
 import io.cratis.chronicle.constraints.IConstraint
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.events.migrations.IEventTypeMigration
+import io.cratis.chronicle.java.BlockingReactorMiddleware
+import io.cratis.chronicle.observation.IReactorMethodArgumentResolver
+import io.cratis.chronicle.observation.IReactorMiddleware
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.projections.FromEvent
@@ -54,6 +57,8 @@ class ClientArtifacts(
     override val constraints: List<KClass<*>> get() = discovered.constraints
     override val eventSeeders: List<KClass<*>> get() = discovered.eventSeeders
     override val webhooks: List<KClass<*>> get() = discovered.webhooks
+    override val reactorMiddlewares: List<KClass<*>> get() = discovered.reactorMiddlewares
+    override val reactorArgumentResolvers: List<KClass<*>> get() = discovered.reactorArgumentResolvers
 
     private fun scan(): Discovered = newClassGraph().scan().use { result ->
         Discovered(
@@ -72,7 +77,14 @@ class ClientArtifacts(
             reducers = result.withAnnotation(Reducer::class) { it.isReducer() },
             constraints = result.implementing(IConstraint::class) { it.isConstraint() },
             eventSeeders = result.implementing(ICanSeedEvents::class) { it.isEventSeeder() },
-            webhooks = result.implementing(IWebhookDefiner::class) { it.isWebhookDefiner() }
+            webhooks = result.implementing(IWebhookDefiner::class) { it.isWebhookDefiner() },
+            reactorMiddlewares = (
+                result.implementing(IReactorMiddleware::class) { it.isReactorMiddleware() } +
+                    result.implementing(BlockingReactorMiddleware::class) { it.isReactorMiddleware() }
+                ).distinct(),
+            reactorArgumentResolvers = result.implementing(IReactorMethodArgumentResolver::class) {
+                it.isReactorMethodArgumentResolver()
+            }
         )
     }
 
@@ -119,7 +131,9 @@ class ClientArtifacts(
         val reducers: List<KClass<*>>,
         val constraints: List<KClass<*>>,
         val eventSeeders: List<KClass<*>>,
-        val webhooks: List<KClass<*>>
+        val webhooks: List<KClass<*>>,
+        val reactorMiddlewares: List<KClass<*>>,
+        val reactorArgumentResolvers: List<KClass<*>>
     )
 
     companion object {

@@ -7,6 +7,7 @@ import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.events.EventType
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
+import kotlin.reflect.KParameter
 import kotlin.reflect.full.callSuspend
 import kotlin.reflect.full.findAnnotation
 
@@ -24,6 +25,13 @@ internal data class EventHandlerMethod(
 ) {
     /** How many parameters the method takes, counting the instance receiver at index 0. */
     val parameterCount: Int get() = function.parameters.size
+
+    /**
+     * The parameters past the event, which is everything that has to be resolved per invocation.
+     *
+     * Index 0 is the instance receiver and index 1 is the event itself, so these start at index 2.
+     */
+    val argumentParameters: List<KParameter> get() = function.parameters.drop(2)
 
     /** Whether the parameter at [index] is an [EventContext]. */
     fun takesContextAt(index: Int): Boolean =

@@ -6,6 +6,9 @@ package io.cratis.chronicle.artifacts
 import io.cratis.chronicle.constraints.IConstraint
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.events.migrations.IEventTypeMigration
+import io.cratis.chronicle.java.BlockingReactorMiddleware
+import io.cratis.chronicle.observation.IReactorMethodArgumentResolver
+import io.cratis.chronicle.observation.IReactorMiddleware
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.projections.FromEvent
@@ -53,6 +56,20 @@ internal fun KClass<*>.isReactor(): Boolean = isInstantiableArtifact() && hasAnn
 
 /** Whether this class is a reducer. */
 internal fun KClass<*>.isReducer(): Boolean = isInstantiableArtifact() && hasAnnotation<Reducer>()
+
+/**
+ * Whether this class wraps reactor handler invocations.
+ *
+ * Java cannot implement the suspending [IReactorMiddleware], so a Java middleware implements
+ * [BlockingReactorMiddleware] instead and is adapted onto it - both count as the same kind here.
+ */
+internal fun KClass<*>.isReactorMiddleware(): Boolean =
+    isInstantiableArtifact() &&
+        (isSubclassOf(IReactorMiddleware::class) || isSubclassOf(BlockingReactorMiddleware::class))
+
+/** Whether this class supplies a reactor handler parameter past the event. */
+internal fun KClass<*>.isReactorMethodArgumentResolver(): Boolean =
+    isInstantiableArtifact() && isSubclassOf(IReactorMethodArgumentResolver::class)
 
 /** Whether this class is a constraint. */
 internal fun KClass<*>.isConstraint(): Boolean =

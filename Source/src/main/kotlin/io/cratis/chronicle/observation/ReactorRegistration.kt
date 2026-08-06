@@ -25,8 +25,16 @@ internal data class ReactorRegistration(
     val handlers: ReactorHandlers
 ) {
     companion object {
-        /** Reads [reactorClass]'s annotations and handler methods. */
-        fun from(reactorClass: KClass<*>): ReactorRegistration {
+        /**
+         * Reads [reactorClass]'s annotations and handler methods.
+         *
+         * [arguments] decides which handler parameters past the event are supportable, so a handler
+         * asking for something nothing can supply is rejected here.
+         */
+        fun from(
+            reactorClass: KClass<*>,
+            arguments: ReactorMethodArguments = ReactorMethodArguments.contextOnly
+        ): ReactorRegistration {
             val annotation = reactorClass.findAnnotation<Reactor>()
 
             return ReactorRegistration(
@@ -41,7 +49,7 @@ internal data class ReactorRegistration(
                 tags = ObserverFilters.tagsOf(reactorClass),
                 filters = ObserverFilters.from(reactorClass),
 
-                handlers = ReactorHandlers.from(reactorClass)
+                handlers = ReactorHandlers.from(reactorClass, arguments)
             )
         }
     }

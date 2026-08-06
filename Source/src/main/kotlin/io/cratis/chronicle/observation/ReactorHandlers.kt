@@ -68,14 +68,17 @@ internal class ReactorHandlers(
          * Builds the handler set for [reactorClass] by convention: any method whose first parameter
          * is a class annotated with `@EventType` is a handler for that event type.
          */
-        fun from(reactorClass: KClass<*>): ReactorHandlers {
+        fun from(
+            reactorClass: KClass<*>,
+            arguments: ReactorMethodArguments = ReactorMethodArguments.contextOnly
+        ): ReactorHandlers {
             val live = mutableMapOf<String, EventHandlerMethod>()
             val replay = mutableMapOf<String, EventHandlerMethod>()
             val onceOnly = mutableSetOf<KFunction<*>>()
 
             for (function in reactorClass.memberFunctions) {
                 val handler = EventHandlerMethod.from(function) ?: continue
-                requireDispatchable(handler, reactorClass)
+                requireDispatchable(handler, reactorClass, arguments)
 
                 if (function.findAnnotation<OnceOnly>() != null) {
                     onceOnly.add(function)
@@ -96,18 +99,15 @@ internal class ReactorHandlers(
         }
 
         /**
-         * A reactor handler is `(event)` or `(event, context)`, suspending or not. Anything else
-         * cannot be invoked, so it is rejected at registration rather than failing on every event.
+         * A reactor handler takes the event first, suspending or not. Everything after it has to be
+         * something the client can supply for each event - the [io.cratis.chronicle.events.EventContext],
+         * or whatever the configured resolvers claim. A parameter nothing can supply is rejected here
+         * rather than failing on every event the reactor is given.
          */
-        private fun requireDispatchable(handler: EventHandlerMethod, reactorClass: KClass<*>) {
-            // Index 0 is the instance receiver, so the two valid shapes arrive as 2 and 3.
-            if (handler.parameterCount > 3) {
-                handler.reject(reactorClass, "a reactor handler takes the event and optionally an EventContext")
-            }
-
-            if (handler.parameterCount == 3 && !handler.takesContextAt(2)) {
-                handler.reject(reactorClass, "its second parameter must be an EventContext")
-            }
-        }
+        private fun requireDispatchable(
+            handler: EventHandlerMethod,
+            reactorClass: KClass<*>,
+            arguments: ReactorMethodArguments
+        ) = arguments.requireResolvable(handler, reactorClass)
     }
 }

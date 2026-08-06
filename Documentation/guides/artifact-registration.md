@@ -57,9 +57,16 @@ calling it once at startup makes the first append deterministic.
 | Constraint | Implements `IConstraint` |
 | Event seeder | Implements `ICanSeedEvents` |
 | Webhook | Implements `IWebhookDefiner` |
+| Reactor middleware | Implements `IReactorMiddleware` |
+| Reactor argument resolver | Implements `IReactorMethodArgumentResolver` |
 
 Only concrete classes qualify — interfaces and abstract classes are skipped, so
 your own base types never get registered by accident.
+
+The last two are client-side: they are never declared to the kernel, they take
+part in how a reactor handler is invoked. They are discovered here because they
+answer the same question — what is this application made of? See
+[Reactor middlewares](#reactor-middlewares) below.
 
 External services and event store subscriptions are configuration rather than
 artifacts: they describe systems outside your application, so they are still set
@@ -182,6 +189,70 @@ val options = ChronicleOptions.development().copy(
 If an artifact cannot be created, the client throws `ArtifactActivationFailed`
 naming the class and explaining the three ways out: give it a constructor that
 takes nothing, give its parameters defaults, or activate it through a container.
+
+## Reactor middlewares
+
+Tracing, logging, metrics and correlation scoping want to happen around every
+reactor handler and belong to none of them. Put them in an `IReactorMiddleware`
+and every reactor stays a description of what happens when a fact arrives:
+
+<!-- validate: skip -->
+
+```kotlin
+import io.cratis.chronicle.events.EventContext
+import io.cratis.chronicle.observation.IReactorMiddleware
+
+class HandlerTiming : IReactorMiddleware {
+    private val started = ThreadLocal<Long>()
+
+    override suspend fun beforeInvoke(context: EventContext, event: Any) {
+        started.set(System.nanoTime())
+    }
+
+    override suspend fun afterInvoke(context: EventContext, event: Any) {
+        println("${event::class.simpleName} took ${System.nanoTime() - started.get()}ns")
+    }
+}
+```
+
+Writing the class is all there is to it — discovery finds it and applies it to
+every reactor. `beforeInvoke` runs outermost-first and `afterInvoke` in reverse,
+so middlewares nest the way you would write them by hand, and `afterInvoke` runs
+whether the handler returned or threw.
+
+Java cannot implement a suspending method, so a Java middleware implements
+`BlockingReactorMiddleware` — the same two methods without `suspend` — and the
+client adapts it onto the same chain.
+
+## Handler parameters beyond the event
+
+A reactor handler takes the event, and optionally its `EventContext`. Anything
+past that is resolved per invocation, which is how a handler asks for the
+current state of a read model without reaching for the event log:
+
+<!-- validate: skip -->
+
+```kotlin
+@Reactor
+class OverdraftAlerts(private val mail: Mailer) {
+    suspend fun moneyWithdrawn(
+        event: MoneyWithdrawn,
+        account: AccountBalance?
+    ) {
+        if ((account?.balance ?: 0.0) < 0.0) mail.overdrawn(event.accountId)
+    }
+}
+```
+
+The instance is fetched for the event source the event arrived under, and is
+`null` when nothing has been projected for that key yet — so declare the
+parameter nullable.
+
+Implement `IReactorMethodArgumentResolver` to supply anything else, a
+container-backed service for instance. Discovered resolvers are consulted before
+the built-in read model one, so an application can take over a parameter the
+client would otherwise claim. A parameter nothing can supply is rejected when the
+reactor registers, rather than failing on every event.
 
 ## Reference
 

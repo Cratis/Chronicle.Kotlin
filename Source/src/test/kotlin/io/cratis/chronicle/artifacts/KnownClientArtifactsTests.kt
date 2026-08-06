@@ -3,11 +3,14 @@
 
 package io.cratis.chronicle.artifacts
 
+import io.cratis.chronicle.artifacts.given.OrderClockArgument
 import io.cratis.chronicle.artifacts.given.OrderList
 import io.cratis.chronicle.artifacts.given.OrderListProjection
+import io.cratis.chronicle.artifacts.given.OrderLogging
 import io.cratis.chronicle.artifacts.given.OrderPlaced
 import io.cratis.chronicle.artifacts.given.OrderReactor
 import io.cratis.chronicle.artifacts.given.OrderSummary
+import io.cratis.chronicle.artifacts.given.OrderTiming
 import io.cratis.chronicle.artifacts.given.ShippingLabel
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -28,6 +31,18 @@ class KnownClientArtifactsTests {
         assertEquals(listOf(OrderReactor::class), artifacts.reactors)
         assertEquals(listOf(OrderListProjection::class), artifacts.projections)
         assertEquals(listOf(OrderList::class), artifacts.readModels)
+    }
+
+    @Test
+    fun `sorts the client-side kinds the same way the scan does`() {
+        val artifacts = KnownClientArtifacts(
+            OrderTiming::class,
+            OrderLogging::class,
+            OrderClockArgument::class
+        )
+
+        assertEquals(listOf(OrderTiming::class, OrderLogging::class), artifacts.reactorMiddlewares)
+        assertEquals(listOf(OrderClockArgument::class), artifacts.reactorArgumentResolvers)
     }
 
     @Test

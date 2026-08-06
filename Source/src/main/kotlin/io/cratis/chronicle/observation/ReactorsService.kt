@@ -27,11 +27,13 @@ class ReactorsService(
     private val namespace: String,
     private val lifecycle: ConnectionLifecycle,
     private val stub: ReactorsGrpcKt.ReactorsCoroutineStub,
-    private val eventLog: IEventLog
+    private val eventLog: IEventLog,
+    private val middlewares: ReactorMiddlewares = ReactorMiddlewares.none,
+    private val arguments: ReactorMethodArguments = ReactorMethodArguments.contextOnly
 ) : IReactorsService {
 
     override suspend fun register(reactor: Any): Job {
-        val registration = ReactorRegistration.from(reactor::class)
+        val registration = ReactorRegistration.from(reactor::class, arguments)
 
         val eventTypes = registration.handlers.eventTypes.map { (id, eventKClass) ->
             val ann = eventKClass.findAnnotation<EventType>()!!
@@ -134,10 +136,8 @@ class ReactorsService(
                     val handler = resolution.handler
                     try {
                         val event = chronicleGson.fromJson(appendedEvent.content, handler.eventClass.java)
-                        val result = if (handler.parameterCount == 3) {
-                            handler.invoke(reactor, event, context)
-                        } else {
-                            handler.invoke(reactor, event)
+                        val result = middlewares.invoke(context, event) {
+                            handler.invoke(reactor, event, *arguments.resolve(handler, context).toTypedArray())
                         }
                         appendSideEffects(result, context.eventSourceId)
                         lastSuccessfulSequenceNumber = context.sequenceNumber
