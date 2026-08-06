@@ -15,6 +15,7 @@ A Kotlin-idiomatic client for [Cratis Chronicle](https://github.com/Cratis/Chron
 
 ```text
 Source/              ← io.cratis:chronicle Kotlin library
+Testing/             ← io.cratis:chronicle-testing in-process test support
 Documentation/       ← User-facing documentation
 Samples/
   Kotlin/Console/    ← Kotlin console sample application
