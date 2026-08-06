@@ -106,6 +106,24 @@ class JavaInteropTests {
     }
 
     @Test
+    fun `java repeated tag annotations are read`() {
+        // Kotlin's @Repeatable only reaches Java through a generated JVM container annotation, so
+        // repeating @Tag from Java is worth pinning down rather than assuming.
+        assertEquals(
+            listOf("analytics", "reporting", "owned-by-platform"),
+            ObserverFilters.tagsOf(JavaTaggedReactor::class)
+        )
+    }
+
+    @Test
+    fun `java repeated filter annotations are read`() {
+        val filters = ObserverFilters.from(JavaTaggedReactor::class)
+        assertEquals(listOf("critical", "production"), filters.filterTags)
+        assertEquals("Patient", filters.eventSourceType)
+        assertEquals("Onboarding", filters.eventStreamType)
+    }
+
+    @Test
     fun `java reducer handler taking an event context has four parameters`() {
         val registration = ReducerRegistration.from(JavaReducer::class)
         // Index 0 is the instance receiver, so the context-taking shape arrives as four.

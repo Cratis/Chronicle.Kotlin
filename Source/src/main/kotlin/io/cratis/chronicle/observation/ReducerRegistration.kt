@@ -17,6 +17,8 @@ import kotlin.reflect.full.memberFunctions
  * @property isActive Whether the kernel should actively run the reducer.
  * @property readModelName The name of the read model the reducer produces.
  * @property readModelClass The class of the read model, inferred from the handlers' return type.
+ * @property tags Descriptive labels for the reducer itself.
+ * @property filters Narrows which events the kernel delivers.
  * @property handlers The handler methods, keyed by event type identifier.
  */
 internal data class ReducerRegistration(
@@ -25,6 +27,8 @@ internal data class ReducerRegistration(
     val isActive: Boolean,
     val readModelName: String,
     val readModelClass: KClass<*>?,
+    val tags: List<String>,
+    val filters: ObserverFilters,
     val handlers: Map<String, EventHandlerMethod>
 ) {
     companion object {
@@ -64,6 +68,8 @@ internal data class ReducerRegistration(
                 isActive = annotation?.isActive ?: true,
                 readModelName = readModelName,
                 readModelClass = readModelClass,
+                tags = ObserverFilters.tagsOf(reducerClass),
+                filters = ObserverFilters.from(reducerClass),
                 handlers = handlers
             )
         }
