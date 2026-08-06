@@ -77,6 +77,20 @@ class JavaInteropTests {
     }
 
     @Test
+    fun `java standalone event sequence annotation is read`() {
+        // JavaEventSequenceReactor writes @EventSequence("outbox") in Java's shorthand form, which
+        // only compiles while the Kotlin parameter is named `value` - so this failing to build at
+        // all is the real assertion here.
+        assertEquals("outbox", JavaEventSequenceReactor::class.findAnnotation<EventSequence>()!!.value)
+        assertEquals("outbox", ReactorRegistration.from(JavaEventSequenceReactor::class).eventSequenceId)
+    }
+
+    @Test
+    fun `java standalone event sequence annotation wins over the parameter`() {
+        assertEquals("from-standalone", ReducerRegistration.from(JavaEventSequenceReducer::class).eventSequenceId)
+    }
+
+    @Test
     fun `java reducer annotation is read`() {
         val registration = ReducerRegistration.from(JavaReducer::class)
         assertEquals("java-reducer", registration.id)

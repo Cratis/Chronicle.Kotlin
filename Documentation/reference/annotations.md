@@ -32,7 +32,7 @@ for the event type of its first parameter.
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `id` | `String` | `""` | Stable identifier. Defaults to class name. |
-| `eventSequence` | `String` | event log | The event sequence to observe. |
+| `eventSequence` | `String` | event log | The event sequence to observe. Overridden by [@EventSequence](#eventsequence). |
 
 A handler takes the event, and optionally an `EventContext` carrying the event's
 metadata:
@@ -124,7 +124,7 @@ read model.
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `id` | `String` | `""` | Stable identifier. Defaults to class name. |
-| `eventSequence` | `String` | event log | The event sequence to observe. |
+| `eventSequence` | `String` | event log | The event sequence to observe. Overridden by [@EventSequence](#eventsequence). |
 | `isActive` | `Boolean` | `true` | Whether the kernel runs the reducer. |
 
 A handler takes the event, the state so far, and optionally an `EventContext`.
@@ -184,7 +184,7 @@ annotated class is itself the read model.
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `id` | `String` | `""` | Stable identifier. Defaults to class name. |
-| `eventSequence` | `String` | event log | The event sequence to observe. |
+| `eventSequence` | `String` | event log | The event sequence to observe. Overridden by [@EventSequence](#eventsequence). |
 
 <!-- validate: declarations -->
 
@@ -198,6 +198,43 @@ import io.cratis.chronicle.readModels.ReadModel
 @FromEvent(OrderPlaced::class)
 data class OutboxOrderTracking(val orderId: String = "")
 ```
+
+---
+
+## @EventSequence
+
+Points an observer — a reactor, a reducer or a projection — at the event
+sequence it observes. This is the standalone alternative to the
+`eventSequence` parameter on [@Reactor](#reactor), [@Reducer](#reducer) and
+[@Projection](#projection); reach for it when the sequence is the only thing
+being configured, so the observer keeps its conventional identifier.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `value` | `String` | *(required)* | The event sequence to observe. |
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.observation.EventSequence
+import io.cratis.chronicle.observation.Reactor
+
+@Reactor
+@EventSequence("outbox")
+class OutboxOrderNotifications {
+    fun orderPlaced(event: OrderPlaced) {
+        println("Order ${event.orderId} placed, observed from the outbox")
+    }
+}
+```
+
+When both this annotation and the `eventSequence` parameter are present, this
+annotation wins.
+
+There is no `@EventLog` counterpart. In the .NET client it exists to override
+the inbox routing that `[EventStore]` on an event type turns on — and the
+Kotlin client has no `@EventStore`, so an observer without an explicit
+sequence already reads from the event log.
 
 ---
 

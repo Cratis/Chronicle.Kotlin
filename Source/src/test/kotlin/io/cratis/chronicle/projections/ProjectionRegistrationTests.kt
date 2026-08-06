@@ -4,6 +4,7 @@
 package io.cratis.chronicle.projections
 
 import io.cratis.chronicle.eventSequences.EventSequenceId
+import io.cratis.chronicle.observation.EventSequence
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -18,6 +19,13 @@ class ProjectionRegistrationTests {
 
     @Projection(id = "custom-id", eventSequence = "outbox")
     class ConfiguredProjection
+
+    @EventSequence("outbox")
+    class StandaloneEventSequenceProjection
+
+    @Projection(eventSequence = "from-parameter")
+    @EventSequence("from-standalone")
+    class DoublyConfiguredProjection
 
     @Test
     fun `id defaults to the class simple name`() {
@@ -53,6 +61,32 @@ class ProjectionRegistrationTests {
     @Test
     fun `explicit event sequence is used`() {
         assertEquals("outbox", ProjectionRegistration.from(ConfiguredProjection::class).eventSequenceId)
+    }
+
+    @Test
+    fun `standalone event sequence annotation is used`() {
+        assertEquals(
+            "outbox",
+            ProjectionRegistration.from(StandaloneEventSequenceProjection::class).eventSequenceId
+        )
+    }
+
+    @Test
+    fun `standalone event sequence annotation wins over the parameter`() {
+        // Matching the .NET client, where [EventSequence] on the class takes priority over the
+        // event sequence declared on [Projection].
+        assertEquals(
+            "from-standalone",
+            ProjectionRegistration.from(DoublyConfiguredProjection::class).eventSequenceId
+        )
+    }
+
+    @Test
+    fun `java standalone event sequence annotation is read`() {
+        assertEquals(
+            "outbox",
+            ProjectionRegistration.from(JavaEventSequenceProjection::class).eventSequenceId
+        )
     }
 
     @Test

@@ -3,7 +3,7 @@
 
 package io.cratis.chronicle.projections
 
-import io.cratis.chronicle.eventSequences.EventSequenceId
+import io.cratis.chronicle.observation.EventSequence
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 
@@ -27,11 +27,7 @@ internal data class ProjectionRegistration(
 
             return ProjectionRegistration(
                 id = annotation?.id?.ifEmpty { null } ?: projectionClass.simpleName!!,
-
-                // An unspecified event sequence means the event log, which is where projections
-                // observe from unless they deliberately target another sequence.
-                eventSequenceId = annotation?.eventSequence?.ifEmpty { null }
-                    ?: EventSequenceId.eventLog.value
+                eventSequenceId = EventSequence.idOf(projectionClass, annotation?.eventSequence)
             )
         }
     }

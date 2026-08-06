@@ -3,7 +3,6 @@
 
 package io.cratis.chronicle.observation
 
-import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.readModels.ReadModel
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
@@ -41,9 +40,7 @@ internal data class ReducerRegistration(
             val annotation = reducerClass.findAnnotation<Reducer>()
             val id = annotation?.id?.ifEmpty { null } ?: reducerClass.simpleName!!
 
-            // An unspecified event sequence means the event log, which is where reducers observe
-            // from unless they deliberately target another sequence.
-            val eventSequenceId = annotation?.eventSequence?.ifEmpty { null } ?: EventSequenceId.eventLog.value
+            val eventSequenceId = EventSequence.idOf(reducerClass, annotation?.eventSequence)
 
             val handlers = mutableMapOf<String, EventHandlerMethod>()
             var readModelClass: KClass<*>? = null
