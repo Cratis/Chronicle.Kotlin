@@ -32,9 +32,15 @@ internal class ReactorObservationOutcome {
         lastSuccessfulSequenceNumber = sequenceNumber
     }
 
-    /** Records that [handlerName] failed with [error]. */
+    /**
+     * Records that [handlerName] failed with [error].
+     *
+     * Reflection reports a throwing handler as an InvocationTargetException with no message of its
+     * own, so both the message and the stack trace are taken from what the handler actually raised -
+     * otherwise every stuck partition would read "Error in someHandler".
+     */
     fun failed(error: Exception, handlerName: String) {
-        messages.add(error.message ?: "Error in $handlerName")
-        stackTrace = error.stackTraceToString()
+        messages.add(error.messageFor(handlerName))
+        stackTrace = error.unwrapReflectionFailure().stackTraceToString()
     }
 }

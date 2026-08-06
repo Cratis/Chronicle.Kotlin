@@ -6,7 +6,9 @@ package io.cratis.chronicle.observation
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -48,6 +50,13 @@ class ReplayNotificationsTests {
     @Reactor
     class MarkedButSilent : ICanBeNotifiedAboutReplay {
         fun bookReturned(@Suppress("UNUSED_PARAMETER") event: BookReturned) = Unit
+    }
+
+    @Reactor
+    class FailingNotification : ICanBeNotifiedAboutReplay {
+        fun bookReturned(@Suppress("UNUSED_PARAMETER") event: BookReturned) = Unit
+        fun replayBegan(@Suppress("UNUSED_PARAMETER") context: ReplayContext): Unit =
+            throw IllegalStateException("cache is gone")
     }
 
     @Reactor
@@ -99,6 +108,23 @@ class ReplayNotificationsTests {
             ReplayNotifications.from(WrongNotificationParameter::class)
         }
         assertTrue(error.message!!.contains("ReplayContext"))
+    }
+
+    @Test
+    fun `a notification that throws is reported as a failure rather than escaping`() = runBlocking {
+        val outcome = ReactorObservationOutcome()
+        val notifications = ReplayNotifications.from(FailingNotification::class)
+
+        // Mirrors what the dispatch does: the throw is recorded, not propagated, so the kernel is
+        // told the partition failed instead of the whole observation being torn down.
+        try {
+            notifications.notifyBegan(FailingNotification(), context)
+        } catch (e: Exception) {
+            outcome.failed(e, "replay notification")
+        }
+
+        assertFalse(outcome.isSuccess)
+        assertTrue(outcome.exceptions.single().contains("cache is gone"), outcome.exceptions.toString())
     }
 
     @Test

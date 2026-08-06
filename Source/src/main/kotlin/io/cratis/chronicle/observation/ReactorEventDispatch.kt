@@ -50,11 +50,11 @@ internal class ReactorEventDispatch(
             val context = appendedEvent.context.toEventContext()
 
             // The kernel flags the first and last event of a replay rather than sending a separate
-            // signal, so the notifications bracket the handling of those two events. A notification
-            // that throws fails the partition just as a handler would: a reactor told a replay began
-            // and never told it ended is worse off than one that stops and says so.
+            // signal, so the notifications bracket the handling of those two events.
             if (context.observationState.isHeadOfReplay) {
-                registration.replayNotifications.notifyBegan(reactor, replayContextFor(partition, context.sequenceNumber))
+                notify(partition, context, outcome) { replayContext ->
+                    registration.replayNotifications.notifyBegan(reactor, replayContext)
+                }
             }
 
             when (val resolution =
@@ -69,11 +69,34 @@ internal class ReactorEventDispatch(
             }
 
             if (context.observationState.isTailOfReplay) {
-                registration.replayNotifications.notifyEnded(reactor, replayContextFor(partition, context.sequenceNumber))
+                notify(partition, context, outcome) { replayContext ->
+                    registration.replayNotifications.notifyEnded(reactor, replayContext)
+                }
             }
         }
 
         return outcome
+    }
+
+    /**
+     * Runs a replay notification, recording a failure the same way a failing handler is recorded.
+     *
+     * A notification that throws has to fail the partition rather than the whole observation: the
+     * kernel is then told the position the reactor genuinely got past, and the partition turns up in
+     * `failedPartitions` with the message. Letting it escape would tear the stream down instead, and
+     * the reactor would silently retry the same batch forever.
+     */
+    private suspend fun notify(
+        partition: String,
+        context: EventContext,
+        outcome: ReactorObservationOutcome,
+        notification: suspend (ReplayContext) -> Unit
+    ) {
+        try {
+            notification(replayContextFor(partition, context.sequenceNumber))
+        } catch (e: Exception) {
+            outcome.failed(e, "replay notification")
+        }
     }
 
     private suspend fun invoke(

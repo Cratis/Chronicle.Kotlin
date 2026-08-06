@@ -158,8 +158,10 @@ class ReducersService(
                         }
                         lastSuccessfulSequenceNumber = appendedEvent.context.sequenceNumber
                     } catch (e: Exception) {
-                        exceptions.add(e.message ?: "Error in ${handler.function.name}")
-                        stackTrace = e.stackTraceToString()
+                        // Reflection wraps a throwing handler, so the message and stack trace the
+                        // kernel is told about are taken from what the handler actually raised.
+                        exceptions.add(e.messageFor(handler.function.name))
+                        stackTrace = e.unwrapReflectionFailure().stackTraceToString()
                     }
                 }
 
