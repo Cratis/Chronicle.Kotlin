@@ -5,12 +5,10 @@ package io.cratis.chronicle.readModels
 
 import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.Readmodels
-import com.google.gson.Gson
+import io.cratis.chronicle.json.chronicleGson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlin.reflect.KClass
-
-private val gson = Gson()
 
 class MaterializedReadModels(
     private val eventStoreName: String,
@@ -27,7 +25,7 @@ class MaterializedReadModels(
             .setPageSize(take)
             .build()
 
-        return stub.getInstances(request).instancesList.map { gson.fromJson(it, readModelClass.java) }
+        return stub.getInstances(request).instancesList.map { chronicleGson.fromJson(it, readModelClass.java) }
     }
 
     override fun <T : Any> observeInstances(readModelClass: KClass<T>, skip: Int, take: Int): Flow<List<T>> {
@@ -40,7 +38,7 @@ class MaterializedReadModels(
             .build()
 
         return stub.observeInstances(request).map { response ->
-            response.instancesList.map { gson.fromJson(it, readModelClass.java) }
+            response.instancesList.map { chronicleGson.fromJson(it, readModelClass.java) }
         }
     }
 }

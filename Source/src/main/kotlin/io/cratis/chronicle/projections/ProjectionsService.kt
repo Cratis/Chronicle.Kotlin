@@ -5,9 +5,9 @@ package io.cratis.chronicle.projections
 
 import Cratis.Chronicle.Contracts.Projections.ProjectionsGrpcKt
 import Cratis.Chronicle.Contracts.Projections.ProjectionsOuterClass
-import com.google.gson.Gson
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.readModels.ReadModelsService
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -15,8 +15,6 @@ import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.memberProperties
 import kotlin.reflect.full.primaryConstructor
-
-private val gson = Gson()
 
 /** The literal key value meaning "correlate on the event source id", matching the kernel's key convention. */
 private const val EVENT_SOURCE_ID_KEY = "EventSourceId"
@@ -424,7 +422,7 @@ class ProjectionsService(
         val initialModelStateJson = try {
             val ctor = readModelClass.primaryConstructor
             if (ctor != null && ctor.parameters.all { it.isOptional }) {
-                gson.toJson(ctor.callBy(emptyMap()))
+                chronicleGson.toJson(ctor.callBy(emptyMap()))
             } else {
                 "{}"
             }

@@ -5,9 +5,9 @@ package io.cratis.chronicle.observation
 
 import Cratis.Chronicle.Contracts.Observation.Reducers.ObservationReducers
 import Cratis.Chronicle.Contracts.Observation.Reducers.ReducersGrpcKt
-import com.google.gson.Gson
 import io.cratis.chronicle.connection.ConnectionLifecycle
 import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -20,8 +20,6 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.reflect.full.findAnnotation
-
-private val gson = Gson()
 
 class ReducersService(
     private val eventStoreName: String,
@@ -129,7 +127,7 @@ class ReducersService(
                 val readModelClass = registration.readModelClass
                 if (initialStateJson.isNotBlank() && readModelClass != null) {
                     try {
-                        currentState = gson.fromJson(initialStateJson, readModelClass.java)
+                        currentState = chronicleGson.fromJson(initialStateJson, readModelClass.java)
                     } catch (_: Exception) {}
                 }
 
@@ -141,7 +139,7 @@ class ReducersService(
                     }
 
                     try {
-                        val event = gson.fromJson(appendedEvent.content, handler.eventClass.java)
+                        val event = chronicleGson.fromJson(appendedEvent.content, handler.eventClass.java)
                         // Index 0 is the instance receiver: (event), (event, state), or
                         // (event, state, context) - the same shapes the C# client accepts.
                         currentState = when (handler.function.parameters.size) {
@@ -166,7 +164,7 @@ class ReducersService(
                 else
                     ObservationReducers.ObservationState.Failed
 
-                val readModelStateJson = if (currentState != null) gson.toJson(currentState) else ""
+                val readModelStateJson = if (currentState != null) chronicleGson.toJson(currentState) else ""
 
                 requests.send(
                     ObservationReducers.ReducerMessage.newBuilder()
