@@ -8,6 +8,8 @@
   href: tracing.md
 - name: Captures
   href: captures.md
+- name: Testing
+  href: testing.md
 - name: Appending Events
   href: appending-events.md
 - name: Reactors

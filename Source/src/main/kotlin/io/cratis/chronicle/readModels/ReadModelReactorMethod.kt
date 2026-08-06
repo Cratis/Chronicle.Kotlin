@@ -8,6 +8,7 @@ import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.callSuspend
 import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaMethod
 
 /**
@@ -81,6 +82,10 @@ internal data class ReadModelReactorMethod(
             } else {
                 declared
             }
+
+            // As with event handlers, a method on a non-public class needs reflection told before
+            // it can be invoked.
+            function.isAccessible = true
 
             return ReadModelReactorMethod(
                 changeType = changeType,

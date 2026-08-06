@@ -10,6 +10,7 @@ import kotlin.reflect.KFunction
 import kotlin.reflect.KParameter
 import kotlin.reflect.full.callSuspend
 import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.jvm.isAccessible
 
 /**
  * A single handler method on a reactor or reducer, together with the event type it handles.
@@ -63,6 +64,12 @@ internal data class EventHandlerMethod(
             val eventClass = eventParameter.type.classifier as? KClass<*> ?: return null
             val eventType = eventClass.findAnnotation<EventType>() ?: return null
             val eventTypeId = eventType.id.ifEmpty { eventClass.simpleName ?: return null }
+
+            // A handler declared on an `internal` or private class is ordinary Kotlin, but its JVM
+            // class is not public - so reflection refuses to invoke the method without being told,
+            // and the observer would fail on every event it was given.
+            function.isAccessible = true
+
             return EventHandlerMethod(function, eventClass, eventTypeId)
         }
     }
