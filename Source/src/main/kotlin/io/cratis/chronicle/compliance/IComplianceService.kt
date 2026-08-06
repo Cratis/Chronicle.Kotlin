@@ -5,4 +5,6 @@ package io.cratis.chronicle.compliance
 
 interface IComplianceService {
     suspend fun release(subject: String, schema: String = "{}", payload: String = "{}"): String
+
+    suspend fun deleteEncryptionKey(identifier: String)
 }

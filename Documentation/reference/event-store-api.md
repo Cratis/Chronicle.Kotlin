@@ -13,6 +13,8 @@ interface IChronicleClient : AutoCloseable {
         namespace: String = EventStoreNamespaceName.default.value
     ): EventStore
 
+    suspend fun getEventStores(): List<String>
+    fun evictEventStores()
     fun dispose()
 }
 ```
@@ -30,6 +32,12 @@ ChronicleClient(
     ChronicleOptions.fromConnectionString("chronicle://chronicle.internal")
 )
 ```
+
+`getEventStores` lists every event store known to the kernel — not just the
+ones this client has already opened via `getEventStore`. `evictEventStores`
+clears this client's internal cache of `EventStore` instances (and their
+per-store subscriptions) without disposing the client itself — useful
+between test classes that share a client instance.
 
 ---
 
@@ -49,37 +57,211 @@ interface IEventStore {
     val seeding: IEventSeedingService
     val readModels: IReadModelsService
     val unitOfWorkManager: UnitOfWorkManager
+    val compliance: IComplianceService
+    val eventTypes: IEventTypesService
+    val namespaces: INamespacesService
+    val externalServices: IExternalServicesService
+    val jobs: IJobsService
+    val eventStoreSubscriptions: IEventStoreSubscriptionsService
+    val webhooks: IWebhooksService
+    val identities: IIdentityManagerService
+
+    fun getEventSequence(id: EventSequenceId): IEventSequence
 }
 ```
 
-The concrete `EventStore` returned by `getEventStore` additionally exposes
-`compliance`, `eventTypes`, and `namespaces`.
+Every service is now on the interface itself — `compliance`, `eventTypes`,
+`namespaces`, `externalServices`, `jobs`, `eventStoreSubscriptions`,
+`webhooks`, and `identities` used to be available only on the concrete
+`EventStore` class; code written against `IEventStore` (for example in
+tests, behind a fake) now sees the full surface.
+
+`eventLog` is the default event log sequence (`EventSequenceId.eventLog`).
+Use `getEventSequence(id)` to get any other, non-default `IEventSequence` by
+id — for example one used exclusively by a specific subsystem.
 
 ---
 
-## IEventLog
+## IEventSequence and IEventLog
+
+`IEventLog` is `IEventSequence` plus a `transactional` entry point; both
+share the same read/write surface.
 
 <!-- validate: skip -->
 
 ```kotlin
-interface IEventLog : IEventSequence {
-    val transactional: ITransactionalEventSequence
+interface IEventSequence {
+    val id: EventSequenceId
+    val appendOperations: SharedFlow<List<AppendedEventWithResult>>
 
     suspend fun append(
         eventSourceId: String,
         event: Any,
         options: AppendOptions? = null
     ): AppendResult
-
     suspend fun appendMany(
         eventSourceId: String,
         events: List<Any>,
         options: AppendOptions? = null
     ): List<AppendResult>
-
     suspend fun hasEventsFor(eventSourceId: String): Boolean
+
+    suspend fun getTailSequenceNumber(
+        eventSourceId: String? = null
+    ): EventSequenceNumber
+    suspend fun getForEventSourceIdAndEventTypes(
+        eventSourceId: String,
+        eventTypes: List<KClass<*>>,
+        eventStreamType: String? = null,
+        eventStreamId: String? = null,
+        eventSourceType: String? = null
+    ): List<AppendedEvent>
+    suspend fun getFromSequenceNumber(
+        sequenceNumber: EventSequenceNumber,
+        eventSourceId: String? = null,
+        eventTypes: List<KClass<*>>? = null
+    ): List<AppendedEvent>
+    suspend fun getNextSequenceNumber(): EventSequenceNumber
+    suspend fun getTailSequenceNumberForObserver(
+        observerType: KClass<*>
+    ): EventSequenceNumber
+
+    suspend fun completeStream(
+        eventStreamType: String,
+        eventStreamId: String
+    ): CompleteStreamResult
+
+    suspend fun redact(
+        sequenceNumber: EventSequenceNumber,
+        reason: RedactionReason
+    )
+    suspend fun redactForEventSource(
+        eventSourceId: String,
+        reason: RedactionReason,
+        eventTypes: List<KClass<*>> = emptyList()
+    )
+}
+
+interface IEventLog : IEventSequence {
+    val transactional: ITransactionalEventSequence
 }
 ```
+
+### Reading events back
+
+`getForEventSourceIdAndEventTypes` gets events for one event source,
+narrowed to specific event types and (optionally) a specific stream.
+`getFromSequenceNumber` instead reads forward from a position in the
+sequence, optionally narrowed by event source and/or event type —
+useful for catching up from a bookmark. `getTailSequenceNumber` and
+`getNextSequenceNumber` report the current end of the sequence (or of one
+event source's events within it) and the sequence number the *next*
+appended event will receive, respectively. `getTailSequenceNumberForObserver`
+reports the tail relative to the event types a specific reactor or reducer
+type actually handles (discovered by reflection over its handler methods).
+
+<!-- validate: skip -->
+
+```kotlin
+data class AppendedEvent(
+    val context: EventContext,
+    val content: String
+)
+```
+
+`content` is the event's raw stored JSON — deserialize it with the concrete
+event class matching `context.eventType` to get a typed event object.
+
+### Redacting events
+
+`redact` permanently rewrites a single event's content, identified by its
+sequence number. `redactForEventSource` does the same for every event of a
+given event source, optionally narrowed to specific event types (an empty
+list, the default, redacts every event type for that source). **Both are
+destructive, irreversible content rewrites — not a soft delete or a field
+mask.** Once either call returns, the original content is gone from the
+event store for good. Use them only for a confirmed compliance/erasure
+request (e.g. GDPR "right to be forgotten"), typically alongside
+[`IComplianceService.deleteEncryptionKey`](#icomplianceservice) rather than
+instead of it — deleting the encryption key is non-destructive to event
+content (it just becomes unreadable), while redaction actually erases it.
+
+<!-- validate: skip -->
+
+```kotlin
+@JvmInline
+value class RedactionReason(val value: String)
+
+sealed class CompleteStreamResult {
+    data class Success(
+        val sequenceNumber: EventSequenceNumber
+    ) : CompleteStreamResult()
+    data object DefaultStreamCannotBeCompleted : CompleteStreamResult()
+    data object AlreadyCompleted : CompleteStreamResult()
+}
+```
+
+### Completing a stream
+
+`completeStream` marks an event stream type/id pair as closed so no further
+events can be appended to it, returning a `CompleteStreamResult`. The
+default stream (`"Default"` paired with the default event stream id, the
+one every plain `append`/`appendMany` call writes to) can never be
+completed. Completing an already-completed stream returns
+`CompleteStreamResult.AlreadyCompleted` rather than throwing.
+
+### Observing appends: `appendOperations`
+
+`appendOperations` is a hot `SharedFlow` that emits after every append made
+*through that specific `IEventSequence` instance* completes, whether it
+succeeded or failed — a single-event `append` emits a list of one element,
+a batch `appendMany` emits the whole batch. It does not emit for
+transactional appends made through `ITransactionalEventSequence` (those
+only emit, as part of the underlying batch, once the unit of work commits
+and the real append happens). Being a *hot* flow, only appends made after a
+subscriber starts collecting are seen — nothing is replayed.
+
+<!-- validate: skip -->
+
+```kotlin
+data class AppendedEventWithResult(
+    val context: EventContext,
+    val event: Any,
+    val result: AppendResult
+)
+```
+
+### Concurrency control
+
+Optimistic concurrency is opt-in per append, via
+`AppendOptions.concurrencyScope`:
+
+<!-- validate: skip -->
+
+```kotlin
+data class AppendOptions(
+    val correlationId: UUID? = null,
+    val concurrencyScope: ConcurrencyScope? = null
+)
+
+data class ConcurrencyScope(
+    val sequenceNumber: EventSequenceNumber,
+    val eventSourceId: Boolean = false,
+    val eventStreamType: String? = null,
+    val eventStreamId: String? = null,
+    val eventSourceType: String? = null,
+    val eventTypes: List<EventTypeDescriptor> = emptyList()
+)
+```
+
+Build one with `ConcurrencyScopeBuilder` rather than the constructor
+directly — `withSequenceNumber` sets the expected position, and
+`withEventSourceId`/`withEventStreamType`/`withEventStreamId`/
+`withEventSourceType`/`withEventType(s)` each narrow which dimension the
+check applies to. Leaving `concurrencyScope` unset (the default) is
+equivalent to `ConcurrencyScope.none` — the append is not concurrency
+checked. When the scope no longer matches, the append fails with
+`AppendResult.concurrencyViolation` set instead of throwing.
 
 ### AppendResult
 
@@ -89,6 +271,101 @@ interface IEventLog : IEventSequence {
 | `sequenceNumber` | `EventSequenceNumber` | Position in the event log |
 | `constraintViolations` | `List<ConstraintViolation>` | On failure |
 | `errors` | `List<AppendError>` | On failure |
+| `concurrencyViolation` | `ConcurrencyViolation?` | Set on stale scope |
+
+---
+
+## Unit of work
+
+`IEventStore.unitOfWorkManager` returns an `IUnitOfWorkManager`, which
+creates and tracks `IUnitOfWork` instances scoped to the current thread.
+
+<!-- validate: skip -->
+
+```kotlin
+interface IUnitOfWorkManager {
+    val current: IUnitOfWork
+    val hasCurrent: Boolean
+    fun tryGetFor(correlationId: CorrelationId): IUnitOfWork?
+    fun begin(): IUnitOfWork
+    fun begin(correlationId: CorrelationId): IUnitOfWork
+    fun setCurrent(unitOfWork: IUnitOfWork)
+}
+
+interface IUnitOfWork {
+    val isCompleted: Boolean
+    val correlationId: CorrelationId
+    val isSuccess: Boolean
+
+    fun addEvent(
+        eventSequenceId: EventSequenceId,
+        eventSourceId: String,
+        event: Any,
+        options: AppendOptions? = null
+    )
+    fun getEvents(): List<Any>
+    fun getConstraintViolations(): List<ConstraintViolation>
+    fun getConcurrencyViolations(): List<ConcurrencyViolation>
+    fun getAppendErrors(): List<AppendError>
+
+    suspend fun commit()
+    suspend fun rollback()
+
+    fun onCompleted(callback: (IUnitOfWork) -> Unit)
+    fun tryGetLastCommittedEventSequenceNumber(): EventSequenceNumber?
+}
+```
+
+`current` throws `NoUnitOfWorkHasBeenStarted` if `begin` hasn't been called
+on this thread — check `hasCurrent` first if that's expected. Prefer
+staging events through `store.eventLog.transactional.append`/`appendMany`
+(see [Transactions](../guides/transactions.md)) over calling `addEvent`
+directly; the transactional event sequence resolves the right
+`EventSequenceId` for you.
+
+After `commit()`, `isSuccess` reflects whether every staged event was
+appended without a constraint violation, concurrency violation, or append
+error; `getConstraintViolations()`/`getConcurrencyViolations()`/
+`getAppendErrors()` report the specifics, and
+`tryGetLastCommittedEventSequenceNumber()` returns the highest sequence
+number actually committed (`null` if nothing committed). `onCompleted`
+registers a callback invoked once, whether the unit of work ends via
+`commit()` or `rollback()` — it can be called multiple times to register
+several callbacks.
+
+---
+
+## IIdentityManagerService
+
+<!-- validate: skip -->
+
+```kotlin
+interface IIdentityManagerService {
+    suspend fun rename(subject: String, name: String)
+}
+```
+
+Renames the human-readable name the kernel has stored for the identity
+identified by `subject`. This only updates the stored display name; it
+does not change the `Identity` objects your process is currently using —
+see
+[Correlation and identity](/chronicle/correlation-identity-causation/).
+
+---
+
+## INamespacesService
+
+<!-- validate: skip -->
+
+```kotlin
+interface INamespacesService {
+    suspend fun ensure(namespaceName: String)
+    suspend fun getAll(): List<String>
+}
+```
+
+`ensure` creates a namespace if it doesn't already exist (idempotent).
+`getAll` lists every namespace in the event store.
 
 ---
 
@@ -123,12 +400,56 @@ interface IReducersService {
 ```kotlin
 interface IReadModelsService {
     suspend fun register(vararg readModelClasses: KClass<*>)
+
     suspend fun <T : Any> getInstanceByKey(
         readModelClass: KClass<T>,
         key: String
     ): T?
+
+    suspend fun <T : Any> getInstances(
+        readModelClass: KClass<T>,
+        eventCount: Long? = null
+    ): List<T>
+
+    suspend fun <T : Any> getSnapshotsById(
+        readModelClass: KClass<T>,
+        key: String
+    ): List<ReadModelSnapshot<T>>
+
+    fun <T : Any> watch(readModelClass: KClass<T>): Flow<ReadModelChangeset<T>>
+
+    suspend fun dehydrateSession(
+        readModelClass: KClass<*>,
+        key: String,
+        sessionId: String
+    )
+
+    suspend fun <T : Any> release(instance: T, subject: String? = null): T
+    suspend fun <T : Any> releaseMany(instances: List<T>): List<T>
+
+    val materialized: IMaterializedReadModels
 }
 ```
+
+- `getInstances` replays events in-process to produce every instance of a
+  read model, optionally capped to the first `eventCount` events.
+- `getSnapshotsById` returns the full history of intermediate states for
+  one read model key, grouped by correlation id — each `ReadModelSnapshot`
+  carries the deserialized `instance`, the `events` that produced it, and
+  (when known) when they `occurred` and their `correlationId`. Unlike
+  `getInstanceByKey`, which only returns the latest state, this is the way
+  to inspect how a read model got to where it is.
+- `watch` returns a `Flow<ReadModelChangeset<T>>` of live changes,
+  deserialized straight into `T` — no polling, no manual JSON parsing. Each
+  `ReadModelChangeset` carries the `modelKey`, the `changeType`
+  (`Added`/`Modified`/`Removed`), the deserialized `readModel` (`null` when
+  `removed`), and the triggering event's `eventSequenceNumber`/`occurred`/
+  `correlationId` when known.
+- `release`/`releaseMany` decrypt `@Pii`-annotated properties on one or a
+  batch of read model instances. The compliance subject defaults to each
+  instance's `id` property if present; pass `subject` explicitly to
+  `release` when there is no `id` property or it isn't the compliance
+  subject.
 
 ---
 
@@ -154,6 +475,36 @@ interface IConstraintsService {
 }
 ```
 
+`IConstraintBuilder`, passed into `IConstraint.define`, can additionally
+scope every constraint added through it — see
+[Constraint scoping](../guides/constraints.md).
+
+---
+
+## IEventTypesService
+
+<!-- validate: skip -->
+
+```kotlin
+interface IEventTypesService {
+    suspend fun register(vararg eventClasses: KClass<*>)
+    suspend fun registerSingle(eventClass: KClass<*>)
+    suspend fun getAllGenerationsForEventType(
+        eventTypeId: String
+    ): List<Events.EventTypeRegistration>
+    fun getRegisteredEventTypes(): List<EventTypeDescriptor>
+}
+```
+
+`register`/`registerSingle` accept both plain `@EventType`-annotated
+classes and [`IEventTypeMigration`](../guides/event-evolution.md) classes,
+merging them into one registration per event type id, schema included
+(generated from the latest generation's class — see
+[Annotations](annotations.md)). `getRegisteredEventTypes` returns every
+event type registered through this instance so far; it's what
+`eventStoreSubscriptions.subscribe` falls back to when a subscription
+isn't narrowed to specific event types.
+
 ---
 
 ## IEventSeedingService
@@ -166,6 +517,9 @@ interface IEventSeedingService {
 }
 ```
 
+See [Seeding](../guides/seeding.md) for `IEventSeedingBuilder`, including
+namespace-scoped seed data via `forNamespace`.
+
 ---
 
 ## IComplianceService
@@ -174,9 +528,20 @@ interface IEventSeedingService {
 
 ```kotlin
 interface IComplianceService {
-    suspend fun release(subject: String, schema: String, payload: String): String
+    suspend fun release(
+        subject: String,
+        schema: String,
+        payload: String
+    ): String
+    suspend fun deleteEncryptionKey(identifier: String)
 }
 ```
+
+`deleteEncryptionKey` deletes the encryption key for a compliance subject —
+a "right to be forgotten" erasure that leaves existing encrypted PII
+content permanently undecryptable, without rewriting the events
+themselves. Compare with [`redact`/`redactForEventSource`](#redacting-events),
+which instead rewrites event content directly.
 
 ---
 
@@ -184,22 +549,34 @@ interface IComplianceService {
 
 Every service method above is a Kotlin `suspend` function and cannot be
 called from Java directly. The `io.cratis.chronicle.java` package provides
-blocking bridges — each is a static method taking the service as its first
-argument.
+blocking bridges — each is a static method taking the service (or
+sequence) as its first argument. A few Kotlin value classes
+(`EventSequenceNumber`, `EventSequenceId`, `EventTypeId`, `RedactionReason`)
+have a private constructor on the JVM ABI and no ordinary getter, so
+bridges that touch them take and return plain `long`/`String` instead.
 
-| Bridge | Wraps |
-| --- | --- |
-| `EventLogJavaBridge` | `append`, `appendMany`, `hasEventsFor` |
-| `TransactionalEventSequenceJavaBridge` | `append`, `appendMany` |
-| `EventTypesServiceJavaBridge` | `register` |
-| `ReadModelsJavaBridge` | `register`, `getInstanceByKey` |
-| `ReactorsServiceJavaBridge` | `register` |
-| `ReducersServiceJavaBridge` | `register` |
-| `ProjectionsServiceJavaBridge` | `register` |
-| `ConstraintsServiceJavaBridge` | `register` |
-| `EventSeedingServiceJavaBridge` | `seed` |
-| `NamespacesServiceJavaBridge` | `ensure` |
-| `UnitOfWorkJavaBridge` | `commit`, `rollback` |
+- `EventLogJavaBridge` — `append`, `appendMany`, `hasEventsFor`,
+  `getForEventSourceIdAndEventTypes`, `getFromSequenceNumber`,
+  `getTailSequenceNumber`, `getNextSequenceNumber`, `completeStream`,
+  `redact`, `redactForEventSource`, `watchAppendOperations`
+- `TransactionalEventSequenceJavaBridge` — `append`, `appendMany`
+- `ConcurrencyScopeBuilderJavaBridge` — `withSequenceNumber`
+- `EventTypesServiceJavaBridge` — `register`, `registerSingle`,
+  `getAllGenerationsForEventType`
+- `ReadModelsJavaBridge` — `register`, `getInstanceByKey`,
+  `getInstances`, `getSnapshotsById`, `watch`, `dehydrateSession`,
+  `release`, `releaseMany`, `getMaterializedInstances`
+- `ReactorsServiceJavaBridge` — `register`
+- `ReducersServiceJavaBridge` — `register`
+- `ProjectionsServiceJavaBridge` — `register`
+- `ConstraintsServiceJavaBridge` — `register`
+- `EventSeedingServiceJavaBridge` — `seed`
+- `EventSeedingBuilderJavaBridge` / `EventSeedingScopeBuilderJavaBridge`
+  — `forEventType`
+- `NamespacesServiceJavaBridge` — `ensure`, `getAll`
+- `IdentityManagerServiceJavaBridge` — `rename`
+- `UnitOfWorkJavaBridge` — `commit`, `rollback`
+- `ComplianceServiceJavaBridge` — `release`, `deleteEncryptionKey`
 
 <!-- validate: body needs=store -->
 
@@ -215,7 +592,11 @@ var result = EventLogJavaBridge.append(
 
 `EventSequenceNumber` is a Kotlin value class, so an `AppendResult` has no
 ordinary getter for it on the JVM. Read it with
-`EventLogJavaBridge.getSequenceNumber(result)`.
+`EventLogJavaBridge.getSequenceNumber(result)`. The same applies to
+`getTailSequenceNumber`/`getNextSequenceNumber` (they return `long`
+directly) and to `redact`/`redactForEventSource` (they take a `long`
+sequence number and a plain `String` reason rather than
+`EventSequenceNumber`/`RedactionReason`).
 
 `ConstraintBuilderJavaBridge`, `UniqueConstraintBuilderJavaBridge`,
 `ProjectionBuilderJavaBridge`, and `CausationManagerJavaBridge` cover the

@@ -9,13 +9,21 @@ import Cratis.Chronicle.Contracts.NamespacesGrpcKt
 class NamespacesService(
     private val eventStoreName: String,
     private val stub: NamespacesGrpcKt.NamespacesCoroutineStub
-) {
+) : INamespacesService {
     /** Ensures a namespace exists in the event store, creating it if absent. */
-    suspend fun ensure(namespaceName: String) {
+    override suspend fun ensure(namespaceName: String) {
         val request = CratisChronicleContracts.EnsureNamespace.newBuilder()
             .setEventStore(eventStoreName)
             .setName(namespaceName)
             .build()
         stub.ensure(request)
+    }
+
+    /** Lists all namespaces in the event store. */
+    override suspend fun getAll(): List<String> {
+        val request = CratisChronicleContracts.GetNamespacesRequest.newBuilder()
+            .setEventStore(eventStoreName)
+            .build()
+        return stub.getNamespaces(request).itemsList
     }
 }

@@ -6,15 +6,19 @@ package io.cratis.chronicle.samples.console;
 import io.cratis.chronicle.IEventStore;
 import io.cratis.chronicle.compliance.Pii;
 import io.cratis.chronicle.events.EventType;
+import io.cratis.chronicle.eventSequences.AppendedEvent;
 import io.cratis.chronicle.eventSequences.AppendResult;
 import io.cratis.chronicle.readModels.ReadModel;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import io.cratis.chronicle.java.EventLogJavaBridge;
 import io.cratis.chronicle.java.ReadModelsJavaBridge;
+import io.cratis.chronicle.java.ComplianceServiceJavaBridge;
+import io.cratis.chronicle.EventStore;
 
 @EventType
 record CustomerRegistered(
@@ -246,6 +250,61 @@ public class Compliance {
         System.out.println(fmt("Postal code", customer.getPostalCode(), true));
         System.out.println(fmt("Country", customer.getCountry(), false));
         System.out.println("  PII fields are stored encrypted at rest — values above are the encrypted form.");
+    }
+
+    /**
+     * Deletes the encryption key used for the sample customer's PII — a real "right to be forgotten" erasure.
+     * Existing encrypted PII values become permanently unreadable; no re-encryption or rollback is possible.
+     */
+    public static void deleteCustomerEncryptionKey(EventStore store) {
+        SampleCustomerData sampleCustomer = SampleCustomerData.instance;
+        ComplianceServiceJavaBridge.deleteEncryptionKey(store.getCompliance(), sampleCustomer.id);
+        System.out.println("[pii] Deleted the encryption key for " + sampleCustomer.fullName + " (" +
+                          sampleCustomer.id + "). Its encrypted PII can no longer be decrypted.");
+    }
+
+    /**
+     * Permanently redacts the most recent address-change event for {@code person}.
+     * <p>
+     * Redaction is a destructive content rewrite, not a soft delete or a field mask — once this
+     * returns, the original address content for that specific event is gone from the event store
+     * for good. Demonstrates {@code getForEventSourceIdAndEventTypes} to locate the event's
+     * sequence number, then {@code redact} to erase its content.
+     */
+    public static void redactLastAddressChange(IEventStore store, Person person) throws Exception {
+        List<AppendedEvent> addressEvents = EventLogJavaBridge.getForEventSourceIdAndEventTypes(
+            store.getEventLog(),
+            person.getId(),
+            List.of(EmployeeAddressSet.class, EmployeeMoved.class)
+        );
+        AppendedEvent last = addressEvents.stream()
+            .max(Comparator.comparingLong(e -> e.getContext().getSequenceNumber()))
+            .orElse(null);
+        if (last == null) {
+            System.out.println("[redact] " + person.getFirstName() + " " + person.getLastName() +
+                              " has no address-change events to redact.");
+            return;
+        }
+        long sequenceNumber = last.getContext().getSequenceNumber();
+        EventLogJavaBridge.redact(store.getEventLog(), sequenceNumber, "Sample: erase address history");
+        System.out.println("[redact] Permanently redacted the address event at sequence " + sequenceNumber +
+                          " for " + person.getFirstName() + " " + person.getLastName() +
+                          ". The original content is gone — this cannot be undone.");
+    }
+
+    /**
+     * Permanently redacts every event for the sample customer — a full "right to be forgotten" erasure.
+     * <p>
+     * More thorough than {@link #deleteCustomerEncryptionKey}: instead of leaving encrypted-but-unreadable
+     * content behind, this rewrites every event's content for the event source, gone for good. Like
+     * {@link #redactLastAddressChange}, this is destructive and irreversible — only use it for a
+     * confirmed compliance/erasure request.
+     */
+    public static void redactAllCustomerEvents(IEventStore store) throws Exception {
+        SampleCustomerData sampleCustomer = SampleCustomerData.instance;
+        EventLogJavaBridge.redactForEventSource(store.getEventLog(), sampleCustomer.id, "Sample: GDPR erasure request", List.of());
+        System.out.println("[redact] Permanently redacted every event for " + sampleCustomer.fullName + " (" +
+                          sampleCustomer.id + "). This cannot be undone.");
     }
 
     private static String fmt(String label, String value, boolean isPii) {

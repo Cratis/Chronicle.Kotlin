@@ -3,12 +3,26 @@
 
 package io.cratis.chronicle.eventSequences
 
+import kotlinx.coroutines.flow.SharedFlow
+import kotlin.reflect.KClass
+
 /**
  * Defines the API surface for an event sequence.
  */
 interface IEventSequence {
     /** The unique identifier of this event sequence. */
     val id: EventSequenceId
+
+    /**
+     * A hot [SharedFlow] that emits a list of [AppendedEventWithResult] after each append operation
+     * made through this specific [IEventSequence] instance.
+     *
+     * A single-event [append] emits a list of one element; a batch [appendMany] emits the full
+     * batch. Subscribers receive the emission after the operation has completed, whether it
+     * succeeded or failed. This flow does not emit for transactional appends through
+     * [ITransactionalEventSequence].
+     */
+    val appendOperations: SharedFlow<List<AppendedEventWithResult>>
 
     /**
      * Appends a single event to the event sequence.
@@ -37,4 +51,94 @@ interface IEventSequence {
      * @return `true` if events exist for the given source, otherwise `false`.
      */
     suspend fun hasEventsFor(eventSourceId: String): Boolean
+
+    /**
+     * Gets the sequence number of the last (tail) event in the sequence.
+     *
+     * @param eventSourceId Optional event source identifier to get the tail for.
+     *   If not specified, the tail sequence number across all event sources is returned.
+     * @return The tail [EventSequenceNumber].
+     */
+    suspend fun getTailSequenceNumber(eventSourceId: String? = null): EventSequenceNumber
+
+    /**
+     * Gets all events for a specific event source, optionally filtered and narrowed further.
+     *
+     * @param eventSourceId The event source identifier to get events for.
+     * @param eventTypes The event types to filter for.
+     * @param eventStreamType Optional event stream type to narrow to. Defaults to all stream types.
+     * @param eventStreamId Optional event stream identifier to narrow to. Defaults to all streams.
+     * @param eventSourceType Optional event source type to narrow to. Defaults to all source types.
+     * @return A list of [AppendedEvent].
+     */
+    suspend fun getForEventSourceIdAndEventTypes(
+        eventSourceId: String,
+        eventTypes: List<KClass<*>>,
+        eventStreamType: String? = null,
+        eventStreamId: String? = null,
+        eventSourceType: String? = null
+    ): List<AppendedEvent>
+
+    /**
+     * Gets all events after and including the given sequence number, with optional narrowing.
+     *
+     * @param sequenceNumber The [EventSequenceNumber] of the first event to get from.
+     * @param eventSourceId Optional event source identifier to filter by.
+     * @param eventTypes Optional event types to filter by.
+     * @return A list of [AppendedEvent].
+     */
+    suspend fun getFromSequenceNumber(
+        sequenceNumber: EventSequenceNumber,
+        eventSourceId: String? = null,
+        eventTypes: List<KClass<*>>? = null
+    ): List<AppendedEvent>
+
+    /**
+     * Gets the sequence number that will be assigned to the next appended event.
+     *
+     * @return The next [EventSequenceNumber].
+     */
+    suspend fun getNextSequenceNumber(): EventSequenceNumber
+
+    /**
+     * Gets the sequence number of the last (tail) event relevant to a specific observer type.
+     *
+     * @param observerType The reactor or reducer type to get the tail for.
+     * @return The tail [EventSequenceNumber], based on the tail of the event types the observer handles.
+     */
+    suspend fun getTailSequenceNumberForObserver(observerType: KClass<*>): EventSequenceNumber
+
+    /**
+     * Completes a stream so that no further events can be appended to it.
+     *
+     * @param eventStreamType The event stream type identifying the stream's type.
+     * @param eventStreamId The event stream id identifying the stream within the type.
+     * @return A [CompleteStreamResult] — [CompleteStreamResult.Success] with the tail sequence number
+     *   on success, or one of the error cases describing why the operation was rejected.
+     * @remarks The default stream — event stream type `"Default"` paired with the default event stream
+     *   id — can never be completed. Completing an already-completed stream returns
+     *   [CompleteStreamResult.AlreadyCompleted] and leaves the stream in its completed state.
+     */
+    suspend fun completeStream(eventStreamType: String, eventStreamId: String): CompleteStreamResult
+
+    /**
+     * Redacts a specific event instance, permanently rewriting its content.
+     *
+     * This is a destructive content rewrite, not a field mask - the original content is gone
+     * once this returns. Use it for compliance-driven removal of a single event's payload.
+     *
+     * @param sequenceNumber The [EventSequenceNumber] of the event to redact.
+     * @param reason The [RedactionReason] for redacting.
+     */
+    suspend fun redact(sequenceNumber: EventSequenceNumber, reason: RedactionReason)
+
+    /**
+     * Redacts all events for a specific event source, optionally filtered to specific event types.
+     *
+     * @param eventSourceId The event source identifier to redact events for.
+     * @param reason The [RedactionReason] for redacting.
+     * @param eventTypes Optional event types to narrow the redaction to. If empty, all event types
+     *   for the event source are redacted.
+     */
+    suspend fun redactForEventSource(eventSourceId: String, reason: RedactionReason, eventTypes: List<KClass<*>> = emptyList())
 }

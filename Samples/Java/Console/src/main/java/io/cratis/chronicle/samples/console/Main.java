@@ -34,6 +34,9 @@ import io.cratis.chronicle.java.ProjectionsServiceJavaBridge;
 import io.cratis.chronicle.java.NamespacesServiceJavaBridge;
 import io.cratis.chronicle.java.EventSeedingServiceJavaBridge;
 import io.cratis.chronicle.java.CausationManagerJavaBridge;
+import io.cratis.chronicle.java.WebhooksServiceJavaBridge;
+import io.cratis.chronicle.java.IdentityManagerServiceJavaBridge;
+import io.cratis.chronicle.readModels.ReadModelSnapshot;
 
 public class Main {
     private static final List<String> titles = Arrays.asList(
@@ -215,14 +218,70 @@ public class Main {
     private static void readModel(IEventStore store, Person person) throws Exception {
         EmployeeState state = ReadModelsJavaBridge.getInstanceByKey(store.getReadModels(), EmployeeState.class, person.getId());
         if (state == null) {
-            System.out.println("[read-model] No state found for " + person.getFirstName() + " " + 
+            System.out.println("[read-model] No state found for " + person.getFirstName() + " " +
                               person.getLastName() + " yet.");
         } else {
             String emailDisplay = state.getEmail().isEmpty() ? "no email yet" : state.getEmail();
             String addressDisplay = state.getAddress().isEmpty() ? "no address yet" : state.getAddress();
-            System.out.println("[read-model] " + person.getFirstName() + " " + person.getLastName() + 
+            System.out.println("[read-model] " + person.getFirstName() + " " + person.getLastName() +
                               ": " + state.getTitle() + " <" + emailDisplay + "> @ " + addressDisplay);
         }
+    }
+
+    /** Lists every EmployeeDetails instance by replaying events in-process — demonstrates IReadModelsService.getInstances. */
+    private static void listEmployeeDetails(IEventStore store) throws Exception {
+        List<EmployeeDetails> details = ReadModelsJavaBridge.getInstances(store.getReadModels(), EmployeeDetails.class);
+        if (details.isEmpty()) {
+            System.out.println("[read-models] No EmployeeDetails instances yet.");
+            return;
+        }
+        System.out.println("[read-models] " + details.size() + " employee detail(s) (via getInstances, replayed in-process):");
+        for (EmployeeDetails detail : details) {
+            System.out.println("  " + detail.getFirstName() + " " + detail.getLastName() + " - " + detail.getTitle() +
+                " (" + detail.getPromotionCount() + " promotion(s)) @ " + detail.getCity() + ", " + detail.getCountry());
+        }
+    }
+
+    /**
+     * Lists every EmployeeState snapshot for {@code person}, grouped by correlation id, from the
+     * beginning of the event log. Demonstrates {@code getSnapshotsById}, which — unlike
+     * {@code getInstanceByKey} — returns the full history of intermediate states instead of only
+     * the latest one.
+     */
+    private static void listEmployeeStateSnapshots(IEventStore store, Person person) throws Exception {
+        List<ReadModelSnapshot<EmployeeState>> snapshots =
+            ReadModelsJavaBridge.getSnapshotsById(store.getReadModels(), EmployeeState.class, person.getId());
+        if (snapshots.isEmpty()) {
+            System.out.println("[snapshots] No EmployeeState snapshots found for " + person.getFirstName() +
+                              " " + person.getLastName() + " yet.");
+            return;
+        }
+        System.out.println("[snapshots] " + snapshots.size() + " EmployeeState snapshot(s) for " +
+                          person.getFirstName() + " " + person.getLastName() + " (via getSnapshotsById):");
+        for (int index = 0; index < snapshots.size(); index++) {
+            ReadModelSnapshot<EmployeeState> snapshot = snapshots.get(index);
+            String occurred = snapshot.getOccurred() != null ? snapshot.getOccurred().toString() : "unknown time";
+            System.out.println("  #" + index + " @ " + occurred + " (correlation " + snapshot.getCorrelationId() +
+                              "): title='" + snapshot.getInstance().getTitle() + "', email='" +
+                              snapshot.getInstance().getEmail() + "'");
+        }
+    }
+
+    private static final List<String> renamedDisplayNames = Arrays.asList(
+        "Alice A. Smith", "Bob B. Jones", "The System (renamed)"
+    );
+
+    /**
+     * Renames the current user's identity via {@code IdentityManager.rename}. This updates the
+     * human-readable name the kernel has stored for that identity's subject — switch users with
+     * 'i' and run this again to rename a different one.
+     */
+    private static void renameCurrentUser(IEventStore store, int userIndex) {
+        Identity user = users.get(userIndex);
+        String newName = renamedDisplayNames.get(userIndex % renamedDisplayNames.size());
+        IdentityManagerServiceJavaBridge.rename(store.getIdentities(), user.getSubject(), newName);
+        System.out.println("[identity] Renamed identity " + user.getUserName() + " (" + user.getSubject() +
+                          ") to '" + newName + "' via IdentityManager.rename.");
     }
 
     private static void writeInstructions() {
@@ -232,9 +291,19 @@ Use 1-3 to select an employee. Then:
   P = Promote          A = Move (change address)
   E = Set email        U = Try to take the next employee's email (constraint violation)
   R = Read model       T = Transactional update
+  L = List employees (read models via getInstances)
+  M = List EmployeeState snapshot history (getSnapshotsById)
+  D = Redact employee's last address event (permanent, destructive!)
   C = Register customer with PII   V = View customer PII read model
+  K = Delete customer's PII encryption key (right to be forgotten)
+  G = Redact ALL of the customer's events (GDPR erasure, permanent, destructive!)
+  N = Rename current user's identity (IdentityManager.rename)
+  W = List webhooks    J = List jobs    S = List event store subscriptions
   I = Switch user (cycle: Alice Smith -> Bob Jones -> System)
   H or ? = Show this menu          Q = Quit
+
+EmployeeState changes are watched live in the background via typed watch() -
+look for "[watch]" lines after actions that change title/email.
 """);
     }
 
@@ -286,7 +355,13 @@ Use 1-3 to select an employee. Then:
                 EmployeeEmailSet.class,
                 EmployeeMoved.class,
                 CustomerRegistered.class,
-                CustomerAddressUpdated.class
+                CustomerAddressUpdated.class,
+                // Reactor side-effect events appended by HrNotificationReactor.
+                WelcomePackageRequested.class,
+                PromotionAudited.class,
+                // Owned by the external payroll event store, but this store still needs the schema
+                // to store events arriving through the payroll-inbox subscription.
+                PayrollRunCompleted.class
             );
 
             // Customer has no reducer or projection — register it explicitly so Chronicle knows its schema.
@@ -295,10 +370,26 @@ Use 1-3 to select an employee. Then:
             // Reducers auto-register their read models (EmployeeState, CustomerDetails) with observerType=Reducer.
             ReducersServiceJavaBridge.register(store.getReducers(), new EmployeeStateReducer());
             ReducersServiceJavaBridge.register(store.getReducers(), new CustomerReducer());
+            // Typed watch(): observe live EmployeeState changes in the background for as long as the
+            // sample runs. Deserializes each changeset straight into EmployeeState — no manual JSON parsing.
+            ReadModelsJavaBridge.watch(store.getReadModels(), EmployeeState.class, changeset -> {
+                EmployeeState model = changeset.getReadModel();
+                String summary = (changeset.getRemoved() || model == null)
+                    ? "removed"
+                    : model.getTitle() + " <" + model.getEmail() + ">";
+                System.out.println("\n[watch] EmployeeState '" + changeset.getModelKey() + "' " +
+                    changeset.getChangeType() + ": " + summary);
+            });
             // Declarative projection: a separate class implements IProjectionFor<Employee>.
             ProjectionsServiceJavaBridge.register(store.getProjections(), new EmployeeListProjection());
             // Model-bound projection: EmployeeDetails carries @FromEvent/@SetFrom — no separate projection class needed.
             ProjectionsServiceJavaBridge.register(store.getProjections(), EmployeeDetails.class);
+            // External service: an HTTP payroll provider secured with a bearer token.
+            ExternalServices.registerPayrollExternalService(store);
+            // Discoverable webhook: notifies an external HR system whenever an employee is hired.
+            WebhooksServiceJavaBridge.register(store.getWebhooks(), new EmployeeHiredWebhook());
+            // Event store subscription: ingest payroll runs from the external payroll event store's outbox.
+            Payroll.setupPayrollIntegration(store);
             // Ensure the Default namespace exists so the seeding grain can distribute seeds to it.
             NamespacesServiceJavaBridge.ensure(store.getNamespaces(), "Default");
             EventSeedingServiceJavaBridge.seed(store.getSeeding(), new EmployeeSeeder());
@@ -347,8 +438,17 @@ Use 1-3 to select an employee. Then:
                     case "u" -> stealEmail(store, selectedIndex, users.get(userIndex));
                     case "r" -> readModel(store, Employees.employees.get(selectedIndex));
                     case "t" -> transact(store, selectedIndex, users.get(userIndex), random);
+                    case "l" -> listEmployeeDetails(store);
+                    case "m" -> listEmployeeStateSnapshots(store, Employees.employees.get(selectedIndex));
+                    case "d" -> Compliance.redactLastAddressChange(store, Employees.employees.get(selectedIndex));
                     case "c" -> Compliance.registerCustomerWithPii(store);
                     case "v" -> Compliance.showCustomerReadModel(store);
+                    case "k" -> Compliance.deleteCustomerEncryptionKey(store);
+                    case "g" -> Compliance.redactAllCustomerEvents(store);
+                    case "n" -> renameCurrentUser(store, userIndex);
+                    case "w" -> Webhooks.listWebhooks(store);
+                    case "j" -> Jobs.listJobs(store);
+                    case "s" -> Payroll.listEventStoreSubscriptions(store);
                     case "h", "?" -> writeInstructions();
                 }
             }

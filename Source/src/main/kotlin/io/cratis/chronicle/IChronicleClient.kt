@@ -19,6 +19,22 @@ interface IChronicleClient : AutoCloseable {
         namespace: String = EventStoreNamespaceName.default.value
     ): EventStore
 
+    /**
+     * Lists all event stores known to the kernel — not just the ones cached locally by this client.
+     *
+     * @return The names of all event stores.
+     */
+    suspend fun getEventStores(): List<String>
+
+    /**
+     * Evicts every cached [EventStore], releasing it from this client's internal cache.
+     *
+     * Used to release per-event-store subscriptions when the calling environment needs to reset
+     * client state without disposing the client itself — for example, between test classes that
+     * share an [IChronicleClient] instance.
+     */
+    fun evictEventStores()
+
     /** Releases all resources held by this client. */
     fun dispose()
 

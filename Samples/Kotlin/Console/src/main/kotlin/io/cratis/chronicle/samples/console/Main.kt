@@ -11,6 +11,8 @@ import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.auditing.causationManager
 import io.cratis.chronicle.identity.Identity
 import io.cratis.chronicle.identity.identityProvider
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 private val titles = listOf(
@@ -145,6 +147,52 @@ private suspend fun readModel(store: IEventStore, person: Person) {
     }
 }
 
+/** Lists every EmployeeDetails instance by replaying events in-process — demonstrates [io.cratis.chronicle.readModels.IReadModelsService.getInstances]. */
+private suspend fun listEmployeeDetails(store: IEventStore) {
+    val details = store.readModels.getInstances(EmployeeDetails::class)
+    if (details.isEmpty()) {
+        println("[read-models] No EmployeeDetails instances yet.")
+        return
+    }
+    println("[read-models] ${details.size} employee detail(s) (via getInstances, replayed in-process):")
+    details.forEach { detail ->
+        println("  ${detail.firstName} ${detail.lastName} - ${detail.title} (${detail.promotionCount} promotion(s)) @ ${detail.city}, ${detail.country}")
+    }
+}
+
+/**
+ * Lists every EmployeeState snapshot for [person], grouped by correlation id, from the beginning
+ * of the event log. Demonstrates [io.cratis.chronicle.readModels.IReadModelsService.getSnapshotsById],
+ * which — unlike [io.cratis.chronicle.readModels.IReadModelsService.getInstanceByKey] — returns the
+ * full history of intermediate states instead of only the latest one.
+ */
+private suspend fun listEmployeeStateSnapshots(store: IEventStore, person: Person) {
+    val snapshots = store.readModels.getSnapshotsById(EmployeeState::class, person.id)
+    if (snapshots.isEmpty()) {
+        println("[snapshots] No EmployeeState snapshots found for ${person.firstName} ${person.lastName} yet.")
+        return
+    }
+    println("[snapshots] ${snapshots.size} EmployeeState snapshot(s) for ${person.firstName} ${person.lastName} (via getSnapshotsById):")
+    snapshots.forEachIndexed { index, snapshot ->
+        val occurred = snapshot.occurred?.toString() ?: "unknown time"
+        println("  #$index @ $occurred (correlation ${snapshot.correlationId}): title='${snapshot.instance.title}', email='${snapshot.instance.email}'")
+    }
+}
+
+private val renamedDisplayNames = listOf("Alice A. Smith", "Bob B. Jones", "The System (renamed)")
+
+/**
+ * Renames the current user's identity via [io.cratis.chronicle.identities.IIdentityManagerService.rename].
+ * This updates the human-readable name the kernel has stored for that identity's subject — switch
+ * users with 'i' and run this again to rename a different one.
+ */
+private suspend fun renameCurrentUser(store: IEventStore, userIndex: Int) {
+    val user = users[userIndex]
+    val newName = renamedDisplayNames[userIndex % renamedDisplayNames.size]
+    store.identities.rename(user.subject, newName)
+    println("[identity] Renamed identity ${user.userName} (${user.subject}) to '$newName' via IdentityManager.rename.")
+}
+
 private fun writeInstructions() {
     println("""
 
@@ -152,9 +200,19 @@ Use 1-3 to select an employee. Then:
   P = Promote          A = Move (change address)
   E = Set email        U = Try to take the next employee's email (constraint violation)
   R = Read model       T = Transactional update
+  L = List employees (read models via getInstances)
+  M = List EmployeeState snapshot history (getSnapshotsById)
+  D = Redact employee's last address event (permanent, destructive!)
   C = Register customer with PII   V = View customer PII read model
+  K = Delete customer's PII encryption key (right to be forgotten)
+  G = Redact ALL of the customer's events (GDPR erasure, permanent, destructive!)
+  N = Rename current user's identity (IdentityManager.rename)
+  W = List webhooks    J = List jobs    S = List event store subscriptions
   I = Switch user (cycle: Alice Smith -> Bob Jones -> System)
   H or ? = Show this menu          Q = Quit
+
+EmployeeState changes are watched live in the background via typed watch() -
+look for "[watch]" lines after actions that change title/email.
 """.trimIndent())
 }
 
@@ -199,7 +257,13 @@ fun main() = runBlocking {
             EmployeeEmailSet::class,
             EmployeeMoved::class,
             CustomerRegistered::class,
-            CustomerAddressUpdated::class
+            CustomerAddressUpdated::class,
+            // Reactor side-effect events appended by HrNotificationReactor.
+            WelcomePackageRequested::class,
+            PromotionAudited::class,
+            // Owned by the external payroll event store, but this store still needs the schema
+            // to store events arriving through the payroll-inbox subscription.
+            PayrollRunCompleted::class
         )
 
         // Customer has no reducer or projection — register it explicitly so Chronicle knows its schema.
@@ -208,10 +272,25 @@ fun main() = runBlocking {
         // Reducers auto-register their read models (EmployeeState, CustomerDetails) with observerType=Reducer.
         store.reducers.register(EmployeeStateReducer())
         store.reducers.register(CustomerReducer())
+        // Typed watch(): observe live EmployeeState changes in the background for as long as the
+        // sample runs. Deserializes each changeset straight into EmployeeState — no manual JSON parsing.
+        launch {
+            store.readModels.watch(EmployeeState::class).collect { changeset ->
+                val model = changeset.readModel
+                val summary = if (changeset.removed || model == null) "removed" else "${model.title} <${model.email}>"
+                println("\n[watch] EmployeeState '${changeset.modelKey}' ${changeset.changeType}: $summary")
+            }
+        }
         // Declarative projection: a separate class implements IProjectionFor<Employee>.
         store.projections.register(EmployeeListProjection())
         // Model-bound projection: EmployeeDetails carries @FromEvent/@SetFrom — no separate projection class needed.
         store.projections.register(EmployeeDetails::class)
+        // External service: an HTTP payroll provider secured with a bearer token.
+        registerPayrollExternalService(store)
+        // Discoverable webhook: notifies an external HR system whenever an employee is hired.
+        store.webhooks.register(EmployeeHiredWebhook())
+        // Event store subscription: ingest payroll runs from the external payroll event store's outbox.
+        setupPayrollIntegration(store)
         // Ensure the Default namespace exists so the seeding grain can distribute seeds to it.
         store.namespaces.ensure("Default")
         store.seeding.seed(EmployeeSeeder())
@@ -245,8 +324,17 @@ fun main() = runBlocking {
                 "u" -> stealEmail(store, selectedIndex, users[userIndex])
                 "r" -> readModel(store, employees[selectedIndex])
                 "t" -> transact(store, selectedIndex, users[userIndex], random)
+                "l" -> listEmployeeDetails(store)
+                "m" -> listEmployeeStateSnapshots(store, employees[selectedIndex])
+                "d" -> redactLastAddressChange(store, employees[selectedIndex])
                 "c" -> registerCustomerWithPii(store)
                 "v" -> showCustomerReadModel(store)
+                "k" -> deleteCustomerEncryptionKey(store)
+                "g" -> redactAllCustomerEvents(store)
+                "n" -> renameCurrentUser(store, userIndex)
+                "w" -> listWebhooks(store)
+                "j" -> listJobs(store)
+                "s" -> listEventStoreSubscriptions(store)
                 "h", "?" -> writeInstructions()
             }
         }

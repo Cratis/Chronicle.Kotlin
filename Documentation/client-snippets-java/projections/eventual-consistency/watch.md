@@ -1,6 +1,32 @@
-```text
-Java does not support this workflow yet.
-`IReadModelsService` only exposes `getInstanceByKey` — there is no reactive or
-streaming API to watch a read model for changes. Track the client SDK issue
-before relying on observable read models from Java.
+```java
+import io.cratis.chronicle.EventStore;
+import io.cratis.chronicle.readModels.ReadModel;
+
+import io.cratis.chronicle.java.ReadModelsJavaBridge;
+
+@ReadModel
+class WatchAccountInfo {
+    private String name = "";
+    private double balance = 0.0;
+
+    public WatchAccountInfo() {}
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public double getBalance() { return balance; }
+    public void setBalance(double balance) { this.balance = balance; }
+}
+
+class ProjectionsEventualConsistencyWatch {
+    void watchAccountChanges(EventStore store) {
+        ReadModelsJavaBridge.watch(store.getReadModels(), WatchAccountInfo.class, changeset -> {
+            WatchAccountInfo model = changeset.getReadModel();
+            String label = changeset.getRemoved() || model == null
+                ? "removed"
+                : model.getName() + ": " + model.getBalance();
+            System.out.println(changeset.getModelKey() + " " + changeset.getChangeType() + ": " + label);
+        });
+    }
+}
 ```

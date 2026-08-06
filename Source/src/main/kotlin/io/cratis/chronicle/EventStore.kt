@@ -4,13 +4,29 @@
 package io.cratis.chronicle
 
 import io.cratis.chronicle.compliance.ComplianceService
+import io.cratis.chronicle.compliance.IComplianceService
 import io.cratis.chronicle.connection.ChronicleServices
 import io.cratis.chronicle.constraints.ConstraintsService
 import io.cratis.chronicle.constraints.IConstraintsService
 import io.cratis.chronicle.events.EventTypesService
+import io.cratis.chronicle.events.IEventTypesService
 import io.cratis.chronicle.eventSequences.EventLog
+import io.cratis.chronicle.eventSequences.EventSequence
+import io.cratis.chronicle.eventSequences.EventSequenceId
+import io.cratis.chronicle.eventSequences.IEventSequence
+import io.cratis.chronicle.eventStoreSubscriptions.EventStoreSubscriptionsService
+import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionsService
+import io.cratis.chronicle.externalServices.ExternalServicesService
+import io.cratis.chronicle.externalServices.IExternalServicesService
+import io.cratis.chronicle.identities.IIdentityManagerService
+import io.cratis.chronicle.identities.IdentityManagerService
+import io.cratis.chronicle.jobs.IJobsService
+import io.cratis.chronicle.jobs.JobsService
 import io.cratis.chronicle.eventSequences.IEventLog
+import io.cratis.chronicle.namespaces.INamespacesService
 import io.cratis.chronicle.namespaces.NamespacesService
+import io.cratis.chronicle.webhooks.IWebhooksService
+import io.cratis.chronicle.webhooks.WebhooksService
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
 import io.cratis.chronicle.observation.ReactorsService
@@ -23,6 +39,7 @@ import io.cratis.chronicle.readModels.ReadModelsService
 import io.cratis.chronicle.seeding.EventSeedingService
 import io.cratis.chronicle.seeding.IEventSeedingService
 import io.cratis.chronicle.transactions.UnitOfWorkManager
+import java.util.concurrent.ConcurrentHashMap
 
 class EventStore(
     override val name: String,
@@ -32,7 +49,7 @@ class EventStore(
     private val defaultSinkTypeId: String = io.cratis.chronicle.sinks.WellKnownSinkTypes.MONGODB
 ) : IEventStore {
 
-    override val unitOfWorkManager: UnitOfWorkManager = UnitOfWorkManager()
+    override val unitOfWorkManager: UnitOfWorkManager = UnitOfWorkManager(this)
 
     override val eventLog: IEventLog by lazy {
         EventLog(name, namespace, services.eventSequences, unitOfWorkManager)
@@ -41,13 +58,13 @@ class EventStore(
     // ReadModelsService is shared so that reducers and projections can auto-register their read
     // models with the correct observer type without the caller having to set it on @ReadModel.
     private val readModelsService: ReadModelsService by lazy {
-        ReadModelsService(name, namespace, services.readModels, defaultSinkTypeId)
+        ReadModelsService(name, namespace, services.readModels, services.materializedReadModels, services.compliance, defaultSinkTypeId)
     }
 
     override val readModels: IReadModelsService get() = readModelsService
 
     override val reactors: IReactorsService by lazy {
-        ReactorsService(name, namespace, lifecycle, services.reactors)
+        ReactorsService(name, namespace, lifecycle, services.reactors, eventLog)
     }
 
     override val reducers: IReducersService by lazy {
@@ -66,15 +83,49 @@ class EventStore(
         EventSeedingService(name, namespace, services.eventSeeding)
     }
 
-    val compliance by lazy {
+    override val compliance: IComplianceService by lazy {
         ComplianceService(name, namespace, services.compliance)
     }
 
-    val eventTypes by lazy {
+    override val eventTypes: IEventTypesService by lazy {
         EventTypesService(name, services.eventTypes)
     }
 
-    val namespaces by lazy {
+    override val namespaces: INamespacesService by lazy {
         NamespacesService(name, services.namespaces)
     }
+
+    override val externalServices: IExternalServicesService by lazy {
+        ExternalServicesService(name, services.externalServices)
+    }
+
+    override val jobs: IJobsService by lazy {
+        JobsService(name, namespace, services.jobs)
+    }
+
+    override val eventStoreSubscriptions: IEventStoreSubscriptionsService by lazy {
+        EventStoreSubscriptionsService(name, services.eventStoreSubscriptions, eventTypes)
+    }
+
+    override val webhooks: IWebhooksService by lazy {
+        WebhooksService(name, services.webhooks)
+    }
+
+    override val identities: IIdentityManagerService by lazy {
+        IdentityManagerService(name, namespace, services.identities)
+    }
+
+    private val eventSequences = ConcurrentHashMap<EventSequenceId, IEventSequence>()
+
+    override fun getEventSequence(id: EventSequenceId): IEventSequence =
+        // The default event log is special-cased so that anything resolving it by id - such as a
+        // UnitOfWork committing staged events - gets the same instance as `eventLog`, sharing its
+        // appendOperations flow and transactional wiring rather than a disconnected duplicate.
+        if (id == EventSequenceId.eventLog) {
+            eventLog
+        } else {
+            eventSequences.getOrPut(id) {
+                EventSequence(id, name, namespace, services.eventSequences)
+            }
+        }
 }

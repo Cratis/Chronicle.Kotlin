@@ -4,6 +4,7 @@
 package io.cratis.chronicle.samples.console;
 
 import io.cratis.chronicle.projections.FromEvent;
+import io.cratis.chronicle.projections.Increment;
 import io.cratis.chronicle.projections.SetFrom;
 import io.cratis.chronicle.readModels.ReadModel;
 
@@ -28,11 +29,14 @@ public class EmployeeDetails {
     private String city = "";
     private String zipCode = "";
     private String country = "";
+    /** Bumped by one every time this employee is promoted — demonstrates {@link Increment}. */
+    @Increment(eventType = EmployeePromoted.class)
+    private int promotionCount = 0;
 
     public EmployeeDetails() {}
 
     public EmployeeDetails(String id, String firstName, String lastName, String title,
-                          String address, String city, String zipCode, String country) {
+                          String address, String city, String zipCode, String country, int promotionCount) {
         this.id = id;
         this.firstName = firstName;
         this.lastName = lastName;
@@ -41,6 +45,7 @@ public class EmployeeDetails {
         this.city = city;
         this.zipCode = zipCode;
         this.country = country;
+        this.promotionCount = promotionCount;
     }
 
     public String getId() { return id; }
@@ -66,4 +71,7 @@ public class EmployeeDetails {
 
     public String getCountry() { return country; }
     public void setCountry(String country) { this.country = country; }
+
+    public int getPromotionCount() { return promotionCount; }
+    public void setPromotionCount(int promotionCount) { this.promotionCount = promotionCount; }
 }

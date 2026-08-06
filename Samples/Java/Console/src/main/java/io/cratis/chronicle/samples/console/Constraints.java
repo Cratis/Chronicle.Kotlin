@@ -22,8 +22,11 @@ class UniqueEmployeeHire implements IConstraint {
 class UniqueEmployeeEmail implements IConstraint {
     @Override
     public void define(IConstraintBuilder builder) {
-        builder.unique(unique -> {
-            UniqueConstraintBuilderJavaBridge.on(unique, EmployeeEmailSet.class, EmployeeEmailSet::email)
+        // Scope uniqueness checking to be per event source type rather than globally across
+        // the whole event store — this keeps employee email uniqueness from ever colliding
+        // with an unrelated event source type (e.g. customers) that also happens to set emails.
+        builder.perEventSourceType().unique(unique -> {
+            UniqueConstraintBuilderJavaBridge.on(unique, EmployeeEmailSet.class, "email")
                 .ignoreCasing()
                 .withMessage("That email address is already in use by another employee.");
             return null; // Java lambda returning Unit

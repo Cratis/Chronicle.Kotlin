@@ -10,7 +10,7 @@ class ConstraintsUniqueCasingEmail : IConstraint {
     override fun define(builder: IConstraintBuilder) {
         builder.unique { unique ->
             unique
-                .on(ConstraintsUniqueCasingUserRegistered::class) { it.email }
+                .on(ConstraintsUniqueCasingUserRegistered::class, ConstraintsUniqueCasingUserRegistered::email)
                 .ignoreCasing()
         }
     }

@@ -8,16 +8,25 @@ import Cratis.Chronicle.Contracts.Compliance.ComplianceGrpcKt
 import Cratis.Chronicle.Contracts.Events.Constraints.ConstraintsGrpcKt
 import Cratis.Chronicle.Contracts.Events.EventTypesGrpcKt
 import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
+import Cratis.Chronicle.Contracts.EventStoresGrpcKt
+import Cratis.Chronicle.Contracts.ExternalServices.ExternalServicesGrpcKt
+import Cratis.Chronicle.Contracts.Identities.IdentitiesGrpcKt
+import Cratis.Chronicle.Contracts.Jobs.JobsGrpcKt
 import Cratis.Chronicle.Contracts.NamespacesGrpcKt
+import Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionsGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Reactors.ReactorsGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Reducers.ReducersGrpcKt
+import Cratis.Chronicle.Contracts.Observation.Webhooks.WebhooksGrpcKt
 import Cratis.Chronicle.Contracts.Projections.ProjectionsGrpcKt
+import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.Seeding.EventSeedingGrpcKt
 
 class ChronicleServices(channel: io.grpc.Channel) {
     val connection: ConnectionServiceGrpcKt.ConnectionServiceCoroutineStub =
         ConnectionServiceGrpcKt.ConnectionServiceCoroutineStub(channel)
+    val eventStores: EventStoresGrpcKt.EventStoresCoroutineStub =
+        EventStoresGrpcKt.EventStoresCoroutineStub(channel)
     val eventSequences: EventSequencesGrpcKt.EventSequencesCoroutineStub =
         EventSequencesGrpcKt.EventSequencesCoroutineStub(channel)
     val reactors: ReactorsGrpcKt.ReactorsCoroutineStub =
@@ -32,10 +41,22 @@ class ChronicleServices(channel: io.grpc.Channel) {
         EventSeedingGrpcKt.EventSeedingCoroutineStub(channel)
     val readModels: ReadModelsGrpcKt.ReadModelsCoroutineStub =
         ReadModelsGrpcKt.ReadModelsCoroutineStub(channel)
+    val materializedReadModels: MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub =
+        MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub(channel)
     val compliance: ComplianceGrpcKt.ComplianceCoroutineStub =
         ComplianceGrpcKt.ComplianceCoroutineStub(channel)
     val eventTypes: EventTypesGrpcKt.EventTypesCoroutineStub =
         EventTypesGrpcKt.EventTypesCoroutineStub(channel)
     val namespaces: NamespacesGrpcKt.NamespacesCoroutineStub =
         NamespacesGrpcKt.NamespacesCoroutineStub(channel)
+    val externalServices: ExternalServicesGrpcKt.ExternalServicesCoroutineStub =
+        ExternalServicesGrpcKt.ExternalServicesCoroutineStub(channel)
+    val jobs: JobsGrpcKt.JobsCoroutineStub =
+        JobsGrpcKt.JobsCoroutineStub(channel)
+    val eventStoreSubscriptions: EventStoreSubscriptionsGrpcKt.EventStoreSubscriptionsCoroutineStub =
+        EventStoreSubscriptionsGrpcKt.EventStoreSubscriptionsCoroutineStub(channel)
+    val webhooks: WebhooksGrpcKt.WebhooksCoroutineStub =
+        WebhooksGrpcKt.WebhooksCoroutineStub(channel)
+    val identities: IdentitiesGrpcKt.IdentitiesCoroutineStub =
+        IdentitiesGrpcKt.IdentitiesCoroutineStub(channel)
 }
