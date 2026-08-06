@@ -174,6 +174,57 @@ class EventSequenceTests {
     }
 
     @Test
+    fun `appendMany across event sources commits them all through a single atomic call`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val manyRequest = slot<Eventsequences.AppendManyRequest>()
+        coEvery { stub.appendMany(capture(manyRequest), any()) } returns Eventsequences.AppendManyResponse.newBuilder()
+            .addAllSequenceNumbers(listOf(0L, 1L))
+            .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+
+        val results = sequence.appendMany(
+            listOf(
+                EventForEventSourceId("source-1", SomethingHappened("a")),
+                EventForEventSourceId("source-2", SomethingHappened("b"), eventStreamType = "Onboarding")
+            )
+        )
+
+        io.mockk.coVerify(exactly = 1) { stub.appendMany(any(), any()) }
+        assertEquals(listOf("source-1", "source-2"), manyRequest.captured.eventsList.map { it.eventSourceId })
+        // Each event resolves its own defaults against its own event source id.
+        assertEquals("Default", manyRequest.captured.eventsList[0].eventStreamType)
+        assertEquals("source-1", manyRequest.captured.eventsList[0].eventStreamId)
+        assertEquals("Onboarding", manyRequest.captured.eventsList[1].eventStreamType)
+        assertEquals("source-2", manyRequest.captured.eventsList[1].subject)
+        assertEquals(2, results.size)
+        assertTrue(results.all { it.isSuccess })
+    }
+
+    @Test
+    fun `appendMany across event sources sends a concurrency scope per event source`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val manyRequest = slot<Eventsequences.AppendManyRequest>()
+        coEvery { stub.appendMany(capture(manyRequest), any()) } returns Eventsequences.AppendManyResponse.newBuilder()
+            .addAllSequenceNumbers(listOf(0L, 1L))
+            .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+
+        sequence.appendMany(
+            listOf(
+                EventForEventSourceId("source-1", SomethingHappened("a")),
+                EventForEventSourceId("source-2", SomethingHappened("b"))
+            ),
+            concurrencyScopes = mapOf("source-1" to ConcurrencyScope(EventSequenceNumber(5), eventSourceId = true))
+        )
+
+        // A source left out of the map is appended unchecked rather than validated against nothing.
+        assertEquals(setOf("source-1"), manyRequest.captured.concurrencyScopesMap.keys)
+        assertEquals(5L, manyRequest.captured.concurrencyScopesMap["source-1"]?.sequenceNumber)
+    }
+
+    @Test
     fun `appendMany with an empty event list does not call the kernel at all`() = runBlocking {
         val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
 

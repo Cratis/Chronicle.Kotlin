@@ -187,22 +187,29 @@ class ReactorsService(
     private suspend fun appendSideEffects(result: Any?, triggeringEventSourceId: String) {
         when (result) {
             null, Unit -> return
-            is EventForEventSourceId -> appendIfEventType(result.eventSourceId, result.event)
+            is EventForEventSourceId -> appendIfEventType(result)
             is List<*> -> result.filterNotNull().forEach { item ->
                 if (item is EventForEventSourceId) {
-                    appendIfEventType(item.eventSourceId, item.event)
+                    appendIfEventType(item)
                 } else {
-                    appendIfEventType(triggeringEventSourceId, item)
+                    appendIfEventType(EventForEventSourceId(triggeringEventSourceId, item))
                 }
             }
-            else -> appendIfEventType(triggeringEventSourceId, result)
+            else -> appendIfEventType(EventForEventSourceId(triggeringEventSourceId, result))
         }
     }
 
-    /** Appends [event] to [eventSourceId] when its class carries `@EventType`; silently ignores anything else. */
-    private suspend fun appendIfEventType(eventSourceId: String, event: Any) {
+    /**
+     * Appends the event when its class carries `@EventType`; silently ignores anything else.
+     *
+     * The shaping the caller put on [EventForEventSourceId] is carried through, so a side effect can
+     * target a stream, carry tags, or name a subject exactly as a direct append can. Dropping it
+     * here would make those fields silently do nothing on this path.
+     */
+    private suspend fun appendIfEventType(sideEffect: EventForEventSourceId) {
+        val event = sideEffect.event
         if (event::class.findAnnotation<EventType>() == null) return
-        val result = eventLog.append(eventSourceId, event)
+        val result = eventLog.append(sideEffect.eventSourceId, event, sideEffect.toAppendOptions())
         if (!result.isSuccess) {
             val messages = result.errors.joinToString { it.message }.ifEmpty { "constraint violation" }
             throw IllegalStateException("Failed to append reactor side-effect event '${event::class.simpleName}': $messages")

@@ -101,7 +101,7 @@ class UnitOfWorkTests {
     @Test
     fun `commit issues a separate appendMany call per distinct event source id`() = runBlocking {
         val sequence = mockk<IEventSequence>()
-        coEvery { sequence.appendMany(any(), any(), any()) } returns listOf(
+        coEvery { sequence.appendMany(any<String>(), any(), any()) } returns listOf(
             AppendResult(EventSequenceNumber(0), emptyList(), emptyList(), true)
         )
         val eventStore = eventStoreReturning(sequence)
@@ -120,7 +120,7 @@ class UnitOfWorkTests {
         val violation = ConstraintViolation("unique-email", "already taken")
         val concurrencyViolation = ConcurrencyViolation("source-1", EventSequenceNumber(1), EventSequenceNumber(2))
         val sequence = mockk<IEventSequence>()
-        coEvery { sequence.appendMany(any(), any(), any()) } returns listOf(
+        coEvery { sequence.appendMany(any<String>(), any(), any()) } returns listOf(
             AppendResult(
                 EventSequenceNumber.unavailable,
                 listOf(violation),
@@ -186,7 +186,7 @@ class UnitOfWorkTests {
     @Test
     fun `tryGetLastCommittedEventSequenceNumber is null before commit and the highest number after`() = runBlocking {
         val sequence = mockk<IEventSequence>()
-        coEvery { sequence.appendMany(any(), any(), any()) } returns listOf(
+        coEvery { sequence.appendMany(any<String>(), any(), any()) } returns listOf(
             AppendResult(EventSequenceNumber(3), emptyList(), emptyList(), true),
             AppendResult(EventSequenceNumber(7), emptyList(), emptyList(), true)
         )
@@ -205,7 +205,7 @@ class UnitOfWorkTests {
     @Test
     fun `tryGetLastCommittedEventSequenceNumber stays null when commit fails to produce actual sequence numbers`() = runBlocking {
         val sequence = mockk<IEventSequence>()
-        coEvery { sequence.appendMany(any(), any(), any()) } returns listOf(
+        coEvery { sequence.appendMany(any<String>(), any(), any()) } returns listOf(
             AppendResult(EventSequenceNumber.unavailable, emptyList(), listOf(io.cratis.chronicle.eventSequences.AppendError("boom")), false)
         )
         val eventStore = eventStoreReturning(sequence)
