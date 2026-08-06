@@ -444,7 +444,7 @@ Renames the human-readable name the kernel has stored for the identity
 identified by `subject`. This only updates the stored display name; it
 does not change the `Identity` objects your process is currently using —
 see
-[Correlation and identity](/chronicle/correlation-identity-causation/).
+[Correlation and identity](/chronicle/concepts/correlation-identity-causation/).
 
 ---
 
