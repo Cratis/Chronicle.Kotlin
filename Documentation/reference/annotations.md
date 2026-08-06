@@ -184,6 +184,20 @@ annotated class is itself the read model.
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `id` | `String` | `""` | Stable identifier. Defaults to class name. |
+| `eventSequence` | `String` | event log | The event sequence to observe. |
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.projections.FromEvent
+import io.cratis.chronicle.projections.Projection
+import io.cratis.chronicle.readModels.ReadModel
+
+@ReadModel
+@Projection(eventSequence = "outbox")
+@FromEvent(OrderPlaced::class)
+data class OutboxOrderTracking(val orderId: String = "")
+```
 
 ---
 
