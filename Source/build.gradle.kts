@@ -10,6 +10,7 @@ version = providers.gradleProperty("version").getOrElse("0.0.0-SNAPSHOT")
 val coroutinesVersion = "1.9.0"
 val chronicleContractsVersion = "16.13.4"
 val dnsJavaVersion = "3.6.5"
+val classGraphVersion = "4.8.180"
 
 dependencies {
     api("io.cratis:chronicle-contracts:$chronicleContractsVersion")
@@ -18,6 +19,9 @@ dependencies {
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
     api("dnsjava:dnsjava:$dnsJavaVersion")
     api(kotlin("reflect"))
+
+    // Classpath scanning behind automatic artifact discovery.
+    implementation("io.github.classgraph:classgraph:$classGraphVersion")
 
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
     testImplementation("io.mockk:mockk:1.13.14")
