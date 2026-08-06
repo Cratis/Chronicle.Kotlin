@@ -34,6 +34,18 @@ class ReducerRegistrationTests {
     }
 
     @Reducer
+    @EventSequence("outbox")
+    class StandaloneEventSequenceReducer {
+        fun borrowed(event: BookBorrowed, state: BookState?) = BookState(event.title, true)
+    }
+
+    @Reducer(eventSequence = "from-parameter")
+    @EventSequence("from-standalone")
+    class DoublyConfiguredReducer {
+        fun borrowed(event: BookBorrowed, state: BookState?) = BookState(event.title, true)
+    }
+
+    @Reducer
     class NamedReadModelReducer {
         fun borrowed(event: BookBorrowed, state: NamedBookState?) = NamedBookState(event.title)
     }
@@ -76,6 +88,18 @@ class ReducerRegistrationTests {
     @Test
     fun `explicit event sequence is used`() {
         assertEquals("outbox", ReducerRegistration.from(ConfiguredReducer::class).eventSequenceId)
+    }
+
+    @Test
+    fun `standalone event sequence annotation is used`() {
+        assertEquals("outbox", ReducerRegistration.from(StandaloneEventSequenceReducer::class).eventSequenceId)
+    }
+
+    @Test
+    fun `standalone event sequence annotation wins over the parameter`() {
+        // Matching the .NET client, where [EventSequence] on the class takes priority over the
+        // event sequence declared on [Reducer].
+        assertEquals("from-standalone", ReducerRegistration.from(DoublyConfiguredReducer::class).eventSequenceId)
     }
 
     @Test

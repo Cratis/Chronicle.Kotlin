@@ -26,6 +26,18 @@ class ReactorRegistrationTests {
     }
 
     @Reactor
+    @EventSequence("outbox")
+    class StandaloneEventSequenceReactor {
+        fun bookReturned(@Suppress("UNUSED_PARAMETER") event: BookReturned) = Unit
+    }
+
+    @Reactor(eventSequence = "from-parameter")
+    @EventSequence("from-standalone")
+    class DoublyConfiguredReactor {
+        fun bookReturned(@Suppress("UNUSED_PARAMETER") event: BookReturned) = Unit
+    }
+
+    @Reactor
     @OnceOnly
     class NonReplayableReactor {
         fun bookReturned(@Suppress("UNUSED_PARAMETER") event: BookReturned) = Unit
@@ -63,6 +75,24 @@ class ReactorRegistrationTests {
     @Test
     fun `explicit event sequence is used`() {
         assertEquals("outbox", ReactorRegistration.from(ConfiguredReactor::class).eventSequenceId)
+    }
+
+    @Test
+    fun `standalone event sequence annotation is used`() {
+        assertEquals(
+            "outbox",
+            ReactorRegistration.from(StandaloneEventSequenceReactor::class).eventSequenceId
+        )
+    }
+
+    @Test
+    fun `standalone event sequence annotation wins over the parameter`() {
+        // Matching the .NET client, where [EventSequence] on the class takes priority over the
+        // event sequence declared on [Reactor].
+        assertEquals(
+            "from-standalone",
+            ReactorRegistration.from(DoublyConfiguredReactor::class).eventSequenceId
+        )
     }
 
     @Test

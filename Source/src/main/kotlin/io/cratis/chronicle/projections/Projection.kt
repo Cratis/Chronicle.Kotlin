@@ -7,13 +7,16 @@ package io.cratis.chronicle.projections
  * Marks a class as a Chronicle projection, or overrides the projection identifier on a model-bound read model.
  *
  * This annotation is optional. When omitted, the class simple name is used as the projection identifier.
- * Use it only when the identifier must differ from the class name (e.g. after a rename).
+ * Use it only when the identifier must differ from the class name (e.g. after a rename), or when the
+ * projection observes something other than the event log.
  *
  * For declarative projections the read model type is inferred from the [IProjectionFor] type parameter.
  * For model-bound projections the annotated class itself is the read model.
  *
  * @property id Explicit identifier. Defaults to the class simple name.
+ * @property eventSequence The identifier of the event sequence to observe.
+ *   Defaults to the event log when not specified.
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class Projection(val id: String = "")
+annotation class Projection(val id: String = "", val eventSequence: String = "")

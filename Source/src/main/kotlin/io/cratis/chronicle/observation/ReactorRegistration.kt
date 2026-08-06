@@ -3,7 +3,6 @@
 
 package io.cratis.chronicle.observation
 
-import io.cratis.chronicle.eventSequences.EventSequenceId
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 
@@ -33,10 +32,7 @@ internal data class ReactorRegistration(
             return ReactorRegistration(
                 id = annotation?.id?.ifEmpty { null } ?: reactorClass.simpleName!!,
 
-                // An unspecified event sequence means the event log, which is where reactors observe
-                // from unless they deliberately target another sequence.
-                eventSequenceId = annotation?.eventSequence?.ifEmpty { null }
-                    ?: EventSequenceId.eventLog.value,
+                eventSequenceId = EventSequence.idOf(reactorClass, annotation?.eventSequence),
 
                 // A class-level @OnceOnly registers the reactor as non-replayable, so a replay never
                 // starts for it. The method-level placement is honored per event, when dispatching.
