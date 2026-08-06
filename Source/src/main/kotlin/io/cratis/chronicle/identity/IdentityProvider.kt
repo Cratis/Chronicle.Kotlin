@@ -29,3 +29,12 @@ class IdentityProvider {
         threadLocal.set(Identity.system)
     }
 }
+
+/**
+ * Module-level singleton [IdentityProvider] used throughout the client.
+ *
+ * Declared here rather than in its own file: a file named `identityProvider.kt` next to
+ * `IdentityProvider.kt` differs only by case, which cannot be checked out on a case-insensitive
+ * filesystem - the default on macOS.
+ */
+val identityProvider: IdentityProvider = IdentityProvider()

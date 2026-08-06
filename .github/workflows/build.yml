@@ -34,6 +34,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # CI runs on a case-sensitive filesystem, so two paths differing only by case build
+      # fine here and then break every contributor on macOS or Windows, where only one of
+      # them can exist in the working tree.
+      - name: Check for paths that differ only by case
+        run: |
+          collisions=$(git ls-files | tr 'A-Z' 'a-z' | sort | uniq -d)
+          if [ -n "$collisions" ]; then
+            echo "::error::Paths differing only by case cannot be checked out on a case-insensitive filesystem:"
+            echo "$collisions"
+            exit 1
+          fi
+
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
