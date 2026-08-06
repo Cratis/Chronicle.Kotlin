@@ -84,7 +84,7 @@ open class EventSequence(
             concurrencyViolation = if (response.hasConcurrencyViolation()) response.concurrencyViolation else null
         )
 
-        emitAppendOperations(eventSourceId, listOf(event), listOf(result), correlationId, identity)
+        emitAppendOperations(listOf(EventToAppend(eventSourceId, event)), listOf(result), correlationId, identity)
 
         return result
     }
@@ -93,30 +93,37 @@ open class EventSequence(
         eventSourceId: String,
         events: List<Any>,
         options: AppendOptions?
+    ): List<AppendResult> = appendMany(
+        events = events.map { event ->
+            EventToAppend(
+                eventSourceId = eventSourceId,
+                event = event,
+                eventStreamType = options?.eventStreamType,
+                eventStreamId = options?.eventStreamId,
+                eventSourceType = options?.eventSourceType,
+                tags = options?.tags ?: emptyList(),
+                occurred = options?.occurred,
+                subject = options?.subject
+            )
+        },
+        // The single-source form always sends a scope for its one event source, even when that
+        // scope is the one that disables the check, so the kernel never has to infer intent.
+        concurrencyScopes = mapOf(eventSourceId to (options?.concurrencyScope ?: ConcurrencyScope.none)),
+        correlationId = options?.correlationId
+    )
+
+    override suspend fun appendMany(
+        events: List<EventToAppend>,
+        concurrencyScopes: Map<String, ConcurrencyScope>,
+        correlationId: UUID?
     ): List<AppendResult> {
         if (events.isEmpty()) return emptyList()
 
-        val correlationId = options?.correlationId ?: correlationIdManager.current
-        val concurrencyScope = options?.concurrencyScope ?: ConcurrencyScope.none
+        val effectiveCorrelationId = correlationId ?: correlationIdManager.current
 
         causationManager.add(CausationType.appendManyEvents, mapOf("count" to events.size.toString()))
         val causationChain = causationManager.currentChain
         val identity = identityProvider.currentIdentity
-
-        val eventsToAppend = events.map { event ->
-            val eventType = resolveEventType(event)
-            Eventsequences.EventToAppend.newBuilder().apply {
-                this.eventSourceType = options.eventSourceTypeOrDefault()
-                this.eventSourceId = eventSourceId
-                this.eventStreamType = options.eventStreamTypeOrDefault()
-                this.eventStreamId = options.eventStreamIdOrDefault(eventSourceId)
-                this.eventType = eventType.toContractsEventType()
-                this.content = gson.toJson(event)
-                this.subject = options.subjectOrDefault(eventSourceId)
-                addAllTags(options?.tags ?: emptyList())
-                options?.occurred?.let { this.occurred = it.toContractsDateTimeOffset() }
-            }.build()
-        }
 
         val esName = eventStoreName
         val ns = this@EventSequence.namespace
@@ -124,11 +131,11 @@ open class EventSequence(
             this.eventStore = esName
             this.namespace = ns
             this.eventSequenceId = id.value
-            this.correlationId = correlationId.toContractsGuid()
-            addAllEvents(eventsToAppend)
+            this.correlationId = effectiveCorrelationId.toContractsGuid()
+            addAllEvents(events.map { it.toContract() })
             addAllCausation(causationChain.map { c -> c.toContractsCausation() })
             this.causedBy = identity.withoutDuplicates().toContractsIdentity()
-            putConcurrencyScopes(eventSourceId, concurrencyScope.toContract())
+            concurrencyScopes.forEach { (source, scope) -> putConcurrencyScopes(source, scope.toContract()) }
         }.build()
 
         // A single AppendMany RPC call commits all events as one atomic operation on the kernel side,
@@ -137,7 +144,7 @@ open class EventSequence(
 
         val results = mapAppendManyResponse(events.size, response)
 
-        emitAppendOperations(eventSourceId, events, results, correlationId, identity)
+        emitAppendOperations(events, results, effectiveCorrelationId, identity)
 
         return results
     }
@@ -282,8 +289,7 @@ open class EventSequence(
      * it back on [Eventsequences.AppendResponse]/[Eventsequences.AppendManyResponse].
      */
     private fun emitAppendOperations(
-        eventSourceId: String,
-        events: List<Any>,
+        events: List<EventToAppend>,
         results: List<AppendResult>,
         correlationId: UUID,
         causedBy: ChronicleIdentity
@@ -292,16 +298,33 @@ open class EventSequence(
         val entries = events.mapIndexed { index, event ->
             val context = io.cratis.chronicle.events.EventContext(
                 sequenceNumber = results[index].sequenceNumber.value,
-                eventSourceId = eventSourceId,
-                eventType = resolveEventType(event),
+                eventSourceId = event.eventSourceId,
+                eventType = resolveEventType(event.event),
                 occurred = occurred,
                 correlationId = correlationId,
                 causedBy = causedBy
             )
-            AppendedEventWithResult(context, event, results[index])
+            AppendedEventWithResult(context, event.event, results[index])
         }
         _appendOperations.tryEmit(entries)
     }
+
+    /**
+     * Every unset field falls back to the same default the client has always used, resolved against
+     * the event's own event source id rather than a batch-wide one.
+     */
+    private fun EventToAppend.toContract(): Eventsequences.EventToAppend =
+        Eventsequences.EventToAppend.newBuilder().apply {
+            this.eventSourceType = this@toContract.eventSourceType ?: AppendOptions.DEFAULT_EVENT_SOURCE_TYPE
+            this.eventSourceId = this@toContract.eventSourceId
+            this.eventStreamType = this@toContract.eventStreamType ?: AppendOptions.DEFAULT_EVENT_STREAM_TYPE
+            this.eventStreamId = this@toContract.eventStreamId ?: this@toContract.eventSourceId
+            this.eventType = resolveEventType(this@toContract.event).toContractsEventType()
+            this.content = gson.toJson(this@toContract.event)
+            this.subject = this@toContract.subject ?: this@toContract.eventSourceId
+            addAllTags(this@toContract.tags)
+            this@toContract.occurred?.let { this.occurred = it.toContractsDateTimeOffset() }
+        }.build()
 
     private suspend fun getTailSequenceNumberInternal(
         eventSourceId: String?,

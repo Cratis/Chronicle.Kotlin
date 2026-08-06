@@ -3,6 +3,8 @@
 
 package io.cratis.chronicle.eventSequences
 
+import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
+import java.util.UUID
 import kotlinx.coroutines.flow.SharedFlow
 import kotlin.reflect.KClass
 
@@ -43,6 +45,28 @@ interface IEventSequence {
      * @return A list of [AppendResult], one per event.
      */
     suspend fun appendMany(eventSourceId: String, events: List<Any>, options: AppendOptions? = null): List<AppendResult>
+
+    /**
+     * Appends events spanning any number of event sources as a single atomic batch.
+     *
+     * Use this when a batch has to commit as one unit across more than one event source - the
+     * single-event-source overload cannot express that, and appending per source would give up
+     * atomicity. Each [EventToAppend] carries its own shaping, so events in the same batch can go to
+     * different streams.
+     *
+     * @param events The events to append, in the order they should be appended.
+     * @param concurrencyScopes Optional [ConcurrencyScope] per event source id. Only the event
+     *   sources present in the map are concurrency checked; any source left out is appended
+     *   unchecked.
+     * @param correlationId Optional correlation identifier for the whole batch.
+     *   Defaults to the current [io.cratis.chronicle.correlation.CorrelationIdManager] value.
+     * @return A list of [AppendResult], one per event, in the order of [events].
+     */
+    suspend fun appendMany(
+        events: List<EventToAppend>,
+        concurrencyScopes: Map<String, ConcurrencyScope> = emptyMap(),
+        correlationId: UUID? = null
+    ): List<AppendResult>
 
     /**
      * Determines whether there are any events for a given event source identifier.
