@@ -21,7 +21,12 @@ on:
       - "**"
     paths:
       - "Source/**"
+      - "Testing/**"
+      - "Integrations/**"
       - "Samples/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle/**"
       - ".github/workflows/**"
 
 jobs:
@@ -57,5 +62,8 @@ jobs:
         with:
           gradle-version: '8.13'
 
+      # The whole workspace, not just the client: a change to the test-support module or an
+      # integration has to be built and tested too, and apiCheck only runs as part of a module's
+      # own build.
       - name: Build and test
-        run: gradle :Source:build --no-configuration-cache
+        run: gradle build --no-configuration-cache
