@@ -33,7 +33,9 @@ import io.cratis.chronicle.namespaces.INamespacesService
 import io.cratis.chronicle.namespaces.NamespacesService
 import io.cratis.chronicle.webhooks.IWebhooksService
 import io.cratis.chronicle.webhooks.WebhooksService
+import io.cratis.chronicle.java.BlockingReactorMethodArgumentResolver
 import io.cratis.chronicle.java.BlockingReactorMiddleware
+import io.cratis.chronicle.java.asArgumentResolver
 import io.cratis.chronicle.java.asReactorMiddleware
 import io.cratis.chronicle.observation.FailedPartitions
 import io.cratis.chronicle.observation.IFailedPartitions
@@ -143,7 +145,14 @@ class EventStore(
      */
     private fun discoveredArgumentResolvers(): List<IReactorMethodArgumentResolver> =
         artifacts.reactorArgumentResolvers.map { resolverClass ->
-            artifactActivator.activate(resolverClass) as IReactorMethodArgumentResolver
+            when (val instance = artifactActivator.activate(resolverClass)) {
+                is IReactorMethodArgumentResolver -> instance
+                is BlockingReactorMethodArgumentResolver -> instance.asArgumentResolver()
+                else -> throw IllegalStateException(
+                    "'${resolverClass.simpleName}' was discovered as a reactor argument resolver but is " +
+                        "neither an IReactorMethodArgumentResolver nor a BlockingReactorMethodArgumentResolver"
+                )
+            }
         }
 
     override val failedPartitions: IFailedPartitions by lazy {

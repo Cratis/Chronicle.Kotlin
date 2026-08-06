@@ -6,6 +6,7 @@ package io.cratis.chronicle.artifacts
 import io.cratis.chronicle.constraints.IConstraint
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.events.migrations.IEventTypeMigration
+import io.cratis.chronicle.java.BlockingReactorMethodArgumentResolver
 import io.cratis.chronicle.java.BlockingReactorMiddleware
 import io.cratis.chronicle.observation.IReactorMethodArgumentResolver
 import io.cratis.chronicle.observation.IReactorMiddleware
@@ -82,9 +83,14 @@ class ClientArtifacts(
                 result.implementing(IReactorMiddleware::class) { it.isReactorMiddleware() } +
                     result.implementing(BlockingReactorMiddleware::class) { it.isReactorMiddleware() }
                 ).distinct(),
-            reactorArgumentResolvers = result.implementing(IReactorMethodArgumentResolver::class) {
-                it.isReactorMethodArgumentResolver()
-            }
+            reactorArgumentResolvers = (
+                result.implementing(IReactorMethodArgumentResolver::class) {
+                    it.isReactorMethodArgumentResolver()
+                } +
+                    result.implementing(BlockingReactorMethodArgumentResolver::class) {
+                        it.isReactorMethodArgumentResolver()
+                    }
+                ).distinct()
         )
     }
 

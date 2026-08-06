@@ -30,6 +30,8 @@ import io.cratis.chronicle.namespaces.INamespacesService
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
 import io.cratis.chronicle.eventSequences.EventSequenceId
+import io.cratis.chronicle.observation.FailedPartition
+import io.cratis.chronicle.observation.IFailedPartitions
 import io.cratis.chronicle.projections.IProjectionsService
 import io.cratis.chronicle.projections.ProjectionQueryResult
 import io.cratis.chronicle.readModels.IReadModelsService
@@ -353,6 +355,39 @@ object ProjectionsServiceJavaBridge {
         eventSequenceId: String
     ): ProjectionQueryResult =
         runBlocking { service.query(declaration, EventSequenceId(eventSequenceId)) }
+}
+
+/**
+ * Java-friendly bridge for the partitions observers are stuck on.
+ */
+object FailedPartitionsJavaBridge {
+    /** The partitions the observer with this identifier is currently failing on. */
+    @JvmStatic
+    fun getFor(service: IFailedPartitions, observerId: String): List<FailedPartition> =
+        runBlocking { service.getFor(observerId) }
+
+    /** The partitions the observer declared by this class is currently failing on. */
+    @JvmStatic
+    fun getFor(service: IFailedPartitions, observerClass: Class<*>): List<FailedPartition> =
+        runBlocking { service.getFor(observerClass.kotlin) }
+
+    /** Asks the kernel to try a partition again, on the event log. */
+    @JvmStatic
+    fun retry(service: IFailedPartitions, observerId: String, partition: String) {
+        runBlocking { service.retry(observerId, partition) }
+    }
+
+    /** Asks the kernel to try a partition again, on a named event sequence. */
+    @JvmStatic
+    fun retry(service: IFailedPartitions, observerId: String, partition: String, eventSequenceId: String) {
+        runBlocking { service.retry(observerId, partition, EventSequenceId(eventSequenceId)) }
+    }
+
+    /** Asks the kernel to try a partition again for the observer declared by this class. */
+    @JvmStatic
+    fun retry(service: IFailedPartitions, observerClass: Class<*>, partition: String) {
+        runBlocking { service.retry(observerClass.kotlin, partition) }
+    }
 }
 
 /**
