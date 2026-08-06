@@ -55,6 +55,14 @@ internal data class ReducerRegistration(
                 }
             }
 
+            if (handlers.isEmpty()) {
+                throw ObserverHasNoHandlers(
+                    reducerClass,
+                    "A reducer handler is a public method whose first parameter is a class annotated " +
+                        "with @EventType, returning the read model it produces."
+                )
+            }
+
             val readModelName = readModelClass?.let { readModel ->
                 readModel.findAnnotation<ReadModel>()?.id?.ifEmpty { null } ?: readModel.simpleName
             } ?: ""

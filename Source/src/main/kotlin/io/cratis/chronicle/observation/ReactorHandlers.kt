@@ -85,6 +85,13 @@ internal class ReactorHandlers(
                 target[handler.eventTypeId] = handler
             }
 
+            if (live.isEmpty() && replay.isEmpty()) {
+                throw ObserverHasNoHandlers(
+                    reactorClass,
+                    "A reactor handler is a public method whose first parameter is a class annotated with @EventType."
+                )
+            }
+
             return ReactorHandlers(live, replay, onceOnly)
         }
 

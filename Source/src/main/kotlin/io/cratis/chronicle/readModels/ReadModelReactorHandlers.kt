@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.readModels
 
+import io.cratis.chronicle.observation.ObserverHasNoHandlers
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberFunctions
 
@@ -36,6 +37,15 @@ internal class ReadModelReactorHandlers(private val methods: List<ReadModelReact
         fun from(reactorClass: KClass<*>): ReadModelReactorHandlers {
             val methods = reactorClass.memberFunctions.mapNotNull { function ->
                 ReadModelReactorMethod.from(function)?.also { requireDispatchable(it, reactorClass) }
+            }
+
+            if (methods.isEmpty()) {
+                throw ObserverHasNoHandlers(
+                    reactorClass,
+                    "A read model reactor handler is a public method named after a change - " +
+                        ReadModelChangeType.entries.joinToString(", ") { it.name.replaceFirstChar(Char::lowercase) } +
+                        " - taking the read model as its first parameter."
+                )
             }
 
             return ReadModelReactorHandlers(methods)
