@@ -1,429 +1,428 @@
-# Chronicle Kotlin Client
+<div align="center">
 
-A Kotlin-idiomatic client for [Cratis Chronicle](https://github.com/Cratis/Chronicle).
+# 📜 Chronicle for the JVM
 
-## Overview
+**Event sourcing for Kotlin and Java — write the facts, annotate them, and the rest of the system builds itself.**
 
-`io.cratis:chronicle` provides a clean, type-safe Kotlin API for interacting with the Chronicle Kernel. It builds on top of `io.cratis:chronicle-contracts` (the gRPC contracts artifact) and exposes idiomatic Kotlin constructs including:
+[![Discord](https://img.shields.io/discord/1182595891576717413?label=Discord&logo=discord&logoColor=white)](https://discord.gg/kt4AMpV8WV)
+[![Maven Central](https://img.shields.io/maven-central/v/io.cratis/chronicle?label=Maven%20Central&logo=apachemaven&logoColor=white)](https://central.sonatype.com/artifact/io.cratis/chronicle)
+[![Build](https://github.com/Cratis/Chronicle.Kotlin/actions/workflows/build.yml/badge.svg)](https://github.com/Cratis/Chronicle.Kotlin/actions/workflows/build.yml)
+[![Publish](https://github.com/Cratis/Chronicle.Kotlin/actions/workflows/publish.yml/badge.svg)](https://github.com/Cratis/Chronicle.Kotlin/actions/workflows/publish.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-- **Annotations** — `@EventType`, `@Reactor`, `@Reducer`, `@Projection`, `@ReadModel`, `@Seeder`, `@Constraint`, and `@Pii`
-- **Value objects** — `EventSequenceNumber`, `EventTypeId`, `EventStoreName`, etc.
-- **Fluent client** — `ChronicleClient` → `EventStore` → `EventLog` → `append()`
-- **Coroutines-first** — all async operations use Kotlin coroutines and `Flow`
+</div>
 
-## Structure
+---
 
-```text
-Source/              ← io.cratis:chronicle Kotlin library
-Testing/             ← io.cratis:chronicle-testing in-process test support
-Documentation/       ← User-facing documentation
-Samples/
-  Kotlin/Console/    ← Kotlin console sample application
-  Java/Console/      ← Java console sample application
-```
+A chronicle is a record of what happened, in the order it happened — kept so that the story can be
+told again, from the beginning, to anyone who asks. [Cratis
+Chronicle](https://github.com/Cratis/Chronicle) is that idea as a database: your application appends
+facts, and every view of the world is derived from them rather than overwritten on top of them.
 
-## Prerequisite: Chronicle Running
+This repository is the **JVM client** for it. One artifact, `io.cratis:chronicle`, idiomatic from
+both **Kotlin** and **Java**, plus a **Spring Boot starter** that reduces setup to a dependency.
 
-You need a Chronicle Kernel available before running samples or application code.
+## ✨ Why you might want this
 
-The easiest local setup is the development Docker image:
+- **You declare facts, not plumbing.** An event is a data class or a record with `@EventType` on it.
+  A read model is a class with `@ReadModel`. There is no schema file, no registry, no builder to
+  keep in sync.
+- **Everything registers itself.** Every artifact on your classpath is found and registered with the
+  kernel the moment you connect — in the order the kernel needs them. Manual registration is still
+  there when you want it, one call away.
+- **The past is never lost.** Nothing is updated in place. Every state your system has ever been in
+  is reconstructible, which turns "how did this record end up like that?" from an archaeology
+  project into a query.
+- **Coroutines all the way down.** Every call that touches the kernel suspends. Java gets blocking
+  bridges for the same surface, so neither language is the second-class one.
+- **Rules the kernel enforces.** Uniqueness and other constraints are checked at append time, on the
+  server, not by a read-then-write race in your code.
 
-```bash
-docker run -p 35000:35000 cratis/chronicle:latest-development
-```
+## 📜 What a slice looks like
 
-## Getting Started
+Four annotated types, and you have an event-sourced feature — the fact, the state it produces, the
+fold that produces it, and the rule that guards it:
 
-### Kotlin
-
-Add the dependency to your Gradle build:
-
-```kotlin
-dependencies {
-    implementation("io.cratis:chronicle:<version>")
-}
-```
-
-### Java
-
-Add the dependency to your Gradle build:
-
-```groovy
-dependencies {
-    implementation 'io.cratis:chronicle:<version>'
-}
-```
-
-## Quick Example
-
-### Kotlin
+<table>
+<tr><th width="50%">Kotlin</th><th width="50%">Java</th></tr>
+<tr valign="top"><td>
 
 ```kotlin
-import io.cratis.chronicle.ChronicleClient
-import io.cratis.chronicle.ChronicleOptions
-import io.cratis.chronicle.events.EventType
-
-@EventType(id = "EmployeeHired")
-data class EmployeeHired(val firstName: String, val lastName: String, val title: String)
-
-suspend fun main() {
-    val client = ChronicleClient(ChronicleOptions.development())
-    val store = client.getEventStore("MyStore")
-
-    // Chronicle needs the schema for an event type before it will accept events of that type.
-    // Register them once at startup, before appending anything.
-    store.eventTypes.register(EmployeeHired::class)
-
-    val result = store.eventLog.append("employee-123", EmployeeHired("Jane", "Doe", "Engineer"))
-    println("Appended at sequence number ${result.sequenceNumber.value}")
-    client.dispose()
-}
-```
-
-### Java
-
-```java
-import io.cratis.chronicle.ChronicleClient;
-import io.cratis.chronicle.ChronicleOptions;
-import io.cratis.chronicle.events.EventType;
+@EventType
+data class EmployeeHired(
+    val firstName: String = "",
+    val lastName: String = "",
+    val title: String = ""
+)
 
 @EventType
-public class EmployeeHired {
-    private String firstName;
-    private String lastName;
-    private String title;
-    
-    public EmployeeHired(String firstName, String lastName, String title) {
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.title = title;
-    }
-    
-    // Getters and setters omitted for brevity
-}
-
-public class Main {
-    public static void main(String[] args) throws Exception {
-        ChronicleClient client = new ChronicleClient(ChronicleOptions.Companion.development());
-        var store = client.getEventStore("MyStore");
-        var result = store.getEventLog().append("employee-123", 
-            new EmployeeHired("Jane", "Doe", "Engineer"));
-        System.out.println("Appended at sequence number " + result.getSequenceNumber().getValue());
-        client.dispose();
-    }
-}
-```
-
-## Reactors
-
-Reactors observe events and produce side effects (notifications, commands to other contexts, etc.):
-
-### Kotlin
-
-```kotlin
-import io.cratis.chronicle.events.EventContext
-import io.cratis.chronicle.observation.Reactor
-
-@Reactor
-class HrNotificationReactor {
-    fun employeeHired(event: EmployeeHired, context: EventContext) {
-        println("Employee hired: ${event.firstName} ${event.lastName}")
-    }
-}
-
-// Register with the event store:
-store.reactors.register(HrNotificationReactor())
-```
-
-### Java
-
-```java
-import io.cratis.chronicle.events.EventContext;
-import io.cratis.chronicle.observation.Reactor;
-
-@Reactor
-public class HrNotificationReactor {
-    public void employeeHired(EmployeeHired event, EventContext context) {
-        System.out.println("Employee hired: " + event.getFirstName() + " " + event.getLastName());
-    }
-}
-
-// Register with the event store:
-store.getReactors().register(new HrNotificationReactor());
-```
-
-## Reducers
-
-Reducers fold events into read models:
-
-### Kotlin
-
-```kotlin
-import io.cratis.chronicle.observation.Reducer
-import io.cratis.chronicle.readModels.ReadModel
+data class EmployeePromoted(val newTitle: String = "")
 
 @ReadModel
-data class EmployeeState(val firstName: String = "", val title: String = "")
+data class EmployeeState(
+    val id: String = "",
+    val firstName: String = "",
+    val title: String = ""
+)
 
 @Reducer
 class EmployeeStateReducer {
-    fun employeeHired(event: EmployeeHired): EmployeeState =
-        EmployeeState(firstName = event.firstName, title = event.title)
+    fun employeeHired(event: EmployeeHired) =
+        EmployeeState(
+            firstName = event.firstName,
+            title = event.title)
 
-    fun employeePromoted(event: EmployeePromoted, state: EmployeeState?): EmployeeState =
-        (state ?: EmployeeState()).copy(title = event.newTitle)
+    fun employeePromoted(
+        event: EmployeePromoted,
+        state: EmployeeState?
+    ) = (state ?: EmployeeState())
+        .copy(title = event.newTitle)
 }
-
-// Register and query:
-store.reducers.register(EmployeeStateReducer())
-val state = store.readModels.getInstanceByKey(EmployeeState::class, "employee-123")
 ```
 
-### Java
+</td><td>
 
 ```java
-import io.cratis.chronicle.observation.Reducer;
-import io.cratis.chronicle.readModels.ReadModel;
+@EventType
+public record EmployeeHired(
+    String firstName,
+    String lastName,
+    String title
+) {}
+
+@EventType
+public record EmployeePromoted(String newTitle) {}
 
 @ReadModel
 public class EmployeeState {
+    private String id = "";
     private String firstName = "";
     private String title = "";
-    
-    // Constructors, getters, and setters omitted for brevity
+    // getters and setters
 }
 
 @Reducer
 public class EmployeeStateReducer {
-    public EmployeeState employeeHired(EmployeeHired event) {
-        return new EmployeeState(event.getFirstName(), event.getTitle());
+    public EmployeeState employeeHired(
+            EmployeeHired event) {
+        return new EmployeeState("",
+            event.firstName(), event.title());
     }
 
-    public EmployeeState employeePromoted(EmployeePromoted event, EmployeeState state) {
-        EmployeeState result = state != null ? state : new EmployeeState();
-        result.setTitle(event.getNewTitle());
-        return result;
+    public EmployeeState employeePromoted(
+            EmployeePromoted event,
+            EmployeeState state) {
+        var current = state != null
+            ? state : new EmployeeState();
+        current.setTitle(event.newTitle());
+        return current;
     }
 }
-
-// Register and query:
-store.getReducers().register(new EmployeeStateReducer());
-EmployeeState state = store.getReadModels().getInstanceByKey(EmployeeState.class, "employee-123");
 ```
 
-## Projections
+</td></tr>
+</table>
 
-Declarative projections map events to read models:
-
-### Kotlin
+No registration code appears anywhere above, and none is needed. Append an event and the read model
+is there:
 
 ```kotlin
-import io.cratis.chronicle.projections.IProjectionBuilderFor
-import io.cratis.chronicle.projections.IProjectionFor
-import io.cratis.chronicle.projections.Projection
-
-@Projection(readModel = EmployeeState::class)
-class EmployeeProjection : IProjectionFor<EmployeeState> {
-    override fun define(builder: IProjectionBuilderFor<EmployeeState>) {
-        builder
-            .from(EmployeeHired::class)
-            .from(EmployeePromoted::class) { fb ->
-                fb.set(EmployeeState::title).toProperty("newTitle")
-            }
-    }
-}
-
-store.projections.register(EmployeeProjection())
+store.eventLog.append("employee-1", EmployeeHired("Ada", "Lovelace", "Engineer"))
+val ada = store.readModels.getInstanceByKey(EmployeeState::class, "employee-1")
 ```
 
-### Java
+## 🧩 The cast
+
+Everything you write is one of a handful of kinds. Annotate it, and the client finds it:
+
+| Artifact | You write | It does |
+| --- | --- | --- |
+| **Event type** | `@EventType` on a data class or record | Records a fact that happened. Immutable, forever |
+| **Read model** | `@ReadModel` on a class | The shape some part of your system reads |
+| **Reducer** | `@Reducer` with one method per event | Folds a stream of events into a read model |
+| **Projection** | `IProjectionFor<T>`, or `@FromEvent` on the model | Declares the same fold, without writing the fold |
+| **Reactor** | `@Reactor` with one method per event | Does something when a fact arrives — mail, calls, more events |
+| **Constraint** | `IConstraint` with `@Constraint` | A rule the kernel enforces before an append is accepted |
+| **Seeder** | `ICanSeedEvents` with `@Seeder` | Facts that should exist the first time the system runs |
+| **Migration** | `IEventTypeMigration<New, Old>` | Carries an event type forward to a new generation |
+| **Webhook** | `IWebhookDefiner` | Pushes events out to something beyond your process |
+
+## 🎥 How it fits together
+
+```mermaid
+flowchart LR
+    App["✍️ your code<br/>appends a fact"] -->|"@EventType"| Log[["📜 event log<br/>the record of what happened"]]
+    Discovery["🔍 discovery<br/>scans your classpath"] -.->|"registers everything"| Kernel
+    Log --> Kernel(["⚙️ Chronicle kernel"])
+    Kernel --> Reducers["🔁 reducers<br/>+ projections"]
+    Kernel --> Reactors["⚡ reactors"]
+    Kernel --> Constraints["🛡️ constraints<br/>checked on append"]
+    Reducers --> ReadModels["📊 read models<br/>what your API returns"]
+    Reactors --> Effects["📮 side effects<br/>mail · calls · new events"]
+```
+
+The one arrow worth pointing at is the dotted one. You never build that list — the client does, on
+every connect, so a kernel that restarts is told everything again without you noticing.
+
+## 🚀 Quick start
+
+You need a kernel. The development image is a single command:
+
+```shell
+docker run -p 35000:35000 cratis/chronicle:latest-development
+```
+
+### Plain Kotlin or Java
+
+```kotlin
+// build.gradle.kts
+dependencies {
+    implementation("io.cratis:chronicle:2.1.1")
+}
+```
+
+```groovy
+// build.gradle
+dependencies {
+    implementation 'io.cratis:chronicle:2.1.1'
+}
+```
+
+Connect, wait for the first registration pass, and go:
+
+<table>
+<tr><th width="50%">Kotlin</th><th width="50%">Java</th></tr>
+<tr valign="top"><td>
+
+```kotlin
+fun main() = runBlocking {
+    val client = ChronicleClient(
+        ChronicleOptions.development())
+    val store = client.getEventStore("MyApp")
+    store.awaitRegistration()
+
+    store.eventLog.append(
+        "employee-1",
+        EmployeeHired("Ada", "Lovelace", "Engineer"))
+
+    val ada = store.readModels
+        .getInstanceByKey(
+            EmployeeState::class, "employee-1")
+    println(ada)
+
+    client.dispose()
+}
+```
+
+</td><td>
 
 ```java
-import io.cratis.chronicle.projections.IProjectionBuilderFor;
-import io.cratis.chronicle.projections.IProjectionFor;
-import io.cratis.chronicle.projections.Projection;
+public static void main(String[] args) {
+    var client = new ChronicleClient(
+        ChronicleOptions.Companion.development());
+    var store = client.getEventStore(
+        "MyApp", "Default");
+    EventStoreJavaBridge.awaitRegistration(store);
 
-@Projection
-public class EmployeeProjection implements IProjectionFor<EmployeeState> {
-    @Override
-    public void define(IProjectionBuilderFor<EmployeeState> builder) {
-        builder
-            .from(EmployeeHired.class)
-            .from(EmployeePromoted.class, fb -> 
-                fb.set(EmployeeState::getTitle).toProperty("newTitle")
-            );
-    }
+    EventLogJavaBridge.append(
+        store.getEventLog(), "employee-1",
+        new EmployeeHired(
+            "Ada", "Lovelace", "Engineer"), null);
+
+    var ada = ReadModelsJavaBridge
+        .getInstanceByKey(store.getReadModels(),
+            EmployeeState.class, "employee-1");
+    System.out.println(ada);
+
+    client.dispose();
 }
-
-store.getProjections().register(new EmployeeProjection());
 ```
 
-## Constraints
+</td></tr>
+</table>
 
-Prevent invalid state via kernel-enforced constraints:
+Java cannot call Kotlin `suspend` functions, so the client ships a blocking bridge per service in
+`io.cratis.chronicle.java` — same surface, no coroutines required.
 
-### Kotlin
+### Spring Boot
+
+The starter brings the client with it and wires everything up:
 
 ```kotlin
-import io.cratis.chronicle.constraints.Constraint
-import io.cratis.chronicle.constraints.IConstraint
-import io.cratis.chronicle.constraints.IConstraintBuilder
-
-@Constraint
-class UniqueEmployeeHire : IConstraint {
-    override fun define(builder: IConstraintBuilder) {
-        builder.uniqueFor(EmployeeHired::class, "An employee can only be hired once.")
-    }
+// build.gradle.kts
+dependencies {
+    implementation("io.cratis:chronicle-spring-boot-starter:2.1.1")
 }
-
-store.constraints.register(UniqueEmployeeHire())
 ```
 
-### Java
+```yaml
+cratis:
+  chronicle:
+    event-store: Ordering
+```
+
+That is the whole setup. Your artifacts are discovered in your application's packages and registered
+before the first request is served, and an `IEventStore` is ready to inject:
+
+<table>
+<tr><th width="50%">Kotlin</th><th width="50%">Java</th></tr>
+<tr valign="top"><td>
+
+```kotlin
+@RestController
+class Employees(
+    private val eventStore: IEventStore
+) {
+    @PostMapping("/employees/{id}/hire")
+    fun hire(
+        @PathVariable id: String,
+        @RequestBody hire: Hire
+    ) = runBlocking {
+        eventStore.eventLog.append(id,
+            EmployeeHired(
+                hire.firstName,
+                hire.lastName,
+                hire.title))
+    }
+}
+```
+
+</td><td>
 
 ```java
-import io.cratis.chronicle.constraints.Constraint;
-import io.cratis.chronicle.constraints.IConstraint;
-import io.cratis.chronicle.constraints.IConstraintBuilder;
+@RestController
+public class Employees {
+    private final Chronicle chronicle;
 
-@Constraint
-public class UniqueEmployeeHire implements IConstraint {
-    @Override
-    public void define(IConstraintBuilder builder) {
-        builder.uniqueFor(EmployeeHired.class, "An employee can only be hired once.");
+    public Employees(Chronicle chronicle) {
+        this.chronicle = chronicle;
+    }
+
+    @PostMapping("/employees/{id}/hire")
+    public void hire(
+            @PathVariable String id,
+            @RequestBody Hire hire) {
+        chronicle.append(id,
+            new EmployeeHired(
+                hire.firstName(),
+                hire.lastName(),
+                hire.title()));
     }
 }
-
-store.getConstraints().register(new UniqueEmployeeHire());
 ```
 
-## Transactions (Unit of Work)
+</td></tr>
+</table>
 
-Stage multiple appends and commit atomically:
+Artifacts are activated through the Spring container, so a reactor takes its dependencies through
+its constructor like any `@Service`. On top of that the starter gives every request an identity, a
+causation trail, and a unit of work — and can route each one to its own tenant namespace from a
+header, a subdomain, or a claim. See the [Spring Boot guide](Documentation/guides/spring-boot.md).
 
-### Kotlin
+## 🌍 Facts with a place
+
+A fact often happened *somewhere*. `Point`, `LineString` and `Polygon` are ordinary properties on an
+event, read model or reducer state, and they serialize as GeoJSON — which is how the kernel
+recognizes the value as geospatial and how the sink knows to index and query it:
+
+<table>
+<tr><th width="50%">Kotlin</th><th width="50%">Java</th></tr>
+<tr valign="top"><td>
 
 ```kotlin
-val unitOfWork = store.unitOfWorkManager.begin()
-store.eventLog.transactional.append(id1, EmployeePromoted("Senior Engineer"))
-store.eventLog.transactional.append(id2, EmployeePromoted("Principal Engineer"))
-unitOfWork.commit()
-```
-
-### Java
-
-```java
-var unitOfWork = store.getUnitOfWorkManager().begin();
-store.getEventLog().getTransactional().append(id1, new EmployeePromoted("Senior Engineer"));
-store.getEventLog().getTransactional().append(id2, new EmployeePromoted("Principal Engineer"));
-unitOfWork.commit();
-```
-
-## Seeding
-
-Seed initial events on first startup:
-
-### Kotlin
-
-```kotlin
-import io.cratis.chronicle.seeding.ICanSeedEvents
-import io.cratis.chronicle.seeding.IEventSeedingBuilder
-import io.cratis.chronicle.seeding.Seeder
-
-@Seeder
-class EmployeeSeeder : ICanSeedEvents {
-    override fun seed(builder: IEventSeedingBuilder) {
-        builder.forEventSource("emp-1", listOf(EmployeeHired("Ada", "Lovelace", "Engineer")))
-    }
-}
-
-store.seeding.seed(EmployeeSeeder())
-```
-
-### Java
-
-```java
-import io.cratis.chronicle.seeding.ICanSeedEvents;
-import io.cratis.chronicle.seeding.IEventSeedingBuilder;
-import io.cratis.chronicle.seeding.Seeder;
-
-import java.util.Arrays;
-
-@Seeder
-public class EmployeeSeeder implements ICanSeedEvents {
-    @Override
-    public void seed(IEventSeedingBuilder builder) {
-        builder.forEventSource("emp-1", 
-            Arrays.asList(new EmployeeHired("Ada", "Lovelace", "Engineer")));
-    }
-}
-
-store.getSeeding().seed(new EmployeeSeeder());
-```
-
-## Geospatial
-
-`Point`, `LineString`, and `Polygon` serialize as GeoJSON, which is how
-Chronicle recognizes a value as geospatial and how the sink is able to index and
-query it. Use them on any event, read model, or reducer state.
-
-### Kotlin
-
-```kotlin
-import io.cratis.chronicle.events.EventType
-import io.cratis.chronicle.geospatial.Point
-
 @EventType
-data class WarehouseInspected(val warehouseId: String, val inspectedAt: Point)
+data class WarehouseInspected(
+    val warehouseId: String = "",
+    val inspectedAt: Point = Point(0.0, 0.0)
+)
 
-store.eventLog.append("warehouse-1", WarehouseInspected("warehouse-1", Point(10.75, 59.91)))
+store.eventLog.append(
+    "warehouse-1",
+    WarehouseInspected("warehouse-1", Point(10.75, 59.91)))
 ```
 
-### Java
+</td><td>
 
 ```java
-import io.cratis.chronicle.events.EventType;
-import io.cratis.chronicle.geospatial.Point;
-
 @EventType
-public record WarehouseInspected(String warehouseId, Point inspectedAt) {}
+public record WarehouseInspected(
+    String warehouseId,
+    Point inspectedAt
+) {}
 
-var event = new WarehouseInspected("warehouse-1", new Point(10.75, 59.91));
-var result = store.getEventLog().append("warehouse-1", event);
+store.getEventLog().append(
+    "warehouse-1",
+    new WarehouseInspected(
+        "warehouse-1", new Point(10.75, 59.91)));
 ```
 
-The event content on the wire carries the GeoJSON shape the kernel looks for:
+</td></tr>
+</table>
+
+On the wire that becomes the shape the kernel looks for, with no mapping of your own:
 
 ```json
-{
-  "warehouseId": "warehouse-1",
-  "inspectedAt": { "type": "Point", "coordinates": [10.75, 59.91] }
-}
+{ "warehouseId": "warehouse-1", "inspectedAt": { "type": "Point", "coordinates": [10.75, 59.91] } }
 ```
 
-See [Geospatial types](Documentation/reference/geospatial.md) for the full
-reference, including polygons with holes.
+See [Geospatial types](Documentation/reference/geospatial.md) for the full reference, including
+polygons with holes.
 
-## Building
+## 🧰 What's in this repo
 
-```bash
-gradle :Source:build
-```
+| Piece | What it is | Where |
+| --- | --- | --- |
+| **`io.cratis:chronicle`** | The JVM client — annotations, coroutines, artifact discovery, Java bridges | [`Source`](Source) |
+| **`io.cratis:chronicle-spring-boot-starter`** | Spring Boot auto-configuration, multi-tenancy, per-request identity and units of work | [`Integrations/SpringBoot`](Integrations/SpringBoot) |
+| **`io.cratis:chronicle-testing`** | In-process scenarios for specifying a slice with no kernel, container or database | [`Testing`](Testing) |
+| **Kotlin console sample** | An interactive tour of the whole API, with registration done by hand | [`Samples/Kotlin/Console`](Samples/Kotlin/Console) |
+| **Java console sample** | The same tour in Java | [`Samples/Java/Console`](Samples/Java/Console) |
+| **Kotlin Spring Boot sample** | An event-sourced HTTP API with no setup code at all | [`Samples/Kotlin/SpringBoot`](Samples/Kotlin/SpringBoot) |
+| **Java Spring Boot sample** | The same application in Java | [`Samples/Java/SpringBoot`](Samples/Java/SpringBoot) |
+| **Documentation** | Getting started, guides, and the API reference | [`Documentation`](Documentation) |
 
-## Running the Console Sample
+## 🗺️ Start here
 
-Samples are available in both Kotlin and Java. See [Samples/Kotlin/Console/README.md](./Samples/Kotlin/Console/README.md) or [Samples/Java/Console/README.md](./Samples/Java/Console/README.md) for full instructions.
+- [Get Started](Documentation/get-started/index.md) — install, connect, append, and read a read model
+  back, in Kotlin and Java. **Start here.**
+- [Artifact Registration](Documentation/guides/artifact-registration.md) — what gets discovered, in
+  what order, and how to narrow, replace or turn it off.
+- [Spring Boot](Documentation/guides/spring-boot.md) — the starter, multi-tenancy, and per-request
+  identity, causation and units of work.
+- [Reference](Documentation/reference/index.md) — every annotation, the `IEventStore` API, and the
+  full configuration surface.
+- [Cratis Chronicle](https://github.com/Cratis/Chronicle) — the kernel this client talks to, and the
+  concepts behind it.
 
-### Kotlin Sample
+## ▶️ Running the samples
 
-```bash
+```shell
 docker run -p 35000:35000 cratis/chronicle:latest-development
-gradle :Samples:Kotlin:Console:run
+
+gradle :Samples:Kotlin:Console:run          # interactive tour, Kotlin
+gradle :Samples:Java:Console:run            # interactive tour, Java
+gradle :Samples:Kotlin:SpringBoot:bootRun   # HTTP API on :8080
+gradle :Samples:Java:SpringBoot:bootRun     # HTTP API on :8081
 ```
 
-### Java Sample
+## ✅ Quality gates
 
-```bash
-docker run -p 35000:35000 cratis/chronicle:latest-development
-gradle :Samples:Java:Console:run
+```shell
+gradle build                                # every module builds clean
+gradle test                                 # all specs pass
+
+cd Documentation && ./verify-markdown.sh    # docs lint + every link resolves
+python3 Documentation/validate-client-snippets.py   # every doc snippet compiles
 ```
+
+Documentation snippets are not decorative — every Kotlin and Java fence in `Documentation/` is
+compiled against the real client on every build, so an example that references an API that no longer
+exists fails CI rather than a reader.
+
+---
+
+<div align="center">
+
+*Part of the [Cratis](https://cratis.io) platform · Licensed under the [MIT license](LICENSE)*
+
+</div>
