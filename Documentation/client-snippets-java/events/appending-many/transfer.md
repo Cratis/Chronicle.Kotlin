@@ -2,7 +2,7 @@
 import io.cratis.chronicle.EventStore;
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.eventSequences.AppendResult;
-import io.cratis.chronicle.eventSequences.EventToAppend;
+import io.cratis.chronicle.eventSequences.EventForEventSourceId;
 
 import io.cratis.chronicle.java.EventSequenceJavaBridge;
 
@@ -21,8 +21,8 @@ class EventsAppendingManyTransfer {
         return EventSequenceJavaBridge.appendMany(
             store.getEventLog(),
             List.of(
-                new EventToAppend(fromAccount, new TransferMoneyWithdrawn(amount)),
-                new EventToAppend(toAccount, new TransferMoneyDeposited(amount))));
+                new EventForEventSourceId(fromAccount, new TransferMoneyWithdrawn(amount)),
+                new EventForEventSourceId(toAccount, new TransferMoneyDeposited(amount))));
     }
 }
 ```

@@ -41,7 +41,7 @@ concurrency via `AppendOptions.concurrencyScope`).
 
 `appendMany(eventSourceId, events)` shapes the whole batch around one event
 source. When a single unit of work touches several — moving money between
-two accounts, say — pass `EventToAppend` records instead. Each carries its
+two accounts, say — pass `EventForEventSourceId` records instead. Each carries its
 own event source id and its own shaping, and the batch still commits as
 one atomic append:
 
@@ -60,12 +60,12 @@ data class StockReserved(val sku: String, val quantity: Int)
 <!-- validate: body needs=store -->
 
 ```kotlin
-import io.cratis.chronicle.eventSequences.EventToAppend
+import io.cratis.chronicle.eventSequences.EventForEventSourceId
 
 store.eventLog.appendMany(
     listOf(
-        EventToAppend("order-1", OrderLineAdded("sku-9", 2)),
-        EventToAppend("sku-9", StockReserved("sku-9", 2))
+        EventForEventSourceId("order-1", OrderLineAdded("sku-9", 2)),
+        EventForEventSourceId("sku-9", StockReserved("sku-9", 2))
     )
 )
 ```

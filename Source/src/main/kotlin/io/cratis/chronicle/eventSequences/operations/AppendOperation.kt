@@ -8,7 +8,7 @@ import java.time.Instant
 /**
  * An event staged for appending by [IEventSourceOperations.append].
  *
- * This is [io.cratis.chronicle.eventSequences.EventToAppend] without the event source id, which the
+ * This is [io.cratis.chronicle.eventSequences.EventForEventSourceId] without the event source id, which the
  * enclosing [IEventSourceOperations] already establishes for every event staged against it.
  *
  * @property event The event object to append. Must be annotated with [@EventType][io.cratis.chronicle.events.EventType].

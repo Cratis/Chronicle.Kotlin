@@ -84,7 +84,7 @@ open class EventSequence(
             concurrencyViolation = if (response.hasConcurrencyViolation()) response.concurrencyViolation else null
         )
 
-        emitAppendOperations(listOf(EventToAppend(eventSourceId, event)), listOf(result), correlationId, identity)
+        emitAppendOperations(listOf(EventForEventSourceId(eventSourceId, event)), listOf(result), correlationId, identity)
 
         return result
     }
@@ -95,7 +95,7 @@ open class EventSequence(
         options: AppendOptions?
     ): List<AppendResult> = appendMany(
         events = events.map { event ->
-            EventToAppend(
+            EventForEventSourceId(
                 eventSourceId = eventSourceId,
                 event = event,
                 eventStreamType = options?.eventStreamType,
@@ -113,7 +113,7 @@ open class EventSequence(
     )
 
     override suspend fun appendMany(
-        events: List<EventToAppend>,
+        events: List<EventForEventSourceId>,
         concurrencyScopes: Map<String, ConcurrencyScope>,
         correlationId: UUID?
     ): List<AppendResult> {
@@ -289,7 +289,7 @@ open class EventSequence(
      * it back on [Eventsequences.AppendResponse]/[Eventsequences.AppendManyResponse].
      */
     private fun emitAppendOperations(
-        events: List<EventToAppend>,
+        events: List<EventForEventSourceId>,
         results: List<AppendResult>,
         correlationId: UUID,
         causedBy: ChronicleIdentity
@@ -313,7 +313,7 @@ open class EventSequence(
      * Every unset field falls back to the same default the client has always used, resolved against
      * the event's own event source id rather than a batch-wide one.
      */
-    private fun EventToAppend.toContract(): Eventsequences.EventToAppend =
+    private fun EventForEventSourceId.toContract(): Eventsequences.EventToAppend =
         Eventsequences.EventToAppend.newBuilder().apply {
             this.eventSourceType = this@toContract.eventSourceType ?: AppendOptions.DEFAULT_EVENT_SOURCE_TYPE
             this.eventSourceId = this@toContract.eventSourceId

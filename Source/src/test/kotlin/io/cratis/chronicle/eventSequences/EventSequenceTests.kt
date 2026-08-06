@@ -185,8 +185,8 @@ class EventSequenceTests {
 
         val results = sequence.appendMany(
             listOf(
-                EventToAppend("source-1", SomethingHappened("a")),
-                EventToAppend("source-2", SomethingHappened("b"), eventStreamType = "Onboarding")
+                EventForEventSourceId("source-1", SomethingHappened("a")),
+                EventForEventSourceId("source-2", SomethingHappened("b"), eventStreamType = "Onboarding")
             )
         )
 
@@ -213,8 +213,8 @@ class EventSequenceTests {
 
         sequence.appendMany(
             listOf(
-                EventToAppend("source-1", SomethingHappened("a")),
-                EventToAppend("source-2", SomethingHappened("b"))
+                EventForEventSourceId("source-1", SomethingHappened("a")),
+                EventForEventSourceId("source-2", SomethingHappened("b"))
             ),
             concurrencyScopes = mapOf("source-1" to ConcurrencyScope(EventSequenceNumber(5), eventSourceId = true))
         )

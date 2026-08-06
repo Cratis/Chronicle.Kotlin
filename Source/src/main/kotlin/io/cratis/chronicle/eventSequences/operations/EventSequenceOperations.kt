@@ -4,7 +4,7 @@
 package io.cratis.chronicle.eventSequences.operations
 
 import io.cratis.chronicle.eventSequences.AppendResult
-import io.cratis.chronicle.eventSequences.EventToAppend
+import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.IEventSequence
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import java.util.UUID
@@ -36,10 +36,10 @@ class EventSequenceOperations(override val eventSequence: IEventSequence) : IEve
 
     override fun getAppendedEvents(): List<Any> = eventSources.values.flatMap { it.getAppendedEvents() }
 
-    override fun getEventsToAppend(): List<EventToAppend> =
+    override fun getEventsToAppend(): List<EventForEventSourceId> =
         eventSources.flatMap { (eventSourceId, operations) ->
             operations.getOperationsOfType<AppendOperation>().map { operation ->
-                EventToAppend(
+                EventForEventSourceId(
                     eventSourceId = eventSourceId,
                     event = operation.event,
                     eventStreamType = operation.eventStreamType,

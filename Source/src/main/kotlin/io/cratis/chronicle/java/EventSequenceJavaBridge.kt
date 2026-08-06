@@ -4,7 +4,7 @@
 package io.cratis.chronicle.java
 
 import io.cratis.chronicle.eventSequences.AppendResult
-import io.cratis.chronicle.eventSequences.EventToAppend
+import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.IEventSequence
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import java.util.UUID
@@ -31,7 +31,7 @@ object EventSequenceJavaBridge {
     @JvmOverloads
     fun appendMany(
         eventSequence: IEventSequence,
-        events: List<EventToAppend>,
+        events: List<EventForEventSourceId>,
         concurrencyScopes: Map<String, ConcurrencyScope> = emptyMap(),
         correlationId: UUID? = null
     ): List<AppendResult> = runBlocking { eventSequence.appendMany(events, concurrencyScopes, correlationId) }

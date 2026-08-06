@@ -1,6 +1,6 @@
 ```kotlin
 import io.cratis.chronicle.eventSequences.AppendResult
-import io.cratis.chronicle.eventSequences.EventToAppend
+import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.events.EventType
 
@@ -18,8 +18,8 @@ class Transfers(private val eventLog: IEventLog) {
     suspend fun transfer(fromAccount: String, toAccount: String, amount: Double): List<AppendResult> =
         eventLog.appendMany(
             listOf(
-                EventToAppend(fromAccount, MoneyWithdrawn(amount)),
-                EventToAppend(toAccount, MoneyDeposited(amount))
+                EventForEventSourceId(fromAccount, MoneyWithdrawn(amount)),
+                EventForEventSourceId(toAccount, MoneyDeposited(amount))
             )
         )
 }

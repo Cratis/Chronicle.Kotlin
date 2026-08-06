@@ -4,7 +4,7 @@
 package io.cratis.chronicle.eventSequences.operations
 
 import io.cratis.chronicle.eventSequences.AppendResult
-import io.cratis.chronicle.eventSequences.EventToAppend
+import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.IEventSequence
 import java.util.UUID
 
@@ -56,9 +56,9 @@ interface IEventSequenceOperations {
     /**
      * Gets what will go on the wire, in the order it will be sent.
      *
-     * @return The staged [EventToAppend] records, in append order.
+     * @return The staged [EventForEventSourceId] records, in append order.
      */
-    fun getEventsToAppend(): List<EventToAppend>
+    fun getEventsToAppend(): List<EventForEventSourceId>
 
     /** Clears everything composed so far, leaving the instance reusable. */
     fun clear()

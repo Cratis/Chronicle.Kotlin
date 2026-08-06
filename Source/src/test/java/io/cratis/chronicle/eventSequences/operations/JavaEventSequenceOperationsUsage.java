@@ -4,7 +4,7 @@
 package io.cratis.chronicle.eventSequences.operations;
 
 import io.cratis.chronicle.eventSequences.AppendResult;
-import io.cratis.chronicle.eventSequences.EventToAppend;
+import io.cratis.chronicle.eventSequences.EventForEventSourceId;
 import io.cratis.chronicle.eventSequences.IEventSequence;
 import io.cratis.chronicle.java.ConcurrencyScopeBuilderJavaBridge;
 import io.cratis.chronicle.java.EventSequenceJavaBridge;
@@ -42,7 +42,7 @@ public final class JavaEventSequenceOperationsUsage {
     }
 
     /** Inspects what a composed operation is about to send, without sending it. */
-    public static List<EventToAppend> stagedEvents(IEventSequence sequence, Object event) {
+    public static List<EventForEventSourceId> stagedEvents(IEventSequence sequence, Object event) {
         IEventSequenceOperations operations = EventSequenceOperationsJavaBridge.operationsFor(sequence);
         EventSequenceOperationsJavaBridge.forEventSourceId(operations, "customer-1", source ->
             EventSourceOperationsJavaBridge.append(source, event));
@@ -56,6 +56,6 @@ public final class JavaEventSequenceOperationsUsage {
         Object second) {
         return EventSequenceJavaBridge.appendMany(
             sequence,
-            List.of(new EventToAppend("customer-1", first), new EventToAppend("customer-2", second)));
+            List.of(new EventForEventSourceId("customer-1", first), new EventForEventSourceId("customer-2", second)));
     }
 }

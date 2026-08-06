@@ -51,7 +51,7 @@ interface IEventSequence {
      *
      * Use this when a batch has to commit as one unit across more than one event source - the
      * single-event-source overload cannot express that, and appending per source would give up
-     * atomicity. Each [EventToAppend] carries its own shaping, so events in the same batch can go to
+     * atomicity. Each [EventForEventSourceId] carries its own shaping, so events in the same batch can go to
      * different streams.
      *
      * @param events The events to append, in the order they should be appended.
@@ -63,7 +63,7 @@ interface IEventSequence {
      * @return A list of [AppendResult], one per event, in the order of [events].
      */
     suspend fun appendMany(
-        events: List<EventToAppend>,
+        events: List<EventForEventSourceId>,
         concurrencyScopes: Map<String, ConcurrencyScope> = emptyMap(),
         correlationId: UUID? = null
     ): List<AppendResult>

@@ -105,7 +105,7 @@ interface IEventSequence {
         options: AppendOptions? = null
     ): List<AppendResult>
     suspend fun appendMany(
-        events: List<EventToAppend>,
+        events: List<EventForEventSourceId>,
         concurrencyScopes: Map<String, ConcurrencyScope> = emptyMap(),
         correlationId: UUID? = null
     ): List<AppendResult>
@@ -155,7 +155,7 @@ interface IEventLog : IEventSequence {
 ### Appending across event sources
 
 The `eventSourceId` overload of `appendMany` shapes every event in the
-batch the same way. The `List<EventToAppend>` overload instead lets each
+batch the same way. The `List<EventForEventSourceId>` overload instead lets each
 event carry its own event source id and its own shaping, so one atomic
 batch can span many event sources and many streams. `concurrencyScopes` is
 keyed by event source id — only the sources present in the map are
@@ -164,7 +164,7 @@ concurrency checked, and any source left out is appended unchecked.
 <!-- validate: skip -->
 
 ```kotlin
-data class EventToAppend(
+data class EventForEventSourceId(
     val eventSourceId: String,
     val event: Any,
     val eventStreamType: String? = null,
@@ -199,7 +199,7 @@ interface IEventSequenceOperations {
     ): IEventSequenceOperations
     fun withCorrelationId(correlationId: UUID): IEventSequenceOperations
     fun getAppendedEvents(): List<Any>
-    fun getEventsToAppend(): List<EventToAppend>
+    fun getEventsToAppend(): List<EventForEventSourceId>
     fun clear()
     suspend fun perform(): List<AppendResult>
 }
