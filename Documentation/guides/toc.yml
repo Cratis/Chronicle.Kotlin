@@ -20,13 +20,5 @@
   href: transactions.md
 - name: Event Evolution
   href: event-evolution.md
-- name: Event Type Migrations
-  href: migrations.md
-- name: Webhooks
-  href: webhooks.md
-- name: Jobs
-  href: jobs.md
-- name: Event Store Subscriptions
-  href: event-store-subscriptions.md
 - name: External Services
   href: external-services.md
