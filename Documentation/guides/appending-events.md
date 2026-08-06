@@ -24,6 +24,7 @@ reading, redacting, and observing events:
 
 | Member | Use it for |
 | --- | --- |
+| `appendMany(events)` | One atomic batch spanning several event sources. |
 | `getTailSequenceNumber` | Current end of the sequence or one source. |
 | `getForEventSourceIdAndEventTypes` | Events for one source, by type. |
 | `getFromSequenceNumber` | Events forward from a position (a bookmark). |
@@ -35,6 +36,77 @@ reading, redacting, and observing events:
 See the [EventStore API reference](../reference/event-store-api.md) for the
 full `IEventSequence` interface and `ConcurrencyScope` (optimistic
 concurrency via `AppendOptions.concurrencyScope`).
+
+### Appending across event sources
+
+`appendMany(eventSourceId, events)` shapes the whole batch around one event
+source. When a single unit of work touches several — moving money between
+two accounts, say — pass `EventToAppend` records instead. Each carries its
+own event source id and its own shaping, and the batch still commits as
+one atomic append:
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.events.EventType
+
+@EventType
+data class OrderLineAdded(val sku: String, val quantity: Int)
+
+@EventType
+data class StockReserved(val sku: String, val quantity: Int)
+```
+
+<!-- validate: body needs=store -->
+
+```kotlin
+import io.cratis.chronicle.eventSequences.EventToAppend
+
+store.eventLog.appendMany(
+    listOf(
+        EventToAppend("order-1", OrderLineAdded("sku-9", 2)),
+        EventToAppend("sku-9", StockReserved("sku-9", 2))
+    )
+)
+```
+
+Pass `concurrencyScopes` to check specific event sources optimistically —
+it is keyed by event source id, and any source left out is appended
+unchecked.
+
+### Composing a batch across call sites
+
+Sometimes the events for one unit of work are not all decided in the same
+place. `forEventSourceId` starts a composed operation you can build up and
+inspect before anything is sent, then commit with a single `perform()`:
+
+<!-- validate: body needs=store -->
+
+```kotlin
+import io.cratis.chronicle.eventSequences.EventSequenceNumber
+import io.cratis.chronicle.eventSequences.operations.forEventSourceId
+
+val operations = store.eventLog.forEventSourceId("order-1") {
+    withConcurrencyScope {
+        withSequenceNumber(EventSequenceNumber(4)).withEventSourceId()
+    }
+    append(OrderLineAdded("sku-9", 2))
+}
+
+operations.forEventSourceId("sku-9") {
+    append(StockReserved("sku-9", 2), tags = listOf("inventory"))
+}
+
+// Nothing has reached the kernel yet - this is exactly what perform() will send.
+println(operations.getEventsToAppend())
+
+val results = operations.perform()
+```
+
+Concurrency lives on the event source rather than on an individual event,
+because that is where the kernel checks it. A source that never asks for a
+scope is appended unchecked, and a scope already set is never cleared by a
+later call that expresses no expectation.
 
 ### Redacting events
 

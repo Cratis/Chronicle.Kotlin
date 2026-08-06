@@ -104,6 +104,11 @@ interface IEventSequence {
         events: List<Any>,
         options: AppendOptions? = null
     ): List<AppendResult>
+    suspend fun appendMany(
+        events: List<EventToAppend>,
+        concurrencyScopes: Map<String, ConcurrencyScope> = emptyMap(),
+        correlationId: UUID? = null
+    ): List<AppendResult>
     suspend fun hasEventsFor(eventSourceId: String): Boolean
 
     suspend fun getTailSequenceNumber(
@@ -146,6 +151,96 @@ interface IEventLog : IEventSequence {
     val transactional: ITransactionalEventSequence
 }
 ```
+
+### Appending across event sources
+
+The `eventSourceId` overload of `appendMany` shapes every event in the
+batch the same way. The `List<EventToAppend>` overload instead lets each
+event carry its own event source id and its own shaping, so one atomic
+batch can span many event sources and many streams. `concurrencyScopes` is
+keyed by event source id — only the sources present in the map are
+concurrency checked, and any source left out is appended unchecked.
+
+<!-- validate: skip -->
+
+```kotlin
+data class EventToAppend(
+    val eventSourceId: String,
+    val event: Any,
+    val eventStreamType: String? = null,
+    val eventStreamId: String? = null,
+    val eventSourceType: String? = null,
+    val tags: List<String> = emptyList(),
+    val occurred: Instant? = null,
+    val subject: String? = null
+)
+```
+
+Every unset field falls back to the same default a plain `append` uses,
+resolved against that event's own event source id.
+
+### Composed operations
+
+`IEventSequenceOperations` composes a batch that is decided in more than
+one place, then commits it with a single `perform()`. Start one with the
+`operations()` or `forEventSourceId(...)` extension on any
+`IEventSequence`. Nothing reaches the kernel until `perform()` runs, and
+`getEventsToAppend()` shows exactly what it will send.
+
+<!-- validate: skip -->
+
+```kotlin
+interface IEventSequenceOperations {
+    val eventSequence: IEventSequence
+
+    fun forEventSourceId(
+        eventSourceId: String,
+        configure: IEventSourceOperations.() -> Unit
+    ): IEventSequenceOperations
+    fun withCorrelationId(correlationId: UUID): IEventSequenceOperations
+    fun getAppendedEvents(): List<Any>
+    fun getEventsToAppend(): List<EventToAppend>
+    fun clear()
+    suspend fun perform(): List<AppendResult>
+}
+
+interface IEventSourceOperations {
+    val operations: List<IEventSequenceOperation>
+    val concurrencyScope: ConcurrencyScope
+
+    fun withConcurrencyScope(concurrencyScope: ConcurrencyScope): IEventSourceOperations
+    fun withConcurrencyScope(
+        configure: ConcurrencyScopeBuilder.() -> Unit
+    ): IEventSourceOperations
+    fun append(
+        event: Any,
+        eventStreamType: String? = null,
+        eventStreamId: String? = null,
+        eventSourceType: String? = null,
+        tags: List<String> = emptyList(),
+        occurred: Instant? = null,
+        subject: String? = null
+    ): IEventSourceOperations
+    fun <T : IEventSequenceOperation> getOperationsOfType(type: KClass<T>): List<T>
+    fun getAppendedEvents(): List<Any>
+}
+```
+
+Calling `forEventSourceId` twice for the same event source adds to what is
+already staged rather than replacing it. The concurrency scope lives on the
+event source, since that is where the kernel checks it: an event source
+that never sets one is appended unchecked, and a scope already set is never
+cleared by a later `ConcurrencyScope.notSet` — so a call that expresses no
+expectation cannot silently disable a check that was explicitly asked for.
+
+Causation is not composed here; it is derived from the ambient
+`CausationManager` when `perform()` runs.
+
+Java reaches this through `EventSequenceOperationsJavaBridge`
+(`operationsFor`, `forEventSourceId`, `perform`) and
+`EventSourceOperationsJavaBridge` (`append`, `withConcurrencyScope`), which
+supply the blocking calls, `Consumer`-based configuration, and the optional
+parameters Kotlin default arguments cannot give Java.
 
 ### Reading events back
 

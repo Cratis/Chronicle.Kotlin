@@ -1,4 +1,28 @@
-```text
-The Java Chronicle client does not support this workflow yet.
-It can use the JVM client APIs, but it does not currently expose a transactional multi-source append-many API.
+```java
+import io.cratis.chronicle.EventStore;
+import io.cratis.chronicle.events.EventType;
+import io.cratis.chronicle.eventSequences.AppendResult;
+import io.cratis.chronicle.eventSequences.EventToAppend;
+
+import io.cratis.chronicle.java.EventSequenceJavaBridge;
+
+import java.util.List;
+
+@EventType
+record TransferMoneyWithdrawn(double amount) {}
+
+@EventType
+record TransferMoneyDeposited(double amount) {}
+
+class EventsAppendingManyTransfer {
+    // Moves money between two accounts as one atomic append — each event targets its own account,
+    // and either both are committed or neither of them is.
+    List<AppendResult> transfer(EventStore store, String fromAccount, String toAccount, double amount) {
+        return EventSequenceJavaBridge.appendMany(
+            store.getEventLog(),
+            List.of(
+                new EventToAppend(fromAccount, new TransferMoneyWithdrawn(amount)),
+                new EventToAppend(toAccount, new TransferMoneyDeposited(amount))));
+    }
+}
 ```
