@@ -119,6 +119,8 @@ class ReactorsService(
                     if (resolution !is ReactorHandlerResolution.Invoke) {
                         // A handler deliberately skipped for replay and an event no handler wants
                         // are both fully observed - the reactor is caught up past them either way.
+                        // A skipped @OnceOnly handler produces no side effects either, which is the
+                        // whole point of taking it out of the replay.
                         lastSuccessfulSequenceNumber = context.sequenceNumber
                         continue
                     }
