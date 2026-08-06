@@ -96,12 +96,10 @@ internal class ReactorHandlers(
         }
 
         /**
-         * A reactor handler is `(event)` or `(event, context)`. Anything else cannot be invoked, so
-         * it is rejected at registration rather than failing on every event.
+         * A reactor handler is `(event)` or `(event, context)`, suspending or not. Anything else
+         * cannot be invoked, so it is rejected at registration rather than failing on every event.
          */
         private fun requireDispatchable(handler: EventHandlerMethod, reactorClass: KClass<*>) {
-            handler.requireNotSuspending(reactorClass)
-
             // Index 0 is the instance receiver, so the two valid shapes arrive as 2 and 3.
             if (handler.parameterCount > 3) {
                 handler.reject(reactorClass, "a reactor handler takes the event and optionally an EventContext")

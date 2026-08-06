@@ -4,10 +4,25 @@
 package io.cratis.chronicle.readModels
 
 import io.cratis.chronicle.observation.InvalidHandlerSignature
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import java.time.Instant
+
+private fun addedChangeset(readModel: EmployeeProfile) = ReadModelChangeset(
+    namespace = "default",
+    modelKey = "employee-1",
+    readModel = readModel,
+    removed = false,
+    changeType = ReadModelChangeType.Added,
+    eventSequenceNumber = 3,
+    occurred = Instant.EPOCH,
+    correlationId = null
+)
 
 data class EmployeeProfile(val name: String)
 
@@ -41,8 +56,12 @@ class ReadModelReactorHandlersTests {
     }
 
     class SuspendingReactor : IReadModelReactor {
-        @Suppress("RedundantSuspendModifier")
-        suspend fun added(@Suppress("UNUSED_PARAMETER") employee: EmployeeProfile) = Unit
+        var welcomed: EmployeeProfile? = null
+
+        suspend fun added(employee: EmployeeProfile) {
+            delay(1)
+            welcomed = employee
+        }
     }
 
     class TooManyParametersReactor : IReadModelReactor {
@@ -123,8 +142,22 @@ class ReadModelReactorHandlersTests {
     }
 
     @Test
-    fun `a suspending handler is rejected`() {
-        assertThrows<InvalidHandlerSignature> { ReadModelReactorHandlers.from(SuspendingReactor::class) }
+    fun `a suspending handler is discovered like any other`() {
+        val handlers = ReadModelReactorHandlers.from(SuspendingReactor::class)
+        assertEquals(setOf(EmployeeProfile::class), handlers.readModelClasses)
+    }
+
+    @Test
+    fun `a suspending handler is awaited`() = runBlocking {
+        val reactor = SuspendingReactor()
+        val employee = EmployeeProfile("Ada")
+
+        ReadModelReactorHandlers.from(SuspendingReactor::class)
+            .resolve(EmployeeProfile::class, ReadModelChangeType.Added)
+            .single()
+            .invoke(reactor, addedChangeset(employee))
+
+        assertSame(employee, reactor.welcomed)
     }
 
     @Test

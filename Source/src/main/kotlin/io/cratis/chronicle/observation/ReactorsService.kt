@@ -134,10 +134,10 @@ class ReactorsService(
                     val handler = resolution.handler
                     try {
                         val event = chronicleGson.fromJson(appendedEvent.content, handler.eventClass.java)
-                        val result = if (handler.function.parameters.size == 3) {
-                            handler.function.call(reactor, event, context)
+                        val result = if (handler.parameterCount == 3) {
+                            handler.invoke(reactor, event, context)
                         } else {
-                            handler.function.call(reactor, event)
+                            handler.invoke(reactor, event)
                         }
                         appendSideEffects(result, context.eventSourceId)
                         lastSuccessfulSequenceNumber = context.sequenceNumber

@@ -142,15 +142,15 @@ class ReducersService(
                         val event = chronicleGson.fromJson(appendedEvent.content, handler.eventClass.java)
                         // Index 0 is the instance receiver: (event), (event, state), or
                         // (event, state, context) - the same shapes the C# client accepts.
-                        currentState = when (handler.function.parameters.size) {
-                            2 -> handler.function.call(reducer, event)
-                            4 -> handler.function.call(
+                        currentState = when (handler.parameterCount) {
+                            2 -> handler.invoke(reducer, event)
+                            4 -> handler.invoke(
                                 reducer,
                                 event,
                                 currentState,
                                 appendedEvent.context.toEventContext()
                             )
-                            else -> handler.function.call(reducer, event, currentState)
+                            else -> handler.invoke(reducer, event, currentState)
                         }
                         lastSuccessfulSequenceNumber = appendedEvent.context.sequenceNumber
                     } catch (e: Exception) {

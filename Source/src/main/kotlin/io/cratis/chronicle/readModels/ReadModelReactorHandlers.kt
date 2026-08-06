@@ -52,16 +52,11 @@ internal class ReadModelReactorHandlers(private val methods: List<ReadModelReact
         }
 
         /**
-         * A handler is `(readModel)` or `(readModel, changeset)`. Anything else cannot be invoked, so
-         * it is rejected at registration rather than failing on every change that arrives.
+         * A handler is `(readModel)` or `(readModel, changeset)`, suspending or not. Anything else
+         * cannot be invoked, so it is rejected at registration rather than failing on every change
+         * that arrives.
          */
         private fun requireDispatchable(method: ReadModelReactorMethod, reactorClass: KClass<*>) {
-            // A suspending function carries a hidden continuation parameter, so without rejecting it
-            // first the arity check below would report a puzzling extra argument instead.
-            if (method.function.isSuspend) {
-                method.reject(reactorClass, "suspending handlers are not supported yet - make it a regular function")
-            }
-
             // Index 0 is the instance receiver, so the two valid shapes arrive as 2 and 3.
             if (method.parameterCount > 3) {
                 method.reject(reactorClass, "a handler takes the read model and optionally a ReadModelChangeset")

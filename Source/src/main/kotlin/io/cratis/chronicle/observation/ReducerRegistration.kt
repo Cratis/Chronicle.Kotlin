@@ -81,15 +81,13 @@ internal data class ReducerRegistration(
 
         /**
          * A reducer handler is `(event)`, `(event, state)`, or `(event, state, context)` - the same
-         * shapes the C# client accepts.
+         * shapes the C# client accepts - suspending or not.
          *
          * The mistake worth catching is `(event, context)`: it looks right next to a reactor
          * handler, but a reducer's second parameter is the state so far, so the state would be
          * handed to a parameter expecting an EventContext on every single event.
          */
         private fun requireDispatchable(handler: EventHandlerMethod, reducerClass: KClass<*>) {
-            handler.requireNotSuspending(reducerClass)
-
             // Index 0 is the instance receiver, so the three valid shapes arrive as 2, 3, and 4.
             if (handler.parameterCount > 4) {
                 handler.reject(
