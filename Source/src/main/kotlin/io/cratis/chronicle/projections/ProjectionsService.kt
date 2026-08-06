@@ -5,7 +5,6 @@ package io.cratis.chronicle.projections
 
 import Cratis.Chronicle.Contracts.Projections.ProjectionsGrpcKt
 import Cratis.Chronicle.Contracts.Projections.ProjectionsOuterClass
-import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.readModels.ReadModelsService
@@ -53,8 +52,8 @@ class ProjectionsService(
     @Suppress("UNCHECKED_CAST")
     private suspend fun buildDeclarativeDefinition(projection: IProjectionFor<Any>): ProjectionsOuterClass.ProjectionDefinition? {
         val projectionClass = projection::class
-        val annotation = projectionClass.findAnnotation<Projection>()
-        val projectionId = annotation?.id?.ifEmpty { projectionClass.simpleName!! } ?: projectionClass.simpleName!!
+        val registration = ProjectionRegistration.from(projectionClass)
+        val projectionId = registration.id
 
         val readModelClass = projectionClass.supertypes
             .firstOrNull { it.classifier?.toString()?.contains("IProjectionFor") == true }
@@ -72,6 +71,7 @@ class ProjectionsService(
 
         return buildProjectionDefinition(
             projectionId,
+            registration.eventSequenceId,
             readModelClass,
             fromPairs,
             joinPairs = buildJoinPairsFromEntries(builderFor.joinEntries),
@@ -95,9 +95,8 @@ class ProjectionsService(
         val fromEventAnnotations = readModelClass.findAnnotations<FromEvent>()
         if (fromEventAnnotations.isEmpty()) return null
 
-        val projectionAnnotation = readModelClass.findAnnotation<Projection>()
-        val projectionId = projectionAnnotation?.id?.ifEmpty { readModelClass.simpleName!! }
-            ?: readModelClass.simpleName!!
+        val registration = ProjectionRegistration.from(readModelClass)
+        val projectionId = registration.id
 
         val fromPairs = fromEventAnnotations.mapNotNull { fromAnn ->
             val mapped = buildPropertyMappingsForEvent(readModelClass, fromAnn.eventType)
@@ -108,6 +107,7 @@ class ProjectionsService(
 
         return buildProjectionDefinition(
             projectionId,
+            registration.eventSequenceId,
             readModelClass,
             fromPairs,
             joinPairs = collectJoinPairs(readModelClass),
@@ -406,6 +406,7 @@ class ProjectionsService(
 
     private fun buildProjectionDefinition(
         projectionId: String,
+        eventSequenceId: String,
         readModelClass: KClass<*>,
         fromPairs: List<ProjectionsOuterClass.KeyValuePair_EventType_FromDefinition>,
         joinPairs: List<ProjectionsOuterClass.KeyValuePair_EventType_JoinDefinition> = emptyList(),
@@ -434,7 +435,7 @@ class ProjectionsService(
             .setIdentifier(projectionId)
             .setReadModel(readModelName)
             .setInitialModelState(initialModelStateJson)
-            .setEventSequenceId(EventSequenceId.eventLog.value)
+            .setEventSequenceId(eventSequenceId)
             .setIsActive(true)
             .setIsRewindable(isRewindable)
             .addAllFrom(fromPairs)

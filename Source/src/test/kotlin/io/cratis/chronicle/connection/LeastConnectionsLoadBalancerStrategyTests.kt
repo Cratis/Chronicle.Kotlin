@@ -5,10 +5,10 @@ package io.cratis.chronicle.connection
 
 import io.mockk.every
 import io.mockk.mockk
-import io.mockk.slot
 import io.mockk.verify
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.io.IOException
 import java.net.http.HttpClient
@@ -41,9 +41,11 @@ class LeastConnectionsLoadBalancerStrategyTests {
     @Test
     fun `selects the address reporting the fewest connections`() = runBlocking {
         val httpClient = mockk<HttpClient>()
-        val requests = slot<HttpRequest>()
-        every { httpClient.send(capture(requests), any<HttpResponse.BodyHandler<String>>()) } answers {
-            val uri = requests.captured.uri().toString()
+        // The strategy probes every address concurrently, so the answer has to read the request it
+        // was actually called with. A shared capture slot holds whichever call landed last, which
+        // made this stub hand one address's count to the other and fail intermittently.
+        every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } answers {
+            val uri = firstArg<HttpRequest>().uri().toString()
             when {
                 uri.contains("a.example.com") && uri.endsWith("/connections/count") -> response(200, "20")
                 uri.contains("b.example.com") && uri.endsWith("/connections/count") -> response(200, "1")
@@ -81,14 +83,17 @@ class LeastConnectionsLoadBalancerStrategyTests {
     @Test
     fun `probes over plain HTTP when disableTls is true`() = runBlocking {
         val httpClient = mockk<HttpClient>()
-        val requests = slot<HttpRequest>()
-        every { httpClient.send(capture(requests), any<HttpResponse.BodyHandler<String>>()) } answers {
+        val schemes = java.util.concurrent.ConcurrentLinkedQueue<String>()
+        every { httpClient.send(any(), any<HttpResponse.BodyHandler<String>>()) } answers {
+            schemes.add(firstArg<HttpRequest>().uri().scheme)
             response(200, "0")
         }
 
         val strategy = LeastConnectionsLoadBalancerStrategy(disableTls = true, maxSelectionJitterMs = 0, httpClient = httpClient)
         strategy.select(listOf(addressA, addressB))
 
-        assertEquals("http", requests.captured.uri().scheme)
+        // Every probe has to be plain HTTP, not just whichever one happened to land last.
+        assertTrue(schemes.isNotEmpty())
+        assertTrue(schemes.all { it == "http" })
     }
 }
