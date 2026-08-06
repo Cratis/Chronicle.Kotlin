@@ -13,7 +13,16 @@ class ChronicleClient(private val options: ChronicleOptions) : IChronicleClient 
 
     override fun getEventStore(name: String, namespace: String): EventStore {
         return eventStores.getOrPut("$name/$namespace") {
-            EventStore(name, namespace, connection.services, connection.lifecycle, options.defaultSinkTypeId)
+            EventStore(
+                name,
+                namespace,
+                connection.services,
+                connection.lifecycle,
+                options.defaultSinkTypeId,
+                options.artifacts,
+                options.artifactActivator,
+                options.autoDiscoverAndRegister
+            )
         }
     }
 

@@ -51,4 +51,25 @@ interface IEventStore {
      * @return The [IEventSequence] instance.
      */
     fun getEventSequence(id: EventSequenceId): IEventSequence
+
+    /**
+     * Registers every artifact the application owns with the kernel — event types, read models,
+     * constraints, projections, webhooks, reactors, reducers and seeders — in the order the kernel
+     * needs them.
+     *
+     * Called automatically on every connect unless
+     * [io.cratis.chronicle.ChronicleOptions.autoDiscoverAndRegister] is turned off. Calling it
+     * yourself is safe at any time: it registers the same artifacts again, and never starts a second
+     * set of reactor or reducer observations.
+     */
+    suspend fun registerAll()
+
+    /**
+     * Suspends until automatic registration has finished, so the very next append is guaranteed to hit
+     * a kernel that already knows the event types.
+     *
+     * Returns immediately when [io.cratis.chronicle.ChronicleOptions.autoDiscoverAndRegister] is
+     * turned off — there is nothing to wait for.
+     */
+    suspend fun awaitRegistration()
 }

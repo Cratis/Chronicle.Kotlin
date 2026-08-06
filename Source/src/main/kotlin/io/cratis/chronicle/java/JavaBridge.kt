@@ -7,6 +7,7 @@ import Cratis.Chronicle.Contracts.Events.Events
 import Cratis.Chronicle.Contracts.Jobs.JobsOuterClass
 import Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.ObservationEventstoresubscriptions
 import Cratis.Chronicle.Contracts.Observation.Webhooks.ObservationWebhooks
+import io.cratis.chronicle.IEventStore
 import io.cratis.chronicle.auditing.CausationManager
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.compliance.IComplianceService
@@ -292,6 +293,21 @@ object UnitOfWorkJavaBridge {
     @JvmStatic
     fun rollback(unitOfWork: UnitOfWork) {
         runBlocking { unitOfWork.rollback() }
+    }
+}
+
+/**
+ * Java-friendly bridge for IEventStore artifact registration.
+ */
+object EventStoreJavaBridge {
+    @JvmStatic
+    fun registerAll(eventStore: IEventStore) {
+        runBlocking { eventStore.registerAll() }
+    }
+
+    @JvmStatic
+    fun awaitRegistration(eventStore: IEventStore) {
+        runBlocking { eventStore.awaitRegistration() }
     }
 }
 

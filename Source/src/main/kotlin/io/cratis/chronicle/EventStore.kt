@@ -3,6 +3,11 @@
 
 package io.cratis.chronicle
 
+import io.cratis.chronicle.artifacts.ArtifactActivator
+import io.cratis.chronicle.artifacts.ArtifactRegistrations
+import io.cratis.chronicle.artifacts.IArtifactActivator
+import io.cratis.chronicle.artifacts.IClientArtifacts
+import io.cratis.chronicle.artifacts.KnownClientArtifacts
 import io.cratis.chronicle.compliance.ComplianceService
 import io.cratis.chronicle.compliance.IComplianceService
 import io.cratis.chronicle.connection.ChronicleServices
@@ -39,15 +44,38 @@ import io.cratis.chronicle.readModels.ReadModelsService
 import io.cratis.chronicle.seeding.EventSeedingService
 import io.cratis.chronicle.seeding.IEventSeedingService
 import io.cratis.chronicle.transactions.UnitOfWorkManager
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.concurrent.ConcurrentHashMap
 
+/**
+ * An event store, and everything you can do with it.
+ *
+ * @param name The name of the event store.
+ * @param namespace The namespace within the event store.
+ * @param services The gRPC stubs to talk to the kernel through.
+ * @param lifecycle Tracks whether the client is connected, and under which connection id.
+ * @param defaultSinkTypeId The sink read models are persisted to by default.
+ * @param artifacts What the application consists of. Only consulted when [autoDiscoverAndRegister] is on.
+ * @param artifactActivator Creates the instances for discovered artifacts.
+ * @param autoDiscoverAndRegister Whether to register every artifact automatically on connect. Off by
+ *   default here so that constructing an event store directly never reaches out to the kernel on its
+ *   own; [ChronicleClient] turns it on from [ChronicleOptions.autoDiscoverAndRegister].
+ */
 class EventStore(
     override val name: String,
     override val namespace: String,
     private val services: ChronicleServices,
     private val lifecycle: ConnectionLifecycle,
-    private val defaultSinkTypeId: String = io.cratis.chronicle.sinks.WellKnownSinkTypes.MONGODB
+    private val defaultSinkTypeId: String = io.cratis.chronicle.sinks.WellKnownSinkTypes.MONGODB,
+    artifacts: IClientArtifacts = KnownClientArtifacts.empty,
+    artifactActivator: IArtifactActivator = ArtifactActivator,
+    private val autoDiscoverAndRegister: Boolean = false
 ) : IEventStore {
+
+    private val registrations = ArtifactRegistrations(this, artifacts, artifactActivator)
 
     override val unitOfWorkManager: UnitOfWorkManager = UnitOfWorkManager(this)
 
@@ -116,6 +144,32 @@ class EventStore(
     }
 
     private val eventSequences = ConcurrentHashMap<EventSequenceId, IEventSequence>()
+
+    init {
+        if (autoDiscoverAndRegister) {
+            // Registration is redone on every connection, not just the first. A kernel that restarted
+            // has forgotten every declaration made to it, and the client is expected to state them again.
+            CoroutineScope(Dispatchers.IO).launch {
+                lifecycle.connections().collect {
+                    try {
+                        registrations.registerAll()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        System.err.println("[EventStore] Automatic registration of artifacts failed: ${e.message}")
+                    }
+                }
+            }
+        }
+    }
+
+    override suspend fun registerAll() {
+        registrations.registerAll()
+    }
+
+    override suspend fun awaitRegistration() {
+        if (autoDiscoverAndRegister) registrations.completed.await()
+    }
 
     override fun getEventSequence(id: EventSequenceId): IEventSequence =
         // The default event log is special-cased so that anything resolving it by id - such as a
