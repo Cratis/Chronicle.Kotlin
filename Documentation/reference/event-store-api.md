@@ -859,13 +859,73 @@ which instead rewrites event content directly.
 
 ## Java interop
 
-Every service method above is a Kotlin `suspend` function and cannot be
-called from Java directly. The `io.cratis.chronicle.java` package provides
-blocking bridges — each is a static method taking the service (or
-sequence) as its first argument. A few Kotlin value classes
-(`EventSequenceNumber`, `EventSequenceId`, `EventTypeId`, `RedactionReason`)
-have a private constructor on the JVM ABI and no ordinary getter, so
-bridges that touch them take and return plain `long`/`String` instead.
+Every service method above is a Kotlin `suspend` function, which Java cannot
+call directly — a `suspend fun` carries a hidden continuation on the JVM.
+
+### Start here: the blocking client
+
+`io.cratis.chronicle.java` carries a blocking view of the client. It is what a
+Java application should use, and it reads the same as the Kotlin one:
+
+<!-- validate: skip -->
+
+```java
+var client = BlockingChronicleClient.connect(ChronicleOptions.development());
+var eventStore = client.getEventStore("ChronicleConsole");
+
+eventStore.getEventLog().append("some-event-source", new TestEvent("Hello world!"));
+```
+
+Artifacts still register themselves, and the append waits for that to finish —
+so there is nothing to declare and nothing to sequence.
+
+- `BlockingChronicleClient` — `connect`, `getEventStore(s)`, `dispose`.
+  Closeable.
+- `BlockingEventStore` — the event log and other sequences, transactional
+  appends, read models, reactors, units of work, and registration.
+- `BlockingEventSequence` — `append`, `appendMany`, `hasEventsFor`, sequence
+  numbers, reading events back, `redact`.
+- `BlockingTransactionalEventSequence` — `append` and `appendMany`, staged
+  against the current unit of work.
+- `BlockingReadModels` — `getInstanceByKey` and `register`, by plain `Class`.
+- `BlockingReactors` — `register`.
+- `BlockingUnitOfWork` — `commit`, `rollback`. Closeable, rolling back unless
+  it was committed.
+
+Every call blocks until the kernel answers, which is what a `main`, a controller
+method or a scheduled job wants. Do not call them from inside a coroutine —
+Kotlin should use the suspending API directly. `unwrap()` on any of them returns
+the suspending object underneath.
+
+A unit of work reads as try-with-resources, so a throw needs no `catch`:
+
+<!-- validate: skip -->
+
+```java
+var eventStore = new BlockingEventStore(store);
+
+try (var unitOfWork = eventStore.beginUnitOfWork()) {
+    var transactional = eventStore.getTransactional();
+
+    transactional.append("order-123", new OrderPlaced(99.95));
+    transactional.append("inventory-widget", new InventoryReserved("widget", 1));
+
+    unitOfWork.commit();
+}
+```
+
+### The lower-level bridges
+
+Underneath, the same package provides static bridges — each takes the service
+(or sequence) as its first argument. Reach for these for the corners the
+blocking client does not wrap.
+
+A few Kotlin value classes (`EventSequenceNumber`, `EventSequenceId`,
+`EventTypeId`, `RedactionReason`, `CausationType`) have mangled constructors on
+the JVM ABI, so anything Java-facing takes and returns plain `long`/`String`
+instead. Reading one back works — `getValue()` is the one accessor Kotlin leaves
+unmangled — but Java can never construct one, which is why none appears in a
+Java-facing signature. `Causation.of(timestamp, type)` exists for the same reason.
 
 - `EventLogJavaBridge` — `append`, `appendMany`, `hasEventsFor`,
   `getForEventSourceIdAndEventTypes`, `getFromSequenceNumber`,
