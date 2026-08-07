@@ -43,6 +43,10 @@ EventLogJavaBridge.append(store.getEventLog(), "employee-1",
 It is not required — appending before it completes simply races the kernel — but
 calling it once at startup makes the first append deterministic.
 
+In a Spring Boot application even that is unnecessary: the starter holds the
+application back until registration is done. See
+[Spring Boot](spring-boot.md).
+
 ## What gets discovered
 
 | Artifact | Recognized by |
@@ -188,6 +192,8 @@ val options = ChronicleOptions.development().copy(
     artifactActivator = IArtifactActivator { type -> myContainer.resolve(type) }
 )
 ```
+
+Spring Boot applications get this for free — see [Spring Boot](spring-boot.md).
 
 If an artifact cannot be created, the client throws `ArtifactActivationFailed`
 naming the class and explaining the three ways out: give it a constructor that

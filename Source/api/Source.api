@@ -2088,6 +2088,15 @@ public final class io/cratis/chronicle/json/PolygonTypeAdapter : com/google/gson
 	public synthetic fun write (Lcom/google/gson/stream/JsonWriter;Ljava/lang/Object;)V
 }
 
+public final class io/cratis/chronicle/namespaces/DefaultEventStoreNamespaceResolver : io/cratis/chronicle/namespaces/IEventStoreNamespaceResolver {
+	public static final field INSTANCE Lio/cratis/chronicle/namespaces/DefaultEventStoreNamespaceResolver;
+	public fun resolve ()Ljava/lang/String;
+}
+
+public abstract interface class io/cratis/chronicle/namespaces/IEventStoreNamespaceResolver {
+	public abstract fun resolve ()Ljava/lang/String;
+}
+
 public abstract interface class io/cratis/chronicle/namespaces/INamespacesService {
 	public abstract fun ensure (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getAll (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;

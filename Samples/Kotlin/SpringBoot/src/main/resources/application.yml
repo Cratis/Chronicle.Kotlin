@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: chronicle-spring-sample
+
+cratis:
+  chronicle:
+    # Everything else has a sensible default: the local development kernel, the Default namespace,
+    # and automatic discovery and registration of every artifact in this application's packages.
+    event-store: SpringSample
+
+logging:
+  level:
+    io.cratis.chronicle: INFO

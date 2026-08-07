@@ -2,6 +2,8 @@
   href: index.md
 - name: Artifact Registration
   href: artifact-registration.md
+- name: Spring Boot
+  href: spring-boot.md
 - name: Strongly-typed Identifiers
   href: concepts.md
 - name: Tracing

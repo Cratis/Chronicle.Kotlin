@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: chronicle-spring-sample-java
+
+server:
+  port: 8081
+
+cratis:
+  chronicle:
+    # Everything else has a sensible default: the local development kernel, the Default namespace,
+    # and automatic discovery and registration of every artifact in this application's packages.
+    event-store: SpringSampleJava
+
+logging:
+  level:
+    io.cratis.chronicle: INFO
