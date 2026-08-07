@@ -161,5 +161,11 @@ both arguments:
 <!-- validate: body needs=client -->
 
 ```java
+import io.cratis.chronicle.EventStore;
+
 EventStore store = client.getEventStore("MyApp", "production");
 ```
+
+`BlockingChronicleClient` has both forms, so a Java application using it can
+name the namespace or leave it at the default — see
+[Java interop](event-store-api.md#java-interop).

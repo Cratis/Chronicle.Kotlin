@@ -42,6 +42,39 @@ public final class JavaClientFlowUsage {
         }
     }
 
+    /** Reading the position off a result, which a value class getter cannot give Java. */
+    public static long appendAndReadThePosition() {
+        var client = BlockingChronicleClient.connect(ChronicleOptions.development());
+        var result = client.getEventStore("ChronicleConsole")
+            .getEventLog()
+            .append("some-event-source", new TestEvent("Hello world!"));
+
+        return result.getSequenceNumberValue();
+    }
+
+    /** Registering an observer by hand, when discovery is off. */
+    public static void registeringByHand(Object reactor, Object reducer) {
+        var eventStore = BlockingChronicleClient
+            .connect(ChronicleOptions.development())
+            .getEventStore("ChronicleConsole");
+
+        eventStore.getReactors().register(reactor);
+        eventStore.getReducers().register(reducer);
+    }
+
+    /** A unit of work, which try-with-resources rolls back unless it was committed. */
+    public static void severalAppendsAsOne() {
+        var eventStore = BlockingChronicleClient
+            .connect(ChronicleOptions.development())
+            .getEventStore("ChronicleConsole");
+
+        try (var unitOfWork = eventStore.beginUnitOfWork()) {
+            eventStore.getTransactional().append("source-1", new TestEvent("one"));
+            eventStore.getTransactional().append("source-2", new TestEvent("two"));
+            unitOfWork.commit();
+        }
+    }
+
     /** Naming a namespace, and reading back, still without a coroutine in sight. */
     public static long readingBack() {
         var client = BlockingChronicleClient.connect(ChronicleOptions.development());

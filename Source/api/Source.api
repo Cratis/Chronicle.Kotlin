@@ -942,6 +942,7 @@ public final class io/cratis/chronicle/eventSequences/AppendResult {
 	public final fun getConstraintViolations ()Ljava/util/List;
 	public final fun getErrors ()Ljava/util/List;
 	public final fun getSequenceNumber-hvNBoNI ()J
+	public final fun getSequenceNumberValue ()J
 	public fun hashCode ()I
 	public final fun isSuccess ()Z
 	public fun toString ()Ljava/lang/String;
@@ -1758,6 +1759,7 @@ public final class io/cratis/chronicle/java/BlockingEventStore {
 	public final fun getNamespace ()Ljava/lang/String;
 	public final fun getReactors ()Lio/cratis/chronicle/java/BlockingReactors;
 	public final fun getReadModels ()Lio/cratis/chronicle/java/BlockingReadModels;
+	public final fun getReducers ()Lio/cratis/chronicle/java/BlockingReducers;
 	public final fun getTransactional ()Lio/cratis/chronicle/java/BlockingTransactionalEventSequence;
 	public final fun registerAll ()V
 	public final fun unwrap ()Lio/cratis/chronicle/IEventStore;
@@ -1784,6 +1786,12 @@ public final class io/cratis/chronicle/java/BlockingReadModels {
 	public final fun getInstanceByKey (Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Object;
 	public final fun register ([Ljava/lang/Class;)V
 	public final fun unwrap ()Lio/cratis/chronicle/readModels/IReadModelsService;
+}
+
+public final class io/cratis/chronicle/java/BlockingReducers {
+	public fun <init> (Lio/cratis/chronicle/observation/IReducersService;)V
+	public final fun register (Ljava/lang/Object;)Lkotlinx/coroutines/Job;
+	public final fun unwrap ()Lio/cratis/chronicle/observation/IReducersService;
 }
 
 public final class io/cratis/chronicle/java/BlockingTransactionalEventSequence {

@@ -37,6 +37,9 @@ class BlockingEventStore(private val store: IEventStore) {
     /** The reactors, for registering one by hand. */
     val reactors: BlockingReactors by lazy { BlockingReactors(store.reactors) }
 
+    /** The reducers, for registering one by hand. */
+    val reducers: BlockingReducers by lazy { BlockingReducers(store.reducers) }
+
     /** Begins a unit of work, so several appends commit as one atomic operation. */
     fun beginUnitOfWork(): BlockingUnitOfWork = BlockingUnitOfWork(store.unitOfWorkManager.begin())
 
