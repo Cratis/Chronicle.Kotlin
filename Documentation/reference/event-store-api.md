@@ -65,6 +65,7 @@ interface IEventStore {
     val eventStoreSubscriptions: IEventStoreSubscriptionsService
     val webhooks: IWebhooksService
     val identities: IIdentityManagerService
+    val failedPartitions: IFailedPartitions
 
     fun getEventSequence(id: EventSequenceId): IEventSequence
 }
@@ -172,7 +173,8 @@ data class EventForEventSourceId(
     val eventSourceType: String? = null,
     val tags: List<String> = emptyList(),
     val occurred: Instant? = null,
-    val subject: String? = null
+    val subject: String? = null,
+    val causation: List<Causation> = emptyList()
 )
 ```
 
@@ -198,6 +200,7 @@ interface IEventSequenceOperations {
         configure: IEventSourceOperations.() -> Unit
     ): IEventSequenceOperations
     fun withCorrelationId(correlationId: UUID): IEventSequenceOperations
+    fun withCausation(causation: List<Causation>): IEventSequenceOperations
     fun getAppendedEvents(): List<Any>
     fun getEventsToAppend(): List<EventForEventSourceId>
     fun clear()
@@ -336,7 +339,14 @@ Optimistic concurrency is opt-in per append, via
 ```kotlin
 data class AppendOptions(
     val correlationId: UUID? = null,
-    val concurrencyScope: ConcurrencyScope? = null
+    val concurrencyScope: ConcurrencyScope? = null,
+    val eventSourceType: String? = null,
+    val eventStreamType: String? = null,
+    val eventStreamId: String? = null,
+    val subject: String? = null,
+    val tags: List<String> = emptyList(),
+    val occurred: Instant? = null,
+    val causation: List<Causation> = emptyList()
 )
 
 data class ConcurrencyScope(
@@ -357,6 +367,51 @@ check applies to. Leaving `concurrencyScope` unset (the default) is
 equivalent to `ConcurrencyScope.none` — the append is not concurrency
 checked. When the scope no longer matches, the append fails with
 `AppendResult.concurrencyViolation` set instead of throwing.
+
+### Causation
+
+Every append carries a causation chain describing what led to it. By default
+that chain is ambient: `CausationManager` builds one up per thread, and the
+append reads it as it goes. Nearly every append should leave it at that.
+
+Set `AppendOptions.causation` to attribute an append to a different chain —
+an event imported from a legacy system, or a side effect that belongs to a
+chain of its own rather than to the work the current thread happens to be
+doing. An override deliberately leaves the ambient chain untouched, so later
+appends are not attributed to something they had nothing to do with.
+
+<!-- validate: body needs=store -->
+
+```kotlin
+import io.cratis.chronicle.auditing.Causation
+import io.cratis.chronicle.auditing.CausationType
+import io.cratis.chronicle.eventSequences.AppendOptions
+import java.time.Instant
+
+store.eventLog.append(
+    "employee-1",
+    EmployeeHired("Ada", "Lovelace", "Engineer"),
+    AppendOptions(
+        causation = listOf(
+            Causation(
+                Instant.parse("1998-06-01T09:00:00Z"),
+                CausationType("LegacyImport"),
+                mapOf("file" to "1998.csv")
+            )
+        )
+    )
+)
+```
+
+`EventForEventSourceId` carries the same field, which is how a reactor side
+effect names its own chain. One caveat applies to batches: the kernel carries
+a single chain per `appendMany`, not one per event, so a batch whose events
+declare different chains throws `CausationDiffersAcrossBatch` rather than
+silently keeping one of them. Give them the same causation, leave it unset,
+or append them as separate batches. For a composed operation, set it once for
+the whole batch with `withCausation`.
+
+From Java, use `AppendOptionsBuilder.causation(...)`.
 
 ### AppendResult
 
@@ -473,6 +528,85 @@ interface IReactorsService {
     suspend fun register(reactor: Any): Job
 }
 ```
+
+A handler takes the event first, and after that anything the client can supply
+for it — an `EventContext`, a read model resolved for the event's event source,
+or whatever an `IReactorMethodArgumentResolver` claims. Handlers may suspend.
+`IReactorMiddleware` wraps every invocation. See
+[Artifact Registration](../guides/artifact-registration.md) for both.
+
+### Being told about a replay
+
+Implement `ICanBeNotifiedAboutReplay` and declare `replayBegan` and/or
+`replayEnded`. Each takes a `ReplayContext` or nothing at all, and may suspend.
+Chronicle replays each event source independently, so the notifications arrive
+once per partition rather than once overall.
+
+<!-- validate: skip -->
+
+```kotlin
+data class ReplayContext(
+    val observerId: String,
+    val partition: String,
+    val sequenceNumber: EventSequenceNumber
+)
+```
+
+The kernel flags the first and last event of a replay rather than sending a
+separate signal, so `replayBegan` runs immediately before the first replayed
+event is handled and `replayEnded` immediately after the last. A replay that
+delivers no events produces no notification — there was no first event to flag.
+
+Implementing the interface and declaring neither method is rejected at
+registration: a marker with nothing behind it would silently do nothing.
+
+---
+
+## IFailedPartitions
+
+A handler that throws stops the event source it threw on and leaves every other
+one running. That keeps one bad event from halting the system, and it also means
+a stuck partition announces itself nowhere. `store.failedPartitions` is how an
+application finds out, and how an operator recovers once the cause is fixed.
+
+<!-- validate: skip -->
+
+```kotlin
+interface IFailedPartitions {
+    suspend fun getFor(observerId: String): List<FailedPartition>
+    suspend fun getFor(observerClass: KClass<*>): List<FailedPartition>
+    suspend fun retry(
+        observerId: String,
+        partition: String,
+        eventSequenceId: EventSequenceId = EventSequenceId.eventLog
+    )
+    suspend fun retry(observerClass: KClass<*>, partition: String)
+}
+
+data class FailedPartition(
+    val id: UUID,
+    val observerId: String,
+    val partition: String,
+    val attempts: List<FailedPartitionAttempt>
+) {
+    val lastAttempt: FailedPartitionAttempt?
+}
+
+data class FailedPartitionAttempt(
+    val occurred: Instant,
+    val sequenceNumber: EventSequenceNumber,
+    val messages: List<String>,
+    val stackTrace: String
+)
+```
+
+The overloads taking a `KClass` read the observer's id — and, when retrying, the
+sequence it observes — off the class exactly as registration does, so an observer
+can be asked about by type rather than by remembering what its id came out as.
+
+`attempts` is the history of the problem, oldest first: `lastAttempt` is the one
+still standing in the way. Retrying an observer whose cause has not been fixed
+simply adds another attempt, so fix first and retry after.
 
 ---
 
@@ -594,8 +728,52 @@ worked Kotlin and Java examples.
 ```kotlin
 interface IProjectionsService {
     suspend fun register(vararg projections: Any)
+    suspend fun query(
+        declaration: String,
+        eventSequenceId: EventSequenceId = EventSequenceId.eventLog
+    ): ProjectionQueryResult
 }
 ```
+
+### Ad-hoc queries
+
+A registered projection is the right answer when a read model is part of the
+system: the kernel keeps it up to date and the client hands you a type. `query`
+is for the questions that are not part of the system — a one-off question of the
+event log during an incident, a report nobody wants to deploy a projection for,
+a declaration being written in an editor and tried out as it is typed.
+
+Nothing is registered, nothing is persisted, and nothing observes afterwards.
+The kernel projects over the sequence and hands back the result.
+
+<!-- validate: skip -->
+
+```kotlin
+val result = store.projections.query(
+    """
+    from EmployeeHired
+        set name to firstName
+    """
+)
+
+when (result) {
+    is ProjectionQueryResult.Projected ->
+        result.instancesOf(EmployeeName::class).forEach(::println)
+    is ProjectionQueryResult.Invalid ->
+        result.errors.forEach(::println)
+}
+```
+
+A declaration is a piece of text, so the first thing that can go wrong is that
+the kernel cannot parse it. That is an ordinary outcome of asking a question in
+a language rather than an exception, so it comes back as `Invalid` carrying a
+line and column per error — which is what you show whoever wrote it.
+
+An ad-hoc declaration has no registered read model type, so `entries` is raw
+JSON and `instancesOf` deserializes it into whatever shape the declaration
+produced.
+
+From Java, use `ProjectionsServiceJavaBridge.query(...)`.
 
 ---
 
@@ -681,13 +859,73 @@ which instead rewrites event content directly.
 
 ## Java interop
 
-Every service method above is a Kotlin `suspend` function and cannot be
-called from Java directly. The `io.cratis.chronicle.java` package provides
-blocking bridges — each is a static method taking the service (or
-sequence) as its first argument. A few Kotlin value classes
-(`EventSequenceNumber`, `EventSequenceId`, `EventTypeId`, `RedactionReason`)
-have a private constructor on the JVM ABI and no ordinary getter, so
-bridges that touch them take and return plain `long`/`String` instead.
+Every service method above is a Kotlin `suspend` function, which Java cannot
+call directly — a `suspend fun` carries a hidden continuation on the JVM.
+
+### Start here: the blocking client
+
+`io.cratis.chronicle.java` carries a blocking view of the client. It is what a
+Java application should use, and it reads the same as the Kotlin one:
+
+<!-- validate: skip -->
+
+```java
+var client = BlockingChronicleClient.connect(ChronicleOptions.development());
+var eventStore = client.getEventStore("ChronicleConsole");
+
+eventStore.getEventLog().append("some-event-source", new TestEvent("Hello world!"));
+```
+
+Artifacts still register themselves, and the append waits for that to finish —
+so there is nothing to declare and nothing to sequence.
+
+- `BlockingChronicleClient` — `connect`, `getEventStore(s)`, `dispose`.
+  Closeable.
+- `BlockingEventStore` — the event log and other sequences, transactional
+  appends, read models, reactors, units of work, and registration.
+- `BlockingEventSequence` — `append`, `appendMany`, `hasEventsFor`, sequence
+  numbers, reading events back, `redact`.
+- `BlockingTransactionalEventSequence` — `append` and `appendMany`, staged
+  against the current unit of work.
+- `BlockingReadModels` — `getInstanceByKey` and `register`, by plain `Class`.
+- `BlockingReactors` — `register`.
+- `BlockingUnitOfWork` — `commit`, `rollback`. Closeable, rolling back unless
+  it was committed.
+
+Every call blocks until the kernel answers, which is what a `main`, a controller
+method or a scheduled job wants. Do not call them from inside a coroutine —
+Kotlin should use the suspending API directly. `unwrap()` on any of them returns
+the suspending object underneath.
+
+A unit of work reads as try-with-resources, so a throw needs no `catch`:
+
+<!-- validate: skip -->
+
+```java
+var eventStore = new BlockingEventStore(store);
+
+try (var unitOfWork = eventStore.beginUnitOfWork()) {
+    var transactional = eventStore.getTransactional();
+
+    transactional.append("order-123", new OrderPlaced(99.95));
+    transactional.append("inventory-widget", new InventoryReserved("widget", 1));
+
+    unitOfWork.commit();
+}
+```
+
+### The lower-level bridges
+
+Underneath, the same package provides static bridges — each takes the service
+(or sequence) as its first argument. Reach for these for the corners the
+blocking client does not wrap.
+
+A few Kotlin value classes (`EventSequenceNumber`, `EventSequenceId`,
+`EventTypeId`, `RedactionReason`, `CausationType`) have mangled constructors on
+the JVM ABI, so anything Java-facing takes and returns plain `long`/`String`
+instead. Reading one back works — `getValue()` is the one accessor Kotlin leaves
+unmangled — but Java can never construct one, which is why none appears in a
+Java-facing signature. `Causation.of(timestamp, type)` exists for the same reason.
 
 - `EventLogJavaBridge` — `append`, `appendMany`, `hasEventsFor`,
   `getForEventSourceIdAndEventTypes`, `getFromSequenceNumber`,

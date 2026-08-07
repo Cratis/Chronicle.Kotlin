@@ -21,4 +21,13 @@ data class AppendResult(
     val errors: List<AppendError>,
     val isSuccess: Boolean,
     val concurrencyViolation: ConcurrencyViolation? = null
-)
+) {
+    /**
+     * The position as a plain `Long`.
+     *
+     * [sequenceNumber] is an [EventSequenceNumber], a `@JvmInline value class`, so its getter has a
+     * mangled JVM signature that Java cannot name. This one has no value class in its signature, so
+     * it is how Java reads the position: `result.getSequenceNumberValue()`.
+     */
+    val sequenceNumberValue: Long get() = sequenceNumber.value
+}

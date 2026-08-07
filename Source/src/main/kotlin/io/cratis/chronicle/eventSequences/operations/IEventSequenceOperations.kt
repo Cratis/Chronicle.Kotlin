@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.eventSequences.operations
 
+import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.IEventSequence
@@ -45,6 +46,19 @@ interface IEventSequenceOperations {
      * @return This instance, for chaining.
      */
     fun withCorrelationId(correlationId: UUID): IEventSequenceOperations
+
+    /**
+     * Attributes the composed operation to [causation] rather than the ambient chain.
+     *
+     * Like correlation, causation describes the whole batch: the kernel carries one chain per
+     * append, not one per event, so this belongs here rather than on an individual staged event.
+     * Without it the chain the current thread has built up is used, which is what nearly every
+     * caller wants.
+     *
+     * @param causation The chain this batch should be attributed to.
+     * @return This instance, for chaining.
+     */
+    fun withCausation(causation: List<Causation>): IEventSequenceOperations
 
     /**
      * Gets the events staged across every event source.

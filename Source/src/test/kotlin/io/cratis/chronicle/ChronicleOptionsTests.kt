@@ -3,6 +3,8 @@
 
 package io.cratis.chronicle
 
+import io.cratis.chronicle.artifacts.given.OrderPlaced
+import io.cratis.chronicle.artifacts.given.OrderReactor
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Assertions.*
 
@@ -27,5 +29,34 @@ class ChronicleOptionsTests {
     fun `programIdentifier defaults to Unknown`() {
         val opts = ChronicleOptions.fromConnectionString("chronicle://localhost:35000")
         assertEquals("Unknown", opts.programIdentifier)
+    }
+
+    @Test
+    fun `artifacts are discovered and registered automatically by default`() {
+        assertTrue(ChronicleOptions.development().autoDiscoverAndRegister)
+    }
+
+    @Test
+    fun `withoutAutoRegistration turns automatic registration off`() {
+        assertFalse(ChronicleOptions.development().withoutAutoRegistration().autoDiscoverAndRegister)
+    }
+
+    @Test
+    fun `withoutAutoRegistration leaves everything else alone`() {
+        val opts = ChronicleOptions.development()
+        val without = opts.withoutAutoRegistration()
+
+        assertEquals(opts.connectionString, without.connectionString)
+        assertEquals(opts.programIdentifier, without.programIdentifier)
+        assertEquals(opts.defaultSinkTypeId, without.defaultSinkTypeId)
+        assertSame(opts.artifacts, without.artifacts)
+    }
+
+    @Test
+    fun `withArtifactsFrom narrows discovery to the given packages`() {
+        val opts = ChronicleOptions.development().withArtifactsFrom("io.cratis.chronicle.artifacts.given")
+
+        assertTrue(opts.artifacts.eventTypes.contains(OrderPlaced::class))
+        assertTrue(opts.artifacts.reactors.contains(OrderReactor::class))
     }
 }

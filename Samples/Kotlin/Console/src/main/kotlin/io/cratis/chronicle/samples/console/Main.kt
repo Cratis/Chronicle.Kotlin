@@ -239,7 +239,11 @@ fun main() = runBlocking {
         ChronicleOptions.fromConnectionString(connectionString)
     } else {
         ChronicleOptions.development()
-    }
+        // This sample deliberately opts out of automatic discovery and registration so that every
+        // artifact below is registered by hand — it doubles as a tour of the registration API and of
+        // the exact order the kernel wants things in. Leave auto-registration on (the default) and
+        // everything from here down to the constraints happens for you; see the Spring Boot sample.
+    }.withoutAutoRegistration()
 
     println("Connecting to Chronicle at ${options.connectionString.target} (disableTls=${options.connectionString.disableTls})")
     val client = ChronicleClient(options)

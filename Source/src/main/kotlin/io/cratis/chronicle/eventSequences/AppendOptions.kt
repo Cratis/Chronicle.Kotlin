@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.eventSequences
 
+import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import java.time.Instant
 import java.util.UUID
@@ -31,6 +32,11 @@ import java.util.UUID
  * @property tags Tags to attach to the event. Observers can be filtered by tag.
  * @property occurred When the event actually occurred. Defaults to the time the kernel appends it -
  *   set this when importing or backfilling events that happened earlier.
+ * @property causation The chain describing what caused this event. Defaults to the ambient chain
+ *   held by [io.cratis.chronicle.auditing.CausationManager] for the current thread, which is what
+ *   nearly every append should use. Set this only to attribute an append to something other than
+ *   the work the current thread is doing - an imported event, or a side effect that belongs to a
+ *   chain of its own. An empty list means "no override" and leaves the ambient chain in charge.
  */
 data class AppendOptions @JvmOverloads constructor(
     val correlationId: UUID? = null,
@@ -40,7 +46,8 @@ data class AppendOptions @JvmOverloads constructor(
     val eventStreamId: String? = null,
     val subject: String? = null,
     val tags: List<String> = emptyList(),
-    val occurred: Instant? = null
+    val occurred: Instant? = null,
+    val causation: List<Causation> = emptyList()
 ) {
     internal companion object {
         /** The event source type used when none is specified. */

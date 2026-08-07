@@ -7,7 +7,10 @@ import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.events.EventType
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
+import kotlin.reflect.KParameter
+import kotlin.reflect.full.callSuspend
 import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.jvm.isAccessible
 
 /**
  * A single handler method on a reactor or reducer, together with the event type it handles.
@@ -24,25 +27,27 @@ internal data class EventHandlerMethod(
     /** How many parameters the method takes, counting the instance receiver at index 0. */
     val parameterCount: Int get() = function.parameters.size
 
+    /**
+     * The parameters past the event, which is everything that has to be resolved per invocation.
+     *
+     * Index 0 is the instance receiver and index 1 is the event itself, so these start at index 2.
+     */
+    val argumentParameters: List<KParameter> get() = function.parameters.drop(2)
+
     /** Whether the parameter at [index] is an [EventContext]. */
     fun takesContextAt(index: Int): Boolean =
         function.parameters.getOrNull(index)?.type?.classifier == EventContext::class
 
     /**
-     * Rejects a suspending handler, which the client cannot invoke.
+     * Invokes the handler with [arguments], awaiting it when it suspends.
      *
-     * A `suspend` function also carries a hidden continuation parameter, so without this the arity
-     * checks would report a puzzling extra argument instead of the real problem.
+     * `callSuspend` is used for every handler, suspending or not: a plain function goes straight
+     * through it, and a `suspend` one is awaited rather than being handed a continuation it would
+     * reject. Both observers already dispatch from inside a coroutine, so a handler that suspends
+     * frees the thread instead of blocking it.
      */
-    fun requireNotSuspending(observerClass: KClass<*>) {
-        if (function.isSuspend) {
-            throw InvalidHandlerSignature(
-                observerClass,
-                function.name,
-                "suspending handlers are not supported yet - make it a regular function"
-            )
-        }
-    }
+    suspend fun invoke(observer: Any, vararg arguments: Any?): Any? =
+        function.callSuspend(observer, *arguments)
 
     /** Throws [InvalidHandlerSignature] with [reason] for this handler. */
     fun reject(observerClass: KClass<*>, reason: String): Nothing =
@@ -59,6 +64,12 @@ internal data class EventHandlerMethod(
             val eventClass = eventParameter.type.classifier as? KClass<*> ?: return null
             val eventType = eventClass.findAnnotation<EventType>() ?: return null
             val eventTypeId = eventType.id.ifEmpty { eventClass.simpleName ?: return null }
+
+            // A handler declared on an `internal` or private class is ordinary Kotlin, but its JVM
+            // class is not public - so reflection refuses to invoke the method without being told,
+            // and the observer would fail on every event it was given.
+            function.isAccessible = true
+
             return EventHandlerMethod(function, eventClass, eventTypeId)
         }
     }

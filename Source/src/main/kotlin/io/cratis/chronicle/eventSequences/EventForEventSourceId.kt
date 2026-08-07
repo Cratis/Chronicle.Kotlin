@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.eventSequences
 
+import io.cratis.chronicle.auditing.Causation
 import java.time.Instant
 
 /**
@@ -33,6 +34,11 @@ import java.time.Instant
  *   set this when importing or backfilling events that happened earlier.
  * @property subject The compliance subject this event is about, which is what PII is held against.
  *   Defaults to [eventSourceId] - set this when the subject is someone other than the event source.
+ * @property causation The chain describing what caused this event, overriding the ambient one. This
+ *   is what lets a reactor side effect attribute itself to something other than the chain the
+ *   triggering event left on the thread. Note that the kernel carries one chain per
+ *   [IEventSequence.appendMany] batch rather than one per event, so a batch whose events disagree
+ *   on causation cannot be expressed and is rejected rather than having the difference dropped.
  */
 data class EventForEventSourceId @JvmOverloads constructor(
     val eventSourceId: String,
@@ -42,7 +48,8 @@ data class EventForEventSourceId @JvmOverloads constructor(
     val eventSourceType: String? = null,
     val tags: List<String> = emptyList(),
     val occurred: Instant? = null,
-    val subject: String? = null
+    val subject: String? = null,
+    val causation: List<Causation> = emptyList()
 ) {
     /**
      * The shaping expressed as [AppendOptions], for the paths that append one event at a time -
@@ -55,6 +62,7 @@ data class EventForEventSourceId @JvmOverloads constructor(
         eventStreamId = eventStreamId,
         subject = subject,
         tags = tags,
-        occurred = occurred
+        occurred = occurred,
+        causation = causation
     )
 }

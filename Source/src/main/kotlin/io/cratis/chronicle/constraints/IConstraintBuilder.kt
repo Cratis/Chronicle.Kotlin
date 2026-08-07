@@ -32,6 +32,23 @@ interface IConstraintBuilder {
     fun perEventStreamId(): IConstraintBuilder
 
     fun <TEvent : Any> uniqueFor(eventClass: KClass<TEvent>, message: String = ""): IConstraintBuilder
+
+    /**
+     * The same, taking a Java [Class].
+     *
+     * Kotlin's [KClass] is awkward to produce from Java, and the default argument on the overload
+     * above does not exist there either. This is what a Java constraint calls.
+     *
+     * @param eventClass The event type the uniqueness applies to.
+     * @param message What to tell the caller when the append is rejected.
+     * @return This builder, for chaining.
+     */
+    fun <TEvent : Any> uniqueFor(eventClass: Class<TEvent>, message: String): IConstraintBuilder =
+        uniqueFor(eventClass.kotlin, message)
+
+    /** The same with no message, since Kotlin default arguments do not reach Java. */
+    fun <TEvent : Any> uniqueFor(eventClass: Class<TEvent>): IConstraintBuilder =
+        uniqueFor(eventClass.kotlin, "")
     fun unique(configure: (IUniqueConstraintBuilder) -> Unit): IConstraintBuilder
 }
 

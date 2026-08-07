@@ -6,6 +6,7 @@ package io.cratis.chronicle.eventSequences.operations
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.IEventSequence
+import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import java.util.UUID
 
@@ -20,6 +21,7 @@ class EventSequenceOperations(override val eventSequence: IEventSequence) : IEve
     // makes the append order predictable for anyone reading them back.
     private val eventSources = linkedMapOf<String, IEventSourceOperations>()
     private var correlationId: UUID? = null
+    private var causation: List<Causation> = emptyList()
 
     override fun forEventSourceId(
         eventSourceId: String,
@@ -31,6 +33,11 @@ class EventSequenceOperations(override val eventSequence: IEventSequence) : IEve
 
     override fun withCorrelationId(correlationId: UUID): EventSequenceOperations {
         this.correlationId = correlationId
+        return this
+    }
+
+    override fun withCausation(causation: List<Causation>): EventSequenceOperations {
+        this.causation = causation
         return this
     }
 
@@ -47,7 +54,8 @@ class EventSequenceOperations(override val eventSequence: IEventSequence) : IEve
                     eventSourceType = operation.eventSourceType,
                     tags = operation.tags,
                     occurred = operation.occurred,
-                    subject = operation.subject
+                    subject = operation.subject,
+                    causation = causation
                 )
             }
         }
@@ -55,6 +63,7 @@ class EventSequenceOperations(override val eventSequence: IEventSequence) : IEve
     override fun clear() {
         eventSources.clear()
         correlationId = null
+        causation = emptyList()
     }
 
     override suspend fun perform(): List<AppendResult> = eventSequence.appendMany(

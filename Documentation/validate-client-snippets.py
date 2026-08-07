@@ -41,11 +41,14 @@ PAGE_PRELUDES = {
     "kotlin": {
         "client": 'val client: io.cratis.chronicle.ChronicleClient = error("compile-only")',
         "store": 'val store: io.cratis.chronicle.EventStore = error("compile-only")',
+        # Kotlin has no blocking store - the name exists so a Java fence can ask for one.
+        "blockingStore": 'val store: io.cratis.chronicle.EventStore = error("compile-only")',
         "employeeId": 'val employeeId: String = "emp-001"',
     },
     "java": {
         "client": "io.cratis.chronicle.ChronicleClient client = null;",
         "store": "io.cratis.chronicle.EventStore store = null;",
+        "blockingStore": "io.cratis.chronicle.java.BlockingEventStore store = null;",
         "employeeId": 'String employeeId = "emp-001";',
     },
 }

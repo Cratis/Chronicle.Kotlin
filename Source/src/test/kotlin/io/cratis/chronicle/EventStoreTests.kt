@@ -8,6 +8,8 @@ import io.cratis.chronicle.connection.ConnectionLifecycle
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Assertions.assertSame
@@ -51,5 +53,11 @@ class EventStoreTests {
         val second = store.getEventSequence(EventSequenceId("sequence-two"))
 
         assertNotSame(first, second)
+    }
+
+    @Test
+    fun `awaitRegistration returns straight away when automatic registration is turned off`() = runTest {
+        // No kernel is reachable here, so a call that waited would never come back.
+        withTimeout(1000) { newEventStore().awaitRegistration() }
     }
 }

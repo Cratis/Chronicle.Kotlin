@@ -6,15 +6,19 @@ package io.cratis.chronicle.eventSequences
 import Cratis.Chronicle.Contracts.EventSequences.Eventsequences
 import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
 import bcl.Bcl
+import io.cratis.chronicle.artifacts.IRegistrationGate
+import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.auditing.causationManager
 import io.cratis.chronicle.correlation.correlationIdManager
+import io.cratis.chronicle.diagnostics.ChronicleTraces
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.events.EventTypeDescriptor
 import io.cratis.chronicle.identity.Identity as ChronicleIdentity
 import io.cratis.chronicle.identity.identityProvider
 import io.cratis.chronicle.json.chronicleGson
+import io.opentelemetry.api.common.Attributes
 import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -32,7 +36,9 @@ open class EventSequence(
     override val id: EventSequenceId,
     private val eventStoreName: String,
     private val namespace: String,
-    private val stub: EventSequencesGrpcKt.EventSequencesCoroutineStub
+    private val stub: EventSequencesGrpcKt.EventSequencesCoroutineStub,
+    private val traces: ChronicleTraces = ChronicleTraces.default,
+    private val registrationGate: IRegistrationGate = IRegistrationGate.open
 ) : IEventSequence {
 
     private val _appendOperations = MutableSharedFlow<List<AppendedEventWithResult>>(
@@ -43,13 +49,36 @@ open class EventSequence(
     override val appendOperations: SharedFlow<List<AppendedEventWithResult>> = _appendOperations.asSharedFlow()
 
     override suspend fun append(eventSourceId: String, event: Any, options: AppendOptions?): AppendResult {
+        // The kernel rejects an event whose type it has never been told about, and registration
+        // happens on connect in the background - so without this the first append after
+        // getEventStore would race it. Once that pass is through, waiting costs nothing.
+        registrationGate.awaitOpen()
+
+        // Resolved once here rather than inside the span body, so naming the span costs no extra
+        // reflection over what the append was going to do anyway.
         val eventType = resolveEventType(event)
+
+        return traces.span(
+            "Chronicle append ${eventType.id.value}",
+            appendAttributes(eventSourceId, eventType.id.value)
+        ) {
+            appendInternal(eventSourceId, event, eventType, options)
+        }
+    }
+
+    private suspend fun appendInternal(
+        eventSourceId: String,
+        event: Any,
+        eventType: EventTypeDescriptor,
+        options: AppendOptions?
+    ): AppendResult {
         val correlationId = options?.correlationId ?: correlationIdManager.current
         val concurrencyScope = options?.concurrencyScope ?: ConcurrencyScope.none
         val content = chronicleGson.toJson(event)
 
-        causationManager.add(CausationType.appendEvent, mapOf("eventType" to eventType.id.value))
-        val causationChain = causationManager.currentChain
+        val causationChain = causationFor(options?.causation ?: emptyList()) {
+            causationManager.add(CausationType.appendEvent, mapOf("eventType" to eventType.id.value))
+        }
         val identity = identityProvider.currentIdentity
 
         val esName = eventStoreName
@@ -101,7 +130,8 @@ open class EventSequence(
                 eventSourceType = options?.eventSourceType,
                 tags = options?.tags ?: emptyList(),
                 occurred = options?.occurred,
-                subject = options?.subject
+                subject = options?.subject,
+                causation = options?.causation ?: emptyList()
             )
         },
         // The single-source form always sends a scope for its one event source, even when that
@@ -117,10 +147,23 @@ open class EventSequence(
     ): List<AppendResult> {
         if (events.isEmpty()) return emptyList()
 
+        registrationGate.awaitOpen()
+
+        return traces.span("Chronicle appendMany", appendManyAttributes(events.size)) {
+            appendManyInternal(events, concurrencyScopes, correlationId)
+        }
+    }
+
+    private suspend fun appendManyInternal(
+        events: List<EventForEventSourceId>,
+        concurrencyScopes: Map<String, ConcurrencyScope>,
+        correlationId: UUID?
+    ): List<AppendResult> {
         val effectiveCorrelationId = correlationId ?: correlationIdManager.current
 
-        causationManager.add(CausationType.appendManyEvents, mapOf("count" to events.size.toString()))
-        val causationChain = causationManager.currentChain
+        val causationChain = causationFor(batchCausationOf(events)) {
+            causationManager.add(CausationType.appendManyEvents, mapOf("count" to events.size.toString()))
+        }
         val identity = identityProvider.currentIdentity
 
         val esName = eventStoreName
@@ -305,6 +348,58 @@ open class EventSequence(
             AppendedEventWithResult(context, event.event, results[index])
         }
         _appendOperations.tryEmit(entries)
+    }
+
+    /** What a reader of a trace needs to find this append: which event, where it went. */
+    private fun appendAttributes(eventSourceId: String, eventTypeId: String): Attributes = Attributes.of(
+        ChronicleTraces.EVENT_TYPE, eventTypeId,
+        ChronicleTraces.EVENT_SOURCE_ID, eventSourceId,
+        ChronicleTraces.EVENT_SEQUENCE_ID, id.value,
+        ChronicleTraces.EVENT_STORE, eventStoreName,
+        ChronicleTraces.NAMESPACE, namespace
+    )
+
+    /**
+     * The same for a batch, minus the event type and source - a batch may span many of both, and the
+     * count is what tells you whether you are looking at the batch you meant to.
+     */
+    private fun appendManyAttributes(eventCount: Int): Attributes = Attributes.builder()
+        .put(ChronicleTraces.EVENT_SEQUENCE_ID, id.value)
+        .put(ChronicleTraces.EVENT_STORE, eventStoreName)
+        .put(ChronicleTraces.NAMESPACE, namespace)
+        .put(ChronicleTraces.EVENT_COUNT, eventCount.toLong())
+        .build()
+
+    /**
+     * The causation chain to send: [override] when the caller supplied one, otherwise the ambient
+     * chain for this thread after [recordAmbient] has noted the append on it.
+     *
+     * An override deliberately leaves the ambient chain alone. The point of overriding is that this
+     * append is not part of the work the current thread is doing, so recording it there would
+     * attribute later appends to something they had nothing to do with.
+     */
+    private fun causationFor(override: List<Causation>, recordAmbient: () -> Unit): List<Causation> {
+        if (override.isNotEmpty()) return override
+        recordAmbient()
+        return causationManager.currentChain
+    }
+
+    /**
+     * The one causation chain a batch is appended under.
+     *
+     * The kernel's AppendMany request carries a single chain for the whole batch rather than one per
+     * event, so events that disagree cannot be expressed. Rejecting that says so plainly, where
+     * quietly picking one event's chain would attribute the rest of the batch to a cause that is not
+     * theirs.
+     */
+    private fun batchCausationOf(events: List<EventForEventSourceId>): List<Causation> {
+        val declared = events.map { it.causation }.filter { it.isNotEmpty() }.distinct()
+
+        if (declared.size > 1) {
+            throw CausationDiffersAcrossBatch(events.size)
+        }
+
+        return declared.singleOrNull() ?: emptyList()
     }
 
     /**

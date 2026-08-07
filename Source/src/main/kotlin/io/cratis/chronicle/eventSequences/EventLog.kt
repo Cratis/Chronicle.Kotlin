@@ -4,14 +4,18 @@
 package io.cratis.chronicle.eventSequences
 
 import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
+import io.cratis.chronicle.artifacts.IRegistrationGate
+import io.cratis.chronicle.diagnostics.ChronicleTraces
 import io.cratis.chronicle.transactions.IUnitOfWorkManager
 
 class EventLog(
     name: String,
     namespace: String,
     stub: EventSequencesGrpcKt.EventSequencesCoroutineStub,
-    private val unitOfWorkManager: IUnitOfWorkManager
-) : EventSequence(EventSequenceId.eventLog, name, namespace, stub), IEventLog {
+    private val unitOfWorkManager: IUnitOfWorkManager,
+    traces: ChronicleTraces = ChronicleTraces.default,
+    registrationGate: IRegistrationGate = IRegistrationGate.open
+) : EventSequence(EventSequenceId.eventLog, name, namespace, stub, traces, registrationGate), IEventLog {
 
     override val transactional: ITransactionalEventSequence by lazy {
         TransactionalEventSequence(this, unitOfWorkManager)

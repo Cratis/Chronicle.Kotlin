@@ -6,9 +6,11 @@ package io.cratis.chronicle.observation
 import Cratis.Chronicle.Contracts.Observation.Reducers.ObservationReducers
 import Cratis.Chronicle.Contracts.Observation.Reducers.ReducersGrpcKt
 import io.cratis.chronicle.connection.ConnectionLifecycle
+import io.cratis.chronicle.diagnostics.ChronicleTraces
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
+import io.opentelemetry.api.common.Attributes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +29,8 @@ class ReducersService(
     private val lifecycle: ConnectionLifecycle,
     private val stub: ReducersGrpcKt.ReducersCoroutineStub,
     private val defaultSinkTypeId: String = WellKnownSinkTypes.MONGODB,
-    private val readModels: io.cratis.chronicle.readModels.ReadModelsService? = null
+    private val readModels: io.cratis.chronicle.readModels.ReadModelsService? = null,
+    private val traces: ChronicleTraces = ChronicleTraces.default
 ) : IReducersService {
 
     override suspend fun register(reducer: Any): Job {
@@ -139,23 +142,26 @@ class ReducersService(
                     }
 
                     try {
-                        val event = chronicleGson.fromJson(appendedEvent.content, handler.eventClass.java)
-                        // Index 0 is the instance receiver: (event), (event, state), or
-                        // (event, state, context) - the same shapes the C# client accepts.
-                        currentState = when (handler.function.parameters.size) {
-                            2 -> handler.function.call(reducer, event)
-                            4 -> handler.function.call(
-                                reducer,
-                                event,
-                                currentState,
-                                appendedEvent.context.toEventContext()
-                            )
-                            else -> handler.function.call(reducer, event, currentState)
+                        val context = appendedEvent.context.toEventContext()
+                        currentState = traces.span(
+                            "Chronicle reduce ${context.eventType.id.value}",
+                            reduceAttributes(registration, context)
+                        ) {
+                            val event = chronicleGson.fromJson(appendedEvent.content, handler.eventClass.java)
+                            // Index 0 is the instance receiver: (event), (event, state), or
+                            // (event, state, context) - the same shapes the C# client accepts.
+                            when (handler.parameterCount) {
+                                2 -> handler.invoke(reducer, event)
+                                4 -> handler.invoke(reducer, event, currentState, context)
+                                else -> handler.invoke(reducer, event, currentState)
+                            }
                         }
                         lastSuccessfulSequenceNumber = appendedEvent.context.sequenceNumber
                     } catch (e: Exception) {
-                        exceptions.add(e.message ?: "Error in ${handler.function.name}")
-                        stackTrace = e.stackTraceToString()
+                        // Reflection wraps a throwing handler, so the message and stack trace the
+                        // kernel is told about are taken from what the handler actually raised.
+                        exceptions.add(e.messageFor(handler.function.name))
+                        stackTrace = e.unwrapReflectionFailure().stackTraceToString()
                     }
                 }
 
@@ -191,6 +197,19 @@ class ReducersService(
             requests.close()
         }
     }
+
+    /** What a reader of a trace needs to place this fold: which reducer, which event, where. */
+    private fun reduceAttributes(
+        registration: ReducerRegistration,
+        context: io.cratis.chronicle.events.EventContext
+    ): Attributes = Attributes.builder()
+        .put(ChronicleTraces.OBSERVER_ID, registration.id)
+        .put(ChronicleTraces.EVENT_TYPE, context.eventType.id.value)
+        .put(ChronicleTraces.EVENT_SOURCE_ID, context.eventSourceId)
+        .put(ChronicleTraces.EVENT_SEQUENCE_ID, registration.eventSequenceId)
+        .put(ChronicleTraces.SEQUENCE_NUMBER, context.sequenceNumber)
+        .put(ChronicleTraces.IS_REPLAY, context.observationState.isReplay)
+        .build()
 
     private companion object {
         /** How long to wait before re-establishing an observation whose stream ended. */

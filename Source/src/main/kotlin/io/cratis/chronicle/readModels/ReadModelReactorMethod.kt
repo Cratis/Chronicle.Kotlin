@@ -6,7 +6,9 @@ package io.cratis.chronicle.readModels
 import io.cratis.chronicle.observation.InvalidHandlerSignature
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
+import kotlin.reflect.full.callSuspend
 import kotlin.reflect.full.isSubclassOf
+import kotlin.reflect.jvm.isAccessible
 import kotlin.reflect.jvm.javaMethod
 
 /**
@@ -44,13 +46,16 @@ internal data class ReadModelReactorMethod(
      *
      * A collection handler is handed the changed instance as a single-element list, or an empty one
      * when the change removed it - never `null`, which a `List` parameter could not accept.
+     *
+     * `callSuspend` covers both kinds of handler: a plain function goes straight through it, and a
+     * `suspend` one is awaited rather than being handed a continuation it would reject.
      */
-    fun invoke(reactor: Any, changeset: ReadModelChangeset<*>): Any? {
+    suspend fun invoke(reactor: Any, changeset: ReadModelChangeset<*>): Any? {
         val readModel = if (isCollection) listOfNotNull(changeset.readModel) else changeset.readModel
         return if (takesChangeset) {
-            function.call(reactor, readModel, changeset)
+            function.callSuspend(reactor, readModel, changeset)
         } else {
-            function.call(reactor, readModel)
+            function.callSuspend(reactor, readModel)
         }
     }
 
@@ -77,6 +82,10 @@ internal data class ReadModelReactorMethod(
             } else {
                 declared
             }
+
+            // As with event handlers, a method on a non-public class needs reflection told before
+            // it can be invoked.
+            function.isAccessible = true
 
             return ReadModelReactorMethod(
                 changeType = changeType,

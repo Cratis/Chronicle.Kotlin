@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.readModels
 
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
@@ -64,7 +65,7 @@ class ReadModelReactorMethodTests {
         ReadModelReactorHandlers.from(reactorClass).resolve(EmployeeProfile::class, changeType).single()
 
     @Test
-    fun `invoking a handler passes the changed instance`() {
+    fun `invoking a handler passes the changed instance`() = runBlocking {
         val reactor = RecordingReactor()
         val employee = EmployeeProfile("Ada")
 
@@ -75,7 +76,7 @@ class ReadModelReactorMethodTests {
     }
 
     @Test
-    fun `invoking a handler passes the changeset when it asks for one`() {
+    fun `invoking a handler passes the changeset when it asks for one`() = runBlocking {
         val reactor = RecordingReactor()
         val change = changeset(EmployeeProfile("Ada"), ReadModelChangeType.Modified)
 
@@ -85,7 +86,7 @@ class ReadModelReactorMethodTests {
     }
 
     @Test
-    fun `invoking a removal handler passes no instance`() {
+    fun `invoking a removal handler passes no instance`() = runBlocking {
         val reactor = RecordingReactor()
 
         methodFor(RecordingReactor::class, ReadModelChangeType.Removed)
@@ -95,7 +96,7 @@ class ReadModelReactorMethodTests {
     }
 
     @Test
-    fun `invoking a collection handler passes the instance as a single element list`() {
+    fun `invoking a collection handler passes the instance as a single element list`() = runBlocking {
         val reactor = BatchReactor()
         val employee = EmployeeProfile("Ada")
 
@@ -106,7 +107,7 @@ class ReadModelReactorMethodTests {
     }
 
     @Test
-    fun `invoking a collection handler passes an empty list when the instance is gone`() {
+    fun `invoking a collection handler passes an empty list when the instance is gone`() = runBlocking {
         val reactor = BatchReactor()
 
         methodFor(BatchReactor::class, ReadModelChangeType.Removed)
@@ -116,7 +117,7 @@ class ReadModelReactorMethodTests {
     }
 
     @Test
-    fun `invoking a handler returns what it returned`() {
+    fun `invoking a handler returns what it returned`() = runBlocking {
         val result = methodFor(SideEffectReactor::class, ReadModelChangeType.Added)
             .invoke(SideEffectReactor(), changeset(EmployeeProfile("Ada"), ReadModelChangeType.Added))
 

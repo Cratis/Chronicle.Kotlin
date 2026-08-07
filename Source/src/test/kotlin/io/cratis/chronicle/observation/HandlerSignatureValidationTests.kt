@@ -30,9 +30,13 @@ class HandlerSignatureValidationTests {
         ) = Unit
     }
 
-    class SuspendingReactor {
+    class SuspendingReactorWithExtraParameter {
         @Suppress("RedundantSuspendModifier")
-        suspend fun bookReturned(@Suppress("UNUSED_PARAMETER") event: BookReturned) = Unit
+        suspend fun bookReturned(
+            @Suppress("UNUSED_PARAMETER") event: BookReturned,
+            @Suppress("UNUSED_PARAMETER") context: EventContext,
+            @Suppress("UNUSED_PARAMETER") extra: String
+        ) = Unit
     }
 
     @Reducer
@@ -53,11 +57,11 @@ class HandlerSignatureValidationTests {
     }
 
     @Reducer
-    class SuspendingReducer {
+    class SuspendingReducerTakingContextInsteadOfState {
         @Suppress("RedundantSuspendModifier")
         suspend fun borrowed(
             @Suppress("UNUSED_PARAMETER") event: BookBorrowed,
-            @Suppress("UNUSED_PARAMETER") state: BookState?
+            @Suppress("UNUSED_PARAMETER") context: EventContext
         ) = BookState("", false)
     }
 
@@ -77,11 +81,10 @@ class HandlerSignatureValidationTests {
     }
 
     @Test
-    fun `suspending reactor handler is rejected with a dedicated message`() {
-        val error = assertThrows(InvalidHandlerSignature::class.java) {
-            ReactorHandlers.from(SuspendingReactor::class)
+    fun `a suspending reactor handler is held to the same shape as any other`() {
+        assertThrows(InvalidHandlerSignature::class.java) {
+            ReactorHandlers.from(SuspendingReactorWithExtraParameter::class)
         }
-        assertTrue(error.message!!.contains("suspending"))
     }
 
     @Test
@@ -101,11 +104,11 @@ class HandlerSignatureValidationTests {
     }
 
     @Test
-    fun `suspending reducer handler is rejected with a dedicated message`() {
+    fun `a suspending reducer handler is held to the same shape as any other`() {
         val error = assertThrows(InvalidHandlerSignature::class.java) {
-            ReducerRegistration.from(SuspendingReducer::class)
+            ReducerRegistration.from(SuspendingReducerTakingContextInsteadOfState::class)
         }
-        assertTrue(error.message!!.contains("suspending"))
+        assertTrue(error.message!!.contains("state so far"))
     }
 
     @Test

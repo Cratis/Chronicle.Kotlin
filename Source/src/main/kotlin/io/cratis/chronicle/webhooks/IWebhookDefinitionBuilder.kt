@@ -57,6 +57,15 @@ interface IWebhookDefinitionBuilder {
     fun <TEvent : Any> withEventType(eventClass: KClass<TEvent>): IWebhookDefinitionBuilder
 
     /**
+     * The same, taking a Java [Class], which is what a Java webhook definer has to hand.
+     *
+     * @param eventClass The event type to include.
+     * @return This builder, for chaining.
+     */
+    fun <TEvent : Any> withEventType(eventClass: Class<TEvent>): IWebhookDefinitionBuilder =
+        withEventType(eventClass.kotlin)
+
+    /**
      * Specifies that the webhook is not replayable.
      */
     fun notReplayable(): IWebhookDefinitionBuilder

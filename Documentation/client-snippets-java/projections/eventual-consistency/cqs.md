@@ -1,10 +1,7 @@
 ```java
 import io.cratis.chronicle.IEventStore;
 import io.cratis.chronicle.events.EventType;
-import kotlin.jvm.JvmClassMappingKt;
-import kotlinx.coroutines.BuildersKt;
-import kotlin.coroutines.EmptyCoroutineContext;
-import kotlin.coroutines.Continuation;
+import io.cratis.chronicle.java.BlockingEventStore;
 
 @EventType
 record EcCqsBookCreated(String title) {}
@@ -17,42 +14,27 @@ record EcCqsBook(String id, String title) {
 
 // Commands — fire and forget, never return projected state
 class EcCqsBookCommandHandler {
-    private final IEventStore store;
+    private final BlockingEventStore store;
 
     EcCqsBookCommandHandler(IEventStore store) {
-        this.store = store;
+        this.store = new BlockingEventStore(store);
     }
 
-    void create(String bookId, String title) throws InterruptedException {
-        var eventLog = store.getEventLog();
-
-        BuildersKt.runBlocking(EmptyCoroutineContext.INSTANCE, (scope, continuation) -> {
-            @SuppressWarnings("unchecked")
-            var appendContinuation = (Continuation<Object>) continuation;
-            return eventLog.append(bookId, new EcCqsBookCreated(title), null, appendContinuation);
-        });
+    void create(String bookId, String title) {
+        store.getEventLog().append(bookId, new EcCqsBookCreated(title));
     }
 }
 
 // Queries — always read from projections
 class EcCqsBookQueryHandler {
-    private final IEventStore store;
+    private final BlockingEventStore store;
 
     EcCqsBookQueryHandler(IEventStore store) {
-        this.store = store;
+        this.store = new BlockingEventStore(store);
     }
 
-    EcCqsBook getBook(String bookId) throws InterruptedException {
-        return (EcCqsBook) BuildersKt.runBlocking(
-            EmptyCoroutineContext.INSTANCE,
-            (scope, continuation) -> {
-                @SuppressWarnings("unchecked")
-                var readContinuation = (Continuation<? super EcCqsBook>) continuation;
-                return store.getReadModels().getInstanceByKey(
-                    JvmClassMappingKt.getKotlinClass(EcCqsBook.class),
-                    bookId,
-                    readContinuation);
-            });
+    EcCqsBook getBook(String bookId) {
+        return store.getReadModels().getInstanceByKey(EcCqsBook.class, bookId);
     }
 }
 ```

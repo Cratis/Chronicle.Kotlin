@@ -54,19 +54,19 @@ val store = client.getEventStore("MyApp")
 
 ### Java Development Setup
 
-`ChronicleOptions` is a Kotlin `data class`, so its factory methods are
-reached through `Companion` from Java. The `namespace` argument has a
-default value in Kotlin only — Java must pass it explicitly.
+Java goes through `BlockingChronicleClient`, which is the same client with
+the coroutines taken off — see
+[step 3](#3-suspend-functions-and-java-interop).
 
 <!-- validate: body -->
 
 ```java
-import io.cratis.chronicle.ChronicleClient;
 import io.cratis.chronicle.ChronicleOptions;
-import io.cratis.chronicle.EventStore;
+import io.cratis.chronicle.java.BlockingChronicleClient;
+import io.cratis.chronicle.java.BlockingEventStore;
 
-var client = new ChronicleClient(ChronicleOptions.Companion.development());
-EventStore store = client.getEventStore("MyApp", "Default");
+var client = BlockingChronicleClient.connect(ChronicleOptions.development());
+BlockingEventStore store = client.getEventStore("MyApp");
 ```
 
 For anything other than local development, supply a connection string.
@@ -91,8 +91,8 @@ val client = ChronicleClient(
 <!-- validate: body -->
 
 ```java
-var client = new ChronicleClient(
-    ChronicleOptions.Companion.fromConnectionString(
+var client = BlockingChronicleClient.connect(
+    ChronicleOptions.fromConnectionString(
         "chronicle://my-client:my-secret@chronicle.internal:35000"
     )
 );
@@ -116,19 +116,31 @@ fun main() = runBlocking {
 }
 ```
 
-Java cannot call `suspend` functions directly. The client ships blocking
-bridges in `io.cratis.chronicle.java` — one per service — and the Java
-examples below use them:
+Java cannot call a `suspend` function at all — it carries a hidden
+continuation on the JVM. So Java uses `BlockingChronicleClient`, the same
+client with the waiting done for it:
 
 <!-- validate: declarations -->
 
 ```java
-import io.cratis.chronicle.java.EventLogJavaBridge;
-import io.cratis.chronicle.java.EventTypesServiceJavaBridge;
-import io.cratis.chronicle.java.ReactorsServiceJavaBridge;
-import io.cratis.chronicle.java.ReadModelsJavaBridge;
-import io.cratis.chronicle.java.ReducersServiceJavaBridge;
+import io.cratis.chronicle.ChronicleOptions;
+import io.cratis.chronicle.java.BlockingChronicleClient;
+
+class JavaMain {
+    void run() {
+        var client = BlockingChronicleClient.connect(ChronicleOptions.development());
+        var store = client.getEventStore("MyApp");
+        // everything below is an ordinary blocking call
+    }
+}
 ```
+
+Each call blocks until the kernel answers, which is what a `main`, a
+controller method or a scheduled job wants. `unwrap()` on any of these
+returns the suspending object underneath, and
+`io.cratis.chronicle.java` also holds lower-level static bridges for the
+corners the blocking client does not wrap — see
+[Java interop](../reference/event-store-api.md#java-interop).
 
 ## 4. Define an event type
 
@@ -167,28 +179,21 @@ public record EmployeeHired(
 ) {}
 ```
 
-## 5. Register the event types
+## 5. Append an event
 
-Chronicle needs the schema for an event type before it will accept events
-of that type. Register them once at startup, before appending anything.
+Nothing had to be registered first. Chronicle needs the schema for an event
+type before it will accept events of that type, and the same goes for every
+other artifact your application owns — but the client finds them all on the
+classpath and declares them to the kernel as it connects, and the first
+append waits for that to finish. There is no registration step to write and
+none to sequence.
 
-### Kotlin Event Type Registration
-
-<!-- validate: body needs=store -->
-
-```kotlin
-store.eventTypes.register(EmployeeHired::class)
-```
-
-### Java Event Type Registration
-
-<!-- validate: body needs=store -->
-
-```java
-EventTypesServiceJavaBridge.register(store.getEventTypes(), EmployeeHired.class);
-```
-
-## 6. Append an event
+Prefer to register by hand? Turn discovery off with
+`ChronicleOptions.development().withoutAutoRegistration()` and call the
+services yourself — `store.eventTypes.register(EmployeeHired::class)` and
+friends. See
+[Artifact Registration](../guides/artifact-registration.md) for both paths
+in full.
 
 ### Kotlin Append Event
 
@@ -215,27 +220,25 @@ if (result.isSuccess) {
 
 ### Java Append Event
 
-<!-- validate: body needs=store -->
+<!-- validate: body needs=blockingStore -->
 
 ```java
 import java.util.stream.Collectors;
 
 String employeeId = "emp-001";
-var result = EventLogJavaBridge.append(
-    store.getEventLog(),
+var result = store.getEventLog().append(
     employeeId,
     new EmployeeHired(
         employeeId,
         "Jane",
         "Smith",
         "Engineering"
-    ),
-    null
+    )
 );
 
 if (result.isSuccess()) {
     System.out.println("Appended at sequence " +
-        EventLogJavaBridge.getSequenceNumber(result));
+        result.getSequenceNumberValue());
 } else {
     String violations =
         result.getConstraintViolations().stream()
@@ -245,11 +248,13 @@ if (result.isSuccess()) {
 }
 ```
 
-`EventSequenceNumber` is a Kotlin value class, so it has no ordinary
-getter on the JVM — read the sequence number through
-`EventLogJavaBridge.getSequenceNumber` rather than off the result.
+`sequenceNumber` is an `EventSequenceNumber`, a Kotlin value class, whose
+getter has a mangled JVM signature Java cannot name — so `AppendResult`
+carries `getSequenceNumberValue()` for reading the position as a plain
+`long`. The same goes the other way: Java never has to construct a value
+class, because nothing Java-facing asks for one.
 
-## 7. React to events
+## 6. React to events
 
 A reactor observes events and performs side effects (see
 [Reactors](/chronicle/reactors/) for the full model). Annotate the
@@ -273,7 +278,8 @@ class HrNotifications {
 }
 ```
 
-Register it to start observing:
+The client finds it and starts the observation on connect. To register it
+by hand instead:
 
 <!-- validate: body needs=store -->
 
@@ -298,15 +304,16 @@ public class HrNotifications {
 }
 ```
 
-Register it to start observing:
+The client finds it and starts the observation on connect. To register it
+by hand instead:
 
-<!-- validate: body needs=store -->
+<!-- validate: body needs=blockingStore -->
 
 ```java
-ReactorsServiceJavaBridge.register(store.getReactors(), new HrNotifications());
+store.getReactors().register(new HrNotifications());
 ```
 
-## 8. Build a read model
+## 7. Build a read model
 
 A reducer folds a stream of events into a single object (see
 [Reducers](/chronicle/reducers/) for the full model). The `@ReadModel`
@@ -316,8 +323,10 @@ A reducer method takes the event, and optionally the current state. The
 state is `null` for the first event of an event source, so declare that
 parameter as nullable and fall back to a fresh instance.
 
-Registering a reducer registers its read model too — you only need to
-register a read model explicitly when nothing projects into it.
+A reducer registers its read model too, tagged with the reducer that
+produces it — so a read model only needs registering on its own when
+nothing projects into it. All of it happens automatically; the calls
+below are what you would write with discovery turned off.
 
 ### Kotlin Read Model
 
@@ -416,14 +425,13 @@ public class EmployeeProfileReducer {
 }
 ```
 
-<!-- validate: body needs=store -->
+<!-- validate: body needs=blockingStore -->
 
 ```java
-ReducersServiceJavaBridge.register(
-    store.getReducers(), new EmployeeProfileReducer());
+store.getReducers().register(new EmployeeProfileReducer());
 ```
 
-## 9. Query a read model by key
+## 8. Query a read model by key
 
 After events have been projected, query the read model by its event
 source identifier:
@@ -442,14 +450,11 @@ println(profile?.firstName) // Jane
 
 ### Java Query
 
-<!-- validate: body needs=store,employeeId -->
+<!-- validate: body needs=blockingStore,employeeId -->
 
 ```java
-EmployeeProfile profile = ReadModelsJavaBridge.getInstanceByKey(
-    store.getReadModels(),
-    EmployeeProfile.class,
-    employeeId
-);
+EmployeeProfile profile = store.getReadModels()
+    .getInstanceByKey(EmployeeProfile.class, employeeId);
 System.out.println(profile.getFirstName()); // Jane
 ```
 

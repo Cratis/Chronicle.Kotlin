@@ -1,28 +1,17 @@
 ```java
 import io.cratis.chronicle.IEventStore;
-import kotlin.jvm.JvmClassMappingKt;
-import kotlinx.coroutines.BuildersKt;
-import kotlin.coroutines.EmptyCoroutineContext;
-import kotlin.coroutines.Continuation;
+import io.cratis.chronicle.java.BlockingEventStore;
 
 class ReducersGettingStartedOrderService {
-    private final IEventStore store;
+    private final BlockingEventStore store;
 
     ReducersGettingStartedOrderService(IEventStore store) {
-        this.store = store;
+        this.store = new BlockingEventStore(store);
     }
 
-    ReducersGettingStartedOrderSummary getOrderSummary(String orderId) throws InterruptedException {
-        return (ReducersGettingStartedOrderSummary) BuildersKt.runBlocking(
-            EmptyCoroutineContext.INSTANCE,
-            (scope, continuation) -> {
-                @SuppressWarnings("unchecked")
-                var readContinuation = (Continuation<? super ReducersGettingStartedOrderSummary>) continuation;
-                return store.getReadModels().getInstanceByKey(
-                    JvmClassMappingKt.getKotlinClass(ReducersGettingStartedOrderSummary.class),
-                    orderId,
-                    readContinuation);
-            });
+    ReducersGettingStartedOrderSummary getOrderSummary(String orderId) {
+        return store.getReadModels()
+            .getInstanceByKey(ReducersGettingStartedOrderSummary.class, orderId);
     }
 }
 ```

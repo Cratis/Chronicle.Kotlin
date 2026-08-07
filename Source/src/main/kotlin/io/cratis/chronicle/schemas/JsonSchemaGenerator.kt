@@ -5,6 +5,7 @@ package io.cratis.chronicle.schemas
 
 import com.google.gson.Gson
 import io.cratis.chronicle.compliance.Pii
+import io.cratis.chronicle.concepts.ConceptAs
 import kotlin.reflect.KAnnotatedElement
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -73,6 +74,11 @@ object JsonSchemaGenerator {
         val format = TypeFormats.formatFor(kClass)
 
         return when {
+            // A concept serializes as the value it wraps, so the schema has to describe that value
+            // rather than the wrapper. Describing the wrapper would have the kernel expect an object
+            // where a plain string arrives, and would change the schema of every event that adopted
+            // a concept for a property it already had.
+            kClass.isSubclassOf(ConceptAs::class) -> conceptSchema(kClass, visiting)
             kClass == String::class -> mutableMapOf("type" to "string")
             kClass in integerTypes -> mutableMapOf("type" to "integer")
             kClass in numberTypes -> mutableMapOf("type" to "number")
@@ -87,6 +93,19 @@ object JsonSchemaGenerator {
             isForeignType(kClass) -> mutableMapOf("type" to "string")
             else -> generateNode(kClass, visiting).toMutableMap()
         }
+    }
+
+    /**
+     * Builds the schema for the value a concept wraps.
+     *
+     * The `value` property is what goes on the wire, so its type is what the schema describes. A
+     * concept with no readable `value` falls back to a string, which is what every identifier
+     * concept is anyway.
+     */
+    private fun conceptSchema(kClass: KClass<*>, visiting: MutableSet<KClass<*>>): MutableMap<String, Any> {
+        val underlying = kClass.memberProperties.firstOrNull { it.name == "value" }?.returnType
+            ?: return mutableMapOf("type" to "string")
+        return schemaForType(underlying, visiting)
     }
 
     /** Builds a `"string"` schema carrying the enum's constant names, so the kernel can validate against them. */

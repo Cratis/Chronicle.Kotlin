@@ -1,5 +1,15 @@
 - name: Guides
   href: index.md
+- name: Artifact Registration
+  href: artifact-registration.md
+- name: Strongly-typed Identifiers
+  href: concepts.md
+- name: Tracing
+  href: tracing.md
+- name: Captures
+  href: captures.md
+- name: Testing
+  href: testing.md
 - name: Appending Events
   href: appending-events.md
 - name: Reactors

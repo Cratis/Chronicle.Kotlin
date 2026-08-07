@@ -10,6 +10,8 @@ version = providers.gradleProperty("version").getOrElse("0.0.0-SNAPSHOT")
 val coroutinesVersion = "1.9.0"
 val chronicleContractsVersion = "16.13.4"
 val dnsJavaVersion = "3.6.5"
+val classGraphVersion = "4.8.180"
+val openTelemetryVersion = "1.64.0"
 
 dependencies {
     api("io.cratis:chronicle-contracts:$chronicleContractsVersion")
@@ -19,7 +21,19 @@ dependencies {
     api("dnsjava:dnsjava:$dnsJavaVersion")
     api(kotlin("reflect"))
 
+    // The OpenTelemetry API only. It no-ops until an application registers an SDK, so instrumenting
+    // stays the application's choice - one that does not is unaffected beyond a small jar.
+    api("io.opentelemetry:opentelemetry-api:$openTelemetryVersion")
+
+    // Classpath scanning behind automatic artifact discovery.
+    implementation("io.github.classgraph:classgraph:$classGraphVersion")
+
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    // The OpenTelemetry SDK is a test-only dependency: the client ships the API alone so that
+    // instrumenting stays the application's choice. The in-memory exporter is what lets a spec
+    // assert on the spans the client actually produced.
+    testImplementation("io.opentelemetry:opentelemetry-sdk:$openTelemetryVersion")
+    testImplementation("io.opentelemetry:opentelemetry-sdk-testing:$openTelemetryVersion")
     testImplementation("io.mockk:mockk:1.13.14")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

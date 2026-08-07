@@ -7,6 +7,7 @@ import Cratis.Chronicle.Contracts.Events.Events
 import Cratis.Chronicle.Contracts.Jobs.JobsOuterClass
 import Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.ObservationEventstoresubscriptions
 import Cratis.Chronicle.Contracts.Observation.Webhooks.ObservationWebhooks
+import io.cratis.chronicle.IEventStore
 import io.cratis.chronicle.auditing.CausationManager
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.compliance.IComplianceService
@@ -28,7 +29,15 @@ import io.cratis.chronicle.jobs.IJobsService
 import io.cratis.chronicle.namespaces.INamespacesService
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
+import io.cratis.chronicle.captures.Capture
+import io.cratis.chronicle.captures.CaptureDeclarationResult
+import io.cratis.chronicle.captures.CaptureValidationMessage
+import io.cratis.chronicle.captures.ICapturesService
+import io.cratis.chronicle.eventSequences.EventSequenceId
+import io.cratis.chronicle.observation.FailedPartition
+import io.cratis.chronicle.observation.IFailedPartitions
 import io.cratis.chronicle.projections.IProjectionsService
+import io.cratis.chronicle.projections.ProjectionQueryResult
 import io.cratis.chronicle.readModels.IReadModelsService
 import io.cratis.chronicle.readModels.ReadModelChangeset
 import io.cratis.chronicle.readModels.ReadModelSnapshot
@@ -296,6 +305,21 @@ object UnitOfWorkJavaBridge {
 }
 
 /**
+ * Java-friendly bridge for IEventStore artifact registration.
+ */
+object EventStoreJavaBridge {
+    @JvmStatic
+    fun registerAll(eventStore: IEventStore) {
+        runBlocking { eventStore.registerAll() }
+    }
+
+    @JvmStatic
+    fun awaitRegistration(eventStore: IEventStore) {
+        runBlocking { eventStore.awaitRegistration() }
+    }
+}
+
+/**
  * Java-friendly bridge for IReactorsService operations.
  */
 object ReactorsServiceJavaBridge {
@@ -320,6 +344,89 @@ object ProjectionsServiceJavaBridge {
     @JvmStatic
     fun register(service: IProjectionsService, vararg projections: Any) {
         runBlocking { service.register(*projections) }
+    }
+
+    /** Runs a projection declaration over the event log. */
+    @JvmStatic
+    fun query(service: IProjectionsService, declaration: String): ProjectionQueryResult =
+        runBlocking { service.query(declaration) }
+
+    /** Runs a projection declaration over a named event sequence. */
+    @JvmStatic
+    fun query(
+        service: IProjectionsService,
+        declaration: String,
+        eventSequenceId: String
+    ): ProjectionQueryResult =
+        runBlocking { service.query(declaration, EventSequenceId(eventSequenceId)) }
+}
+
+/**
+ * Java-friendly bridge for captures - sources outside Chronicle, pulled in and appended as events.
+ */
+object CapturesServiceJavaBridge {
+    /** Every capture the event store holds, running or not. */
+    @JvmStatic
+    fun getAll(service: ICapturesService): List<Capture> = runBlocking { service.getAll() }
+
+    /** Saves a declaration under an identifier, replacing whatever was held there. */
+    @JvmStatic
+    fun save(service: ICapturesService, id: String, declaration: String): CaptureDeclarationResult =
+        runBlocking { service.save(id, declaration) }
+
+    /** Checks a declaration without saving anything. */
+    @JvmStatic
+    fun validate(service: ICapturesService, declaration: String): List<CaptureValidationMessage> =
+        runBlocking { service.validate(declaration) }
+
+    /** Starts a capture, so it begins appending what its source produces. */
+    @JvmStatic
+    fun start(service: ICapturesService, id: String): List<CaptureValidationMessage> =
+        runBlocking { service.start(id) }
+
+    /** Stops a capture. It stays saved, and can be started again. */
+    @JvmStatic
+    fun stop(service: ICapturesService, id: String) {
+        runBlocking { service.stop(id) }
+    }
+
+    /** Removes a capture entirely. Events it already appended stay exactly where they are. */
+    @JvmStatic
+    fun delete(service: ICapturesService, id: String) {
+        runBlocking { service.delete(id) }
+    }
+}
+
+/**
+ * Java-friendly bridge for the partitions observers are stuck on.
+ */
+object FailedPartitionsJavaBridge {
+    /** The partitions the observer with this identifier is currently failing on. */
+    @JvmStatic
+    fun getFor(service: IFailedPartitions, observerId: String): List<FailedPartition> =
+        runBlocking { service.getFor(observerId) }
+
+    /** The partitions the observer declared by this class is currently failing on. */
+    @JvmStatic
+    fun getFor(service: IFailedPartitions, observerClass: Class<*>): List<FailedPartition> =
+        runBlocking { service.getFor(observerClass.kotlin) }
+
+    /** Asks the kernel to try a partition again, on the event log. */
+    @JvmStatic
+    fun retry(service: IFailedPartitions, observerId: String, partition: String) {
+        runBlocking { service.retry(observerId, partition) }
+    }
+
+    /** Asks the kernel to try a partition again, on a named event sequence. */
+    @JvmStatic
+    fun retry(service: IFailedPartitions, observerId: String, partition: String, eventSequenceId: String) {
+        runBlocking { service.retry(observerId, partition, EventSequenceId(eventSequenceId)) }
+    }
+
+    /** Asks the kernel to try a partition again for the observer declared by this class. */
+    @JvmStatic
+    fun retry(service: IFailedPartitions, observerClass: Class<*>, partition: String) {
+        runBlocking { service.retry(observerClass.kotlin, partition) }
     }
 }
 
