@@ -6,6 +6,7 @@ package io.cratis.chronicle.eventSequences
 import Cratis.Chronicle.Contracts.EventSequences.Eventsequences
 import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
 import bcl.Bcl
+import io.cratis.chronicle.artifacts.IRegistrationGate
 import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.auditing.causationManager
@@ -36,7 +37,8 @@ open class EventSequence(
     private val eventStoreName: String,
     private val namespace: String,
     private val stub: EventSequencesGrpcKt.EventSequencesCoroutineStub,
-    private val traces: ChronicleTraces = ChronicleTraces.default
+    private val traces: ChronicleTraces = ChronicleTraces.default,
+    private val registrationGate: IRegistrationGate = IRegistrationGate.open
 ) : IEventSequence {
 
     private val _appendOperations = MutableSharedFlow<List<AppendedEventWithResult>>(
@@ -47,6 +49,11 @@ open class EventSequence(
     override val appendOperations: SharedFlow<List<AppendedEventWithResult>> = _appendOperations.asSharedFlow()
 
     override suspend fun append(eventSourceId: String, event: Any, options: AppendOptions?): AppendResult {
+        // The kernel rejects an event whose type it has never been told about, and registration
+        // happens on connect in the background - so without this the first append after
+        // getEventStore would race it. Once that pass is through, waiting costs nothing.
+        registrationGate.awaitOpen()
+
         // Resolved once here rather than inside the span body, so naming the span costs no extra
         // reflection over what the append was going to do anyway.
         val eventType = resolveEventType(event)
@@ -139,6 +146,8 @@ open class EventSequence(
         correlationId: UUID?
     ): List<AppendResult> {
         if (events.isEmpty()) return emptyList()
+
+        registrationGate.awaitOpen()
 
         return traces.span("Chronicle appendMany", appendManyAttributes(events.size)) {
             appendManyInternal(events, concurrencyScopes, correlationId)

@@ -7,6 +7,7 @@ import io.cratis.chronicle.artifacts.ArtifactActivator
 import io.cratis.chronicle.artifacts.ArtifactRegistrations
 import io.cratis.chronicle.artifacts.IArtifactActivator
 import io.cratis.chronicle.artifacts.IClientArtifacts
+import io.cratis.chronicle.artifacts.IRegistrationGate
 import io.cratis.chronicle.artifacts.KnownClientArtifacts
 import io.cratis.chronicle.captures.CapturesService
 import io.cratis.chronicle.captures.ICapturesService
@@ -95,8 +96,14 @@ class EventStore(
 
     override val unitOfWorkManager: UnitOfWorkManager = UnitOfWorkManager(this)
 
+    /**
+     * Held shut until the first registration pass is through, so the first append after
+     * `getEventStore` cannot outrun the event type registration it depends on.
+     */
+    private val registrationGate = IRegistrationGate { awaitRegistration() }
+
     override val eventLog: IEventLog by lazy {
-        EventLog(name, namespace, services.eventSequences, unitOfWorkManager, traces)
+        EventLog(name, namespace, services.eventSequences, unitOfWorkManager, traces, registrationGate)
     }
 
     // ReadModelsService is shared so that reducers and projections can auto-register their read
@@ -249,7 +256,7 @@ class EventStore(
             eventLog
         } else {
             eventSequences.getOrPut(id) {
-                EventSequence(id, name, namespace, services.eventSequences, traces)
+                EventSequence(id, name, namespace, services.eventSequences, traces, registrationGate)
             }
         }
 }

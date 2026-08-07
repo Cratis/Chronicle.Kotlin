@@ -30,9 +30,12 @@ import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeout
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import kotlin.reflect.KClass
@@ -215,6 +218,29 @@ class ArtifactRegistrationsTests {
         assertTrue(activated.contains(OrderSeeder::class))
         assertTrue(activated.contains(OrderWebhook::class))
         assertTrue(activated.contains(OrderListProjection::class))
+    }
+
+    @Test
+    fun `a pass that finished lets everything waiting on the first one through`() = runBlocking {
+        val registrations = registrations()
+
+        registrations.registerAll()
+
+        // Nothing hangs: awaitRegistration returns, and so does the gate the first append waits at.
+        withTimeout(1_000) { registrations.completed.await() }
+    }
+
+    @Test
+    fun `a pass that threw lets them through as well, rather than wedging every append`() = runBlocking {
+        coEvery { eventTypes.register(*anyVararg()) } throws IllegalStateException("kernel unreachable")
+        val registrations = registrations()
+
+        // The throw reaches the caller - the event store logs it and retries on the next connect.
+        assertThrows(IllegalStateException::class.java) { runBlocking { registrations.registerAll() } }
+
+        // What must not happen is the first append waiting forever behind a kernel that never came
+        // up. An append that fails loudly is recoverable; one that hangs is not.
+        withTimeout(1_000) { registrations.completed.await() }
     }
 
     private companion object {

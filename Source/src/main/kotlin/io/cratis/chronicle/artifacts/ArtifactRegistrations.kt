@@ -45,6 +45,18 @@ class ArtifactRegistrations(
 
     /** Registers everything with the kernel. */
     suspend fun registerAll() = mutex.withLock {
+        try {
+            register()
+        } finally {
+            // Even a pass that threw counts as attempted. Anything waiting on the first one - the
+            // first append, awaitRegistration() - has to be let through either way: registration is
+            // retried on the next connect, and an append that fails loudly beats one that hangs
+            // forever behind a kernel that never came up.
+            initial.complete(Unit)
+        }
+    }
+
+    private suspend fun register() {
         // Event types have to exist before anything that refers to them - observers, constraints and
         // projections are all expressed in terms of event type ids. Migrations ride along in the same
         // call: the event types service merges them into the registration for the type they migrate.
@@ -75,9 +87,6 @@ class ArtifactRegistrations(
         // Seeded events are appended by the kernel the moment the seed lands, so every observer that
         // should see them has to be registered by now.
         eventStore.seeding.seed(*instancesOf(artifacts.eventSeeders).toTypedArray())
-
-        initial.complete(Unit)
-        Unit
     }
 
     /**

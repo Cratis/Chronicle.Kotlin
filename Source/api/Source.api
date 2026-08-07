@@ -206,6 +206,15 @@ public abstract interface class io/cratis/chronicle/artifacts/IClientArtifacts {
 	public abstract fun getWebhooks ()Ljava/util/List;
 }
 
+public abstract interface class io/cratis/chronicle/artifacts/IRegistrationGate {
+	public static final field Companion Lio/cratis/chronicle/artifacts/IRegistrationGate$Companion;
+	public static final field open Lio/cratis/chronicle/artifacts/IRegistrationGate;
+	public abstract fun awaitOpen (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class io/cratis/chronicle/artifacts/IRegistrationGate$Companion {
+}
+
 public final class io/cratis/chronicle/artifacts/KnownClientArtifacts : io/cratis/chronicle/artifacts/IClientArtifacts {
 	public static final field Companion Lio/cratis/chronicle/artifacts/KnownClientArtifacts$Companion;
 	public fun <init> (Ljava/lang/Iterable;)V
@@ -1048,14 +1057,14 @@ public final class io/cratis/chronicle/eventSequences/EventForEventSourceId {
 }
 
 public final class io/cratis/chronicle/eventSequences/EventLog : io/cratis/chronicle/eventSequences/EventSequence, io/cratis/chronicle/eventSequences/IEventLog {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/EventSequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/transactions/IUnitOfWorkManager;Lio/cratis/chronicle/diagnostics/ChronicleTraces;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/EventSequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/transactions/IUnitOfWorkManager;Lio/cratis/chronicle/diagnostics/ChronicleTraces;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/EventSequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/transactions/IUnitOfWorkManager;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/artifacts/IRegistrationGate;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/EventSequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/transactions/IUnitOfWorkManager;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/artifacts/IRegistrationGate;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun getTransactional ()Lio/cratis/chronicle/eventSequences/ITransactionalEventSequence;
 }
 
 public class io/cratis/chronicle/eventSequences/EventSequence : io/cratis/chronicle/eventSequences/IEventSequence {
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/EventSequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/diagnostics/ChronicleTraces;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/EventSequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/EventSequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/artifacts/IRegistrationGate;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/EventSequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/artifacts/IRegistrationGate;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun append (Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun appendMany (Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun appendMany (Ljava/util/List;Ljava/util/Map;Ljava/util/UUID;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
