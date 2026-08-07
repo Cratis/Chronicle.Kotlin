@@ -26,7 +26,9 @@ public final class io/cratis/chronicle/ChronicleOptions {
 	public final fun component7 ()Lio/opentelemetry/api/OpenTelemetry;
 	public final fun copy (Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/String;Ljava/lang/String;ZLio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;Lio/opentelemetry/api/OpenTelemetry;)Lio/cratis/chronicle/ChronicleOptions;
 	public static synthetic fun copy$default (Lio/cratis/chronicle/ChronicleOptions;Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/String;Ljava/lang/String;ZLio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;Lio/opentelemetry/api/OpenTelemetry;ILjava/lang/Object;)Lio/cratis/chronicle/ChronicleOptions;
+	public static final fun development ()Lio/cratis/chronicle/ChronicleOptions;
 	public fun equals (Ljava/lang/Object;)Z
+	public static final fun fromConnectionString (Ljava/lang/String;)Lio/cratis/chronicle/ChronicleOptions;
 	public final fun getArtifactActivator ()Lio/cratis/chronicle/artifacts/IArtifactActivator;
 	public final fun getArtifacts ()Lio/cratis/chronicle/artifacts/IClientArtifacts;
 	public final fun getAutoDiscoverAndRegister ()Z
@@ -1705,6 +1707,62 @@ public final class io/cratis/chronicle/java/AppendOptionsBuilder {
 	public final fun tags (Ljava/util/List;)Lio/cratis/chronicle/java/AppendOptionsBuilder;
 }
 
+public final class io/cratis/chronicle/java/BlockingChronicleClient : java/lang/AutoCloseable {
+	public static final field Companion Lio/cratis/chronicle/java/BlockingChronicleClient$Companion;
+	public fun <init> (Lio/cratis/chronicle/IChronicleClient;)V
+	public fun close ()V
+	public static final fun connect (Lio/cratis/chronicle/ChronicleOptions;)Lio/cratis/chronicle/java/BlockingChronicleClient;
+	public final fun dispose ()V
+	public final fun evictEventStores ()V
+	public final fun getEventStore (Ljava/lang/String;)Lio/cratis/chronicle/java/BlockingEventStore;
+	public final fun getEventStore (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/java/BlockingEventStore;
+	public final fun getEventStores ()Ljava/util/List;
+	public final fun unwrap ()Lio/cratis/chronicle/IChronicleClient;
+}
+
+public final class io/cratis/chronicle/java/BlockingChronicleClient$Companion {
+	public final fun connect (Lio/cratis/chronicle/ChronicleOptions;)Lio/cratis/chronicle/java/BlockingChronicleClient;
+}
+
+public final class io/cratis/chronicle/java/BlockingEventSequence {
+	public fun <init> (Lio/cratis/chronicle/eventSequences/IEventSequence;)V
+	public final fun append (Ljava/lang/String;Ljava/lang/Object;)Lio/cratis/chronicle/eventSequences/AppendResult;
+	public final fun append (Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;)Lio/cratis/chronicle/eventSequences/AppendResult;
+	public static synthetic fun append$default (Lio/cratis/chronicle/java/BlockingEventSequence;Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;ILjava/lang/Object;)Lio/cratis/chronicle/eventSequences/AppendResult;
+	public final fun appendMany (Ljava/lang/String;Ljava/util/List;)Ljava/util/List;
+	public final fun appendMany (Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;)Ljava/util/List;
+	public final fun appendMany (Ljava/util/List;)Ljava/util/List;
+	public static synthetic fun appendMany$default (Lio/cratis/chronicle/java/BlockingEventSequence;Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;ILjava/lang/Object;)Ljava/util/List;
+	public final fun getForEventSourceIdAndEventTypes (Ljava/lang/String;[Ljava/lang/Class;)Ljava/util/List;
+	public final fun getFromSequenceNumber (J)Ljava/util/List;
+	public final fun getFromSequenceNumber (JLjava/lang/String;)Ljava/util/List;
+	public static synthetic fun getFromSequenceNumber$default (Lio/cratis/chronicle/java/BlockingEventSequence;JLjava/lang/String;ILjava/lang/Object;)Ljava/util/List;
+	public final fun getId ()Ljava/lang/String;
+	public final fun getNextSequenceNumber ()J
+	public final fun getTailSequenceNumber ()J
+	public final fun getTailSequenceNumber (Ljava/lang/String;)J
+	public static synthetic fun getTailSequenceNumber$default (Lio/cratis/chronicle/java/BlockingEventSequence;Ljava/lang/String;ILjava/lang/Object;)J
+	public final fun hasEventsFor (Ljava/lang/String;)Z
+	public final fun redact (JLjava/lang/String;)V
+	public final fun redactForEventSource (Ljava/lang/String;Ljava/lang/String;[Ljava/lang/Class;)V
+	public final fun unwrap ()Lio/cratis/chronicle/eventSequences/IEventSequence;
+}
+
+public final class io/cratis/chronicle/java/BlockingEventStore {
+	public fun <init> (Lio/cratis/chronicle/IEventStore;)V
+	public final fun awaitRegistration ()V
+	public final fun beginUnitOfWork ()Lio/cratis/chronicle/java/BlockingUnitOfWork;
+	public final fun getEventLog ()Lio/cratis/chronicle/java/BlockingEventSequence;
+	public final fun getEventSequence (Ljava/lang/String;)Lio/cratis/chronicle/java/BlockingEventSequence;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getNamespace ()Ljava/lang/String;
+	public final fun getReactors ()Lio/cratis/chronicle/java/BlockingReactors;
+	public final fun getReadModels ()Lio/cratis/chronicle/java/BlockingReadModels;
+	public final fun getTransactional ()Lio/cratis/chronicle/java/BlockingTransactionalEventSequence;
+	public final fun registerAll ()V
+	public final fun unwrap ()Lio/cratis/chronicle/IEventStore;
+}
+
 public abstract interface class io/cratis/chronicle/java/BlockingReactorMethodArgumentResolver {
 	public abstract fun canResolve (Lkotlin/reflect/KParameter;)Z
 	public abstract fun resolve (Lkotlin/reflect/KParameter;Lio/cratis/chronicle/events/EventContext;)Ljava/lang/Object;
@@ -1713,6 +1771,41 @@ public abstract interface class io/cratis/chronicle/java/BlockingReactorMethodAr
 public abstract interface class io/cratis/chronicle/java/BlockingReactorMiddleware {
 	public abstract fun afterInvoke (Lio/cratis/chronicle/events/EventContext;Ljava/lang/Object;)V
 	public abstract fun beforeInvoke (Lio/cratis/chronicle/events/EventContext;Ljava/lang/Object;)V
+}
+
+public final class io/cratis/chronicle/java/BlockingReactors {
+	public fun <init> (Lio/cratis/chronicle/observation/IReactorsService;)V
+	public final fun register (Ljava/lang/Object;)Lkotlinx/coroutines/Job;
+	public final fun unwrap ()Lio/cratis/chronicle/observation/IReactorsService;
+}
+
+public final class io/cratis/chronicle/java/BlockingReadModels {
+	public fun <init> (Lio/cratis/chronicle/readModels/IReadModelsService;)V
+	public final fun getInstanceByKey (Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Object;
+	public final fun register ([Ljava/lang/Class;)V
+	public final fun unwrap ()Lio/cratis/chronicle/readModels/IReadModelsService;
+}
+
+public final class io/cratis/chronicle/java/BlockingTransactionalEventSequence {
+	public fun <init> (Lio/cratis/chronicle/eventSequences/ITransactionalEventSequence;)V
+	public final fun append (Ljava/lang/String;Ljava/lang/Object;)Lio/cratis/chronicle/eventSequences/AppendResult;
+	public final fun append (Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;)Lio/cratis/chronicle/eventSequences/AppendResult;
+	public static synthetic fun append$default (Lio/cratis/chronicle/java/BlockingTransactionalEventSequence;Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;ILjava/lang/Object;)Lio/cratis/chronicle/eventSequences/AppendResult;
+	public final fun appendMany (Ljava/lang/String;Ljava/util/List;)Ljava/util/List;
+	public final fun appendMany (Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;)Ljava/util/List;
+	public static synthetic fun appendMany$default (Lio/cratis/chronicle/java/BlockingTransactionalEventSequence;Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;ILjava/lang/Object;)Ljava/util/List;
+	public final fun unwrap ()Lio/cratis/chronicle/eventSequences/ITransactionalEventSequence;
+}
+
+public final class io/cratis/chronicle/java/BlockingUnitOfWork : java/lang/AutoCloseable {
+	public fun <init> (Lio/cratis/chronicle/transactions/IUnitOfWork;)V
+	public fun close ()V
+	public final fun commit ()V
+	public final fun getCorrelationId ()Ljava/lang/String;
+	public final fun isCompleted ()Z
+	public final fun isSuccess ()Z
+	public final fun rollback ()V
+	public final fun unwrap ()Lio/cratis/chronicle/transactions/IUnitOfWork;
 }
 
 public final class io/cratis/chronicle/java/CapturesServiceJavaBridge {
@@ -2426,6 +2519,8 @@ public final class io/cratis/chronicle/projections/INestedBuilderFor$DefaultImpl
 
 public abstract interface class io/cratis/chronicle/projections/IProjectionBuilderFor {
 	public abstract fun children (Lkotlin/reflect/KProperty1;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public abstract fun from (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public abstract fun from (Ljava/lang/Class;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun from (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun fromAll (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun fromEvery (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
@@ -2437,6 +2532,8 @@ public abstract interface class io/cratis/chronicle/projections/IProjectionBuild
 }
 
 public final class io/cratis/chronicle/projections/IProjectionBuilderFor$DefaultImpls {
+	public static fun from (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public static fun from (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Ljava/lang/Class;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public static synthetic fun from$default (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public static synthetic fun join$default (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public static synthetic fun removedWith$default (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
@@ -2556,6 +2653,8 @@ public abstract interface annotation class io/cratis/chronicle/projections/Proje
 public final class io/cratis/chronicle/projections/ProjectionBuilderFor : io/cratis/chronicle/projections/IProjectionBuilderFor {
 	public fun <init> (Lkotlin/reflect/KClass;)V
 	public fun children (Lkotlin/reflect/KProperty1;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun from (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun from (Ljava/lang/Class;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public fun from (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public fun fromAll (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public fun fromEvery (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;

@@ -1,8 +1,6 @@
 ```java
 import io.cratis.chronicle.IEventStore;
-import kotlin.coroutines.Continuation;
-import kotlin.coroutines.EmptyCoroutineContext;
-import kotlinx.coroutines.BuildersKt;
+import io.cratis.chronicle.java.BlockingEventStore;
 import kotlinx.coroutines.Job;
 
 class ReactorRegistration {
@@ -12,16 +10,10 @@ class ReactorRegistration {
         this.emailGateway = emailGateway;
     }
 
-    Job register(IEventStore store) throws InterruptedException {
-        return (Job) BuildersKt.runBlocking(
-            EmptyCoroutineContext.INSTANCE,
-            (scope, continuation) -> {
-                @SuppressWarnings("unchecked")
-                var registerContinuation = (Continuation<? super Job>) continuation;
-                return store.getReactors().register(
-                    new OrderNotificationsReactor(emailGateway),
-                    registerContinuation);
-            });
+    Job register(IEventStore store) {
+        return new BlockingEventStore(store)
+            .getReactors()
+            .register(new OrderNotificationsReactor(emailGateway));
     }
 }
 ```

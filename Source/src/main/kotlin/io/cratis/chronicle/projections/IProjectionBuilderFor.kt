@@ -12,6 +12,25 @@ interface IProjectionBuilderFor<TReadModel : Any> {
         configure: ((IFromBuilderFor<TReadModel, TEvent>) -> Unit)? = null
     ): IProjectionBuilderFor<TReadModel>
 
+    /**
+     * The same, taking a Java [Class].
+     *
+     * Kotlin's [KClass] is awkward to produce from Java, and the default argument on the overload
+     * above does not exist there either. This is what a Java projection calls.
+     *
+     * @param eventClass The event type to project from.
+     * @param configure How to map its properties, or `null` to rely on AutoMap.
+     * @return This builder, for chaining.
+     */
+    fun <TEvent : Any> from(
+        eventClass: Class<TEvent>,
+        configure: ((IFromBuilderFor<TReadModel, TEvent>) -> Unit)?
+    ): IProjectionBuilderFor<TReadModel> = from(eventClass.kotlin, configure)
+
+    /** The same relying entirely on AutoMap, since Kotlin default arguments do not reach Java. */
+    fun <TEvent : Any> from(eventClass: Class<TEvent>): IProjectionBuilderFor<TReadModel> =
+        from(eventClass.kotlin, null)
+
     /** Configures a join projection from [eventClass], correlated by event source id. */
     fun <TEvent : Any> join(
         eventClass: KClass<TEvent>,

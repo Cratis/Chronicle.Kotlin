@@ -1,27 +1,16 @@
 ```java
 import io.cratis.chronicle.IEventStore;
-import io.cratis.chronicle.eventSequences.AppendResult;
 import io.cratis.chronicle.events.EventType;
-import kotlinx.coroutines.BuildersKt;
-import kotlin.coroutines.EmptyCoroutineContext;
-import kotlin.coroutines.Continuation;
+import io.cratis.chronicle.java.BlockingEventStore;
 
 @EventType(id = "SchemaValidatedOrderPlaced")
 record SchemaValidatedOrderPlaced(String customerId, double total) {}
 
 class SchemaValidationExample {
-    void append(IEventStore store, String eventSourceId, String customerId, double total) throws InterruptedException {
-        var result = (AppendResult) BuildersKt.runBlocking(
-            EmptyCoroutineContext.INSTANCE,
-            (scope, continuation) -> {
-                @SuppressWarnings("unchecked")
-                var appendContinuation = (Continuation<? super AppendResult>) continuation;
-                return store.getEventLog().append(
-                    eventSourceId,
-                    new SchemaValidatedOrderPlaced(customerId, total),
-                    null,
-                    appendContinuation);
-            });
+    void append(IEventStore store, String eventSourceId, String customerId, double total) {
+        var result = new BlockingEventStore(store).getEventLog().append(
+            eventSourceId,
+            new SchemaValidatedOrderPlaced(customerId, total));
 
         if (!result.isSuccess()) {
             result.getErrors().forEach(error ->

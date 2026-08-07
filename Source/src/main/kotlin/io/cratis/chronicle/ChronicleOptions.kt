@@ -65,6 +65,7 @@ data class ChronicleOptions @JvmOverloads constructor(
          * @param connectionString A `chronicle://` connection string.
          * @return The resulting [ChronicleOptions].
          */
+        @JvmStatic
         fun fromConnectionString(connectionString: String): ChronicleOptions =
             ChronicleOptions(ChronicleConnectionString.parse(connectionString))
 
@@ -73,6 +74,7 @@ data class ChronicleOptions @JvmOverloads constructor(
          *
          * Points to localhost:35000 over TLS with the standard dev credentials.
          */
+        @JvmStatic
         fun development(): ChronicleOptions =
             ChronicleOptions(ChronicleConnectionString.DEVELOPMENT)
     }

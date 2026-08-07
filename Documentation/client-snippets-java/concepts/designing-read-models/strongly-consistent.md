@@ -1,30 +1,19 @@
 ```java
 import io.cratis.chronicle.IEventStore;
-import kotlin.jvm.JvmClassMappingKt;
-import kotlinx.coroutines.BuildersKt;
-import kotlin.coroutines.EmptyCoroutineContext;
-import kotlin.coroutines.Continuation;
+import io.cratis.chronicle.java.BlockingEventStore;
 
 record DesigningReadModelsCustomerDetail(String id, String name) {}
 
 class DesigningReadModelsCustomerDetailService {
-    private final IEventStore store;
+    private final BlockingEventStore store;
 
     DesigningReadModelsCustomerDetailService(IEventStore store) {
-        this.store = store;
+        this.store = new BlockingEventStore(store);
     }
 
-    DesigningReadModelsCustomerDetail getDetail(String customerId) throws InterruptedException {
-        return (DesigningReadModelsCustomerDetail) BuildersKt.runBlocking(
-            EmptyCoroutineContext.INSTANCE,
-            (scope, continuation) -> {
-                @SuppressWarnings("unchecked")
-                var readContinuation = (Continuation<? super DesigningReadModelsCustomerDetail>) continuation;
-                return store.getReadModels().getInstanceByKey(
-                    JvmClassMappingKt.getKotlinClass(DesigningReadModelsCustomerDetail.class),
-                    customerId,
-                    readContinuation);
-            });
+    DesigningReadModelsCustomerDetail getDetail(String customerId) {
+        return store.getReadModels()
+            .getInstanceByKey(DesigningReadModelsCustomerDetail.class, customerId);
     }
 }
 ```
