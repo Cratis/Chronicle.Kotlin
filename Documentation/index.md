@@ -93,8 +93,23 @@ dependencies {
 The same JVM client supports both Kotlin and Java. Shared pages include
 separate Kotlin and Java tabs when both examples exist.
 
+Spring Boot applications add the starter instead — it brings the client with it
+and wires everything up:
+
+<!-- validate: skip -->
+
+```kotlin
+dependencies {
+    implementation("io.cratis:chronicle-spring-boot-starter:2.1.1")
+}
+```
+
 ## Client-specific pages
 
 - [Get Started](get-started/) — install the JVM client, connect, and run a
   small Kotlin flow
+- [Artifact Registration](guides/artifact-registration.md) — how artifacts are
+  discovered and registered, and how to narrow or turn that off
+- [Spring Boot](guides/spring-boot.md) — the starter, multi-tenancy, and
+  per-request identity, causation and units of work
 - [Reference](reference/) — annotations, configuration, and service API details

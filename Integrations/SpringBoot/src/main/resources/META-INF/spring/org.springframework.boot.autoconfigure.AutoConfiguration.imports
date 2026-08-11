@@ -1,0 +1,2 @@
+io.cratis.chronicle.spring.ChronicleAutoConfiguration
+io.cratis.chronicle.spring.ChronicleWebAutoConfiguration
