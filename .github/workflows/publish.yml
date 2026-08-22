@@ -40,6 +40,8 @@ on:
       - main
     paths:
       - "Source/**"
+      - "Testing/**"
+      - "Integrations/SpringBoot/**"
 
 permissions:
   contents: write
@@ -88,6 +90,8 @@ jobs:
       - name: Publish to Maven Central
         run: |
           gradle :Source:publishAndReleaseToMavenCentral \
+            :Testing:publishAndReleaseToMavenCentral \
+            :Integrations:SpringBoot:publishAndReleaseToMavenCentral \
             --no-configuration-cache \
             -Pversion=${{ needs.release.outputs.version }}
         env:
