@@ -39,3 +39,5 @@ build/
 # Python (Documentation/validate-client-snippets.py)
 __pycache__/
 *.pyc
+# Local AI work artifacts (plans, handovers, session notes) — never tracked
+.ai-work/
