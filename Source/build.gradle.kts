@@ -55,8 +55,8 @@ mavenPublishing {
 
     pom {
         name.set("Chronicle Kotlin Client")
-        description.set("Idiomatic event sourcing Kotlin client for Cratis Chronicle")
-        url.set("https://github.com/cratis/chronicle.kotlin")
+        description.set("Idiomatic event sourcing client for Kotlin and Java (JVM) for Cratis Chronicle")
+        url.set("https://github.com/Cratis/Chronicle.Kotlin")
         licenses {
             license {
                 name.set("MIT License")
@@ -72,9 +72,9 @@ mavenPublishing {
             }
         }
         scm {
-            url.set("https://github.com/cratis/chronicle.kotlin")
-            connection.set("scm:git:git://github.com/cratis/chronicle.kotlin.git")
-            developerConnection.set("scm:git:ssh://git@github.com/cratis/chronicle.kotlin.git")
+            url.set("https://github.com/Cratis/Chronicle.Kotlin")
+            connection.set("scm:git:git://github.com/Cratis/Chronicle.Kotlin.git")
+            developerConnection.set("scm:git:ssh://git@github.com/Cratis/Chronicle.Kotlin.git")
         }
     }
 }
