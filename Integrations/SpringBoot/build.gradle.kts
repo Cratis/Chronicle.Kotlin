@@ -49,8 +49,8 @@ mavenPublishing {
 
     pom {
         name.set("Chronicle Spring Boot Starter")
-        description.set("Spring Boot auto-configuration for the Cratis Chronicle Kotlin and Java client")
-        url.set("https://github.com/cratis/chronicle.kotlin")
+        description.set("Spring Boot auto-configuration for the Cratis Chronicle event sourcing client for Kotlin and Java")
+        url.set("https://github.com/Cratis/Chronicle.Kotlin")
         licenses {
             license {
                 name.set("MIT License")
@@ -66,9 +66,9 @@ mavenPublishing {
             }
         }
         scm {
-            url.set("https://github.com/cratis/chronicle.kotlin")
-            connection.set("scm:git:git://github.com/cratis/chronicle.kotlin.git")
-            developerConnection.set("scm:git:ssh://git@github.com/cratis/chronicle.kotlin.git")
+            url.set("https://github.com/Cratis/Chronicle.Kotlin")
+            connection.set("scm:git:git://github.com/Cratis/Chronicle.Kotlin.git")
+            developerConnection.set("scm:git:ssh://git@github.com/Cratis/Chronicle.Kotlin.git")
         }
     }
 }
