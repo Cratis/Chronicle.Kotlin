@@ -22,6 +22,12 @@ facts, and every view of the world is derived from them rather than overwritten 
 This repository is the **JVM client** for it. One artifact, `io.cratis:chronicle`, idiomatic from
 both **Kotlin** and **Java**, plus a **Spring Boot starter** that reduces setup to a dependency.
 
+Behind it sits a conviction: almost any system that deals with information and business flows is
+better told this way — and telling it should feel like writing ordinary Kotlin or Java, familiar
+even if you have never event-sourced before. The whole Cratis ecosystem is designed around that:
+deliberately simple, light on ceremony, built with productivity, quality, and reliability in mind —
+and AI-friendly by design, with free [AI skills](https://github.com/Cratis/AI) for building with it.
+
 ## ✨ Why you might want this
 
 - **You declare facts, not plumbing.** An event is a data class or a record with `@EventType` on it.
