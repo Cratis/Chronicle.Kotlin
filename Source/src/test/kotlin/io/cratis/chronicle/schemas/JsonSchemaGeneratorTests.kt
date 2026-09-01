@@ -5,12 +5,18 @@ package io.cratis.chronicle.schemas
 
 import com.google.gson.Gson
 import io.cratis.chronicle.compliance.Pii
+import io.cratis.chronicle.compliance.PiiNotSupportedOnEventSourceId
+import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.chronicle.concepts.EventSourceId
+import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.geospatial.LineString
 import io.cratis.chronicle.geospatial.Point
 import io.cratis.chronicle.geospatial.Polygon
+import io.cratis.chronicle.readModels.ReadModel
 import kotlin.reflect.KClass
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -37,7 +43,7 @@ private data class PersonWithPii(
 )
 
 @Pii(description = "Wraps a sensitive value")
-private data class SensitiveValue(val value: String)
+private data class SensitiveValue(override val value: String) : ConceptAs<String>
 
 private data class PersonWithPiiTypedProperty(
     val name: String,
@@ -50,7 +56,29 @@ private data class PersonWithPiiList(
 )
 
 @Pii(description = "Every property is sensitive")
-private data class FullyPiiClass(val value: String)
+private data class FullyPiiClass(val value: String, val otherValue: String)
+
+@Pii(description = "Every value here is sensitive")
+private data class MedicalDetails(val condition: String, val diagnosedBy: String)
+
+private data class PatientRecord(val name: String, val details: MedicalDetails)
+
+@Pii(description = "The whole envelope is sensitive")
+private data class PiiEnvelope(val secret: SensitiveValue)
+
+@Pii(description = "Employee identifier")
+private data class PiiEmployeeId(override val value: String) : EventSourceId
+
+private data class EventWithPiiEventSourceId(val employeeId: PiiEmployeeId, val name: String)
+
+@Pii(description = "Employee national identifier")
+private data class NationalId(override val value: String) : ConceptAs<String>
+
+@EventType
+private data class EmployeeHired(val employeeId: String, val nationalId: NationalId)
+
+@ReadModel
+private data class Employee(val id: String, val nationalId: NationalId)
 
 private data class Territory(
     val name: String,
@@ -144,11 +172,69 @@ class JsonSchemaGeneratorTests {
     }
 
     @Test
-    fun `a class-level Pii annotation tags the generated schema itself`() {
+    fun `a class-level Pii annotation cascades to every leaf property instead of tagging the container`() {
         val schema = parse(FullyPiiClass::class)
-        val compliance = complianceOf(schema)
+        assertFalse(schema.containsKey("compliance"))
+
+        val properties = propertiesOf(FullyPiiClass::class)
+        val value = properties["value"] as Map<*, *>
+        val otherValue = properties["otherValue"] as Map<*, *>
+        listOf(value, otherValue).forEach {
+            val compliance = complianceOf(it)
+            assertEquals(1, compliance.size)
+            assertEquals("PII", compliance[0]["metadataType"])
+            assertEquals("Every property is sensitive", compliance[0]["details"])
+        }
+    }
+
+    @Test
+    fun `a Pii-marked nested value object descends to its own leaves, not the container`() {
+        val properties = propertiesOf(PatientRecord::class)
+        val details = properties["details"] as Map<*, *>
+        assertFalse(details.containsKey("compliance"))
+
+        @Suppress("UNCHECKED_CAST")
+        val detailsProperties = details["properties"] as Map<String, Any?>
+        val condition = detailsProperties["condition"] as Map<*, *>
+        val diagnosedBy = detailsProperties["diagnosedBy"] as Map<*, *>
+        assertEquals(1, complianceOf(condition).size)
+        assertEquals(1, complianceOf(diagnosedBy).size)
+    }
+
+    @Test
+    fun `duplicate Pii markers reaching the same leaf produce exactly one compliance entry`() {
+        val properties = propertiesOf(PiiEnvelope::class)
+        val secret = properties["secret"] as Map<*, *>
+        val compliance = complianceOf(secret)
         assertEquals(1, compliance.size)
         assertEquals("PII", compliance[0]["metadataType"])
+    }
+
+    @Test
+    fun `a Pii annotation on an EventSourceId-typed concept is rejected`() {
+        assertThrows(PiiNotSupportedOnEventSourceId::class.java) {
+            JsonSchemaGenerator.generate(EventWithPiiEventSourceId::class)
+        }
+    }
+
+    @Test
+    fun `a Pii-marked concept used by an event carries compliance metadata`() {
+        val properties = propertiesOf(EmployeeHired::class)
+        val nationalId = properties["nationalId"] as Map<*, *>
+        val compliance = complianceOf(nationalId)
+        assertEquals(1, compliance.size)
+        assertEquals("PII", compliance[0]["metadataType"])
+        assertEquals("Employee national identifier", compliance[0]["details"])
+    }
+
+    @Test
+    fun `a Pii-marked concept used by a read model carries compliance metadata`() {
+        val properties = propertiesOf(Employee::class)
+        val nationalId = properties["nationalId"] as Map<*, *>
+        val compliance = complianceOf(nationalId)
+        assertEquals(1, compliance.size)
+        assertEquals("PII", compliance[0]["metadataType"])
+        assertEquals("Employee national identifier", compliance[0]["details"])
     }
 
     @Test

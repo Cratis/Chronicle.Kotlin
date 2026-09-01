@@ -8,6 +8,7 @@ import io.cratis.chronicle.auditing.Causation;
 import io.cratis.chronicle.auditing.CausationType;
 import io.cratis.chronicle.compliance.Pii;
 import io.cratis.chronicle.concepts.ConceptAs;
+import io.cratis.chronicle.concepts.EventSourceId;
 import io.cratis.chronicle.constraints.Constraint;
 import io.cratis.chronicle.constraints.IConstraint;
 import io.cratis.chronicle.constraints.IConstraintBuilder;
@@ -96,6 +97,28 @@ public final class JavaConformance {
     /** A read model. */
     @ReadModel
     public record EmployeeState(String id, String title) {
+    }
+
+    // --- Compliance -----------------------------------------------------------------------------
+
+    /** A concept implementing {@link EventSourceId}, the way a Java caller opts a concept into being one. */
+    public record CustomerId(String value) implements EventSourceId {
+        @Override
+        public String getValue() {
+            return value;
+        }
+    }
+
+    /** A concept used purely to prove {@link Pii} resolves from a Java record's canonical constructor parameter. */
+    public record NationalIdentifier(String value) implements ConceptAs<String> {
+        @Override
+        public String getValue() {
+            return value;
+        }
+    }
+
+    /** A record whose {@link ConceptAs} component is annotated {@link Pii} directly - the constructor-parameter shape. */
+    public record CustomerRegisteredWithPiiConcept(CustomerId customerId, @Pii NationalIdentifier nationalId) {
     }
 
     // --- Observers ----------------------------------------------------------------------------
