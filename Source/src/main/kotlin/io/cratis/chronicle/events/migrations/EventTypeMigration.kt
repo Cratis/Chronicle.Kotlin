@@ -15,10 +15,17 @@ import kotlin.reflect.KClass
  *
  * @param TTarget The upgraded (newer generation) event type.
  * @param TSource The previous (older generation) event type.
- * @param targetClass The [KClass] of the upgraded event type.
- * @param sourceClass The [KClass] of the previous event type.
  */
 abstract class EventTypeMigration<TTarget : Any, TSource : Any>(
     override val targetClass: KClass<TTarget>,
     override val sourceClass: KClass<TSource>
-) : IEventTypeMigration<TTarget, TSource>
+) : IEventTypeMigration<TTarget, TSource> {
+    /**
+     * The same, taking Java [Class] references - what a Java migration passes to `super(...)`, since
+     * Java cannot produce a [KClass] directly.
+     *
+     * @param targetClass The [Class] of the upgraded event type.
+     * @param sourceClass The [Class] of the previous event type.
+     */
+    constructor(targetClass: Class<TTarget>, sourceClass: Class<TSource>) : this(targetClass.kotlin, sourceClass.kotlin)
+}
