@@ -2979,6 +2979,14 @@ public final class io/cratis/chronicle/schemas/JsonSchemaGenerator {
 	public final fun generate (Lkotlin/reflect/KClass;)Ljava/lang/String;
 }
 
+public abstract interface annotation class io/cratis/chronicle/schemas/JsonSchemaType : java/lang/annotation/Annotation {
+	public abstract fun type ()Ljava/lang/Class;
+}
+
+public final class io/cratis/chronicle/schemas/SelfReferencingJsonSchemaType : java/lang/Exception {
+	public fun <init> (Lkotlin/reflect/KClass;)V
+}
+
 public final class io/cratis/chronicle/seeding/EventSeedEntry {
 	public fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V

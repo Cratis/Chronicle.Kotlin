@@ -8,10 +8,15 @@ import io.cratis.chronicle.compliance.Pii
 import io.cratis.chronicle.compliance.PiiNotSupportedOnEventSourceId
 import io.cratis.chronicle.concepts.ConceptAs
 import io.cratis.chronicle.concepts.EventSourceId
+import io.cratis.chronicle.geospatial.LineString
+import io.cratis.chronicle.geospatial.Point
+import io.cratis.chronicle.geospatial.Polygon
+import java.math.BigDecimal
 import kotlin.reflect.KAnnotatedElement
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
+import kotlin.reflect.full.createType
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.isSubclassOf
 import kotlin.reflect.full.memberProperties
@@ -20,7 +25,10 @@ import kotlin.reflect.jvm.javaField
 
 private val gson = Gson()
 private val integerTypes = setOf(Int::class, Long::class, Short::class, Byte::class)
-private val numberTypes = setOf(Double::class, Float::class)
+private val numberTypes = setOf(Double::class, Float::class, BigDecimal::class)
+
+/** Formatted types whose schema is a leaf `"object"` rather than a `"string"`/`"integer"`/`"number"` scalar. */
+private val objectFormatTypes = setOf(Point::class, LineString::class, Polygon::class)
 
 /**
  * Generates JSON schemas for Kotlin classes using reflection over their member properties.
@@ -82,28 +90,47 @@ object JsonSchemaGenerator {
     /** Maps a Kotlin [KType] to its JSON schema representation. */
     private fun schemaForType(type: KType, visiting: MutableSet<KClass<*>>): MutableMap<String, Any> {
         val kClass = type.classifier as? KClass<*> ?: return mutableMapOf("type" to "string")
+
+        // An explicit @JsonSchemaType declaration states what a type's own Gson TypeAdapter actually
+        // produces. Reflection alone cannot introspect a custom adapter, so without this the schema
+        // would describe the Kotlin shape while the wire carries something else entirely - and the
+        // value would stop round-tripping through the sink. Checked before the concept branch so an
+        // explicit declaration always wins over an inferred representation.
+        kClass.findAnnotation<JsonSchemaType>()?.let { override ->
+            if (override.type == kClass) throw SelfReferencingJsonSchemaType(kClass)
+            return schemaForType(override.type.createType(), visiting)
+        }
+
+        // A concept serializes as the value it wraps, so the schema has to describe that value
+        // rather than the wrapper. Describing the wrapper would have the kernel expect an object
+        // where a plain string arrives, and would change the schema of every event that adopted
+        // a concept for a property it already had.
+        if (kClass.isSubclassOf(ConceptAs::class)) return conceptSchema(kClass, visiting)
+
         val format = TypeFormats.formatFor(kClass)
 
-        return when {
-            // A concept serializes as the value it wraps, so the schema has to describe that value
-            // rather than the wrapper. Describing the wrapper would have the kernel expect an object
-            // where a plain string arrives, and would change the schema of every event that adopted
-            // a concept for a property it already had.
-            kClass.isSubclassOf(ConceptAs::class) -> conceptSchema(kClass, visiting)
+        // The format lookup has to be checked before isForeignType() below: every scalar format type
+        // added for parity with the .NET client (UUID, Instant, BigDecimal, ByteArray, ...) lives
+        // under java./kotlin. and would otherwise be swallowed by the generic foreign-type fallback
+        // and lose its format, leaving the kernel unable to materialize it as a typed value.
+        val schema: MutableMap<String, Any> = when {
             kClass == String::class -> mutableMapOf("type" to "string")
             kClass in integerTypes -> mutableMapOf("type" to "integer")
             kClass in numberTypes -> mutableMapOf("type" to "number")
             kClass == Boolean::class -> mutableMapOf("type" to "boolean")
-            kClass.java.isEnum -> enumSchema(kClass)
-            kClass == Array::class || kClass.isSubclassOf(Collection::class) -> arraySchema(type, visiting)
+            kClass.java.isEnum -> return enumSchema(kClass)
+            kClass == Array::class || kClass.isSubclassOf(Collection::class) -> return arraySchema(type, visiting)
             // A formatted type is a leaf, and its properties are deliberately left out. A geospatial
             // value serializes through its own GeoJSON adapter, so describing its Kotlin properties
             // would make the kernel flatten it into sub-properties and lose the coordinates. The
             // format alone tells the kernel what the value is.
-            format != null -> mutableMapOf("type" to "object", "format" to format)
-            isForeignType(kClass) -> mutableMapOf("type" to "string")
-            else -> generateNode(kClass, visiting)
+            kClass in objectFormatTypes -> mutableMapOf("type" to "object")
+            format != null -> mutableMapOf("type" to "string")
+            isForeignType(kClass) -> return mutableMapOf("type" to "string")
+            else -> return generateNode(kClass, visiting)
         }
+        format?.let { schema["format"] = it }
+        return schema
     }
 
     /**
@@ -119,10 +146,23 @@ object JsonSchemaGenerator {
         return schemaForType(underlying, visiting)
     }
 
-    /** Builds a `"string"` schema carrying the enum's constant names, so the kernel can validate against them. */
+    /**
+     * Builds an `"integer"` schema carrying the enum's ordinal values, with `x-enumNames` alongside
+     * so the kernel can validate either representation.
+     *
+     * This mirrors the .NET client exactly: the `enum` array is the ordinal values a converter maps
+     * to/from BSON, and `x-enumNames` is the auxiliary metadata that lets those same converters (and
+     * anyone reading the schema by eye) recover the constant names. Kotlin enum constants have no
+     * user-assignable underlying value the way a C# enum member does, so the ordinal position is the
+     * only sensible stand-in for "the declared int value".
+     */
     private fun enumSchema(kClass: KClass<*>): MutableMap<String, Any> {
-        val names = kClass.java.enumConstants.map { (it as Enum<*>).name }
-        return mutableMapOf("type" to "string", "enum" to names)
+        val constants = kClass.java.enumConstants.map { it as Enum<*> }
+        return mutableMapOf(
+            "type" to "integer",
+            "enum" to constants.map { it.ordinal },
+            "x-enumNames" to constants.map { it.name }
+        )
     }
 
     /** Builds an `"array"` schema whose `items` describe the collection's element type. */

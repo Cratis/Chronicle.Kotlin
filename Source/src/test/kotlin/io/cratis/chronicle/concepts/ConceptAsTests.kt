@@ -101,7 +101,8 @@ class ConceptAsTests {
         val schema = JsonSchemaGenerator.generate(BookBorrowed::class)
 
         assertEquals(
-            """{"type":"object","properties":{"book":{"type":"string"},"copy":{"type":"integer"},""" +
+            """{"type":"object","properties":{"book":{"type":"string"},""" +
+                """"copy":{"type":"integer","format":"int32"},""" +
                 """"member":{"type":"string"},"shelf":{"type":"string"}}}""",
             schema
         )
