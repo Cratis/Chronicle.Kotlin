@@ -1,13 +1,9 @@
 ```java
 import io.cratis.chronicle.IEventStore;
-import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.java.AppendOptionsBuilder;
 import io.cratis.chronicle.java.BlockingEventStore;
 
 import java.util.UUID;
-
-@EventType(id = "filtering-with-reactor-order-placed")
-record FilteringWithReactorOrderPlaced(String customerId, double amount) {}
 
 class FilteringAppendService {
     private final BlockingEventStore eventStore;

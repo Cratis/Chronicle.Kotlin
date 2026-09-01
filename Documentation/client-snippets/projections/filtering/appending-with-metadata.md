@@ -1,11 +1,7 @@
 ```kotlin
 import io.cratis.chronicle.IEventStore
 import io.cratis.chronicle.eventSequences.AppendOptions
-import io.cratis.chronicle.events.EventType
 import java.util.UUID
-
-@EventType(id = "filtering-with-reactor-order-placed")
-data class FilteringWithReactorOrderPlaced(val customerId: String, val amount: Double)
 
 class FilteringAppendService(private val eventStore: IEventStore) {
     suspend fun appendOrders(customerId: String) {
