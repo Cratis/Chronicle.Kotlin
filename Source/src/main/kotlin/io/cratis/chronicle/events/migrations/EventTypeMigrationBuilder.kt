@@ -85,6 +85,74 @@ class EventTypeMigrationBuilder<TTarget : Any, TSource : Any> {
     }
 
     /**
+     * The same as [renamedFrom], by property name - for callers, such as Java, that cannot produce a
+     * [KProperty1].
+     *
+     * @param target The property on [TTarget] to populate.
+     * @param source The property on [TSource] to read the value from.
+     * @return This builder, for chaining.
+     */
+    fun renamedFrom(target: String, source: String): EventTypeMigrationBuilder<TTarget, TSource> {
+        properties[target] = mapOf("\$rename" to source)
+        return this
+    }
+
+    /**
+     * The same as [defaultValue], by property name - for callers, such as Java, that cannot produce a
+     * [KProperty1].
+     *
+     * @param target The property on [TTarget] to populate.
+     * @param value The default value to use.
+     * @return This builder, for chaining.
+     */
+    fun defaultValue(target: String, value: Any?): EventTypeMigrationBuilder<TTarget, TSource> {
+        properties[target] = mapOf("\$defaultValue" to value)
+        return this
+    }
+
+    /**
+     * The same as [split], by property name - for callers, such as Java, that cannot produce a
+     * [KProperty1].
+     *
+     * @param target The property on [TTarget] to populate.
+     * @param source The property on [TSource] to split.
+     * @param separator The separator to split on.
+     * @param part The zero-based index of the part to extract.
+     * @return This builder, for chaining.
+     */
+    fun split(
+        target: String,
+        source: String,
+        separator: String,
+        part: Int
+    ): EventTypeMigrationBuilder<TTarget, TSource> {
+        properties[target] = mapOf(
+            "\$split" to mapOf("source" to source, "separator" to separator, "part" to part)
+        )
+        return this
+    }
+
+    /**
+     * The same as [combine], by property name - for callers, such as Java, that cannot produce a
+     * [KProperty1].
+     *
+     * @param target The property on [TTarget] to populate.
+     * @param separator The separator to join the source values with.
+     * @param sources The properties on [TSource] to concatenate, in order.
+     * @return This builder, for chaining.
+     */
+    fun combine(
+        target: String,
+        separator: String,
+        vararg sources: String
+    ): EventTypeMigrationBuilder<TTarget, TSource> {
+        properties[target] = mapOf(
+            "\$combine" to mapOf("sources" to sources.toList(), "separator" to separator)
+        )
+        return this
+    }
+
+    /**
      * Convert the recorded property operations to their JSON wire representation.
      *
      * @return The JSON representation, or `"{}"` when no operations were recorded.
