@@ -790,6 +790,7 @@ public final class io/cratis/chronicle/constraints/ConstraintScope$Companion {
 public final class io/cratis/chronicle/constraints/ConstraintsService : io/cratis/chronicle/constraints/IConstraintsService {
 	public fun <init> (Ljava/lang/String;LCratis/Chronicle/Contracts/Events/Constraints/ConstraintsGrpcKt$ConstraintsCoroutineStub;)V
 	public fun register ([Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun registerModelBound (Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public abstract interface class io/cratis/chronicle/constraints/IConstraint {
@@ -814,6 +815,7 @@ public final class io/cratis/chronicle/constraints/IConstraintBuilder$DefaultImp
 
 public abstract interface class io/cratis/chronicle/constraints/IConstraintsService {
 	public abstract fun register ([Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun registerModelBound (Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public abstract interface class io/cratis/chronicle/constraints/IUniqueConstraintBuilder {
@@ -821,6 +823,19 @@ public abstract interface class io/cratis/chronicle/constraints/IUniqueConstrain
 	public abstract fun on (Lkotlin/reflect/KClass;Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
 	public abstract fun onWithPropertyName (Lkotlin/reflect/KClass;Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
 	public abstract fun withMessage (Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
+}
+
+public abstract interface annotation class io/cratis/chronicle/constraints/RemoveConstraint : java/lang/annotation/Annotation {
+	public abstract fun value ()Ljava/lang/String;
+}
+
+public abstract interface annotation class io/cratis/chronicle/constraints/RemoveConstraints : java/lang/annotation/Annotation {
+	public abstract fun value ()[Lio/cratis/chronicle/constraints/RemoveConstraint;
+}
+
+public abstract interface annotation class io/cratis/chronicle/constraints/Unique : java/lang/annotation/Annotation {
+	public abstract fun id ()Ljava/lang/String;
+	public abstract fun message ()Ljava/lang/String;
 }
 
 public final class io/cratis/chronicle/constraints/UniqueConstraintBuilder : io/cratis/chronicle/constraints/IUniqueConstraintBuilder {

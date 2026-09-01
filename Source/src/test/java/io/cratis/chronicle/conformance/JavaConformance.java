@@ -13,6 +13,8 @@ import io.cratis.chronicle.concepts.EventSourceId;
 import io.cratis.chronicle.constraints.Constraint;
 import io.cratis.chronicle.constraints.IConstraint;
 import io.cratis.chronicle.constraints.IConstraintBuilder;
+import io.cratis.chronicle.constraints.RemoveConstraint;
+import io.cratis.chronicle.constraints.Unique;
 import io.cratis.chronicle.eventSequences.AppendOptions;
 import io.cratis.chronicle.eventSequences.EventForEventSourceId;
 import io.cratis.chronicle.eventSequences.EventSequenceId;
@@ -263,6 +265,23 @@ public final class JavaConformance {
         public void define(IConstraintBuilder builder) {
             builder.uniqueFor(EmployeeHired.class, "One employee per national identifier.");
         }
+    }
+
+    /** A model-bound property-level uniqueness constraint, the declarative alternative to {@link IConstraint}. */
+    @EventType
+    public record CustomerRegistered(@Unique(id = "UniqueCustomerEmail", message = "Email already in use.") String email) {
+    }
+
+    /** A model-bound event-type-level uniqueness constraint. */
+    @EventType
+    @Unique
+    public record ProjectInitialized(String name) {
+    }
+
+    /** Releases the {@code UniqueCustomerEmail} constraint - repeatable, so more than one may apply. */
+    @EventType
+    @RemoveConstraint("UniqueCustomerEmail")
+    public record CustomerRemoved(String customerId) {
     }
 
     /** A seeder. */

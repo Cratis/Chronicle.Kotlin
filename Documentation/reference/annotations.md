@@ -249,6 +249,67 @@ Marks a class as a Chronicle constraint definition. The class must implement
 
 ---
 
+## @Unique
+
+Marks a property or an event type as needing to be unique - the model-bound
+alternative to a hand-written `IConstraint`. On a property, no two events of
+that type may carry the same value; applying it with the same `id` to
+properties on more than one event type groups them under one constraint,
+checked across all of them combined. On an event type, at most one instance
+of that type may exist per event source.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `id` | `String` | `""` | Constraint name, defaulting to the property/class. |
+| `message` | `String` | `""` | Message for a constraint violation. |
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.constraints.Unique
+import io.cratis.chronicle.events.EventType
+
+@EventType
+data class ProjectCreated(@Unique val name: String, val description: String)
+
+@EventType
+@Unique
+data class WorkspaceClaimed(val slug: String)
+```
+
+Pair it with [@RemoveConstraint](#removeconstraint) on a removal event to
+release the value for reuse.
+
+---
+
+## @RemoveConstraint
+
+Marks an event type as releasing a named [@Unique](#unique) constraint when
+it is appended - typically a deletion or lifecycle-ending event. Repeatable,
+so one event can release more than one constraint.
+
+Only one event type may release a given constraint name with this client -
+if more than one declares the same name, registration keeps the first one
+it finds and reports the rest, rather than silently overwriting on every
+reconnect.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `value` | `String` | *(required)* | Name of the constraint to release. |
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.constraints.RemoveConstraint
+import io.cratis.chronicle.events.EventType
+
+@EventType
+@RemoveConstraint("UniqueWorkspaceSlug")
+data class WorkspaceArchived(val workspaceId: String)
+```
+
+---
+
 ## @Seeder
 
 Marks a class as a Chronicle event seeder. The class must implement `ICanSeedEvents`.
