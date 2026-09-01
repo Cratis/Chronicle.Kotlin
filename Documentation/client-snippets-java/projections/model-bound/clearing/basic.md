@@ -1,6 +1,21 @@
-```text
-Java does not support this workflow yet.
-`@ClearWith` targets `CLASS` only (it is meant to sit on a `@Nested` object's own class, alongside its
-`@FromEvent`) — there is no way to clear a plain top-level scalar property back to null in response to
-an event.
+```java
+import io.cratis.chronicle.events.EventType;
+import io.cratis.chronicle.projections.FromEvent;
+import io.cratis.chronicle.projections.SetFrom;
+import io.cratis.chronicle.projections.SetValue;
+import io.cratis.chronicle.readModels.ReadModel;
+
+@EventType(id = "mb-clearing-project-noted")
+record MbClearingProjectNoted(String note) {}
+
+@EventType(id = "mb-clearing-project-note-cleared")
+record MbClearingProjectNoteCleared() {}
+
+@ReadModel
+@FromEvent(eventType = MbClearingProjectNoted.class)
+class MbClearingProjectNotes {
+    @SetFrom(propertyPath = "note", eventType = MbClearingProjectNoted.class)
+    @SetValue(eventType = MbClearingProjectNoteCleared.class, clear = true)
+    public String note;
+}
 ```

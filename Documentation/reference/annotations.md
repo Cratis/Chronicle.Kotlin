@@ -171,6 +171,34 @@ data class OrderSummary(val orderId: String = "", val status: String = "pending"
 
 ---
 
+## @Passive
+
+Marks a model-bound read model's projection as passive — registered with the
+kernel but not actively run. A passive projection's read model is computed on
+demand rather than kept up to date as events arrive. Placed on the read model
+class.
+
+No parameters.
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.projections.FromEvent
+import io.cratis.chronicle.readModels.Passive
+import io.cratis.chronicle.readModels.ReadModel
+
+@EventType
+data class SnapshotCreated(val data: String)
+
+@Passive
+@ReadModel
+@FromEvent(SnapshotCreated::class)
+data class HistoricalSnapshot(val data: String = "")
+```
+
+---
+
 ## @Projection
 
 Marks a class as a Chronicle projection, or overrides the projection
@@ -344,6 +372,89 @@ can be mapped differently per event type.
 annotated property's own name. The default `eventType` applies the mapping
 to every event in the read model's `@FromEvent` list that has a matching
 source property.
+
+---
+
+## @SetValue
+
+Sets a read model property to a constant value when a specific event occurs,
+or clears it back to no value. It is repeatable, so the same property can
+hold a different constant per event type.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `eventType` | `KClass<*>` | — | The event class to trigger on. |
+| `value` | `String` | `""` | The constant's literal text. Ignored if `clear`. |
+| `clear` | `Boolean` | `false` | Clears instead of setting `value`. |
+
+Kotlin annotation parameters cannot be nullable, so `value` is always a plain
+string — a numeric or boolean constant is written out as its literal text
+(`"42"`, `"true"`) rather than as a typed argument. Set `clear = true` to
+clear the property instead, which is Kotlin's equivalent of passing `null`
+for `value` in the .NET client.
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.projections.FromEvent
+import io.cratis.chronicle.projections.SetValue
+import io.cratis.chronicle.readModels.ReadModel
+
+@EventType
+data class SubscriptionActivated(val placeholder: Boolean = true)
+
+@EventType
+data class SubscriptionCanceled(val placeholder: Boolean = true)
+
+@ReadModel
+@FromEvent(SubscriptionActivated::class)
+@FromEvent(SubscriptionCanceled::class)
+data class Subscription(
+    @SetValue(SubscriptionActivated::class, value = "active")
+    @SetValue(SubscriptionCanceled::class, value = "canceled")
+    val status: String = ""
+)
+```
+
+---
+
+## @SetFromContext
+
+Maps a read model property from a named `EventContext` property, for one
+specific event. Unlike [@FromAll / @FromEvery](#fromall--fromevery), which
+map a context property across every event the projection observes, this ties
+the mapping to a single event type.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `eventType` | `KClass<*>` | — | The event class this mapping applies to. |
+| `contextProperty` | `String` | `""` | The context property to read from. |
+
+`contextProperty` defaults to the annotated property's own name.
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.projections.FromEvent
+import io.cratis.chronicle.projections.SetFrom
+import io.cratis.chronicle.projections.SetFromContext
+import io.cratis.chronicle.readModels.ReadModel
+
+@EventType
+data class OrderPlacedForAudit(val customerName: String)
+
+@ReadModel
+@FromEvent(OrderPlacedForAudit::class)
+data class AuditedOrder(
+    @SetFrom("customerName", OrderPlacedForAudit::class)
+    val customerName: String = "",
+
+    @SetFromContext(OrderPlacedForAudit::class, contextProperty = "occurred")
+    val orderedAt: String = ""
+)
+```
 
 ---
 
