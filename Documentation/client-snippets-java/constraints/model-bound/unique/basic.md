@@ -1,3 +1,7 @@
-```text
-Java does not support this workflow yet.
+```java
+import io.cratis.chronicle.constraints.Unique;
+import io.cratis.chronicle.events.EventType;
+
+@EventType
+record ConstraintsModelBoundUniqueProjectCreated(@Unique String name, String description) {}
 ```

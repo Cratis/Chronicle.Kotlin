@@ -4,6 +4,7 @@
 package io.cratis.chronicle.conformance;
 
 import io.cratis.chronicle.ChronicleOptions;
+import io.cratis.chronicle.Subject;
 import io.cratis.chronicle.auditing.Causation;
 import io.cratis.chronicle.auditing.CausationType;
 import io.cratis.chronicle.compliance.Pii;
@@ -12,6 +13,8 @@ import io.cratis.chronicle.concepts.EventSourceId;
 import io.cratis.chronicle.constraints.Constraint;
 import io.cratis.chronicle.constraints.IConstraint;
 import io.cratis.chronicle.constraints.IConstraintBuilder;
+import io.cratis.chronicle.constraints.RemoveConstraint;
+import io.cratis.chronicle.constraints.Unique;
 import io.cratis.chronicle.eventSequences.AppendOptions;
 import io.cratis.chronicle.eventSequences.EventForEventSourceId;
 import io.cratis.chronicle.eventSequences.EventSequenceId;
@@ -23,6 +26,12 @@ import io.cratis.chronicle.geospatial.Point;
 import io.cratis.chronicle.java.AppendOptionsBuilder;
 import io.cratis.chronicle.java.BlockingReactorMethodArgumentResolver;
 import io.cratis.chronicle.java.BlockingReactorMiddleware;
+import io.cratis.chronicle.keys.ContextKey;
+import io.cratis.chronicle.keys.ICompositeKeyBuilder;
+import io.cratis.chronicle.keys.IKeyBuilder;
+import io.cratis.chronicle.keys.Key;
+import io.cratis.chronicle.keys.KeyBuilder;
+import io.cratis.chronicle.keys.ResolvedKey;
 import io.cratis.chronicle.observation.EventSequence;
 import io.cratis.chronicle.observation.FilterEventsByTag;
 import io.cratis.chronicle.observation.ICanBeNotifiedAboutReplay;
@@ -98,6 +107,39 @@ public final class JavaConformance {
     public record EmployeeHiredV2(EmployeeId employee, String title) {
     }
 
+    // --- Keys -----------------------------------------------------------------------------------
+
+    /** An event type with a strongly-typed key, in place of a magic string. */
+    @EventType
+    public record OrderLineAdded(@Key String orderId, String product, int quantity) {
+    }
+
+    /** A handler deriving its key from the event context rather than the event payload. */
+    public static class OrderLineHandlers {
+        @ContextKey(property = "EventSourceId")
+        public void orderLineAdded(OrderLineAdded event) {
+        }
+    }
+
+    /** Every method on {@link IKeyBuilder} and {@link ICompositeKeyBuilder}, as reached from Java. */
+    public static ResolvedKey resolvedKeys() {
+        var byProperty = new KeyBuilder<OrderLineAdded>();
+        byProperty.usingKeyWithPropertyName("orderId");
+
+        var fromContext = new KeyBuilder<OrderLineAdded>();
+        fromContext.usingKeyFromContext("EventSourceId");
+
+        var composite = new KeyBuilder<OrderLineAdded>();
+        composite.usingCompositeKey(builder -> {
+            ICompositeKeyBuilder<OrderLineAdded> b = builder;
+            b.addWithPropertyName("orderId");
+            b.addWithPropertyName("product");
+            return kotlin.Unit.INSTANCE;
+        });
+
+        return composite.build();
+    }
+
     // --- Read models --------------------------------------------------------------------------
 
     /** A read model. */
@@ -132,6 +174,11 @@ public final class JavaConformance {
 
     /** A record whose {@link ConceptAs} component is annotated {@link Pii} directly - the constructor-parameter shape. */
     public record CustomerRegisteredWithPiiConcept(CustomerId customerId, @Pii NationalIdentifier nationalId) {
+    }
+
+    /** A read model whose compliance subject is not its {@code id} property. */
+    @ReadModel
+    public record CustomerOrderSummary(String id, @Subject String customerId, String status) {
     }
 
     // --- Model-bound projections ----------------------------------------------------------------
@@ -268,6 +315,23 @@ public final class JavaConformance {
         public void define(IConstraintBuilder builder) {
             builder.uniqueFor(EmployeeHired.class, "One employee per national identifier.");
         }
+    }
+
+    /** A model-bound property-level uniqueness constraint, the declarative alternative to {@link IConstraint}. */
+    @EventType
+    public record CustomerRegistered(@Unique(id = "UniqueCustomerEmail", message = "Email already in use.") String email) {
+    }
+
+    /** A model-bound event-type-level uniqueness constraint. */
+    @EventType
+    @Unique
+    public record ProjectInitialized(String name) {
+    }
+
+    /** Releases the {@code UniqueCustomerEmail} constraint - repeatable, so more than one may apply. */
+    @EventType
+    @RemoveConstraint("UniqueCustomerEmail")
+    public record CustomerRemoved(String customerId) {
     }
 
     /** A seeder. */

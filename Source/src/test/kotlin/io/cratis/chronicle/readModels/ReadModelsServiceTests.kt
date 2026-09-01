@@ -9,6 +9,7 @@ import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.Readmodels
 import bcl.Bcl
+import io.cratis.chronicle.Subject
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -28,6 +29,9 @@ private data class EmployeeState(val name: String, val title: String)
 // Not file-private: ReadModelsService.resolveSubject() invokes the `id` property reflectively via
 // KProperty1.call(), which requires the declaring class itself to be JVM-accessible (public).
 data class ConfidentialProfile(val id: String, val ssn: String)
+
+// Same visibility requirement as ConfidentialProfile above - its subject property is not `id`.
+data class CustomerOrderSummary(val id: String, @Subject val customerId: String, val total: Double)
 
 private fun UUID.toContractGuid(): Bcl.Guid = Bcl.Guid.newBuilder()
     .setLo(java.lang.Long.reverseBytes(mostSignificantBits))
@@ -135,5 +139,77 @@ class ReadModelsServiceTests {
 
         assertEquals(instances, released)
         coVerify(exactly = 2) { complianceStub.release(any(), any()) }
+    }
+
+    @Test
+    fun `release resolves the subject from a property annotated Subject rather than id`() = runBlocking {
+        val stub = mockk<ReadModelsGrpcKt.ReadModelsCoroutineStub>()
+        val complianceStub = mockk<ComplianceGrpcKt.ComplianceCoroutineStub>()
+        var capturedSubject: String? = null
+        coEvery { complianceStub.release(any(), any()) } answers {
+            val request = firstArg<ComplianceOuterClass.ReleaseRequest>()
+            capturedSubject = request.subject
+            ComplianceOuterClass.ReleaseResponse.newBuilder().setPayload(request.payload).build()
+        }
+
+        val service = ReadModelsService(
+            "my-store",
+            "default",
+            stub,
+            mockk<MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub>(),
+            complianceStub
+        )
+
+        service.release(CustomerOrderSummary(id = "order-1", customerId = "customer-42", total = 99.5))
+
+        assertEquals("customer-42", capturedSubject)
+    }
+
+    @Test
+    fun `release falls back to the id property when nothing is annotated Subject`() = runBlocking {
+        val stub = mockk<ReadModelsGrpcKt.ReadModelsCoroutineStub>()
+        val complianceStub = mockk<ComplianceGrpcKt.ComplianceCoroutineStub>()
+        var capturedSubject: String? = null
+        coEvery { complianceStub.release(any(), any()) } answers {
+            val request = firstArg<ComplianceOuterClass.ReleaseRequest>()
+            capturedSubject = request.subject
+            ComplianceOuterClass.ReleaseResponse.newBuilder().setPayload(request.payload).build()
+        }
+
+        val service = ReadModelsService(
+            "my-store",
+            "default",
+            stub,
+            mockk<MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub>(),
+            complianceStub
+        )
+
+        service.release(ConfidentialProfile(id = "employee-1", ssn = "111-11-1111"))
+
+        assertEquals("employee-1", capturedSubject)
+    }
+
+    @Test
+    fun `release resolves Subject from a Java record's component, not just a Kotlin property`() = runBlocking {
+        val stub = mockk<ReadModelsGrpcKt.ReadModelsCoroutineStub>()
+        val complianceStub = mockk<ComplianceGrpcKt.ComplianceCoroutineStub>()
+        var capturedSubject: String? = null
+        coEvery { complianceStub.release(any(), any()) } answers {
+            val request = firstArg<ComplianceOuterClass.ReleaseRequest>()
+            capturedSubject = request.subject
+            ComplianceOuterClass.ReleaseResponse.newBuilder().setPayload(request.payload).build()
+        }
+
+        val service = ReadModelsService(
+            "my-store",
+            "default",
+            stub,
+            mockk<MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub>(),
+            complianceStub
+        )
+
+        service.release(JavaCustomerOrderSummary("order-1", "customer-42", "pending"))
+
+        assertEquals("customer-42", capturedSubject)
     }
 }

@@ -49,7 +49,8 @@ interface IReadModelsService {
      * Release (decrypt) PII-annotated properties in a read model instance.
      *
      * @param instance The read model instance to decrypt.
-     * @param subject The compliance subject to release for. Defaults to the instance's `id` property, if present.
+     * @param subject The compliance subject to release for. Defaults to a property annotated
+     *   [io.cratis.chronicle.Subject], falling back to the instance's `id` property, if present.
      * @return The decrypted instance, or the original when release is not applicable or fails.
      */
     suspend fun <T : Any> release(instance: T, subject: String? = null): T

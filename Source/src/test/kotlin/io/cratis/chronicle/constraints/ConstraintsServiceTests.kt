@@ -8,6 +8,7 @@ import Cratis.Chronicle.Contracts.Events.Constraints.EventsConstraints
 import com.google.protobuf.Empty
 import io.cratis.chronicle.events.EventType
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.runBlocking
@@ -17,6 +18,9 @@ import org.junit.jupiter.api.Test
 
 @EventType
 private data class ConstraintScopeEmailSet(val email: String)
+
+@EventType
+private data class ModelBoundRegistrationUserRegistered(@Unique(id = "ModelBoundRegistrationUniqueEmail") val email: String)
 
 @Constraint
 private class UnscopedUniqueEmail : IConstraint {
@@ -84,5 +88,28 @@ class ConstraintsServiceTests {
         assertEquals("", scope.eventSourceType)
         assertTrue(scope.eventStreamType.isNotEmpty())
         assertTrue(scope.eventStreamId.isNotEmpty())
+    }
+
+    @Test
+    fun `registerModelBound sends a request built from the given event types' Unique annotations`() = runBlocking {
+        val stub = mockk<ConstraintsGrpcKt.ConstraintsCoroutineStub>()
+        val request = slot<EventsConstraints.RegisterConstraintsRequest>()
+        coEvery { stub.register(capture(request), any()) } returns Empty.getDefaultInstance()
+
+        val service = ConstraintsService("my-store", stub)
+        service.registerModelBound(listOf(ModelBoundRegistrationUserRegistered::class))
+
+        val constraint = request.captured.constraintsList.single()
+        assertEquals("ModelBoundRegistrationUniqueEmail", constraint.name)
+    }
+
+    @Test
+    fun `registerModelBound sends nothing when no event type carries Unique or RemoveConstraint`() = runBlocking {
+        val stub = mockk<ConstraintsGrpcKt.ConstraintsCoroutineStub>()
+
+        val service = ConstraintsService("my-store", stub)
+        service.registerModelBound(listOf(ConstraintScopeEmailSet::class))
+
+        coVerify(exactly = 0) { stub.register(any(), any()) }
     }
 }
