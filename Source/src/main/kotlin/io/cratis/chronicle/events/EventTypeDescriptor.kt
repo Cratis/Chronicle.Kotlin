@@ -25,9 +25,16 @@ data class EventTypeDescriptor(
          * Expected format: `id+generation` or `id+generation+tombstone`.
          * If only `id` is provided, generation defaults to [EventTypeGeneration.first].
          *
+         * This is also the only way a Java caller can name an event type: [EventTypeId] and
+         * [EventTypeGeneration] are `@JvmInline value class`es whose constructors Java cannot
+         * reach, and a `String`-taking constructor here would erase to the primary one's JVM
+         * signature. `@JvmStatic` is what makes `EventTypeDescriptor.parse("Something")` compile
+         * from Java without going through `Companion`.
+         *
          * @param input The string to parse.
          * @return The parsed [EventTypeDescriptor].
          */
+        @JvmStatic
         fun parse(input: String): EventTypeDescriptor {
             val segments = input.split("+")
             return when (segments.size) {
