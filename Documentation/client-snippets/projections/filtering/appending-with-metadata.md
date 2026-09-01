@@ -1,6 +1,33 @@
-```text
-Kotlin does not support this workflow yet.
-`AppendOptions` only carries a `correlationId` — there is no way to attach tags
-or a custom event stream type when appending from Kotlin. Track the client SDK
-issue before relying on metadata-filtered observers from Kotlin.
+```kotlin
+import io.cratis.chronicle.IEventStore
+import io.cratis.chronicle.eventSequences.AppendOptions
+import io.cratis.chronicle.events.EventType
+import java.util.UUID
+
+@EventType(id = "filtering-with-reactor-order-placed")
+data class FilteringWithReactorOrderPlaced(val customerId: String, val amount: Double)
+
+class FilteringAppendService(private val eventStore: IEventStore) {
+    suspend fun appendOrders(customerId: String) {
+        // Appends to all observers — no extra metadata
+        eventStore.eventLog.append(
+            UUID.randomUUID().toString(),
+            FilteringWithReactorOrderPlaced(customerId, 42.0)
+        )
+
+        // Appends to all observers; additionally dispatched to observers filtering on "premium"
+        eventStore.eventLog.append(
+            UUID.randomUUID().toString(),
+            FilteringWithReactorOrderPlaced(customerId, 299.0),
+            AppendOptions(tags = listOf("premium"))
+        )
+
+        // Appends with stream type; dispatched to observers filtering on "wholesale" stream type
+        eventStore.eventLog.append(
+            UUID.randomUUID().toString(),
+            FilteringWithReactorOrderPlaced(customerId, 1500.0),
+            AppendOptions(eventStreamType = "wholesale")
+        )
+    }
+}
 ```
