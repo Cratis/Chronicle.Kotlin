@@ -43,6 +43,22 @@ data class NestedEntry(
     val clearWithEventClasses: List<KClass<*>>
 )
 
+/**
+ * Confirms [propertyName] is a real property of [type], failing clearly and immediately rather than
+ * letting a typo reach the kernel as a broken projection definition.
+ *
+ * This is what backs every property-name-string overload on the declarative builder - the ones a Java
+ * caller reaches for because it cannot produce a [KProperty1].
+ *
+ * @throws UnknownReadModelProperty when [propertyName] is not a property of [type].
+ */
+private fun requireProperty(type: KClass<*>, propertyName: String): String {
+    if (type.memberProperties.none { it.name == propertyName }) {
+        throw UnknownReadModelProperty(type, propertyName)
+    }
+    return propertyName
+}
+
 class ProjectionBuilderFor<TReadModel : Any>(
     private val readModelClass: KClass<TReadModel>
 ) : IProjectionBuilderFor<TReadModel> {
@@ -55,6 +71,8 @@ class ProjectionBuilderFor<TReadModel : Any>(
     val childrenEntries = mutableListOf<ChildrenEntry>()
     val nestedEntries = mutableListOf<NestedEntry>()
     var isRewindable = true
+        private set
+    var autoMapEnabled = true
         private set
 
     override fun <TEvent : Any> from(
@@ -123,6 +141,17 @@ class ProjectionBuilderFor<TReadModel : Any>(
         return this
     }
 
+    override fun <TChild : Any> children(
+        propertyName: String,
+        childClass: Class<TChild>,
+        configure: (IChildrenBuilderFor<TChild>) -> Unit
+    ): IProjectionBuilderFor<TReadModel> {
+        val builder = ChildrenBuilderFor(childClass.kotlin)
+        configure(builder)
+        childrenEntries.add(ChildrenEntry(requireProperty(readModelClass, propertyName), builder.identifiedBy, builder.fromEntries))
+        return this
+    }
+
     override fun <TNested : Any> nested(
         property: KProperty1<TReadModel, *>,
         nestedClass: KClass<TNested>,
@@ -134,8 +163,29 @@ class ProjectionBuilderFor<TReadModel : Any>(
         return this
     }
 
+    override fun <TNested : Any> nested(
+        propertyName: String,
+        nestedClass: Class<TNested>,
+        configure: (INestedBuilderFor<TNested>) -> Unit
+    ): IProjectionBuilderFor<TReadModel> {
+        val builder = NestedBuilderFor(nestedClass.kotlin)
+        configure(builder)
+        nestedEntries.add(NestedEntry(requireProperty(readModelClass, propertyName), builder.fromEntries, builder.clearWithEventClasses))
+        return this
+    }
+
     override fun notRewindable(): IProjectionBuilderFor<TReadModel> {
         isRewindable = false
+        return this
+    }
+
+    override fun noAutoMap(): IProjectionBuilderFor<TReadModel> {
+        autoMapEnabled = false
+        return this
+    }
+
+    override fun autoMap(): IProjectionBuilderFor<TReadModel> {
+        autoMapEnabled = true
         return this
     }
 }
@@ -155,6 +205,9 @@ class FromBuilderFor<TReadModel : Any, TEvent : Any>(
     override fun <TValue : Any?> set(property: KProperty1<TReadModel, TValue>): ISetBuilderFor<TReadModel, TEvent, TValue> =
         SetBuilderFor(propertyMappings, property.name, this)
 
+    override fun <TValue : Any?> set(propertyName: String): ISetBuilderFor<TReadModel, TEvent, TValue> =
+        SetBuilderFor(propertyMappings, requireProperty(readModelClass, propertyName), this)
+
     override fun usingKey(eventPropertyName: String): IFromBuilderFor<TReadModel, TEvent> {
         key = eventPropertyName
         return this
@@ -171,6 +224,48 @@ class FromBuilderFor<TReadModel : Any, TEvent : Any>(
         key = builder.build()
         return this
     }
+
+    override fun <TValue : Any?> count(property: KProperty1<TReadModel, TValue>): IFromBuilderFor<TReadModel, TEvent> {
+        propertyMappings[property.name] = "\$count"
+        return this
+    }
+
+    override fun count(propertyName: String): IFromBuilderFor<TReadModel, TEvent> {
+        propertyMappings[requireProperty(readModelClass, propertyName)] = "\$count"
+        return this
+    }
+
+    override fun <TValue : Any?> increment(property: KProperty1<TReadModel, TValue>): IFromBuilderFor<TReadModel, TEvent> {
+        propertyMappings[property.name] = "\$increment"
+        return this
+    }
+
+    override fun increment(propertyName: String): IFromBuilderFor<TReadModel, TEvent> {
+        propertyMappings[requireProperty(readModelClass, propertyName)] = "\$increment"
+        return this
+    }
+
+    override fun <TValue : Any?> decrement(property: KProperty1<TReadModel, TValue>): IFromBuilderFor<TReadModel, TEvent> {
+        propertyMappings[property.name] = "\$decrement"
+        return this
+    }
+
+    override fun decrement(propertyName: String): IFromBuilderFor<TReadModel, TEvent> {
+        propertyMappings[requireProperty(readModelClass, propertyName)] = "\$decrement"
+        return this
+    }
+
+    override fun <TValue : Any?> add(property: KProperty1<TReadModel, TValue>): IAddBuilderFor<TReadModel, TEvent> =
+        AddBuilderFor(propertyMappings, property.name, this)
+
+    override fun add(propertyName: String): IAddBuilderFor<TReadModel, TEvent> =
+        AddBuilderFor(propertyMappings, requireProperty(readModelClass, propertyName), this)
+
+    override fun <TValue : Any?> subtract(property: KProperty1<TReadModel, TValue>): ISubtractBuilderFor<TReadModel, TEvent> =
+        SubtractBuilderFor(propertyMappings, property.name, this)
+
+    override fun subtract(propertyName: String): ISubtractBuilderFor<TReadModel, TEvent> =
+        SubtractBuilderFor(propertyMappings, requireProperty(readModelClass, propertyName), this)
 }
 
 class SetBuilderFor<TReadModel : Any, TEvent : Any, TValue : Any?>(
@@ -193,6 +288,35 @@ class SetBuilderFor<TReadModel : Any, TEvent : Any, TValue : Any?>(
         mappings[targetProperty] = eventProperty
         return parent
     }
+
+    override fun toEventContextProperty(contextProperty: String): IFromBuilderFor<TReadModel, TEvent> {
+        mappings[targetProperty] = "\$eventContext($contextProperty)"
+        return parent
+    }
+}
+
+/** Builds up an add operation - the event property whose value is added into the target property. */
+class AddBuilderFor<TReadModel : Any, TEvent : Any>(
+    private val mappings: MutableMap<String, String>,
+    private val targetProperty: String,
+    private val parent: IFromBuilderFor<TReadModel, TEvent>
+) : IAddBuilderFor<TReadModel, TEvent> {
+    override fun with(eventPropertyName: String): IFromBuilderFor<TReadModel, TEvent> {
+        mappings[targetProperty] = "\$add($eventPropertyName)"
+        return parent
+    }
+}
+
+/** Builds up a subtract operation - the event property whose value is subtracted from the target property. */
+class SubtractBuilderFor<TReadModel : Any, TEvent : Any>(
+    private val mappings: MutableMap<String, String>,
+    private val targetProperty: String,
+    private val parent: IFromBuilderFor<TReadModel, TEvent>
+) : ISubtractBuilderFor<TReadModel, TEvent> {
+    override fun with(eventPropertyName: String): IFromBuilderFor<TReadModel, TEvent> {
+        mappings[targetProperty] = "\$subtract($eventPropertyName)"
+        return parent
+    }
 }
 
 class JoinBuilderFor<TReadModel : Any, TEvent : Any>(
@@ -205,8 +329,16 @@ class JoinBuilderFor<TReadModel : Any, TEvent : Any>(
     override fun <TValue : Any?> set(property: KProperty1<TReadModel, TValue>): ISetBuilderFor<TReadModel, TEvent, TValue> =
         SetBuilderFor(propertyMappings, property.name, FromBuilderFor(readModelClass))
 
+    override fun <TValue : Any?> set(propertyName: String): ISetBuilderFor<TReadModel, TEvent, TValue> =
+        SetBuilderFor(propertyMappings, requireProperty(readModelClass, propertyName), FromBuilderFor(readModelClass))
+
     override fun on(property: KProperty1<TReadModel, *>): IJoinBuilderFor<TReadModel, TEvent> {
         on = property.name
+        return this
+    }
+
+    override fun on(propertyName: String): IJoinBuilderFor<TReadModel, TEvent> {
+        on = requireProperty(readModelClass, propertyName)
         return this
     }
 }
@@ -218,6 +350,9 @@ class FromEveryBuilderFor<TReadModel : Any>(
 
     override fun <TValue : Any?> set(property: KProperty1<TReadModel, TValue>): IAllSetBuilderFor<TReadModel, TValue> =
         AllSetBuilderFor(propertyMappings, property.name, this)
+
+    override fun <TValue : Any?> set(propertyName: String): IAllSetBuilderFor<TReadModel, TValue> =
+        AllSetBuilderFor(propertyMappings, requireProperty(readModelClass, propertyName), this)
 }
 
 class AllSetBuilderFor<TReadModel : Any, TValue : Any?>(
@@ -303,6 +438,9 @@ class ChildFromBuilderFor<TChild : Any, TEvent : Any>(
 
     override fun <TValue : Any?> set(property: KProperty1<TChild, TValue>): ISetBuilderFor<TChild, TEvent, TValue> =
         SetBuilderFor(propertyMappings, property.name, FromBuilderFor(childClass))
+
+    override fun <TValue : Any?> set(propertyName: String): ISetBuilderFor<TChild, TEvent, TValue> =
+        SetBuilderFor(propertyMappings, requireProperty(childClass, propertyName), FromBuilderFor(childClass))
 
     override fun usingKey(eventPropertyName: String): IChildFromBuilderFor<TChild, TEvent> {
         key = eventPropertyName

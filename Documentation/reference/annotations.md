@@ -171,6 +171,34 @@ data class OrderSummary(val orderId: String = "", val status: String = "pending"
 
 ---
 
+## @Passive
+
+Marks a model-bound read model's projection as passive — registered with the
+kernel but not actively run. A passive projection's read model is computed on
+demand rather than kept up to date as events arrive. Placed on the read model
+class.
+
+No parameters.
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.projections.FromEvent
+import io.cratis.chronicle.readModels.Passive
+import io.cratis.chronicle.readModels.ReadModel
+
+@EventType
+data class SnapshotCreated(val data: String)
+
+@Passive
+@ReadModel
+@FromEvent(SnapshotCreated::class)
+data class HistoricalSnapshot(val data: String = "")
+```
+
+---
+
 ## @Projection
 
 Marks a class as a Chronicle projection, or overrides the projection
@@ -249,6 +277,67 @@ Marks a class as a Chronicle constraint definition. The class must implement
 
 ---
 
+## @Unique
+
+Marks a property or an event type as needing to be unique - the model-bound
+alternative to a hand-written `IConstraint`. On a property, no two events of
+that type may carry the same value; applying it with the same `id` to
+properties on more than one event type groups them under one constraint,
+checked across all of them combined. On an event type, at most one instance
+of that type may exist per event source.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `id` | `String` | `""` | Constraint name, defaulting to the property/class. |
+| `message` | `String` | `""` | Message for a constraint violation. |
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.constraints.Unique
+import io.cratis.chronicle.events.EventType
+
+@EventType
+data class ProjectCreated(@Unique val name: String, val description: String)
+
+@EventType
+@Unique
+data class WorkspaceClaimed(val slug: String)
+```
+
+Pair it with [@RemoveConstraint](#removeconstraint) on a removal event to
+release the value for reuse.
+
+---
+
+## @RemoveConstraint
+
+Marks an event type as releasing a named [@Unique](#unique) constraint when
+it is appended - typically a deletion or lifecycle-ending event. Repeatable,
+so one event can release more than one constraint.
+
+Only one event type may release a given constraint name with this client -
+if more than one declares the same name, registration keeps the first one
+it finds and reports the rest, rather than silently overwriting on every
+reconnect.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `value` | `String` | *(required)* | Name of the constraint to release. |
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.constraints.RemoveConstraint
+import io.cratis.chronicle.events.EventType
+
+@EventType
+@RemoveConstraint("UniqueWorkspaceSlug")
+data class WorkspaceArchived(val workspaceId: String)
+```
+
+---
+
 ## @Seeder
 
 Marks a class as a Chronicle event seeder. The class must implement `ICanSeedEvents`.
@@ -257,10 +346,21 @@ Marks a class as a Chronicle event seeder. The class must implement `ICanSeedEve
 
 ## @Pii
 
-Marks a property as personally identifiable information. Chronicle encrypts
-annotated fields at rest using a per-subject key. See [PII
-Attribute](/chronicle/compliance/pii/) for the full compliance model this
-participates in.
+Marks a property, constructor parameter, field, or type as personally
+identifiable information. Chronicle encrypts annotated values at rest using a
+per-subject key. See [PII Attribute](/chronicle/compliance/pii/) for the full
+compliance model this participates in.
+
+Applying it directly to a property works, but the declare-once pattern is to
+put it on a `ConceptAs<T>` type instead: every event or read model property
+that reuses that concept is PII automatically, with nothing to repeat at each
+call site. It can also mark a composite value object type, in which case
+every value the type holds is treated as PII wherever that type appears.
+
+`@Pii` cannot be applied to an `EventSourceId` concept — Chronicle uses the
+event source id to look up the encryption key for every other PII value
+belonging to that source, so encrypting the id itself would make its own key
+unfindable.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -272,10 +372,75 @@ participates in.
 import io.cratis.chronicle.compliance.Pii
 import io.cratis.chronicle.events.EventType
 
+// Declared once on the concept, every event or read model property that
+// reuses EmailAddress is PII automatically.
+@Pii(description = "Customer email address")
+data class EmailAddress(override val value: String) : io.cratis.chronicle.concepts.ConceptAs<String>
+
 @EventType
 data class CustomerRegistered(
     val customerId: String,
-    @Pii(description = "Customer email address") val email: String
+    val email: EmailAddress
+)
+```
+
+---
+
+## @JsonSchemaType
+
+Overrides the type a class is represented as in the generated JSON schema.
+Apply it to a type that brings its own serializer and writes something other
+than its own shape on the wire — a value object collapsed into a single
+string, for instance. Without it the generated schema would describe the
+Kotlin shape, and the value would not round-trip through the kernel.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `type` | `KClass<*>` | *(required)* | Type the class is represented as. |
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.schemas.JsonSchemaType
+
+// Money serializes as a single string ("42.50 USD") through its own
+// serializer, so the schema needs to describe a string, not an object
+// with amount/currency fields.
+@JsonSchemaType(String::class)
+data class Money(val amount: Double, val currency: String)
+```
+
+Pointing the annotation at the annotated type itself throws
+`SelfReferencingJsonSchemaType` — generating that schema would recurse
+forever.
+
+---
+
+## @Subject
+
+Marks a property as the compliance subject - the identity a release
+decrypts [@Pii](#pii) values against. `IReadModelsService.release` uses it
+to pick which property carries the subject; without it, release falls back
+to a property named `id` (case-insensitive), the convention every read
+model followed before this annotation existed.
+
+Add it whenever a read model's subject is not its `id` - for example a
+support ticket keyed by ticket id but holding a customer's PII, where the
+customer, not the ticket, is who the encryption key belongs to.
+
+No parameters.
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.Subject
+import io.cratis.chronicle.readModels.ReadModel
+
+@ReadModel
+data class SupportTicketSummary(
+    val id: String = "",
+    @Subject val customerId: String = "",
+    val topic: String = ""
 )
 ```
 
@@ -313,6 +478,54 @@ data class OrderTracking(
 
 ---
 
+## @Key
+
+Marks a property on an event as the key a projection correlates that event
+to a read model instance by. [@FromEvent](#fromevent)'s `key` parameter
+takes this today as a bare property-name string; `@Key` is the
+strongly-typed alternative for consumers that resolve the key by
+reflection instead of by name.
+
+No parameters.
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.keys.Key
+
+@EventType
+data class PickTicketOpened(@Key val orderId: String, val warehouse: String)
+```
+
+---
+
+## @ContextKey
+
+Marks a function as deriving its key from the event context — for example
+the event source id, or a correlation id — rather than from a property on
+the event payload.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `property` | `String` | *(required)* | `EventContext` property to use. |
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.keys.ContextKey
+
+class PickTicketHandlers {
+    @ContextKey(property = "EventSourceId")
+    fun pickTicketOpened(event: PickTicketOpened) = Unit
+}
+```
+
+`IKeyBuilder`/`KeyBuilder` build the same resolution fluently instead of
+declaratively — see the `io.cratis.chronicle.keys` package.
+
+---
+
 ## @SetFrom
 
 Applied to a read model property to override auto-mapping by name and
@@ -328,6 +541,89 @@ can be mapped differently per event type.
 annotated property's own name. The default `eventType` applies the mapping
 to every event in the read model's `@FromEvent` list that has a matching
 source property.
+
+---
+
+## @SetValue
+
+Sets a read model property to a constant value when a specific event occurs,
+or clears it back to no value. It is repeatable, so the same property can
+hold a different constant per event type.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `eventType` | `KClass<*>` | — | The event class to trigger on. |
+| `value` | `String` | `""` | The constant's literal text. Ignored if `clear`. |
+| `clear` | `Boolean` | `false` | Clears instead of setting `value`. |
+
+Kotlin annotation parameters cannot be nullable, so `value` is always a plain
+string — a numeric or boolean constant is written out as its literal text
+(`"42"`, `"true"`) rather than as a typed argument. Set `clear = true` to
+clear the property instead, which is Kotlin's equivalent of passing `null`
+for `value` in the .NET client.
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.projections.FromEvent
+import io.cratis.chronicle.projections.SetValue
+import io.cratis.chronicle.readModels.ReadModel
+
+@EventType
+data class SubscriptionActivated(val placeholder: Boolean = true)
+
+@EventType
+data class SubscriptionCanceled(val placeholder: Boolean = true)
+
+@ReadModel
+@FromEvent(SubscriptionActivated::class)
+@FromEvent(SubscriptionCanceled::class)
+data class Subscription(
+    @SetValue(SubscriptionActivated::class, value = "active")
+    @SetValue(SubscriptionCanceled::class, value = "canceled")
+    val status: String = ""
+)
+```
+
+---
+
+## @SetFromContext
+
+Maps a read model property from a named `EventContext` property, for one
+specific event. Unlike [@FromAll / @FromEvery](#fromall--fromevery), which
+map a context property across every event the projection observes, this ties
+the mapping to a single event type.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `eventType` | `KClass<*>` | — | The event class this mapping applies to. |
+| `contextProperty` | `String` | `""` | The context property to read from. |
+
+`contextProperty` defaults to the annotated property's own name.
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.projections.FromEvent
+import io.cratis.chronicle.projections.SetFrom
+import io.cratis.chronicle.projections.SetFromContext
+import io.cratis.chronicle.readModels.ReadModel
+
+@EventType
+data class OrderPlacedForAudit(val customerName: String)
+
+@ReadModel
+@FromEvent(OrderPlacedForAudit::class)
+data class AuditedOrder(
+    @SetFrom("customerName", OrderPlacedForAudit::class)
+    val customerName: String = "",
+
+    @SetFromContext(OrderPlacedForAudit::class, contextProperty = "occurred")
+    val orderedAt: String = ""
+)
+```
 
 ---
 

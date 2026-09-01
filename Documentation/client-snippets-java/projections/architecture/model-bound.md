@@ -1,6 +1,16 @@
-```text
-Java does not support this workflow yet.
-The `@FromEvent`/`@SetFrom` model-bound annotations have no counting equivalent to
-C#'s `[Count<TEvent>]` — track the client SDK issue before relying on model-bound
-event counting from Java.
+```java
+import io.cratis.chronicle.events.EventType;
+import io.cratis.chronicle.projections.Count;
+import io.cratis.chronicle.projections.FromEvent;
+import io.cratis.chronicle.readModels.ReadModel;
+
+@EventType(id = "architecture-model-bound-item-added")
+record ArchitectureModelBoundItemAdded(String category) {}
+
+@ReadModel
+@FromEvent(eventType = ArchitectureModelBoundItemAdded.class, key = "category")
+class ArchitectureModelBoundSummary {
+    @Count(eventType = ArchitectureModelBoundItemAdded.class)
+    public int count = 0;
+}
 ```

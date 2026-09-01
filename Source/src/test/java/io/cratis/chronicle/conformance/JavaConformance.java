@@ -4,13 +4,17 @@
 package io.cratis.chronicle.conformance;
 
 import io.cratis.chronicle.ChronicleOptions;
+import io.cratis.chronicle.Subject;
 import io.cratis.chronicle.auditing.Causation;
 import io.cratis.chronicle.auditing.CausationType;
 import io.cratis.chronicle.compliance.Pii;
 import io.cratis.chronicle.concepts.ConceptAs;
+import io.cratis.chronicle.concepts.EventSourceId;
 import io.cratis.chronicle.constraints.Constraint;
 import io.cratis.chronicle.constraints.IConstraint;
 import io.cratis.chronicle.constraints.IConstraintBuilder;
+import io.cratis.chronicle.constraints.RemoveConstraint;
+import io.cratis.chronicle.constraints.Unique;
 import io.cratis.chronicle.eventSequences.AppendOptions;
 import io.cratis.chronicle.eventSequences.EventForEventSourceId;
 import io.cratis.chronicle.eventSequences.EventSequenceId;
@@ -22,6 +26,12 @@ import io.cratis.chronicle.geospatial.Point;
 import io.cratis.chronicle.java.AppendOptionsBuilder;
 import io.cratis.chronicle.java.BlockingReactorMethodArgumentResolver;
 import io.cratis.chronicle.java.BlockingReactorMiddleware;
+import io.cratis.chronicle.keys.ContextKey;
+import io.cratis.chronicle.keys.ICompositeKeyBuilder;
+import io.cratis.chronicle.keys.IKeyBuilder;
+import io.cratis.chronicle.keys.Key;
+import io.cratis.chronicle.keys.KeyBuilder;
+import io.cratis.chronicle.keys.ResolvedKey;
 import io.cratis.chronicle.observation.EventSequence;
 import io.cratis.chronicle.observation.FilterEventsByTag;
 import io.cratis.chronicle.observation.ICanBeNotifiedAboutReplay;
@@ -31,9 +41,15 @@ import io.cratis.chronicle.observation.Reducer;
 import io.cratis.chronicle.observation.Replay;
 import io.cratis.chronicle.observation.ReplayContext;
 import io.cratis.chronicle.observation.Tag;
+import io.cratis.chronicle.projections.FromEvent;
+import io.cratis.chronicle.projections.SetFrom;
+import io.cratis.chronicle.projections.SetFromContext;
+import io.cratis.chronicle.projections.SetValue;
 import io.cratis.chronicle.readModels.IReadModelReactor;
+import io.cratis.chronicle.readModels.Passive;
 import io.cratis.chronicle.readModels.ReadModel;
 import io.cratis.chronicle.readModels.ReadModelChangeset;
+import io.cratis.chronicle.schemas.JsonSchemaType;
 import io.cratis.chronicle.seeding.ICanSeedEvents;
 import io.cratis.chronicle.seeding.IEventSeedingBuilder;
 import io.cratis.chronicle.webhooks.IWebhookDefiner;
@@ -91,11 +107,115 @@ public final class JavaConformance {
     public record EmployeeHiredV2(EmployeeId employee, String title) {
     }
 
+    // --- Keys -----------------------------------------------------------------------------------
+
+    /** An event type with a strongly-typed key, in place of a magic string. */
+    @EventType
+    public record OrderLineAdded(@Key String orderId, String product, int quantity) {
+    }
+
+    /** A handler deriving its key from the event context rather than the event payload. */
+    public static class OrderLineHandlers {
+        @ContextKey(property = "EventSourceId")
+        public void orderLineAdded(OrderLineAdded event) {
+        }
+    }
+
+    /** Every method on {@link IKeyBuilder} and {@link ICompositeKeyBuilder}, as reached from Java. */
+    public static ResolvedKey resolvedKeys() {
+        var byProperty = new KeyBuilder<OrderLineAdded>();
+        byProperty.usingKeyWithPropertyName("orderId");
+
+        var fromContext = new KeyBuilder<OrderLineAdded>();
+        fromContext.usingKeyFromContext("EventSourceId");
+
+        var composite = new KeyBuilder<OrderLineAdded>();
+        composite.usingCompositeKey(builder -> {
+            ICompositeKeyBuilder<OrderLineAdded> b = builder;
+            b.addWithPropertyName("orderId");
+            b.addWithPropertyName("product");
+            return kotlin.Unit.INSTANCE;
+        });
+
+        return composite.build();
+    }
+
     // --- Read models --------------------------------------------------------------------------
 
     /** A read model. */
     @ReadModel
     public record EmployeeState(String id, String title) {
+    }
+
+    // --- Schemas --------------------------------------------------------------------------------
+
+    /** A type whose own serializer writes something other than its own shape, declared the way Java opts in. */
+    @JsonSchemaType(type = String.class)
+    public record Money(long amount, String currency) {
+    }
+
+    // --- Compliance -----------------------------------------------------------------------------
+
+    /** A concept implementing {@link EventSourceId}, the way a Java caller opts a concept into being one. */
+    public record CustomerId(String value) implements EventSourceId {
+        @Override
+        public String getValue() {
+            return value;
+        }
+    }
+
+    /** A concept used purely to prove {@link Pii} resolves from a Java record's canonical constructor parameter. */
+    public record NationalIdentifier(String value) implements ConceptAs<String> {
+        @Override
+        public String getValue() {
+            return value;
+        }
+    }
+
+    /** A record whose {@link ConceptAs} component is annotated {@link Pii} directly - the constructor-parameter shape. */
+    public record CustomerRegisteredWithPiiConcept(CustomerId customerId, @Pii NationalIdentifier nationalId) {
+    }
+
+    /** A read model whose compliance subject is not its {@code id} property. */
+    @ReadModel
+    public record CustomerOrderSummary(String id, @Subject String customerId, String status) {
+    }
+
+    // --- Model-bound projections ----------------------------------------------------------------
+
+    /** An event a model-bound projection sets a constant value from. */
+    @EventType
+    public record JavaOrderPlaced(String customerName) {
+    }
+
+    /** A second event, so {@link SetValue} can be shown repeated across events on the same property. */
+    @EventType
+    public record JavaOrderCancelled() {
+    }
+
+    /**
+     * A passive model-bound read model exercising {@link SetValue} (set, repeated, and clear) and
+     * {@link SetFromContext}, the way a Java caller declares them - as element arrays via repeated
+     * annotations, and named elements rather than Kotlin's positional/default-argument syntax.
+     */
+    @ReadModel
+    @FromEvent(eventType = JavaOrderPlaced.class)
+    @FromEvent(eventType = JavaOrderCancelled.class)
+    @Passive
+    public record JavaOrderStatus(
+            @SetFrom(propertyPath = "customerName", eventType = JavaOrderPlaced.class)
+            String customerName,
+
+            @SetValue(eventType = JavaOrderPlaced.class, value = "active")
+            @SetValue(eventType = JavaOrderCancelled.class, value = "cancelled")
+            String status,
+
+            @SetFromContext(eventType = JavaOrderPlaced.class, contextProperty = "occurred")
+            String placedAt,
+
+            @SetFrom(propertyPath = "customerName", eventType = JavaOrderPlaced.class)
+            @SetValue(eventType = JavaOrderCancelled.class, clear = true)
+            String note) {
     }
 
     // --- Observers ----------------------------------------------------------------------------
@@ -195,6 +315,23 @@ public final class JavaConformance {
         public void define(IConstraintBuilder builder) {
             builder.uniqueFor(EmployeeHired.class, "One employee per national identifier.");
         }
+    }
+
+    /** A model-bound property-level uniqueness constraint, the declarative alternative to {@link IConstraint}. */
+    @EventType
+    public record CustomerRegistered(@Unique(id = "UniqueCustomerEmail", message = "Email already in use.") String email) {
+    }
+
+    /** A model-bound event-type-level uniqueness constraint. */
+    @EventType
+    @Unique
+    public record ProjectInitialized(String name) {
+    }
+
+    /** Releases the {@code UniqueCustomerEmail} constraint - repeatable, so more than one may apply. */
+    @EventType
+    @RemoveConstraint("UniqueCustomerEmail")
+    public record CustomerRemoved(String customerId) {
     }
 
     /** A seeder. */

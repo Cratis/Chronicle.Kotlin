@@ -1,6 +1,16 @@
-```text
-Kotlin does not support this workflow yet.
-The `@FromEvent`/`@SetFrom` model-bound annotations have no counting equivalent to
-C#'s `[Count<TEvent>]` — track the client SDK issue before relying on model-bound
-event counting from Kotlin.
+```kotlin
+import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.projections.Count
+import io.cratis.chronicle.projections.FromEvent
+import io.cratis.chronicle.readModels.ReadModel
+
+@EventType(id = "architecture-model-bound-item-added")
+data class ArchitectureModelBoundItemAdded(val category: String)
+
+@ReadModel
+@FromEvent(ArchitectureModelBoundItemAdded::class, key = "category")
+data class ArchitectureModelBoundSummary(
+    @Count(ArchitectureModelBoundItemAdded::class)
+    val count: Int = 0
+)
 ```

@@ -68,6 +68,7 @@ class ArtifactRegistrations(
         eventStore.readModels.register(*unownedReadModels().toTypedArray())
 
         eventStore.constraints.register(*instancesOf(artifacts.constraints).toTypedArray())
+        eventStore.constraints.registerModelBound(artifacts.eventTypes)
         // Projections come in two shapes: a class that defines one through a builder, registered as an
         // instance, and a read model that declares the events it projects from, registered as a class.
         val projections: List<Any> = instancesOf(artifacts.projections) + artifacts.modelBoundProjections

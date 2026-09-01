@@ -1,3 +1,9 @@
-```text
-Java does not support this workflow yet.
+```java
+class DecNotRewindableAuditLogEntry {
+    public String userId = "";
+    public String action = "";
+    public String details = "";
+    public String processedAt = "";
+    public long sequenceNumber = 0;
+}
 ```

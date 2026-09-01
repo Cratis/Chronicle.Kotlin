@@ -6,6 +6,7 @@ package io.cratis.chronicle.constraints
 import Cratis.Chronicle.Contracts.Events.Constraints.ConstraintsGrpcKt
 import Cratis.Chronicle.Contracts.Events.Constraints.EventsConstraints
 import io.cratis.chronicle.events.EventType
+import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 
 /**
@@ -84,11 +85,18 @@ class ConstraintsService(
             }.filterNotNull()
         }.flatten()
 
-        if (protoConstraints.isEmpty()) return
+        sendToKernel(protoConstraints)
+    }
+
+    override suspend fun registerModelBound(eventTypes: List<KClass<*>>) =
+        sendToKernel(ModelBoundConstraints.buildFor(eventTypes))
+
+    private suspend fun sendToKernel(constraints: List<EventsConstraints.Constraint>) {
+        if (constraints.isEmpty()) return
 
         val request = EventsConstraints.RegisterConstraintsRequest.newBuilder()
             .setEventStore(eventStoreName)
-            .addAllConstraints(protoConstraints)
+            .addAllConstraints(constraints)
             .build()
 
         stub.register(request)
