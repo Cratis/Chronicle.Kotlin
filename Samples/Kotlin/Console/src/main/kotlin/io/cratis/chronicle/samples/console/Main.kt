@@ -211,8 +211,8 @@ Use 1-3 to select an employee. Then:
   I = Switch user (cycle: Alice Smith -> Bob Jones -> System)
   H or ? = Show this menu          Q = Quit
 
-EmployeeState changes are watched live in the background via typed watch() -
-look for "[watch]" lines after actions that change title/email.
+EmployeeDetails changes are watched live in the background via typed watch() -
+look for "[watch]" lines after actions that change title/address.
 """.trimIndent())
 }
 
@@ -276,13 +276,21 @@ fun main() = runBlocking {
         // Reducers auto-register their read models (EmployeeState, CustomerDetails) with observerType=Reducer.
         store.reducers.register(EmployeeStateReducer())
         store.reducers.register(CustomerReducer())
-        // Typed watch(): observe live EmployeeState changes in the background for as long as the
-        // sample runs. Deserializes each changeset straight into EmployeeState — no manual JSON parsing.
+        // Typed watch(): observe live EmployeeDetails changes in the background for as long as the
+        // sample runs. Deserializes each changeset straight into EmployeeDetails — no manual JSON
+        // parsing. Watching follows a read model the kernel maintains, which means a projection —
+        // a reducer runs client-side, so there is nothing on the server to watch.
         launch {
-            store.readModels.watch(EmployeeState::class).collect { changeset ->
-                val model = changeset.readModel
-                val summary = if (changeset.removed || model == null) "removed" else "${model.title} <${model.email}>"
-                println("\n[watch] EmployeeState '${changeset.modelKey}' ${changeset.changeType}: $summary")
+            try {
+                store.readModels.watch(EmployeeDetails::class).collect { changeset ->
+                    val model = changeset.readModel
+                    val summary = if (changeset.removed || model == null) "removed" else "${model.title} @ ${model.city}"
+                    println("\n[watch] EmployeeDetails '${changeset.modelKey}' ${changeset.changeType}: $summary")
+                }
+            } catch (e: Exception) {
+                // A watch that cannot be established is worth saying out loud, but it is a
+                // background convenience — it must not take the rest of the sample down with it.
+                println("[watch] Stopped watching EmployeeDetails: ${e.message}")
             }
         }
         // Declarative projection: a separate class implements IProjectionFor<Employee>.
@@ -296,7 +304,13 @@ fun main() = runBlocking {
         // Event store subscription: ingest payroll runs from the external payroll event store's outbox.
         setupPayrollIntegration(store)
         // Ensure the Default namespace exists so the seeding grain can distribute seeds to it.
-        store.namespaces.ensure("Default")
+        // Every event store already has a Default namespace, so this is belt and braces — a kernel
+        // that does not serve the namespaces API is no reason to abandon the rest of the tour.
+        try {
+            store.namespaces.ensure("Default")
+        } catch (e: Exception) {
+            println("[namespaces] Could not ensure the Default namespace: ${e.message}")
+        }
         store.seeding.seed(EmployeeSeeder())
         kotlinx.coroutines.delay(2000)
         ensureSeededEmployees(store)
