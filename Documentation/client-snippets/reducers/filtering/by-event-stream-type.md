@@ -7,7 +7,7 @@ import io.cratis.chronicle.observation.EventStreamType
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "reducers-filtering-shipment-sent")
+@EventType
 data class ReducersFilteringShipmentSent(val shippingCost: Double)
 
 @ReadModel

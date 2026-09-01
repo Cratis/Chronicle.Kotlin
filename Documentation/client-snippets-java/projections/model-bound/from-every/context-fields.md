@@ -4,7 +4,7 @@ import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.FromEvery;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "auditable-inventory-changed-for-every")
+@EventType
 record AuditableInventoryChangedForEvery(String reason) {}
 
 @ReadModel

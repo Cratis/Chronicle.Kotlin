@@ -4,13 +4,13 @@ import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 import io.cratis.chronicle.projections.Projection;
 
-@EventType(id = "dec-from-event-sequence-package-created")
+@EventType
 record DecFromEventSequencePackageCreated(String packageId) {}
 
-@EventType(id = "dec-from-event-sequence-package-shipped")
+@EventType
 record DecFromEventSequencePackageShipped(String packageId, String shippedAt) {}
 
-@EventType(id = "dec-from-event-sequence-package-delivered")
+@EventType
 record DecFromEventSequencePackageDelivered(String packageId, String deliveredAt) {}
 
 class DecFromEventSequenceShipping {

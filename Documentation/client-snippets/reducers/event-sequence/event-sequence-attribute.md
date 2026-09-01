@@ -4,7 +4,7 @@ import io.cratis.chronicle.observation.EventSequence
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "reducers-event-sequence-refund-issued")
+@EventType
 data class ReducersEventSequenceRefundIssued(val amount: Double)
 
 @ReadModel

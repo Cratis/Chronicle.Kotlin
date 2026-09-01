@@ -4,7 +4,7 @@ import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.SetValue;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "mb-set-value-thing-happened")
+@EventType
 record MbSetValueThingHappened() {}
 
 @ReadModel

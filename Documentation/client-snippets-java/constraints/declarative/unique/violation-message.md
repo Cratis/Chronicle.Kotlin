@@ -4,7 +4,7 @@ import io.cratis.chronicle.constraints.IConstraintBuilder;
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.java.UniqueConstraintBuilderJavaBridge;
 
-@EventType(id = "constraints-unique-message-project-created")
+@EventType
 record ConstraintsUniqueMessageProjectCreated(String name) {}
 
 class ConstraintsUniqueMessageProjectName implements IConstraint {

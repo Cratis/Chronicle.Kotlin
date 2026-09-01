@@ -3,10 +3,10 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 
-@EventType(id = "order-created-declarative-all")
+@EventType
 record OrderCreatedDeclarativeAll(String orderNumber) {}
 
-@EventType(id = "order-shipped-declarative-all")
+@EventType
 record OrderShippedDeclarativeAll(String trackingNumber) {}
 
 class OrderDeclarativeAll {

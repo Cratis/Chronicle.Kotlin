@@ -3,13 +3,13 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 
-@EventType(id = "dec-constant-key-user-registered")
+@EventType
 record DecConstantKeyUserRegistered(String name) {}
 
-@EventType(id = "dec-constant-key-user-logged-in")
+@EventType
 record DecConstantKeyUserLoggedIn() {}
 
-@EventType(id = "dec-constant-key-user-logged-out")
+@EventType
 record DecConstantKeyUserLoggedOut() {}
 
 class DecConstantKeySiteStatistics {

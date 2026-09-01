@@ -3,10 +3,10 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 
-@EventType(id = "dec-functions-item-added")
+@EventType
 record DecFunctionsItemAdded(String name) {}
 
-@EventType(id = "dec-functions-item-removed")
+@EventType
 record DecFunctionsItemRemoved(String name) {}
 
 class DecFunctionsInventory {

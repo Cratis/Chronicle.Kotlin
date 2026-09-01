@@ -5,7 +5,7 @@ data class ModelingEventsOrderId(val value: String)
 data class ModelingEventsMoney(val amount: Double, val currency: String)
 
 // Nullable smell — "sometimes there's a discount, sometimes not"
-@EventType(id = "modeling-events-order-placed-with-nullable-discount")
+@EventType
 data class ModelingEventsOrderPlacedWithNullableDiscount(
     val id: ModelingEventsOrderId,
     val total: ModelingEventsMoney,
@@ -13,9 +13,9 @@ data class ModelingEventsOrderPlacedWithNullableDiscount(
 )
 
 // Two facts
-@EventType(id = "modeling-events-order-placed")
+@EventType
 data class ModelingEventsOrderPlaced(val id: ModelingEventsOrderId, val total: ModelingEventsMoney)
 
-@EventType(id = "modeling-events-discount-applied")
+@EventType
 data class ModelingEventsDiscountApplied(val id: ModelingEventsOrderId, val amount: ModelingEventsMoney)
 ```

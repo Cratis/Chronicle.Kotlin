@@ -6,10 +6,10 @@ import io.cratis.chronicle.projections.RemovedWithJoin
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-children-removed-feature-activated")
+@EventType
 data class MbChildrenRemovedFeatureActivated(val featureId: String, val name: String)
 
-@EventType(id = "mb-children-removed-feature-deactivated")
+@EventType
 data class MbChildrenRemovedFeatureDeactivated(val featureId: String)
 
 @ReadModel

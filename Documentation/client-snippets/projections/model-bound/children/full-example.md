@@ -7,10 +7,10 @@ import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
 // Events
-@EventType(id = "mb-children-full-order-created")
+@EventType
 data class MbChildrenFullOrderCreated(val customerName: String)
 
-@EventType(id = "mb-children-full-line-item-added")
+@EventType
 data class MbChildrenFullLineItemAdded(
     val itemId: String,
     val productName: String,
@@ -18,10 +18,10 @@ data class MbChildrenFullLineItemAdded(
     val unitPrice: Double
 )
 
-@EventType(id = "mb-children-full-quantity-adjusted")
+@EventType
 data class MbChildrenFullQuantityAdjusted(val itemId: String, val newQuantity: Int)
 
-@EventType(id = "mb-children-full-line-item-removed")
+@EventType
 data class MbChildrenFullLineItemRemoved(val itemId: String)
 
 // Read Models

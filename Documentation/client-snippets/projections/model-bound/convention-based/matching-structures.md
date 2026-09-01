@@ -15,7 +15,7 @@ data class ConventionLineItem(
     val quantity: Int = 0
 )
 
-@EventType(id = "convention-customer-registered")
+@EventType
 data class ConventionCustomerRegistered(
     val firstName: String,
     val lastName: String,
@@ -23,7 +23,7 @@ data class ConventionCustomerRegistered(
     val shippingAddress: ConventionAddress
 )
 
-@EventType(id = "convention-order-created")
+@EventType
 data class ConventionOrderCreated(
     val customerEmail: String,
     val items: List<ConventionLineItem>,

@@ -4,10 +4,10 @@ import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 import java.time.LocalDate
 
-@EventType(id = "employee-hired-with-nested-contract")
+@EventType
 data class EmployeeHiredWithNestedContract(val name: String, val department: String)
 
-@EventType(id = "contract-started-with-nested-contract")
+@EventType
 data class ContractStartedWithNestedContract(
     val contractId: String,
     val startDate: LocalDate,
@@ -15,10 +15,10 @@ data class ContractStartedWithNestedContract(
     val type: String
 )
 
-@EventType(id = "contract-extended-with-nested-contract")
+@EventType
 data class ContractExtendedWithNestedContract(val newEndDate: LocalDate)
 
-@EventType(id = "contract-ended-with-nested-contract")
+@EventType
 data class ContractEndedWithNestedContract(val placeholder: Boolean = true)
 
 data class EmployeeWithNestedContract(

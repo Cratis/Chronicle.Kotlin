@@ -3,10 +3,10 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "convention-partial-user-registered")
+@EventType
 record ConventionPartialUserRegistered(String email) {}
 
-@EventType(id = "convention-partial-user-completed")
+@EventType
 record ConventionPartialUserCompleted(String firstName, String lastName, String phone) {}
 
 @ReadModel

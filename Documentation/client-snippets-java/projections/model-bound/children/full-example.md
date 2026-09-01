@@ -10,20 +10,20 @@ import java.util.Collections;
 import java.util.List;
 
 // Events
-@EventType(id = "mb-children-full-order-created")
+@EventType
 record MbChildrenFullOrderCreated(String customerName) {}
 
-@EventType(id = "mb-children-full-line-item-added")
+@EventType
 record MbChildrenFullLineItemAdded(
     String itemId,
     String productName,
     int initialQuantity,
     double unitPrice) {}
 
-@EventType(id = "mb-children-full-quantity-adjusted")
+@EventType
 record MbChildrenFullQuantityAdjusted(String itemId, int newQuantity) {}
 
-@EventType(id = "mb-children-full-line-item-removed")
+@EventType
 record MbChildrenFullLineItemRemoved(String itemId) {}
 
 // Read Models

@@ -11,6 +11,7 @@ import io.cratis.chronicle.java.BlockingReactorMethodArgumentResolver
 import io.cratis.chronicle.java.BlockingReactorMiddleware
 import io.cratis.chronicle.observation.IReactorMethodArgumentResolver
 import io.cratis.chronicle.observation.IReactorMiddleware
+import io.cratis.chronicle.observation.ReadModelArgument
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.projections.FromEvent
@@ -32,9 +33,31 @@ import kotlin.reflect.full.isSubclassOf
  * exactly the same buckets.
  */
 
-/** Whether this class can be instantiated as an artifact — a concrete class, not an interface or an abstract one. */
+/**
+ * The artifacts the client installs itself, which are therefore never application artifacts.
+ *
+ * Each of these takes its collaborators through its constructor and is built by the client at the
+ * point it is needed. A classpath scan would otherwise find them alongside the application's own
+ * artifacts and hand them to the activator, which has nothing to construct them from.
+ */
+private val clientProvidedArtifacts = setOf(ReadModelArgument::class)
+
+/**
+ * Whether this class can be instantiated as an artifact — something the activator can actually
+ * construct on its own.
+ *
+ * Beyond the obvious (an interface, an abstract class, an annotation, an enum), this rules out the
+ * classes that exist only inside another one's scope: an anonymous `object : ISomething { }`
+ * expression, a class declared inside a function, and a non-static nested class. Each of those
+ * needs the enclosing instance or the captured locals passed to its constructor, which no
+ * classpath scan can supply — and the client's own Java adapters are written as anonymous objects,
+ * so without this the scan discovers them and then fails to activate them.
+ */
 internal fun KClass<*>.isInstantiableArtifact(): Boolean =
-    !java.isInterface && !java.isAnnotation && !java.isEnum && !Modifier.isAbstract(java.modifiers)
+    !java.isInterface && !java.isAnnotation && !java.isEnum && !Modifier.isAbstract(java.modifiers) &&
+        !java.isAnonymousClass && !java.isLocalClass && !java.isSynthetic &&
+        !(java.isMemberClass && !Modifier.isStatic(java.modifiers)) &&
+        this !in clientProvidedArtifacts
 
 /** Whether this class is an event type. */
 internal fun KClass<*>.isEventType(): Boolean = hasAnnotation<EventType>()

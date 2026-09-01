@@ -5,13 +5,13 @@ import io.cratis.chronicle.projections.FromEvery
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "user-registered-for-every")
+@EventType
 data class UserRegisteredForEvery(val name: String, val email: String)
 
-@EventType(id = "user-name-changed-for-every")
+@EventType
 data class UserNameChangedForEvery(val newName: String)
 
-@EventType(id = "user-email-changed-for-every")
+@EventType
 data class UserEmailChangedForEvery(val newEmail: String)
 
 @ReadModel

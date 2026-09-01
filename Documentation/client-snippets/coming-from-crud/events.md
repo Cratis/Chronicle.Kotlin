@@ -1,9 +1,9 @@
 ```kotlin
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "crud-comparison-customer-registered")
+@EventType
 data class CrudComparisonCustomerRegistered(val name: String, val address: String)
 
-@EventType(id = "crud-comparison-address-changed")
+@EventType
 data class CrudComparisonAddressChanged(val address: String)
 ```

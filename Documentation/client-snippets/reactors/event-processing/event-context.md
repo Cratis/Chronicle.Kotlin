@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reactor
 
-@EventType(id = "reactor-account-closed")
+@EventType
 data class ReactorAccountClosed(val accountId: String)
 
 @Reactor

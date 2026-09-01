@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.IEventLog
 
-@EventType(id = "reactors-filtering-order-placed")
+@EventType
 data class ReactorsFilteringOrderPlaced(val totalAmount: Double)
 
 class ReactorsFilteringMetadataExampleService(private val eventLog: IEventLog) {

@@ -1,6 +1,6 @@
 ```java
 import io.cratis.chronicle.events.EventType;
 
-@EventType(id = "WaitlistNotificationSent")
+@EventType
 record WaitlistNotificationSent() {}
 ```

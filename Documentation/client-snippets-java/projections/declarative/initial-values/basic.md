@@ -8,7 +8,7 @@ enum InitialValuesUserStatus {
     Active
 }
 
-@EventType(id = "initial-values-user-created")
+@EventType
 record InitialValuesUserCreated(String name, String email) {}
 
 // Field initializers are the read model's initial values — the kernel builds the starting

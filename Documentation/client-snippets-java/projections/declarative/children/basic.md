@@ -5,13 +5,13 @@ import io.cratis.chronicle.projections.IProjectionFor;
 
 import java.util.List;
 
-@EventType(id = "group-created-for-children")
+@EventType
 record GroupCreatedForChildren(String name, String description) {}
 
-@EventType(id = "user-added-to-group-for-children")
+@EventType
 record UserAddedToGroupForChildren(String userId, String role) {}
 
-@EventType(id = "user-role-changed-for-children")
+@EventType
 record UserRoleChangedForChildren(String userId, String role) {}
 
 record GroupForChildren(String name, String description, List<GroupMemberForChildren> members) {}

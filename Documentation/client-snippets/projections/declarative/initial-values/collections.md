@@ -5,7 +5,7 @@ import io.cratis.chronicle.projections.IProjectionFor
 
 data class InitialValuesAddress(val street: String, val city: String)
 
-@EventType(id = "initial-values-customer-registered")
+@EventType
 data class InitialValuesCustomerRegistered(val name: String)
 
 data class InitialValuesCustomerRecord(

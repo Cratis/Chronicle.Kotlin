@@ -3,7 +3,7 @@ import io.cratis.chronicle.constraints.IConstraint;
 import io.cratis.chronicle.constraints.IConstraintBuilder;
 import io.cratis.chronicle.events.EventType;
 
-@EventType(id = "constraints-unique-event-type-project-initialized")
+@EventType
 class ConstraintsUniqueEventTypeProjectInitialized {
 }
 

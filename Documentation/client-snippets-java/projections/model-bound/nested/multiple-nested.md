@@ -5,19 +5,19 @@ import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.Nested;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "slice-created-for-nested-multiple")
+@EventType
 record SliceCreatedForNestedMultiple(String name) {}
 
-@EventType(id = "command-set-for-nested-multiple")
+@EventType
 record CommandSetForNestedMultiple(String name, String schema) {}
 
-@EventType(id = "command-cleared-for-nested-multiple")
+@EventType
 record CommandClearedForNestedMultiple() {}
 
-@EventType(id = "validation-configured-for-nested-multiple")
+@EventType
 record ValidationConfiguredForNestedMultiple(String rules, boolean isStrict) {}
 
-@EventType(id = "validation-removed-for-nested-multiple")
+@EventType
 record ValidationRemovedForNestedMultiple() {}
 
 @ReadModel

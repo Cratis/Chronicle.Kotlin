@@ -1,6 +1,6 @@
 ```java title="The event - an immutable fact"
 import io.cratis.chronicle.events.EventType;
 
-@EventType(id = "TestEvent")
+@EventType
 record TestEvent(String message) {}
 ```

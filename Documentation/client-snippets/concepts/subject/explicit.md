@@ -3,7 +3,7 @@ import io.cratis.chronicle.IEventStore
 import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "subject-shipping-address-changed")
+@EventType
 data class SubjectShippingAddressChanged(val street: String)
 
 class SubjectShippingService(private val eventStore: IEventStore) {

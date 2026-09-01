@@ -3,10 +3,10 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 
-@EventType(id = "auto-map-account-opened")
+@EventType
 record AutoMapAccountOpened(String name, String email) {}
 
-@EventType(id = "auto-map-account-email-changed")
+@EventType
 record AutoMapAccountEmailChanged(String email) {}
 
 class AutoMapAccount {

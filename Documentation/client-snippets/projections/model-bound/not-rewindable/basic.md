@@ -5,7 +5,7 @@ import io.cratis.chronicle.projections.NotRewindable
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-not-rewindable-audit-event")
+@EventType
 data class MbNotRewindableAuditEvent(val message: String, val occurredAt: String)
 
 @ReadModel

@@ -2,7 +2,7 @@
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.observation.Reactor;
 
-@EventType(id = "reactors-event-sequence-order-shipped")
+@EventType
 record ReactorsEventSequenceOrderShipped(String orderId) {}
 
 @Reactor(id = "shipping-notifications", eventSequence = "outbox")

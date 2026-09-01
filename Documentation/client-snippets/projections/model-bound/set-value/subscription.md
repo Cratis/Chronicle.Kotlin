@@ -4,13 +4,13 @@ import io.cratis.chronicle.projections.FromEvent
 import io.cratis.chronicle.projections.SetValue
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-set-value-subscription-started")
+@EventType
 data class MbSetValueSubscriptionStarted(val placeholder: Boolean = true)
 
-@EventType(id = "mb-set-value-subscription-paused")
+@EventType
 data class MbSetValueSubscriptionPaused(val placeholder: Boolean = true)
 
-@EventType(id = "mb-set-value-subscription-canceled")
+@EventType
 data class MbSetValueSubscriptionCanceled(val placeholder: Boolean = true)
 
 @ReadModel

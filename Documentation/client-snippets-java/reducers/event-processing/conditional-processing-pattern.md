@@ -6,13 +6,13 @@ import io.cratis.chronicle.readModels.ReadModel;
 
 import java.util.UUID;
 
-@EventType(id = "event-processing-account-opened")
+@EventType
 record EventProcessingAccountOpened(UUID accountId) {}
 
-@EventType(id = "event-processing-deposit-made")
+@EventType
 record EventProcessingDepositMade(double amount) {}
 
-@EventType(id = "event-processing-account-closed")
+@EventType
 record EventProcessingAccountClosed() {}
 
 @ReadModel

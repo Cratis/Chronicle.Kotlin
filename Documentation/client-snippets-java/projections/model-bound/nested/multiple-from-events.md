@@ -3,16 +3,16 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.ClearWith;
 import io.cratis.chronicle.projections.FromEvent;
 
-@EventType(id = "command-set-for-nested-multiple-from")
+@EventType
 record CommandSetForNestedMultipleFrom(String name, String schema) {}
 
-@EventType(id = "command-renamed-for-nested-multiple-from")
+@EventType
 record CommandRenamedForNestedMultipleFrom(String name) {}
 
-@EventType(id = "command-schema-updated-for-nested-multiple-from")
+@EventType
 record CommandSchemaUpdatedForNestedMultipleFrom(String schema) {}
 
-@EventType(id = "command-cleared-for-nested-multiple-from")
+@EventType
 record CommandClearedForNestedMultipleFrom() {}
 
 @FromEvent(eventType = CommandSetForNestedMultipleFrom.class)

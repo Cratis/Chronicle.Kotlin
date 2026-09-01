@@ -5,10 +5,10 @@ import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.Nested;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "command-set-for-nested-basic")
+@EventType
 record CommandSetForNestedBasic(String name, String schema) {}
 
-@EventType(id = "command-cleared-for-nested-basic")
+@EventType
 record CommandClearedForNestedBasic() {}
 
 @ReadModel

@@ -6,16 +6,16 @@ import io.cratis.chronicle.projections.SetFrom;
 import io.cratis.chronicle.projections.SubtractFrom;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "bank-account-opened")
+@EventType
 record BankAccountOpened(String accountName, double initialBalance) {}
 
-@EventType(id = "bank-account-renamed")
+@EventType
 record BankAccountRenamed(String newName) {}
 
-@EventType(id = "funds-deposited")
+@EventType
 record FundsDeposited(double amount) {}
 
-@EventType(id = "funds-withdrawn")
+@EventType
 record FundsWithdrawn(double amount) {}
 
 @ReadModel

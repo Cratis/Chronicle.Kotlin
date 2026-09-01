@@ -6,16 +6,16 @@ import io.cratis.chronicle.projections.FromEvent
 import io.cratis.chronicle.projections.Increment
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-constant-key-order-placed-for-metrics")
+@EventType
 class MbConstantKeyOrderPlacedForMetrics
 
-@EventType(id = "mb-constant-key-user-logged-in")
+@EventType
 class MbConstantKeyUserLoggedIn
 
-@EventType(id = "mb-constant-key-user-logged-out")
+@EventType
 class MbConstantKeyUserLoggedOut
 
-@EventType(id = "mb-constant-key-error-occurred")
+@EventType
 class MbConstantKeyErrorOccurred
 
 @ReadModel

@@ -6,7 +6,7 @@ import io.cratis.chronicle.readModels.ReadModel
 import java.time.Instant
 import java.util.UUID
 
-@EventType(id = "event-processing-context-order-placed")
+@EventType
 data class EventProcessingContextOrderPlaced(val orderId: UUID, val amount: Double)
 
 @ReadModel

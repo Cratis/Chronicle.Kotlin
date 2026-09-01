@@ -3,12 +3,12 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.FromEvent
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "convention-partial-user-registered")
+@EventType
 data class ConventionPartialUserRegistered(
     val email: String
 )
 
-@EventType(id = "convention-partial-user-completed")
+@EventType
 data class ConventionPartialUserCompleted(
     val firstName: String,
     val lastName: String,

@@ -4,7 +4,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.observation.Reactor
 
-@EventType(id = "side-effects-activity-logged")
+@EventType
 data class ActivityLogged(val isbn: String)
 
 @Reactor

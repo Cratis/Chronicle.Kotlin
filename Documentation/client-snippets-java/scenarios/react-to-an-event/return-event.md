@@ -3,10 +3,10 @@ import io.cratis.chronicle.events.EventContext;
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.observation.Reactor;
 
-@EventType(id = "scenarios-react-book-reserved")
+@EventType
 record ScenariosReactBookReserved(String isbn) {}
 
-@EventType(id = "scenarios-react-stock-decreased")
+@EventType
 record ScenariosReactStockDecreased(String isbn, int quantity) {}
 
 // Returning an event from a handler appends it as a side effect - against the event source that

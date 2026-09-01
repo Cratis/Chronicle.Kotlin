@@ -5,7 +5,7 @@ import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.observation.Tag
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "tagging-reducers-order-placed")
+@EventType
 data class TaggingReducersOrderPlaced(val totalAmount: Double)
 
 @ReadModel

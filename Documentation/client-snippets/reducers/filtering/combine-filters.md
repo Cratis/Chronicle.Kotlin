@@ -9,7 +9,7 @@ import io.cratis.chronicle.observation.FilterEventsByTag
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "reducers-filtering-combine-order-placed")
+@EventType
 data class ReducersFilteringCombineOrderPlaced(val totalAmount: Double)
 
 @ReadModel

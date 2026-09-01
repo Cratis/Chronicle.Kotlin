@@ -6,7 +6,7 @@ import io.cratis.chronicle.readModels.ReadModel;
 
 import java.time.Instant;
 
-@EventType(id = "event-processing-pattern-with-context-recorded")
+@EventType
 record EventProcessingPatternWithContextRecorded(double value) {}
 
 @ReadModel

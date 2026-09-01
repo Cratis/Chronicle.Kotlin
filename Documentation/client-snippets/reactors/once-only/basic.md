@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.OnceOnly
 import io.cratis.chronicle.observation.Reactor
 
-@EventType(id = "once-only-order-placed")
+@EventType
 data class OnceOnlyOrderPlaced(val orderId: String)
 
 @Reactor

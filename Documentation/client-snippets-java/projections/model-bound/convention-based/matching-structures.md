@@ -8,14 +8,14 @@ record ConventionAddress(String street, String city, String postalCode) {}
 
 record ConventionLineItem(String productName, double unitPrice, int quantity) {}
 
-@EventType(id = "convention-customer-registered")
+@EventType
 record ConventionCustomerRegistered(
     String firstName,
     String lastName,
     ConventionAddress billingAddress,
     ConventionAddress shippingAddress) {}
 
-@EventType(id = "convention-order-created")
+@EventType
 record ConventionOrderCreated(String customerEmail, List<ConventionLineItem> items, List<String> tags) {}
 
 @ReadModel

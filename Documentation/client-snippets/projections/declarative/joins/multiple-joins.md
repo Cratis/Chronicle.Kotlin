@@ -3,16 +3,16 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "dec-joins-multiple-employee-assigned")
+@EventType
 data class DecJoinsMultipleEmployeeAssigned(val groupId: String, val departmentId: String, val locationId: String)
 
-@EventType(id = "dec-joins-multiple-group-created")
+@EventType
 data class DecJoinsMultipleGroupCreated(val name: String)
 
-@EventType(id = "dec-joins-multiple-department-created")
+@EventType
 data class DecJoinsMultipleDepartmentCreated(val name: String)
 
-@EventType(id = "dec-joins-multiple-location-updated")
+@EventType
 data class DecJoinsMultipleLocationUpdated(val address: String)
 
 data class DecJoinsMultipleEmployeeSummary(

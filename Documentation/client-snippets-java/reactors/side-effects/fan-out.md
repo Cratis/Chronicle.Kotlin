@@ -6,7 +6,7 @@ import io.cratis.chronicle.observation.Reactor;
 
 import java.util.List;
 
-@EventType(id = "side-effects-fan-out-stock-decreased")
+@EventType
 record FanOutStockDecreased(String isbn, int quantity) {}
 
 @Reactor

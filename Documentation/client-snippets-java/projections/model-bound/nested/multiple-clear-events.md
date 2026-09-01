@@ -3,13 +3,13 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.ClearWith;
 import io.cratis.chronicle.projections.FromEvent;
 
-@EventType(id = "command-set-for-nested-multiple-clear")
+@EventType
 record CommandSetForNestedMultipleClear(String name, String schema) {}
 
-@EventType(id = "command-cleared-for-nested-multiple-clear")
+@EventType
 record CommandClearedForNestedMultipleClear() {}
 
-@EventType(id = "slice-archived-for-nested-multiple-clear")
+@EventType
 record SliceArchivedForNestedMultipleClear() {}
 
 @FromEvent(eventType = CommandSetForNestedMultipleClear.class)

@@ -5,10 +5,10 @@ import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.SetFrom;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "account-opened-for-deposits")
+@EventType
 record AccountOpenedForDeposits(double initialBalance) {}
 
-@EventType(id = "deposit-made-for-balance")
+@EventType
 record DepositMadeForBalance(double amount) {}
 
 @ReadModel

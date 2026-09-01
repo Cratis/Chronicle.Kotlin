@@ -302,8 +302,8 @@ Use 1-3 to select an employee. Then:
   I = Switch user (cycle: Alice Smith -> Bob Jones -> System)
   H or ? = Show this menu          Q = Quit
 
-EmployeeState changes are watched live in the background via typed watch() -
-look for "[watch]" lines after actions that change title/email.
+EmployeeDetails changes are watched live in the background via typed watch() -
+look for "[watch]" lines after actions that change title/address.
 """);
     }
 
@@ -376,14 +376,16 @@ look for "[watch]" lines after actions that change title/email.
             // Reducers auto-register their read models (EmployeeState, CustomerDetails) with observerType=Reducer.
             ReducersServiceJavaBridge.register(store.getReducers(), new EmployeeStateReducer());
             ReducersServiceJavaBridge.register(store.getReducers(), new CustomerReducer());
-            // Typed watch(): observe live EmployeeState changes in the background for as long as the
-            // sample runs. Deserializes each changeset straight into EmployeeState — no manual JSON parsing.
-            ReadModelsJavaBridge.watch(store.getReadModels(), EmployeeState.class, changeset -> {
-                EmployeeState model = changeset.getReadModel();
+            // Typed watch(): observe live EmployeeDetails changes in the background for as long as the
+            // sample runs. Deserializes each changeset straight into EmployeeDetails — no manual JSON
+            // parsing. Watching follows a read model the kernel maintains, which means a projection —
+            // a reducer runs client-side, so there is nothing on the server to watch.
+            ReadModelsJavaBridge.watch(store.getReadModels(), EmployeeDetails.class, changeset -> {
+                EmployeeDetails model = changeset.getReadModel();
                 String summary = (changeset.getRemoved() || model == null)
                     ? "removed"
-                    : model.getTitle() + " <" + model.getEmail() + ">";
-                System.out.println("\n[watch] EmployeeState '" + changeset.getModelKey() + "' " +
+                    : model.getTitle() + " @ " + model.getCity();
+                System.out.println("\n[watch] EmployeeDetails '" + changeset.getModelKey() + "' " +
                     changeset.getChangeType() + ": " + summary);
             });
             // Declarative projection: a separate class implements IProjectionFor<Employee>.
@@ -397,7 +399,13 @@ look for "[watch]" lines after actions that change title/email.
             // Event store subscription: ingest payroll runs from the external payroll event store's outbox.
             Payroll.setupPayrollIntegration(store);
             // Ensure the Default namespace exists so the seeding grain can distribute seeds to it.
-            NamespacesServiceJavaBridge.ensure(store.getNamespaces(), "Default");
+            // Every event store already has a Default namespace, so this is belt and braces — a kernel
+            // that does not serve the namespaces API is no reason to abandon the rest of the tour.
+            try {
+                NamespacesServiceJavaBridge.ensure(store.getNamespaces(), "Default");
+            } catch (Exception e) {
+                System.out.println("[namespaces] Could not ensure the Default namespace: " + e.getMessage());
+            }
             EventSeedingServiceJavaBridge.seed(store.getSeeding(), new EmployeeSeeder());
             Thread.sleep(2000);
             ensureSeededEmployees(store);

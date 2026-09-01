@@ -3,10 +3,10 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "dec-not-rewindable-user-login-attempt")
+@EventType
 data class DecNotRewindableUserLoginAttempt(val userId: String, val succeeded: Boolean)
 
-@EventType(id = "dec-not-rewindable-permission-change")
+@EventType
 data class DecNotRewindablePermissionChange(val userId: String, val permission: String)
 
 data class DecNotRewindableSecurityAuditEntry(

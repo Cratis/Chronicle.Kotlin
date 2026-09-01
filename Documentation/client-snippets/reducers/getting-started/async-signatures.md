@@ -4,10 +4,10 @@ import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
 import kotlinx.coroutines.delay
 
-@EventType(id = "reducers-async-signatures-opened")
+@EventType
 data class ReducersAsyncSignaturesOpened(val orderId: String)
 
-@EventType(id = "reducers-async-signatures-item-added")
+@EventType
 data class ReducersAsyncSignaturesItemAdded(val sku: String, val amount: Double)
 
 @ReadModel

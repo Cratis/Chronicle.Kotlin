@@ -4,7 +4,7 @@ import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.SetFrom;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "user-registered-for-contact")
+@EventType
 record UserRegisteredForContact(String name, String email) {}
 
 @ReadModel

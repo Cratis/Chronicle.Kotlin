@@ -6,7 +6,7 @@ import io.cratis.chronicle.events.EventType
 data class PiiConceptsSurrogateEmployeeId(override val value: String) : EventSourceId
 
 // Sensitive values stored in PII-marked concept types instead
-@EventType(id = "pii-concepts-surrogate-employee-registered")
+@EventType
 data class PiiConceptsSurrogateEmployeeRegistered(
     val nationalId: PiiConceptsNationalIdNumber,
     val name: PiiConceptsPersonName

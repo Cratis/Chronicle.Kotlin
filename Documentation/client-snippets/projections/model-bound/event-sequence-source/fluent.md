@@ -4,7 +4,7 @@ import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 import io.cratis.chronicle.projections.Projection
 
-@EventType(id = "mb-event-seq-fluent-order-placed")
+@EventType
 data class MbEventSeqFluentOrderPlaced(val amount: Double)
 
 data class MbEventSeqFluentOrderSummary(val totalAmount: Double = 0.0)

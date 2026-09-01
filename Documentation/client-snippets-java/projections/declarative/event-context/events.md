@@ -1,9 +1,9 @@
 ```java
 import io.cratis.chronicle.events.EventType;
 
-@EventType(id = "dec-event-context-user-logged-in")
+@EventType
 record DecEventContextUserLoggedIn(String username) {}
 
-@EventType(id = "dec-event-context-user-performed-action")
+@EventType
 record DecEventContextUserPerformedAction(String userId, String actionType) {}
 ```

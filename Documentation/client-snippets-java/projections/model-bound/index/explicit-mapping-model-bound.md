@@ -2,7 +2,7 @@
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.SetFrom;
 
-@EventType(id = "index-explicit-account-opened")
+@EventType
 record IndexExplicitAccountOpened(String name, double initialBalance) {}
 
 class IndexExplicitMbAccountInfo {

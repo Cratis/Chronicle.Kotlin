@@ -4,13 +4,13 @@ import io.cratis.chronicle.projections.ClearWith;
 import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.SetFrom;
 
-@EventType(id = "command-set-for-nested-explicit")
+@EventType
 record CommandSetForNestedExplicit(String commandName, String jsonSchema) {}
 
-@EventType(id = "command-schema-updated-for-nested-explicit")
+@EventType
 record CommandSchemaUpdatedForNestedExplicit(String updatedSchema) {}
 
-@EventType(id = "command-cleared-for-nested-explicit")
+@EventType
 record CommandClearedForNestedExplicit() {}
 
 @FromEvent(eventType = CommandSetForNestedExplicit.class)

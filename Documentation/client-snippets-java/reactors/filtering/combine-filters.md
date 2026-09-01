@@ -6,7 +6,7 @@ import io.cratis.chronicle.observation.EventStreamType;
 import io.cratis.chronicle.observation.FilterEventsByTag;
 import io.cratis.chronicle.observation.Reactor;
 
-@EventType(id = "reactors-filtering-shipment-dispatched")
+@EventType
 record ReactorsFilteringShipmentDispatched(String trackingNumber) {}
 
 @Reactor

@@ -1,6 +1,6 @@
 ```java
 import io.cratis.chronicle.events.EventType;
 
-@EventType(id = "ReactorOrderPlaced")
+@EventType
 record ReactorOrderPlaced(String customerEmail, double totalAmount) {}
 ```

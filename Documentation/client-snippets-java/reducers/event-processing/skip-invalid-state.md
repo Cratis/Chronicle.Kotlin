@@ -4,7 +4,7 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.observation.Reducer;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "event-processing-skip-item-added")
+@EventType
 record EventProcessingSkipItemAdded(double price) {}
 
 @ReadModel

@@ -5,7 +5,7 @@ import io.cratis.chronicle.projections.FromEvent
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-event-seq-order-placed")
+@EventType
 data class MbEventSeqOrderPlaced(val amount: Double)
 
 @ReadModel

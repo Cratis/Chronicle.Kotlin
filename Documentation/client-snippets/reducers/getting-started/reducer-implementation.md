@@ -3,13 +3,13 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reducer
 import java.time.Instant
 
-@EventType(id = "reducers-getting-started-order-created")
+@EventType
 data class ReducersGettingStartedOrderCreated(val orderId: String)
 
-@EventType(id = "reducers-getting-started-item-added-to-order")
+@EventType
 data class ReducersGettingStartedItemAddedToOrder(val price: Double, val quantity: Int)
 
-@EventType(id = "reducers-getting-started-item-removed-from-order")
+@EventType
 data class ReducersGettingStartedItemRemovedFromOrder(val price: Double, val quantity: Int)
 
 @Reducer

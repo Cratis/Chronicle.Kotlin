@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 
-@EventType(id = "account-opened-declarative-all")
+@EventType
 record AccountOpenedDeclarativeAll(String ownerName) {}
 
 class AccountSummaryDeclarativeAll {

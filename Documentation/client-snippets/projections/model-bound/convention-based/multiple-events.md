@@ -3,13 +3,13 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.FromEvent
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "convention-user-profile-created")
+@EventType
 data class ConventionUserProfileCreated(
     val name: String,
     val email: String
 )
 
-@EventType(id = "convention-user-profile-updated")
+@EventType
 data class ConventionUserProfileUpdated(
     val name: String,
     val email: String,

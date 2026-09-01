@@ -1,13 +1,13 @@
 ```java
 import io.cratis.chronicle.events.EventType;
 
-@EventType(id = "dec-not-rewindable-user-action")
+@EventType
 record DecNotRewindableUserAction(
     String userId,
     String actionType,
     String details) {}
 
-@EventType(id = "dec-not-rewindable-system-event")
+@EventType
 record DecNotRewindableSystemEvent(
     String componentName,
     String eventType,

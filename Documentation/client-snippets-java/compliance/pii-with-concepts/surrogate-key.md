@@ -11,7 +11,7 @@ record PiiConceptsSurrogateEmployeeId(String value) implements EventSourceId {
 }
 
 // Sensitive values stored in PII-marked concept types instead
-@EventType(id = "PiiConceptsSurrogateEmployeeRegistered")
+@EventType
 record PiiConceptsSurrogateEmployeeRegistered(
         PiiConceptsNationalIdNumber nationalId,
         PiiConceptsPersonName name) {

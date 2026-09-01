@@ -4,13 +4,13 @@ import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 import io.cratis.chronicle.projections.Projection
 
-@EventType(id = "dec-from-event-sequence-package-created")
+@EventType
 data class DecFromEventSequencePackageCreated(val packageId: String)
 
-@EventType(id = "dec-from-event-sequence-package-shipped")
+@EventType
 data class DecFromEventSequencePackageShipped(val packageId: String, val shippedAt: String)
 
-@EventType(id = "dec-from-event-sequence-package-delivered")
+@EventType
 data class DecFromEventSequencePackageDelivered(val packageId: String, val deliveredAt: String)
 
 data class DecFromEventSequenceShipping(

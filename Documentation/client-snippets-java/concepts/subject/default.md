@@ -3,7 +3,7 @@ import io.cratis.chronicle.IEventStore;
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.java.EventLogJavaBridge;
 
-@EventType(id = "subject-author-registered")
+@EventType
 record SubjectAuthorRegistered(String name) {}
 
 class SubjectAuthorService {

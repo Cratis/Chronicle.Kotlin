@@ -4,7 +4,7 @@ import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.SetFrom;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "mb-event-seq-local-event")
+@EventType
 record MbEventSeqLocalEvent(String data) {}
 
 // No @EventSequence needed — an observer with no event sequence specified observes the event log.

@@ -3,17 +3,27 @@
 
 package io.cratis.chronicle.samples.spring
 
+import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.observation.Reducer
 
-/** Folds employee events into [EmployeeState]. Discovered and registered by the starter — no wiring needed. */
+/**
+ * Folds employee events into [EmployeeState]. Discovered and registered by the starter — no wiring needed.
+ *
+ * Every handler takes the [EventContext] as a third parameter and stamps `id` from its event source
+ * id. The sink stores the read model under its `id`, so leaving it empty puts every employee on the
+ * same key and they overwrite one another.
+ */
 @Reducer
 class EmployeeStateReducer {
-    fun employeeHired(event: EmployeeHired): EmployeeState =
-        EmployeeState(firstName = event.firstName, lastName = event.lastName, title = event.title)
+    fun employeeHired(event: EmployeeHired, state: EmployeeState?, context: EventContext): EmployeeState =
+        (state ?: EmployeeState()).copy(
+            id = context.eventSourceId,
+            firstName = event.firstName, lastName = event.lastName, title = event.title
+        )
 
-    fun employeePromoted(event: EmployeePromoted, state: EmployeeState?): EmployeeState =
-        (state ?: EmployeeState()).copy(title = event.newTitle)
+    fun employeePromoted(event: EmployeePromoted, state: EmployeeState?, context: EventContext): EmployeeState =
+        (state ?: EmployeeState()).copy(id = context.eventSourceId, title = event.newTitle)
 
-    fun employeeEmailSet(event: EmployeeEmailSet, state: EmployeeState?): EmployeeState =
-        (state ?: EmployeeState()).copy(email = event.email)
+    fun employeeEmailSet(event: EmployeeEmailSet, state: EmployeeState?, context: EventContext): EmployeeState =
+        (state ?: EmployeeState()).copy(id = context.eventSourceId, email = event.email)
 }

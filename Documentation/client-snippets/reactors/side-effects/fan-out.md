@@ -4,7 +4,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.observation.Reactor
 
-@EventType(id = "side-effects-fan-out-stock-decreased")
+@EventType
 data class FanOutStockDecreased(val isbn: String, val quantity: Int)
 
 @Reactor

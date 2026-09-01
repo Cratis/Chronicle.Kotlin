@@ -4,10 +4,10 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.observation.Reducer;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "event-processing-async-recorded")
+@EventType
 record EventProcessingAsyncRecorded(double value) {}
 
-@EventType(id = "event-processing-async-recorded-with-context")
+@EventType
 record EventProcessingAsyncRecordedWithContext(double value) {}
 
 @ReadModel

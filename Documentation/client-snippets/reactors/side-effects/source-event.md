@@ -1,6 +1,6 @@
 ```kotlin
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "side-effects-book-reserved-source")
+@EventType
 data class BookReserved(val memberId: String, val isbn: String)
 ```

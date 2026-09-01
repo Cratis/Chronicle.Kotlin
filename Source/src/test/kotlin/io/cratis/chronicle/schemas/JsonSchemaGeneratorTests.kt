@@ -384,6 +384,27 @@ class JsonSchemaGeneratorTests {
         }
     }
 
+    @Test
+    fun `generates a schema for a java record whose components include primitives`() {
+        val properties = propertiesOf(JavaPayrollRunCompleted::class)
+
+        assertEquals("string", typeOf(properties, "employeeId"))
+        assertEquals("number", typeOf(properties, "amount"))
+        assertEquals("integer", typeOf(properties, "runNumber"))
+        assertEquals("boolean", typeOf(properties, "finalRun"))
+    }
+
+    @Test
+    fun `finds pii on a java record component sitting next to a primitive one`() {
+        val properties = propertiesOf(JavaPayrollRunCompleted::class)
+
+        assertEquals(
+            listOf(mapOf("metadataType" to "PII", "details" to "Net pay for the run")),
+            complianceOf(properties["amount"] as Map<*, *>)
+        )
+        assertTrue(complianceOf(properties["employeeId"] as Map<*, *>).isEmpty())
+    }
+
     private fun parse(cls: KClass<*>): Map<String, Any?> {
         @Suppress("UNCHECKED_CAST")
         return gson.fromJson(JsonSchemaGenerator.generate(cls), Map::class.java) as Map<String, Any?>

@@ -6,19 +6,19 @@ import io.cratis.chronicle.readModels.ReadModel
 import java.time.Instant
 import java.util.UUID
 
-@EventType(id = "event-processing-order-created-for-status")
+@EventType
 data class EventProcessingOrderCreatedForStatus(val orderId: UUID)
 
-@EventType(id = "event-processing-order-paid")
+@EventType
 data class EventProcessingOrderPaid(val orderId: UUID)
 
-@EventType(id = "event-processing-order-shipped")
+@EventType
 data class EventProcessingOrderShipped(val orderId: UUID)
 
-@EventType(id = "event-processing-order-delivered")
+@EventType
 data class EventProcessingOrderDelivered(val orderId: UUID)
 
-@EventType(id = "event-processing-order-cancelled")
+@EventType
 data class EventProcessingOrderCancelled(val orderId: UUID)
 
 @ReadModel

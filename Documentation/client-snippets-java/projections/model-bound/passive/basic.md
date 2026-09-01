@@ -5,7 +5,7 @@ import io.cratis.chronicle.projections.SetFrom;
 import io.cratis.chronicle.readModels.Passive;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "mb-passive-snapshot-created")
+@EventType
 record MbPassiveSnapshotCreated(String data) {}
 
 @Passive

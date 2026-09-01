@@ -1490,6 +1490,7 @@ public final class io/cratis/chronicle/events/EventTypeDescriptor {
 	public final fun getId-tTCfIk0 ()Ljava/lang/String;
 	public final fun getTombstone ()Z
 	public fun hashCode ()I
+	public static final fun parse (Ljava/lang/String;)Lio/cratis/chronicle/events/EventTypeDescriptor;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -1892,6 +1893,7 @@ public final class io/cratis/chronicle/java/EventLogJavaBridge {
 	public static final fun getNextSequenceNumber (Lio/cratis/chronicle/eventSequences/IEventLog;)J
 	public static final fun getSequenceNumber (Lio/cratis/chronicle/eventSequences/AppendResult;)J
 	public static final fun getTailSequenceNumber (Lio/cratis/chronicle/eventSequences/IEventLog;Ljava/lang/String;)J
+	public static final fun getTailSequenceNumberForObserver (Lio/cratis/chronicle/eventSequences/IEventLog;Ljava/lang/Class;)J
 	public static final fun hasEventsFor (Lio/cratis/chronicle/eventSequences/IEventLog;Ljava/lang/String;)Z
 	public static final fun redact (Lio/cratis/chronicle/eventSequences/IEventLog;JLjava/lang/String;)V
 	public static final fun redactForEventSource (Lio/cratis/chronicle/eventSequences/IEventLog;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)V
@@ -2023,8 +2025,10 @@ public final class io/cratis/chronicle/java/ReadModelsJavaBridge {
 	public static final fun dehydrateSession (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;)V
 	public static final fun getInstanceByKey (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Object;
 	public static final fun getInstances (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/lang/Class;)Ljava/util/List;
+	public static final fun getInstances (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/lang/Class;J)Ljava/util/List;
 	public static final fun getMaterializedInstances (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/lang/Class;II)Ljava/util/List;
 	public static final fun getSnapshotsById (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/lang/Class;Ljava/lang/String;)Ljava/util/List;
+	public static final fun observeMaterializedInstances (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/lang/Class;IILjava/util/function/Consumer;)Lkotlinx/coroutines/Job;
 	public static final fun register (Lio/cratis/chronicle/readModels/IReadModelsService;[Ljava/lang/Class;)V
 	public static final fun release (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/lang/Object;)Ljava/lang/Object;
 	public static final fun releaseMany (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/util/List;)Ljava/util/List;

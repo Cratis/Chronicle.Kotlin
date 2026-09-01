@@ -3,10 +3,10 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.ClearWith
 import io.cratis.chronicle.projections.FromEvent
 
-@EventType(id = "command-set-for-nested-clear")
+@EventType
 data class CommandSetForNestedClear(val name: String, val schema: String)
 
-@EventType(id = "command-cleared-for-nested-clear")
+@EventType
 data class CommandClearedForNestedClear(val placeholder: Boolean = true)
 
 @FromEvent(CommandSetForNestedClear::class)

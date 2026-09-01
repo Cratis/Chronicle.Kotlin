@@ -11,16 +11,16 @@ import io.cratis.chronicle.readModels.ReadModel;
 import java.time.Instant;
 
 // Events
-@EventType(id = "mb-counters-user-logged-in-full")
+@EventType
 record MbCountersUserLoggedInFull(Instant timestamp) {}
 
-@EventType(id = "mb-counters-user-logged-out-full")
+@EventType
 record MbCountersUserLoggedOutFull(Instant timestamp) {}
 
-@EventType(id = "mb-counters-purchase-made")
+@EventType
 record MbCountersPurchaseMade(double amount) {}
 
-@EventType(id = "mb-counters-refund-issued")
+@EventType
 record MbCountersRefundIssued(double amount) {}
 
 // Read Model

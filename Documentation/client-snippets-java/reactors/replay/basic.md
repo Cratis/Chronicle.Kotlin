@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.observation.Reactor;
 import io.cratis.chronicle.observation.Replay;
 
-@EventType(id = "replay-aware-order-placed")
+@EventType
 record ReplayAwareOrderPlaced(String orderId) {}
 
 @Reactor

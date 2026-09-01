@@ -8,6 +8,8 @@ import io.cratis.chronicle.observation.Reducer
 @Reducer
 class CustomerReducer {
 
+    // Each value goes from the event to the read model without a conversion, and without anyone
+    // checking that the name did not end up in the email. The types are the check.
     fun customerRegistered(event: CustomerRegistered): CustomerDetails {
         return CustomerDetails(
             id = event.customerId,

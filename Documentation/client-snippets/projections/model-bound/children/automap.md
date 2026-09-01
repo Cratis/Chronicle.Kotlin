@@ -4,7 +4,7 @@ import io.cratis.chronicle.projections.ChildrenFrom
 import io.cratis.chronicle.projections.FromEvent
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-children-automap-line-item-added")
+@EventType
 data class MbChildrenAutoMapLineItemAdded(
     val itemId: String,
     val productName: String,

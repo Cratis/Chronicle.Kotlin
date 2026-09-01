@@ -3,19 +3,19 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "slice-created-for-nested-updates")
+@EventType
 data class SliceCreatedForNestedUpdates(val name: String)
 
-@EventType(id = "command-set-for-nested-updates")
+@EventType
 data class CommandSetForNestedUpdates(val name: String, val schema: String)
 
-@EventType(id = "command-renamed-for-nested-updates")
+@EventType
 data class CommandRenamedForNestedUpdates(val newName: String)
 
-@EventType(id = "command-schema-updated-for-nested-updates")
+@EventType
 data class CommandSchemaUpdatedForNestedUpdates(val updatedSchema: String)
 
-@EventType(id = "command-cleared-for-nested-updates")
+@EventType
 data class CommandClearedForNestedUpdates(val placeholder: Boolean = true)
 
 data class SliceForNestedUpdates(

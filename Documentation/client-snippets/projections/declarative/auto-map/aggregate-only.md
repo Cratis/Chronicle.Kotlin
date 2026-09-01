@@ -3,10 +3,10 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "decl-agg-arrangement-set")
+@EventType
 data class DeclAggArrangementSet(val location: String)
 
-@EventType(id = "decl-agg-candidate-submitted")
+@EventType
 data class DeclAggCandidateSubmitted(val name: String, val location: String)
 
 data class DeclAggAssignmentSummary(val location: String = "", val candidateCount: Int = 0)

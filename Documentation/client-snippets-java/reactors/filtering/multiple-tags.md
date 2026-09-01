@@ -4,7 +4,7 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.observation.FilterEventsByTag;
 import io.cratis.chronicle.observation.Reactor;
 
-@EventType(id = "reactors-filtering-multi-tag-order-placed")
+@EventType
 record ReactorsFilteringMultiTagOrderPlaced(double totalAmount) {}
 
 @Reactor

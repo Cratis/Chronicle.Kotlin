@@ -3,10 +3,10 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 
-@EventType(id = "user-created-declarative-every")
+@EventType
 record UserCreatedDeclarativeEvery(String name, String email) {}
 
-@EventType(id = "user-email-changed-declarative-every")
+@EventType
 record UserEmailChangedDeclarativeEvery(String email) {}
 
 class UserProfileDeclarativeEvery {

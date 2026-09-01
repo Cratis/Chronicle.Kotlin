@@ -7,13 +7,13 @@ import io.cratis.chronicle.projections.Increment;
 import io.cratis.chronicle.projections.SetFrom;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "mb-counters-item-created")
+@EventType
 record MbCountersItemCreated(String name, int initialQuantity) {}
 
-@EventType(id = "mb-counters-item-restocked")
+@EventType
 class MbCountersItemRestocked {}
 
-@EventType(id = "mb-counters-item-sold")
+@EventType
 class MbCountersItemSold {}
 
 @ReadModel

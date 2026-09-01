@@ -11,7 +11,7 @@ record ComplianceClientEmailAddress(String value) implements ConceptAs<String> {
     }
 }
 
-@EventType(id = "ComplianceClientCustomerRegistered")
+@EventType
 record ComplianceClientCustomerRegistered(
         ComplianceClientPersonName name,       // encrypted via concept type
         ComplianceClientEmailAddress email,    // encrypted via concept type

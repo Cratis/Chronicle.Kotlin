@@ -4,7 +4,7 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.observation.Reactor;
 import java.time.Instant;
 
-@EventType(id = "reactor-account-closed")
+@EventType
 record ReactorAccountClosed(String accountId) {}
 
 @Reactor

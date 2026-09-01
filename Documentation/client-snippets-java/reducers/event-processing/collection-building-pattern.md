@@ -8,7 +8,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-@EventType(id = "event-processing-customer-action")
+@EventType
 record EventProcessingCustomerAction(String type, String description) {}
 
 record EventProcessingActivity(String type, Instant timestamp, String description) {}

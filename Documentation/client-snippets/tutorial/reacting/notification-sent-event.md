@@ -1,6 +1,6 @@
 ```kotlin
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "WaitlistNotificationSent")
+@EventType
 class WaitlistNotificationSent
 ```

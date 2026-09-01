@@ -5,38 +5,47 @@ package io.cratis.chronicle.samples.console
 
 import io.cratis.chronicle.EventStore
 import io.cratis.chronicle.compliance.Pii
+import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.chronicle.concepts.appendMany
+import io.cratis.chronicle.concepts.getInstanceByKey
+import io.cratis.chronicle.concepts.redactForEventSource
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.eventSequences.RedactionReason
 import io.cratis.chronicle.readModels.ReadModel
+import kotlin.reflect.full.findAnnotation
+
+// Not a single `@Pii` anywhere in this file, and every personal value below is still encrypted at
+// rest. The annotation lives once on each concept in `CustomerConcepts.kt`, and comes along with
+// the type wherever it is used.
 
 @EventType
 data class CustomerRegistered(
-    val customerId: String,
-    @Pii(description = "Customer email address") val email: String,
-    @Pii(description = "Customer full legal name") val fullName: String,
-    @Pii(description = "Customer phone contact number") val phoneNumber: String
+    val customerId: CustomerId,
+    val email: EmailAddress,
+    val fullName: FullName,
+    val phoneNumber: PhoneNumber
 )
 
 @EventType
 data class CustomerAddressUpdated(
-    val customerId: String,
-    @Pii(description = "Customer street address") val streetAddress: String,
-    @Pii(description = "City of residence") val city: String,
-    @Pii(description = "Postal code") val postalCode: String,
-    val country: String
+    val customerId: CustomerId,
+    val streetAddress: StreetAddress,
+    val city: City,
+    val postalCode: PostalCode,
+    val country: Country
 )
 
 @ReadModel
 data class Customer(
-    val id: String = "",
-    @Pii(description = "Customer full legal name") val fullName: String = "",
-    @Pii(description = "Customer email address") val email: String = "",
-    @Pii(description = "Customer phone contact number") val phoneNumber: String = "",
-    @Pii(description = "Customer street address") val streetAddress: String = "",
-    @Pii(description = "City of residence") val city: String = "",
-    @Pii(description = "Postal code") val postalCode: String = "",
-    val country: String = "",
+    val id: CustomerId = CustomerId(""),
+    val fullName: FullName = FullName(""),
+    val email: EmailAddress = EmailAddress(""),
+    val phoneNumber: PhoneNumber = PhoneNumber(""),
+    val streetAddress: StreetAddress = StreetAddress(""),
+    val city: City = City(""),
+    val postalCode: PostalCode = PostalCode(""),
+    val country: Country = Country(""),
     val customerNumber: String = "",
     val accountStatus: String = "active",
     val totalOrders: Int = 0
@@ -44,36 +53,36 @@ data class Customer(
 
 @ReadModel
 data class CustomerDetails(
-    val id: String = "",
-    @Pii(description = "Customer full legal name") val fullName: String = "",
-    @Pii(description = "Customer email address") val email: String = "",
-    @Pii(description = "Customer phone contact number") val phoneNumber: String = "",
-    @Pii(description = "Customer street address") val streetAddress: String = "",
-    @Pii(description = "City of residence") val city: String = "",
-    @Pii(description = "Postal code") val postalCode: String = "",
-    val country: String = ""
+    val id: CustomerId = CustomerId(""),
+    val fullName: FullName = FullName(""),
+    val email: EmailAddress = EmailAddress(""),
+    val phoneNumber: PhoneNumber = PhoneNumber(""),
+    val streetAddress: StreetAddress = StreetAddress(""),
+    val city: City = City(""),
+    val postalCode: PostalCode = PostalCode(""),
+    val country: Country = Country("")
 )
 
 data class SampleCustomerData(
-    val id: String,
-    val fullName: String,
-    val email: String,
-    val phoneNumber: String,
-    val streetAddress: String,
-    val city: String,
-    val postalCode: String,
-    val country: String
+    val id: CustomerId,
+    val fullName: FullName,
+    val email: EmailAddress,
+    val phoneNumber: PhoneNumber,
+    val streetAddress: StreetAddress,
+    val city: City,
+    val postalCode: PostalCode,
+    val country: Country
 )
 
 val sampleCustomer = SampleCustomerData(
-    id = "c0000001-0000-0000-0000-000000000000",
-    fullName = "Eve Jackson",
-    email = "eve.jackson@example.com",
-    phoneNumber = "+1-202-555-0143",
-    streetAddress = "742 Evergreen Terrace",
-    city = "Springfield",
-    postalCode = "49007",
-    country = "USA"
+    id = CustomerId("c0000001-0000-0000-0000-000000000000"),
+    fullName = FullName("Eve Jackson"),
+    email = EmailAddress("eve.jackson@example.com"),
+    phoneNumber = PhoneNumber("+1-202-555-0143"),
+    streetAddress = StreetAddress("742 Evergreen Terrace"),
+    city = City("Springfield"),
+    postalCode = PostalCode("49007"),
+    country = Country("USA")
 )
 
 suspend fun registerCustomerWithPii(store: io.cratis.chronicle.IEventStore) {
@@ -90,15 +99,17 @@ suspend fun registerCustomerWithPii(store: io.cratis.chronicle.IEventStore) {
         postalCode = sampleCustomer.postalCode,
         country = sampleCustomer.country
     )
+    // Takes the CustomerId as-is — every place the client accepts an event source id as a String
+    // has an overload taking a concept, so the type survives all the way to the call.
     val results = store.eventLog.appendMany(sampleCustomer.id, listOf(registered, addressUpdated))
     val failures = results.filter { !it.isSuccess }
     if (failures.isNotEmpty()) {
         val violations = failures.flatMap { it.constraintViolations }.map { it.message }
-        println("[pii] Could not register ${sampleCustomer.fullName}: ${violations.joinToString("; ")}")
+        println("[pii] Could not register ${sampleCustomer.fullName.value}: ${violations.joinToString("; ")}")
         return
     }
     val lastSeq = results.last().sequenceNumber.value
-    println("[pii] Registered ${sampleCustomer.fullName} (${sampleCustomer.id}) with PII events up to sequence $lastSeq")
+    println("[pii] Registered ${sampleCustomer.fullName.value} (${sampleCustomer.id.value}) with PII events up to sequence $lastSeq")
 }
 
 /**
@@ -106,8 +117,8 @@ suspend fun registerCustomerWithPii(store: io.cratis.chronicle.IEventStore) {
  * Existing encrypted PII values become permanently unreadable; no re-encryption or rollback is possible.
  */
 suspend fun deleteCustomerEncryptionKey(store: EventStore) {
-    store.compliance.deleteEncryptionKey(sampleCustomer.id)
-    println("[pii] Deleted the encryption key for ${sampleCustomer.fullName} (${sampleCustomer.id}). Its encrypted PII can no longer be decrypted.")
+    store.compliance.deleteEncryptionKey(sampleCustomer.id.value)
+    println("[pii] Deleted the encryption key for ${sampleCustomer.fullName.value} (${sampleCustomer.id.value}). Its encrypted PII can no longer be decrypted.")
 }
 
 /**
@@ -150,29 +161,41 @@ suspend fun redactLastAddressChange(store: io.cratis.chronicle.IEventStore, pers
 suspend fun redactAllCustomerEvents(store: io.cratis.chronicle.IEventStore) {
     store.eventLog.redactForEventSource(sampleCustomer.id, RedactionReason("Sample: GDPR erasure request"))
     println(
-        "[redact] Permanently redacted every event for ${sampleCustomer.fullName} (${sampleCustomer.id}). " +
+        "[redact] Permanently redacted every event for ${sampleCustomer.fullName.value} (${sampleCustomer.id.value}). " +
             "This cannot be undone."
     )
 }
 
 suspend fun showCustomerReadModel(store: io.cratis.chronicle.IEventStore) {
     val customer = store.readModels.getInstanceByKey(CustomerDetails::class, sampleCustomer.id)
-    if (customer == null || customer.id.isEmpty()) {
-        println("[pii] No CustomerDetails read model found for ${sampleCustomer.id}. Register the customer first (press C).")
+    if (customer == null || customer.id.value.isEmpty()) {
+        println("[pii] No CustomerDetails read model found for ${sampleCustomer.id.value}. Register the customer first (press C).")
         return
     }
-    fun fmt(label: String, value: String, isPii: Boolean): String =
-        "  ${label.padEnd(15)}: ${value.ifEmpty { "(empty)" }}${if (isPii) "   [PII]" else ""}"
 
     println(listOf(
-        "Customer read model for ${customer.id}:",
-        fmt("Full name",       customer.fullName,       true),
-        fmt("Email",           customer.email,          true),
-        fmt("Phone number",    customer.phoneNumber,    true),
-        fmt("Street address",  customer.streetAddress,  true),
-        fmt("City",            customer.city,           true),
-        fmt("Postal code",     customer.postalCode,     true),
-        fmt("Country",         customer.country,        false),
-        "  PII fields are stored encrypted at rest — values above are the encrypted form."
+        "Customer read model for ${customer.id.value}:",
+        fmt("Full name",      customer.fullName),
+        fmt("Email",          customer.email),
+        fmt("Phone number",   customer.phoneNumber),
+        fmt("Street address", customer.streetAddress),
+        fmt("City",           customer.city),
+        fmt("Postal code",    customer.postalCode),
+        fmt("Country",        customer.country),
+        "  Every [PII] value above is encrypted at rest and decrypted on read. Press K to delete the",
+        "  encryption key and view this again — the PII comes back empty, Country is untouched."
     ).joinToString("\n"))
+}
+
+/**
+ * Formats one value, reading the `[PII]` marker off the concept's own type.
+ *
+ * Nothing here keeps a list of which fields are personal — [Pii] is metadata on the type, so
+ * anything that needs to know can ask, and it can never fall out of date with what is actually
+ * encrypted. Chronicle's schema generator answers the same question the same way.
+ */
+private fun fmt(label: String, value: ConceptAs<String>): String {
+    val pii = value::class.findAnnotation<Pii>()
+    val marker = pii?.let { "   [PII: ${it.description}]" } ?: ""
+    return "  ${label.padEnd(15)}: ${value.value.ifEmpty { "(empty)" }}$marker"
 }

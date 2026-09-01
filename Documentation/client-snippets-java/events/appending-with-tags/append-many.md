@@ -7,10 +7,10 @@ import io.cratis.chronicle.java.BlockingEventStore;
 
 import java.util.List;
 
-@EventType(id = "TaggedMoneyWithdrawn")
+@EventType
 record TaggedMoneyWithdrawn(double amount) {}
 
-@EventType(id = "TaggedMoneyDeposited")
+@EventType
 record TaggedMoneyDeposited(double amount) {}
 
 class TaggedTransferService {

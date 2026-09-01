@@ -3,19 +3,19 @@ import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reactor
 
-@EventType(id = "event-processing-signatures-order-placed")
+@EventType
 data class EventProcessingSignaturesOrderPlaced(val orderId: String)
 
-@EventType(id = "event-processing-signatures-order-shipped")
+@EventType
 data class EventProcessingSignaturesOrderShipped(val orderId: String)
 
-@EventType(id = "event-processing-signatures-order-cancelled")
+@EventType
 data class EventProcessingSignaturesOrderCancelled(val orderId: String)
 
-@EventType(id = "event-processing-signatures-refund-issued")
+@EventType
 data class EventProcessingSignaturesRefundIssued(val orderId: String, val amount: Double)
 
-@EventType(id = "event-processing-signatures-order-archived")
+@EventType
 data class EventProcessingSignaturesOrderArchived(val orderId: String)
 
 @Reactor

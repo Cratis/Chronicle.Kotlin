@@ -4,10 +4,10 @@ import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 import java.time.Instant
 
-@EventType(id = "inventory-registered-from-all")
+@EventType
 data class InventoryRegisteredFromAll(val productName: String)
 
-@EventType(id = "inventory-adjusted-from-all")
+@EventType
 data class InventoryAdjustedFromAll(val quantity: Int)
 
 data class InventoryStatusFromAll(

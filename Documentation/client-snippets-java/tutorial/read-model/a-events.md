@@ -1,9 +1,9 @@
 ```java
 import io.cratis.chronicle.events.EventType;
 
-@EventType(id = "BookBorrowed")
+@EventType
 record BookBorrowed(String memberName) {}
 
-@EventType(id = "BookReturned")
+@EventType
 record BookReturned() {}
 ```

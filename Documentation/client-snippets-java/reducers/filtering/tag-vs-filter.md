@@ -7,7 +7,7 @@ import io.cratis.chronicle.observation.Reducer;
 import io.cratis.chronicle.observation.Tag;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "reducers-filtering-tag-vs-filter-order-placed")
+@EventType
 record ReducersFilteringTagVsFilterOrderPlaced(double totalAmount) {}
 
 @ReadModel

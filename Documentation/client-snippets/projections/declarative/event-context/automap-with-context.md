@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "dec-event-context-user-action")
+@EventType
 data class DecEventContextUserAction(val userId: String, val actionType: String)
 
 class DecEventContextAuditTrailProjection : IProjectionFor<DecEventContextAuditEntry> {

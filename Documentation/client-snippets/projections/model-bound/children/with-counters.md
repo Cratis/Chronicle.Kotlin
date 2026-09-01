@@ -7,7 +7,7 @@ import io.cratis.chronicle.projections.Increment
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-children-counters-item-added-to-cart")
+@EventType
 data class MbChildrenCountersItemAddedToCart(
     val itemId: String,
     val productName: String,
@@ -15,10 +15,10 @@ data class MbChildrenCountersItemAddedToCart(
     val initialQuantity: Int
 )
 
-@EventType(id = "mb-children-counters-quantity-increased")
+@EventType
 data class MbChildrenCountersQuantityIncreased(val itemId: String)
 
-@EventType(id = "mb-children-counters-quantity-decreased")
+@EventType
 data class MbChildrenCountersQuantityDecreased(val itemId: String)
 
 @ReadModel

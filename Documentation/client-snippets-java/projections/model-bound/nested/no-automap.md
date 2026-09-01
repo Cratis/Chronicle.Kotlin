@@ -5,10 +5,10 @@ import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.NoAutoMap;
 import io.cratis.chronicle.projections.SetFrom;
 
-@EventType(id = "command-set-for-nested-no-auto-map")
+@EventType
 record CommandSetForNestedNoAutoMap(String commandName, String schema) {}
 
-@EventType(id = "command-cleared-for-nested-no-auto-map")
+@EventType
 record CommandClearedForNestedNoAutoMap() {}
 
 @FromEvent(eventType = CommandSetForNestedNoAutoMap.class)

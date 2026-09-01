@@ -3,13 +3,13 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "dec-constant-key-page-viewed")
+@EventType
 data class DecConstantKeyPageViewed(val pageUrl: String)
 
-@EventType(id = "dec-constant-key-button-clicked")
+@EventType
 data class DecConstantKeyButtonClicked(val buttonId: String)
 
-@EventType(id = "dec-constant-key-form-submitted")
+@EventType
 data class DecConstantKeyFormSubmitted(val formId: String)
 
 data class DecConstantKeyEngagementMetrics(

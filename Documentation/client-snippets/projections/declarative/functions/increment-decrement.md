@@ -3,10 +3,10 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "dec-functions-item-added")
+@EventType
 data class DecFunctionsItemAdded(val name: String)
 
-@EventType(id = "dec-functions-item-removed")
+@EventType
 data class DecFunctionsItemRemoved(val name: String)
 
 data class DecFunctionsInventory(val quantity: Int = 0)

@@ -96,6 +96,14 @@ object EventLogJavaBridge {
         runBlocking { eventLog.getNextSequenceNumber().value }
 
     /**
+     * The tail sequence number as far as [observerType] is concerned - the position of the last
+     * event of a type it actually handles, rather than of the sequence as a whole.
+     */
+    @JvmStatic
+    fun getTailSequenceNumberForObserver(eventLog: IEventLog, observerType: Class<*>): Long =
+        runBlocking { eventLog.getTailSequenceNumberForObserver(observerType.kotlin).value }
+
+    /**
      * Completes a stream so no further events can be appended to it. Returns `true` when the
      * stream was completed, `false` when it was already completed or is the default stream (which
      * can never be completed).
@@ -183,6 +191,14 @@ object ReadModelsJavaBridge {
     fun <T : Any> getInstances(service: IReadModelsService, readModelClass: Class<T>): List<T> =
         runBlocking { service.getInstances(readModelClass.kotlin) }
 
+    /**
+     * The same, capping the replay at [eventCount] events - faster, but able to return incomplete
+     * state when the cap cuts off events that matter.
+     */
+    @JvmStatic
+    fun <T : Any> getInstances(service: IReadModelsService, readModelClass: Class<T>, eventCount: Long): List<T> =
+        runBlocking { service.getInstances(readModelClass.kotlin, eventCount) }
+
     @JvmStatic
     fun <T : Any> getSnapshotsById(service: IReadModelsService, readModelClass: Class<T>, key: String): List<ReadModelSnapshot<T>> =
         runBlocking { service.getSnapshotsById(readModelClass.kotlin, key) }
@@ -218,6 +234,24 @@ object ReadModelsJavaBridge {
     @JvmStatic
     fun <T : Any> getMaterializedInstances(service: IReadModelsService, readModelClass: Class<T>, skip: Int, take: Int): List<T> =
         runBlocking { service.materialized.getInstances(readModelClass.kotlin, skip, take) }
+
+    /**
+     * Subscribes [callback] to the stored page of [readModelClass] through
+     * [io.cratis.chronicle.readModels.IMaterializedReadModels.observeInstances], which emits the
+     * whole page again every time it changes. Java cannot collect a Kotlin `Flow`, so this launches
+     * a background coroutine and hands each page to [callback] as it arrives. Returns the [Job]
+     * backing the subscription - cancel it to release the change stream.
+     */
+    @JvmStatic
+    fun <T : Any> observeMaterializedInstances(
+        service: IReadModelsService,
+        readModelClass: Class<T>,
+        skip: Int,
+        take: Int,
+        callback: java.util.function.Consumer<List<T>>
+    ): Job = CoroutineScope(Dispatchers.Default).launch {
+        service.materialized.observeInstances(readModelClass.kotlin, skip, take).collect { callback.accept(it) }
+    }
 }
 
 /**

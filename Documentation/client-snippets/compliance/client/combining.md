@@ -6,7 +6,7 @@ import io.cratis.chronicle.events.EventType
 @Pii
 data class ComplianceClientEmailAddress(override val value: String) : ConceptAs<String>
 
-@EventType(id = "compliance-client-customer-registered")
+@EventType
 data class ComplianceClientCustomerRegistered(
     val name: ComplianceClientPersonName,      // encrypted via concept type
     val email: ComplianceClientEmailAddress,   // encrypted via concept type

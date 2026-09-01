@@ -4,7 +4,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "event-processing-pattern-with-context-recorded")
+@EventType
 data class EventProcessingPatternWithContextRecorded(val value: Double)
 
 @ReadModel

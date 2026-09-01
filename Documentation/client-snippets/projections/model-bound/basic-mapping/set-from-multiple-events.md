@@ -4,12 +4,12 @@ import io.cratis.chronicle.projections.FromEvent
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "account-opened-for-rename")
+@EventType
 data class AccountOpenedForRename(
     val accountName: String
 )
 
-@EventType(id = "account-renamed-for-rename")
+@EventType
 data class AccountRenamedForRename(
     val newName: String
 )

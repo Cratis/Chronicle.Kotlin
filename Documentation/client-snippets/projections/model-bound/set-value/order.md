@@ -5,10 +5,10 @@ import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.projections.SetValue
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-set-value-order-placed")
+@EventType
 data class MbSetValueOrderPlaced(val customerName: String)
 
-@EventType(id = "mb-set-value-order-canceled")
+@EventType
 data class MbSetValueOrderCanceled(val placeholder: Boolean = true)
 
 @ReadModel

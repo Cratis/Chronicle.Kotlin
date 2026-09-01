@@ -6,10 +6,10 @@ import io.cratis.chronicle.projections.NoAutoMap
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-children-no-automap-order-placed")
+@EventType
 data class MbChildrenNoAutoMapOrderPlaced(val orderId: String)
 
-@EventType(id = "mb-children-no-automap-line-item-added")
+@EventType
 data class MbChildrenNoAutoMapLineItemAdded(
     val itemId: String,
     val productName: String,

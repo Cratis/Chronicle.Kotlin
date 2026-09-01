@@ -12,11 +12,20 @@ import io.cratis.chronicle.artifacts.given.OrderReactor
 import io.cratis.chronicle.artifacts.given.OrderSummary
 import io.cratis.chronicle.artifacts.given.OrderTiming
 import io.cratis.chronicle.artifacts.given.ShippingLabel
+import io.cratis.chronicle.events.EventContext
+import io.cratis.chronicle.observation.IReactorMiddleware
+import io.cratis.chronicle.observation.ReadModelArgument
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class KnownClientArtifactsTests {
+
+    /** A middleware that needs its enclosing instance to exist — nothing a scan can construct. */
+    inner class InnerMiddleware : IReactorMiddleware {
+        override suspend fun beforeInvoke(context: EventContext, event: Any) {}
+        override suspend fun afterInvoke(context: EventContext, event: Any) {}
+    }
 
     @Test
     fun `sorts each listed class into the kind it belongs to`() {
@@ -67,6 +76,44 @@ class KnownClientArtifactsTests {
         val artifacts = KnownClientArtifacts(OrderPlaced::class, OrderPlaced::class)
 
         assertEquals(listOf(OrderPlaced::class), artifacts.eventTypes)
+    }
+
+    @Test
+    fun `ignores a middleware written as an anonymous object`() {
+        val anonymous = object : IReactorMiddleware {
+            override suspend fun beforeInvoke(context: EventContext, event: Any) {}
+            override suspend fun afterInvoke(context: EventContext, event: Any) {}
+        }
+
+        val artifacts = KnownClientArtifacts(anonymous::class)
+
+        assertTrue(artifacts.reactorMiddlewares.isEmpty())
+    }
+
+    @Test
+    fun `ignores a middleware declared inside a function`() {
+        class Local : IReactorMiddleware {
+            override suspend fun beforeInvoke(context: EventContext, event: Any) {}
+            override suspend fun afterInvoke(context: EventContext, event: Any) {}
+        }
+
+        val artifacts = KnownClientArtifacts(Local::class)
+
+        assertTrue(artifacts.reactorMiddlewares.isEmpty())
+    }
+
+    @Test
+    fun `ignores a middleware declared as an inner class`() {
+        val artifacts = KnownClientArtifacts(InnerMiddleware::class)
+
+        assertTrue(artifacts.reactorMiddlewares.isEmpty())
+    }
+
+    @Test
+    fun `ignores the argument resolvers the client installs itself`() {
+        val artifacts = KnownClientArtifacts(ReadModelArgument::class)
+
+        assertTrue(artifacts.reactorArgumentResolvers.isEmpty())
     }
 
     @Test

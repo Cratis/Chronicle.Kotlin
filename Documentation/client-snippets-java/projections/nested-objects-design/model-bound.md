@@ -5,13 +5,13 @@ import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.Nested;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "nod-slice-created")
+@EventType
 record NodSliceCreated(String name) {}
 
-@EventType(id = "nod-command-set-for-slice")
+@EventType
 record NodCommandSetForSlice(String name, String schema) {}
 
-@EventType(id = "nod-command-cleared-for-slice")
+@EventType
 class NodCommandClearedForSlice {}
 
 @ReadModel

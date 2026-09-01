@@ -4,7 +4,7 @@ import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
 import java.util.UUID
 
-@EventType(id = "event-processing-reuse-item-added")
+@EventType
 data class EventProcessingReuseItemAdded(val itemId: UUID, val name: String)
 
 data class EventProcessingItem(val itemId: UUID, val name: String)

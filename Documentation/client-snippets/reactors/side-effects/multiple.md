@@ -3,13 +3,13 @@ import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reactor
 
-@EventType(id = "side-effects-multiple-book-reserved")
+@EventType
 data class MultipleSideEffectsBookReserved(val isbn: String)
 
-@EventType(id = "side-effects-multiple-stock-decreased")
+@EventType
 data class MultipleStockDecreased(val isbn: String, val quantity: Int)
 
-@EventType(id = "side-effects-stock-low")
+@EventType
 data class StockLow(val isbn: String)
 
 @Reactor

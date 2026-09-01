@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reactor
 
-@EventType(id = "reactors-index-email-confirmed")
+@EventType
 data class ReactorsIndexEmailConfirmed(val email: String)
 
 @Reactor

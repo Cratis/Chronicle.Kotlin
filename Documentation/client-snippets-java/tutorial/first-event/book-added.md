@@ -1,6 +1,6 @@
 ```java
 import io.cratis.chronicle.events.EventType;
 
-@EventType(id = "BookAdded")
+@EventType
 record BookAdded(String title, String isbn) {}
 ```

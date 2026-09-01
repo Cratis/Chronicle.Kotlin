@@ -6,10 +6,10 @@ import io.cratis.chronicle.projections.RemovedWith
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-children-removal-property-line-item-added")
+@EventType
 data class MbChildrenRemovalPropertyLineItemAdded(val itemId: String, val description: String)
 
-@EventType(id = "mb-children-removal-property-line-item-removed")
+@EventType
 data class MbChildrenRemovalPropertyLineItemRemoved(val itemId: String)
 
 @ReadModel

@@ -3,10 +3,10 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "group-created-with-event-parent-key")
+@EventType
 data class GroupCreatedWithEventParentKey(val name: String)
 
-@EventType(id = "user-added-with-event-parent-key")
+@EventType
 data class UserAddedWithEventParentKey(val groupId: String, val userId: String, val role: String)
 
 data class GroupWithEventParentKey(

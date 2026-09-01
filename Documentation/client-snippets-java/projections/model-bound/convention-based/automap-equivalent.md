@@ -5,7 +5,7 @@ import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "convention-equivalent-user-registered")
+@EventType
 record ConventionEquivalentUserRegistered(String name, String email) {}
 
 @ReadModel

@@ -3,10 +3,10 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "inventory-registered-declarative-for-every")
+@EventType
 data class InventoryRegisteredDeclarativeForEvery(val productName: String)
 
-@EventType(id = "inventory-adjusted-declarative-for-every")
+@EventType
 data class InventoryAdjustedDeclarativeForEvery(val quantity: Int)
 
 data class InventoryStatusDeclarativeFromEvery(

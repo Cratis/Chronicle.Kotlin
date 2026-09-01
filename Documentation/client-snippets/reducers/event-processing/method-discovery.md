@@ -5,10 +5,10 @@ import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
 import java.util.UUID
 
-@EventType(id = "event-processing-method-discovery-order-created")
+@EventType
 data class EventProcessingMethodDiscoveryOrderCreated(val orderId: UUID)
 
-@EventType(id = "event-processing-method-discovery-item-added")
+@EventType
 data class EventProcessingMethodDiscoveryItemAdded(val price: Double)
 
 @ReadModel

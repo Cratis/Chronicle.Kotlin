@@ -3,7 +3,7 @@ import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "tagging-user-logged-in")
+@EventType
 data class TaggingUserLoggedIn(val userId: String)
 
 class TaggingUserLoginService(private val eventLog: IEventLog) {
