@@ -35,6 +35,7 @@ import io.cratis.chronicle.observation.Tag;
 import io.cratis.chronicle.readModels.IReadModelReactor;
 import io.cratis.chronicle.readModels.ReadModel;
 import io.cratis.chronicle.readModels.ReadModelChangeset;
+import io.cratis.chronicle.schemas.JsonSchemaType;
 import io.cratis.chronicle.seeding.ICanSeedEvents;
 import io.cratis.chronicle.seeding.IEventSeedingBuilder;
 import io.cratis.chronicle.webhooks.IWebhookDefiner;
@@ -97,6 +98,13 @@ public final class JavaConformance {
     /** A read model. */
     @ReadModel
     public record EmployeeState(String id, String title) {
+    }
+
+    // --- Schemas --------------------------------------------------------------------------------
+
+    /** A type whose own serializer writes something other than its own shape, declared the way Java opts in. */
+    @JsonSchemaType(type = String.class)
+    public record Money(long amount, String currency) {
     }
 
     // --- Compliance -----------------------------------------------------------------------------
