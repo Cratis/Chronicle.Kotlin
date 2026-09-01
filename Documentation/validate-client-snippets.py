@@ -13,8 +13,14 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SNIPPET_ROOT = REPO_ROOT / "Documentation" / "client-snippets"
 JAVA_SNIPPET_ROOT = REPO_ROOT / "Documentation" / "client-snippets-java"
-GENERATED_SOURCE = REPO_ROOT / "Source" / "src" / "test" / "kotlin" / "DocumentationClientSnippetCompilation.kt"
-GENERATED_JAVA_SOURCE_ROOT = REPO_ROOT / "Source" / "src" / "test" / "java" / "io" / "cratis" / "chronicle" / "documentation"
+# Generated sources compile through the :Testing module rather than :Source. Testing depends on
+# Source (api(project(":Source"))), so Testing's test classpath is a strict superset of Source's -
+# every public Source type is still visible - and it additionally exposes the Testing module's own
+# types (EventScenario, ReadModelScenario, ...), which client-snippets/testing/** needs and which
+# :Source:compileTestKotlin structurally can never see (Source has no dependency on Testing - that
+# direction would be circular).
+GENERATED_SOURCE = REPO_ROOT / "Testing" / "src" / "test" / "kotlin" / "DocumentationClientSnippetCompilation.kt"
+GENERATED_JAVA_SOURCE_ROOT = REPO_ROOT / "Testing" / "src" / "test" / "java" / "io" / "cratis" / "chronicle" / "documentation"
 FENCE_RE = re.compile(r"```([^\s`]+)[^\n]*\n(.*?)\n```", re.DOTALL)
 UNSUPPORTED_SNIPPET_MARKER = "does not support this workflow yet"
 
@@ -26,8 +32,8 @@ UNSUPPORTED_SNIPPET_MARKER = "does not support this workflow yet"
 # `<!-- validate: ... -->` directive and is compiled here too.
 PAGE_ROOT = REPO_ROOT / "Documentation"
 PAGE_EXCLUDED_DIRS = {"client-snippets", "client-snippets-java"}
-GENERATED_PAGE_SOURCE = REPO_ROOT / "Source" / "src" / "test" / "kotlin" / "DocumentationPageSnippetCompilation.kt"
-GENERATED_PAGE_JAVA_ROOT = REPO_ROOT / "Source" / "src" / "test" / "java" / "io" / "cratis" / "chronicle" / "documentation" / "pages"
+GENERATED_PAGE_SOURCE = REPO_ROOT / "Testing" / "src" / "test" / "kotlin" / "DocumentationPageSnippetCompilation.kt"
+GENERATED_PAGE_JAVA_ROOT = REPO_ROOT / "Testing" / "src" / "test" / "java" / "io" / "cratis" / "chronicle" / "documentation" / "pages"
 PAGE_JAVA_PACKAGE = "io.cratis.chronicle.documentation.pages"
 # Kotlin and Java page snippets declare the same type names (EmployeeHired,
 # EmployeeProfile, ...) as two language variants of one example, so they need
@@ -345,7 +351,7 @@ def write_page_java(snippets: list[dict]) -> list[Path]:
 def gradle_command() -> list[str]:
     gradlew = REPO_ROOT / "gradlew"
     executable = str(gradlew) if gradlew.exists() else "gradle"
-    return [executable, ":Source:compileTestKotlin", ":Source:compileTestJava", "--no-configuration-cache"]
+    return [executable, ":Testing:compileTestKotlin", ":Testing:compileTestJava", "--no-configuration-cache"]
 
 
 def main() -> int:
@@ -377,13 +383,13 @@ def main() -> int:
         gradle_dirs = [
             GENERATED_PAGE_JAVA_ROOT,
             GENERATED_JAVA_SOURCE_ROOT,
-            REPO_ROOT / "Source" / "src" / "test" / "java" / "io" / "cratis" / "chronicle",
-            REPO_ROOT / "Source" / "src" / "test" / "java" / "io" / "cratis",
-            REPO_ROOT / "Source" / "src" / "test" / "java" / "io",
-            REPO_ROOT / "Source" / "src" / "test" / "java",
-            REPO_ROOT / "Source" / "src" / "test" / "kotlin",
-            REPO_ROOT / "Source" / "src" / "test",
-            REPO_ROOT / "Source" / "src",
+            REPO_ROOT / "Testing" / "src" / "test" / "java" / "io" / "cratis" / "chronicle",
+            REPO_ROOT / "Testing" / "src" / "test" / "java" / "io" / "cratis",
+            REPO_ROOT / "Testing" / "src" / "test" / "java" / "io",
+            REPO_ROOT / "Testing" / "src" / "test" / "java",
+            REPO_ROOT / "Testing" / "src" / "test" / "kotlin",
+            REPO_ROOT / "Testing" / "src" / "test",
+            REPO_ROOT / "Testing" / "src",
         ]
         for directory in gradle_dirs:
             try:

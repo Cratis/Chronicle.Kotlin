@@ -1,3 +1,7 @@
-```text
-Java does not support this workflow yet.
+```java
+class DecSimpleUser {
+    public String name = "";
+    public String email = "";
+    public String createdAt = null;
+}
 ```
