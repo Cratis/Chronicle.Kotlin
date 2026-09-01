@@ -44,6 +44,50 @@ class EventTypeMigrationBuilderTests {
             builder.toJson()
         )
     }
+
+    @Test
+    fun `renamedFrom by property name produces the same directive as the KProperty1 form`() {
+        val byProperty = EventTypeMigrationBuilder<PersonV2, PersonV1>()
+        byProperty.renamedFrom(PersonV2::fullName, PersonV1::name)
+
+        val byName = EventTypeMigrationBuilder<PersonV2, PersonV1>()
+        byName.renamedFrom("fullName", "name")
+
+        assertEquals(byProperty.toJson(), byName.toJson())
+    }
+
+    @Test
+    fun `defaultValue by property name produces the same directive as the KProperty1 form`() {
+        val byProperty = EventTypeMigrationBuilder<PersonV2, PersonV1>()
+        byProperty.defaultValue(PersonV2::country, "unknown")
+
+        val byName = EventTypeMigrationBuilder<PersonV2, PersonV1>()
+        byName.defaultValue("country", "unknown")
+
+        assertEquals(byProperty.toJson(), byName.toJson())
+    }
+
+    @Test
+    fun `split by property name produces the same directive as the KProperty1 form`() {
+        val byProperty = EventTypeMigrationBuilder<PersonV2, PersonV1>()
+        byProperty.split(PersonV2::fullName, PersonV1::name, " ", 0)
+
+        val byName = EventTypeMigrationBuilder<PersonV2, PersonV1>()
+        byName.split("fullName", "name", " ", 0)
+
+        assertEquals(byProperty.toJson(), byName.toJson())
+    }
+
+    @Test
+    fun `combine by property name produces the same directive as the KProperty1 form`() {
+        val byProperty = EventTypeMigrationBuilder<PersonV2, PersonV1>()
+        byProperty.combine(PersonV2::fullName, " ", PersonV1::name)
+
+        val byName = EventTypeMigrationBuilder<PersonV2, PersonV1>()
+        byName.combine("fullName", " ", "name")
+
+        assertEquals(byProperty.toJson(), byName.toJson())
+    }
 }
 
 private class PersonMigration : EventTypeMigration<PersonV2, PersonV1>(PersonV2::class, PersonV1::class) {

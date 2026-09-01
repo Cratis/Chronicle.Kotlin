@@ -6,6 +6,7 @@ package io.cratis.chronicle.projections
 import io.cratis.chronicle.events.EventType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -23,7 +24,14 @@ private data class OrderLineRemoved(val orderId: String, val product: String)
 
 private data class OrderLine(val product: String, val quantity: Int)
 
-private data class Order(val id: String, val customerName: String, val lines: List<OrderLine> = emptyList(), val summary: OrderSummary? = null)
+private data class Order(
+    val id: String,
+    val customerName: String,
+    val lines: List<OrderLine> = emptyList(),
+    val summary: OrderSummary? = null,
+    val version: Int = 0,
+    val totalQuantity: Int = 0
+)
 
 private data class OrderSummary(val note: String)
 
@@ -133,5 +141,105 @@ class ProjectionBuilderForTests {
         assertTrue(builder.isRewindable)
         builder.notRewindable()
         assertFalse(builder.isRewindable)
+    }
+
+    @Test
+    fun `noAutoMap and autoMap toggle autoMapEnabled`() {
+        val builder = ProjectionBuilderFor(Order::class)
+        assertTrue(builder.autoMapEnabled)
+        builder.noAutoMap()
+        assertFalse(builder.autoMapEnabled)
+        builder.autoMap()
+        assertTrue(builder.autoMapEnabled)
+    }
+
+    @Test
+    fun `set by property name produces the same mapping as the KProperty1 form`() {
+        val byProperty = ProjectionBuilderFor(Order::class)
+        byProperty.from(OrderPlaced::class) { it.set(Order::customerName).toProperty("customerId") }
+
+        val byName = ProjectionBuilderFor(Order::class)
+        byName.from(OrderPlaced::class) { it.set<String>("customerName").toProperty("customerId") }
+
+        assertEquals(byProperty.fromEntries.single().properties, byName.fromEntries.single().properties)
+    }
+
+    @Test
+    fun `on by property name produces the same join entry as the KProperty1 form`() {
+        val byProperty = ProjectionBuilderFor(Order::class)
+        byProperty.join(OrderPlaced::class) { it.on(Order::id) }
+
+        val byName = ProjectionBuilderFor(Order::class)
+        byName.join(OrderPlaced::class) { it.on("id") }
+
+        assertEquals(byProperty.joinEntries.single().on, byName.joinEntries.single().on)
+    }
+
+    @Test
+    fun `children by property name and Class produces the same entry as the KProperty1 and KClass form`() {
+        val byProperty = ProjectionBuilderFor(Order::class)
+        byProperty.children(Order::lines, OrderLine::class) { it.identifiedBy("product") }
+
+        val byName = ProjectionBuilderFor(Order::class)
+        byName.children("lines", OrderLine::class.java) { it.identifiedBy("product") }
+
+        assertEquals(byProperty.childrenEntries.single().propertyName, byName.childrenEntries.single().propertyName)
+        assertEquals(byProperty.childrenEntries.single().identifiedBy, byName.childrenEntries.single().identifiedBy)
+    }
+
+    @Test
+    fun `nested by property name and Class produces the same entry as the KProperty1 and KClass form`() {
+        val byProperty = ProjectionBuilderFor(Order::class)
+        byProperty.nested(Order::summary, OrderSummary::class) { it.clearWith(OrderCancelled::class) }
+
+        val byName = ProjectionBuilderFor(Order::class)
+        byName.nested("summary", OrderSummary::class.java) { it.clearWith(OrderCancelled::class.java) }
+
+        assertEquals(byProperty.nestedEntries.single().propertyName, byName.nestedEntries.single().propertyName)
+        assertEquals(byProperty.nestedEntries.single().clearWithEventClasses, byName.nestedEntries.single().clearWithEventClasses)
+    }
+
+    @Test
+    fun `count records the well-known dollar-count expression`() {
+        val builder = ProjectionBuilderFor(Order::class)
+        builder.from(OrderPlaced::class) { it.count("version") }
+        assertEquals(mapOf("version" to "\$count"), builder.fromEntries.single().properties)
+    }
+
+    @Test
+    fun `increment and decrement record their well-known expressions`() {
+        val incrementing = ProjectionBuilderFor(Order::class)
+        incrementing.from(OrderLineAdded::class) { it.increment(Order::version) }
+        assertEquals(mapOf("version" to "\$increment"), incrementing.fromEntries.single().properties)
+
+        val decrementing = ProjectionBuilderFor(Order::class)
+        decrementing.from(OrderLineRemoved::class) { it.decrement("version") }
+        assertEquals(mapOf("version" to "\$decrement"), decrementing.fromEntries.single().properties)
+    }
+
+    @Test
+    fun `add and subtract record the source event property in their well-known expressions`() {
+        val adding = ProjectionBuilderFor(Order::class)
+        adding.from(OrderLineAdded::class) { it.add(Order::totalQuantity).with("quantity") }
+        assertEquals(mapOf("totalQuantity" to "\$add(quantity)"), adding.fromEntries.single().properties)
+
+        val subtracting = ProjectionBuilderFor(Order::class)
+        subtracting.from(OrderLineRemoved::class) { it.subtract("totalQuantity").with("quantity") }
+        assertEquals(mapOf("totalQuantity" to "\$subtract(quantity)"), subtracting.fromEntries.single().properties)
+    }
+
+    @Test
+    fun `toEventContextProperty on from maps to the well-known dollar-eventContext expression`() {
+        val builder = ProjectionBuilderFor(Order::class)
+        builder.from(OrderPlaced::class) { it.set(Order::customerName).toEventContextProperty("CausedBy") }
+        assertEquals(mapOf("customerName" to "\$eventContext(CausedBy)"), builder.fromEntries.single().properties)
+    }
+
+    @Test
+    fun `an unknown property name fails clearly instead of emitting a bad definition`() {
+        val builder = ProjectionBuilderFor(Order::class)
+        assertThrows(UnknownReadModelProperty::class.java) {
+            builder.from(OrderPlaced::class) { it.set<String>("doesNotExist").toProperty("customerId") }
+        }
     }
 }
