@@ -5,12 +5,12 @@ package io.cratis.chronicle.samples.console;
 
 import io.cratis.chronicle.IEventStore;
 import io.cratis.chronicle.compliance.Pii;
+import io.cratis.chronicle.concepts.ConceptAs;
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.eventSequences.AppendedEvent;
 import io.cratis.chronicle.eventSequences.AppendResult;
 import io.cratis.chronicle.readModels.ReadModel;
 
-import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,68 +20,72 @@ import io.cratis.chronicle.java.ReadModelsJavaBridge;
 import io.cratis.chronicle.java.ComplianceServiceJavaBridge;
 import io.cratis.chronicle.EventStore;
 
+// Not a single @Pii anywhere in this file, and every personal value below is still encrypted at
+// rest. The annotation lives once on each concept — FullName, EmailAddress, PhoneNumber,
+// StreetAddress, City, PostalCode — and comes along with the type wherever it is used. Add a third
+// event carrying an EmailAddress tomorrow and it is encrypted without anyone remembering to
+// annotate it, which is the failure mode property-level annotations have: the annotation is only
+// ever as complete as the last person to add a property.
+//
+// The types also stop the compiler treating a name and an email as the same thing — CustomerDetails
+// below takes eight values in a row, and swapping any two of them no longer compiles.
+
 @EventType
 record CustomerRegistered(
-    String customerId,
-    @Pii(description = "Customer email address") String email,
-    @Pii(description = "Customer full legal name") String fullName,
-    @Pii(description = "Customer phone contact number") String phoneNumber
+    CustomerId customerId,
+    EmailAddress email,
+    FullName fullName,
+    PhoneNumber phoneNumber
 ) {}
 
 @EventType
 record CustomerAddressUpdated(
-    String customerId,
-    @Pii(description = "Customer street address") String streetAddress,
-    @Pii(description = "City of residence") String city,
-    @Pii(description = "Postal code") String postalCode,
-    String country
+    CustomerId customerId,
+    StreetAddress streetAddress,
+    City city,
+    PostalCode postalCode,
+    Country country
 ) {}
 
 @ReadModel
 class Customer {
-    private String id = "";
-    @Pii(description = "Customer full legal name")
-    private String fullName = "";
-    @Pii(description = "Customer email address")
-    private String email = "";
-    @Pii(description = "Customer phone contact number")
-    private String phoneNumber = "";
-    @Pii(description = "Customer street address")
-    private String streetAddress = "";
-    @Pii(description = "City of residence")
-    private String city = "";
-    @Pii(description = "Postal code")
-    private String postalCode = "";
-    private String country = "";
+    private CustomerId id = new CustomerId("");
+    private FullName fullName = new FullName("");
+    private EmailAddress email = new EmailAddress("");
+    private PhoneNumber phoneNumber = new PhoneNumber("");
+    private StreetAddress streetAddress = new StreetAddress("");
+    private City city = new City("");
+    private PostalCode postalCode = new PostalCode("");
+    private Country country = new Country("");
     private String customerNumber = "";
     private String accountStatus = "active";
     private int totalOrders = 0;
 
     public Customer() {}
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public CustomerId getId() { return id; }
+    public void setId(CustomerId id) { this.id = id; }
 
-    public String getFullName() { return fullName; }
-    public void setFullName(String fullName) { this.fullName = fullName; }
+    public FullName getFullName() { return fullName; }
+    public void setFullName(FullName fullName) { this.fullName = fullName; }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public EmailAddress getEmail() { return email; }
+    public void setEmail(EmailAddress email) { this.email = email; }
 
-    public String getPhoneNumber() { return phoneNumber; }
-    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public PhoneNumber getPhoneNumber() { return phoneNumber; }
+    public void setPhoneNumber(PhoneNumber phoneNumber) { this.phoneNumber = phoneNumber; }
 
-    public String getStreetAddress() { return streetAddress; }
-    public void setStreetAddress(String streetAddress) { this.streetAddress = streetAddress; }
+    public StreetAddress getStreetAddress() { return streetAddress; }
+    public void setStreetAddress(StreetAddress streetAddress) { this.streetAddress = streetAddress; }
 
-    public String getCity() { return city; }
-    public void setCity(String city) { this.city = city; }
+    public City getCity() { return city; }
+    public void setCity(City city) { this.city = city; }
 
-    public String getPostalCode() { return postalCode; }
-    public void setPostalCode(String postalCode) { this.postalCode = postalCode; }
+    public PostalCode getPostalCode() { return postalCode; }
+    public void setPostalCode(PostalCode postalCode) { this.postalCode = postalCode; }
 
-    public String getCountry() { return country; }
-    public void setCountry(String country) { this.country = country; }
+    public Country getCountry() { return country; }
+    public void setCountry(Country country) { this.country = country; }
 
     public String getCustomerNumber() { return customerNumber; }
     public void setCustomerNumber(String customerNumber) { this.customerNumber = customerNumber; }
@@ -95,25 +99,19 @@ class Customer {
 
 @ReadModel
 class CustomerDetails {
-    private String id = "";
-    @Pii(description = "Customer full legal name")
-    private String fullName = "";
-    @Pii(description = "Customer email address")
-    private String email = "";
-    @Pii(description = "Customer phone contact number")
-    private String phoneNumber = "";
-    @Pii(description = "Customer street address")
-    private String streetAddress = "";
-    @Pii(description = "City of residence")
-    private String city = "";
-    @Pii(description = "Postal code")
-    private String postalCode = "";
-    private String country = "";
+    private CustomerId id = new CustomerId("");
+    private FullName fullName = new FullName("");
+    private EmailAddress email = new EmailAddress("");
+    private PhoneNumber phoneNumber = new PhoneNumber("");
+    private StreetAddress streetAddress = new StreetAddress("");
+    private City city = new City("");
+    private PostalCode postalCode = new PostalCode("");
+    private Country country = new Country("");
 
     public CustomerDetails() {}
 
-    public CustomerDetails(String id, String fullName, String email, String phoneNumber,
-                          String streetAddress, String city, String postalCode, String country) {
+    public CustomerDetails(CustomerId id, FullName fullName, EmailAddress email, PhoneNumber phoneNumber,
+                          StreetAddress streetAddress, City city, PostalCode postalCode, Country country) {
         this.id = id;
         this.fullName = fullName;
         this.email = email;
@@ -124,54 +122,54 @@ class CustomerDetails {
         this.country = country;
     }
 
-    public String getId() { return id; }
-    public void setId(String id) { this.id = id; }
+    public CustomerId getId() { return id; }
+    public void setId(CustomerId id) { this.id = id; }
 
-    public String getFullName() { return fullName; }
-    public void setFullName(String fullName) { this.fullName = fullName; }
+    public FullName getFullName() { return fullName; }
+    public void setFullName(FullName fullName) { this.fullName = fullName; }
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public EmailAddress getEmail() { return email; }
+    public void setEmail(EmailAddress email) { this.email = email; }
 
-    public String getPhoneNumber() { return phoneNumber; }
-    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    public PhoneNumber getPhoneNumber() { return phoneNumber; }
+    public void setPhoneNumber(PhoneNumber phoneNumber) { this.phoneNumber = phoneNumber; }
 
-    public String getStreetAddress() { return streetAddress; }
-    public void setStreetAddress(String streetAddress) { this.streetAddress = streetAddress; }
+    public StreetAddress getStreetAddress() { return streetAddress; }
+    public void setStreetAddress(StreetAddress streetAddress) { this.streetAddress = streetAddress; }
 
-    public String getCity() { return city; }
-    public void setCity(String city) { this.city = city; }
+    public City getCity() { return city; }
+    public void setCity(City city) { this.city = city; }
 
-    public String getPostalCode() { return postalCode; }
-    public void setPostalCode(String postalCode) { this.postalCode = postalCode; }
+    public PostalCode getPostalCode() { return postalCode; }
+    public void setPostalCode(PostalCode postalCode) { this.postalCode = postalCode; }
 
-    public String getCountry() { return country; }
-    public void setCountry(String country) { this.country = country; }
+    public Country getCountry() { return country; }
+    public void setCountry(Country country) { this.country = country; }
 }
 
 class SampleCustomerData {
     static final SampleCustomerData instance = new SampleCustomerData(
-        "c0000001-0000-0000-0000-000000000000",
-        "Eve Jackson",
-        "eve.jackson@example.com",
-        "+1-202-555-0143",
-        "742 Evergreen Terrace",
-        "Springfield",
-        "49007",
-        "USA"
+        new CustomerId("c0000001-0000-0000-0000-000000000000"),
+        new FullName("Eve Jackson"),
+        new EmailAddress("eve.jackson@example.com"),
+        new PhoneNumber("+1-202-555-0143"),
+        new StreetAddress("742 Evergreen Terrace"),
+        new City("Springfield"),
+        new PostalCode("49007"),
+        new Country("USA")
     );
 
-    final String id;
-    final String fullName;
-    final String email;
-    final String phoneNumber;
-    final String streetAddress;
-    final String city;
-    final String postalCode;
-    final String country;
+    final CustomerId id;
+    final FullName fullName;
+    final EmailAddress email;
+    final PhoneNumber phoneNumber;
+    final StreetAddress streetAddress;
+    final City city;
+    final PostalCode postalCode;
+    final Country country;
 
-    SampleCustomerData(String id, String fullName, String email, String phoneNumber,
-                       String streetAddress, String city, String postalCode, String country) {
+    SampleCustomerData(CustomerId id, FullName fullName, EmailAddress email, PhoneNumber phoneNumber,
+                       StreetAddress streetAddress, City city, PostalCode postalCode, Country country) {
         this.id = id;
         this.fullName = fullName;
         this.email = email;
@@ -186,14 +184,14 @@ class SampleCustomerData {
 public class Compliance {
     public static void registerCustomerWithPii(IEventStore store) throws Exception {
         SampleCustomerData sampleCustomer = SampleCustomerData.instance;
-        
+
         CustomerRegistered registered = new CustomerRegistered(
             sampleCustomer.id,
             sampleCustomer.email,
             sampleCustomer.fullName,
             sampleCustomer.phoneNumber
         );
-        
+
         CustomerAddressUpdated addressUpdated = new CustomerAddressUpdated(
             sampleCustomer.id,
             sampleCustomer.streetAddress,
@@ -201,10 +199,13 @@ public class Compliance {
             sampleCustomer.postalCode,
             sampleCustomer.country
         );
-        
-        AppendResult result1 = EventLogJavaBridge.append(store.getEventLog(), sampleCustomer.id, registered, null);
-        AppendResult result2 = EventLogJavaBridge.append(store.getEventLog(), sampleCustomer.id, addressUpdated, null);
-        
+
+        // The event source id is a String on the wire and always will be, so the blocking Java
+        // bridge takes one — getValue() is where a concept goes back to being a plain value.
+        String eventSourceId = sampleCustomer.id.getValue();
+        AppendResult result1 = EventLogJavaBridge.append(store.getEventLog(), eventSourceId, registered, null);
+        AppendResult result2 = EventLogJavaBridge.append(store.getEventLog(), eventSourceId, addressUpdated, null);
+
         if (!result1.isSuccess() || !result2.isSuccess()) {
             StringBuilder violations = new StringBuilder();
             if (!result1.isSuccess()) {
@@ -218,38 +219,39 @@ public class Compliance {
                     .map(v -> v.getMessage())
                     .collect(Collectors.joining("; ")));
             }
-            System.out.println("[pii] Could not register " + sampleCustomer.fullName + ": " + violations);
+            System.out.println("[pii] Could not register " + sampleCustomer.fullName.getValue() + ": " + violations);
             return;
         }
-        
+
         long lastSeq = EventLogJavaBridge.getSequenceNumber(result2);
-        System.out.println("[pii] Registered " + sampleCustomer.fullName + " (" + 
-                          sampleCustomer.id + ") with PII events up to sequence " + lastSeq);
+        System.out.println("[pii] Registered " + sampleCustomer.fullName.getValue() + " (" +
+                          eventSourceId + ") with PII events up to sequence " + lastSeq);
     }
 
     public static void showCustomerReadModel(IEventStore store) throws Exception {
         SampleCustomerData sampleCustomer = SampleCustomerData.instance;
         CustomerDetails customer = ReadModelsJavaBridge.getInstanceByKey(
             store.getReadModels(),
-            CustomerDetails.class, 
-            sampleCustomer.id
+            CustomerDetails.class,
+            sampleCustomer.id.getValue()
         );
-        
-        if (customer == null || customer.getId().isEmpty()) {
-            System.out.println("[pii] No CustomerDetails read model found for " + 
-                             sampleCustomer.id + ". Register the customer first (press C).");
+
+        if (customer == null || customer.getId().getValue().isEmpty()) {
+            System.out.println("[pii] No CustomerDetails read model found for " +
+                             sampleCustomer.id.getValue() + ". Register the customer first (press C).");
             return;
         }
 
-        System.out.println("Customer read model for " + customer.getId() + ":");
-        System.out.println(fmt("Full name", customer.getFullName(), true));
-        System.out.println(fmt("Email", customer.getEmail(), true));
-        System.out.println(fmt("Phone number", customer.getPhoneNumber(), true));
-        System.out.println(fmt("Street address", customer.getStreetAddress(), true));
-        System.out.println(fmt("City", customer.getCity(), true));
-        System.out.println(fmt("Postal code", customer.getPostalCode(), true));
-        System.out.println(fmt("Country", customer.getCountry(), false));
-        System.out.println("  PII fields are stored encrypted at rest — values above are the encrypted form.");
+        System.out.println("Customer read model for " + customer.getId().getValue() + ":");
+        System.out.println(fmt("Full name", customer.getFullName()));
+        System.out.println(fmt("Email", customer.getEmail()));
+        System.out.println(fmt("Phone number", customer.getPhoneNumber()));
+        System.out.println(fmt("Street address", customer.getStreetAddress()));
+        System.out.println(fmt("City", customer.getCity()));
+        System.out.println(fmt("Postal code", customer.getPostalCode()));
+        System.out.println(fmt("Country", customer.getCountry()));
+        System.out.println("  Every [PII] value above is encrypted at rest and decrypted on read. Press K to delete the");
+        System.out.println("  encryption key and view this again — the PII comes back empty, Country is untouched.");
     }
 
     /**
@@ -258,9 +260,9 @@ public class Compliance {
      */
     public static void deleteCustomerEncryptionKey(EventStore store) {
         SampleCustomerData sampleCustomer = SampleCustomerData.instance;
-        ComplianceServiceJavaBridge.deleteEncryptionKey(store.getCompliance(), sampleCustomer.id);
-        System.out.println("[pii] Deleted the encryption key for " + sampleCustomer.fullName + " (" +
-                          sampleCustomer.id + "). Its encrypted PII can no longer be decrypted.");
+        ComplianceServiceJavaBridge.deleteEncryptionKey(store.getCompliance(), sampleCustomer.id.getValue());
+        System.out.println("[pii] Deleted the encryption key for " + sampleCustomer.fullName.getValue() + " (" +
+                          sampleCustomer.id.getValue() + "). Its encrypted PII can no longer be decrypted.");
     }
 
     /**
@@ -302,14 +304,23 @@ public class Compliance {
      */
     public static void redactAllCustomerEvents(IEventStore store) throws Exception {
         SampleCustomerData sampleCustomer = SampleCustomerData.instance;
-        EventLogJavaBridge.redactForEventSource(store.getEventLog(), sampleCustomer.id, "Sample: GDPR erasure request", List.of());
-        System.out.println("[redact] Permanently redacted every event for " + sampleCustomer.fullName + " (" +
-                          sampleCustomer.id + "). This cannot be undone.");
+        EventLogJavaBridge.redactForEventSource(store.getEventLog(), sampleCustomer.id.getValue(),
+            "Sample: GDPR erasure request", List.of());
+        System.out.println("[redact] Permanently redacted every event for " + sampleCustomer.fullName.getValue() + " (" +
+                          sampleCustomer.id.getValue() + "). This cannot be undone.");
     }
 
-    private static String fmt(String label, String value, boolean isPii) {
-        String displayValue = value.isEmpty() ? "(empty)" : value;
-        String piiMarker = isPii ? "   [PII]" : "";
-        return "  " + String.format("%-15s", label) + ": " + displayValue + piiMarker;
+    /**
+     * Formats one value, reading the {@code [PII]} marker off the concept's own type.
+     * <p>
+     * Nothing here keeps a list of which fields are personal — {@link Pii} is metadata on the type,
+     * so anything that needs to know can ask, and it can never fall out of date with what is
+     * actually encrypted. Chronicle's schema generator answers the same question the same way.
+     */
+    private static String fmt(String label, ConceptAs<String> value) {
+        Pii pii = value.getClass().getAnnotation(Pii.class);
+        String marker = pii != null ? "   [PII: " + pii.description() + "]" : "";
+        String displayValue = value.getValue().isEmpty() ? "(empty)" : value.getValue();
+        return "  " + String.format("%-15s", label) + ": " + displayValue + marker;
     }
 }
