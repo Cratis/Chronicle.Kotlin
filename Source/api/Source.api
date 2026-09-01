@@ -2596,6 +2596,10 @@ public abstract interface annotation class io/cratis/chronicle/projections/Incre
 	public abstract fun value ()[Lio/cratis/chronicle/projections/Increment;
 }
 
+public final class io/cratis/chronicle/projections/InvalidPropertyForType : java/lang/IllegalArgumentException {
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;)V
+}
+
 public abstract interface annotation class io/cratis/chronicle/projections/Join : java/lang/annotation/Annotation {
 	public abstract fun eventPropertyName ()Ljava/lang/String;
 	public abstract fun eventType ()Ljava/lang/Class;
@@ -2833,6 +2837,25 @@ public abstract interface annotation class io/cratis/chronicle/projections/SetFr
 	public abstract fun value ()[Lio/cratis/chronicle/projections/SetFrom;
 }
 
+public abstract interface annotation class io/cratis/chronicle/projections/SetFromContext : java/lang/annotation/Annotation {
+	public abstract fun contextProperty ()Ljava/lang/String;
+	public abstract fun eventType ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/SetFromContext$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Lio/cratis/chronicle/projections/SetFromContext;
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/SetValue : java/lang/annotation/Annotation {
+	public abstract fun clear ()Z
+	public abstract fun eventType ()Ljava/lang/Class;
+	public abstract fun value ()Ljava/lang/String;
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/SetValue$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Lio/cratis/chronicle/projections/SetValue;
+}
+
 public abstract interface annotation class io/cratis/chronicle/projections/SubtractFrom : java/lang/annotation/Annotation {
 	public abstract fun eventPropertyName ()Ljava/lang/String;
 	public abstract fun eventType ()Ljava/lang/Class;
@@ -2881,6 +2904,9 @@ public final class io/cratis/chronicle/readModels/MaterializedReadModels : io/cr
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/ReadModels/MaterializedReadModelsGrpcKt$MaterializedReadModelsCoroutineStub;)V
 	public fun getInstances (Lkotlin/reflect/KClass;IILkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun observeInstances (Lkotlin/reflect/KClass;II)Lkotlinx/coroutines/flow/Flow;
+}
+
+public abstract interface annotation class io/cratis/chronicle/readModels/Passive : java/lang/annotation/Annotation {
 }
 
 public abstract interface annotation class io/cratis/chronicle/readModels/ReadModel : java/lang/annotation/Annotation {

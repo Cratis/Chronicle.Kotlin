@@ -32,7 +32,12 @@ import io.cratis.chronicle.observation.Reducer;
 import io.cratis.chronicle.observation.Replay;
 import io.cratis.chronicle.observation.ReplayContext;
 import io.cratis.chronicle.observation.Tag;
+import io.cratis.chronicle.projections.FromEvent;
+import io.cratis.chronicle.projections.SetFrom;
+import io.cratis.chronicle.projections.SetFromContext;
+import io.cratis.chronicle.projections.SetValue;
 import io.cratis.chronicle.readModels.IReadModelReactor;
+import io.cratis.chronicle.readModels.Passive;
 import io.cratis.chronicle.readModels.ReadModel;
 import io.cratis.chronicle.readModels.ReadModelChangeset;
 import io.cratis.chronicle.schemas.JsonSchemaType;
@@ -127,6 +132,43 @@ public final class JavaConformance {
 
     /** A record whose {@link ConceptAs} component is annotated {@link Pii} directly - the constructor-parameter shape. */
     public record CustomerRegisteredWithPiiConcept(CustomerId customerId, @Pii NationalIdentifier nationalId) {
+    }
+
+    // --- Model-bound projections ----------------------------------------------------------------
+
+    /** An event a model-bound projection sets a constant value from. */
+    @EventType
+    public record JavaOrderPlaced(String customerName) {
+    }
+
+    /** A second event, so {@link SetValue} can be shown repeated across events on the same property. */
+    @EventType
+    public record JavaOrderCancelled() {
+    }
+
+    /**
+     * A passive model-bound read model exercising {@link SetValue} (set, repeated, and clear) and
+     * {@link SetFromContext}, the way a Java caller declares them - as element arrays via repeated
+     * annotations, and named elements rather than Kotlin's positional/default-argument syntax.
+     */
+    @ReadModel
+    @FromEvent(eventType = JavaOrderPlaced.class)
+    @FromEvent(eventType = JavaOrderCancelled.class)
+    @Passive
+    public record JavaOrderStatus(
+            @SetFrom(propertyPath = "customerName", eventType = JavaOrderPlaced.class)
+            String customerName,
+
+            @SetValue(eventType = JavaOrderPlaced.class, value = "active")
+            @SetValue(eventType = JavaOrderCancelled.class, value = "cancelled")
+            String status,
+
+            @SetFromContext(eventType = JavaOrderPlaced.class, contextProperty = "occurred")
+            String placedAt,
+
+            @SetFrom(propertyPath = "customerName", eventType = JavaOrderPlaced.class)
+            @SetValue(eventType = JavaOrderCancelled.class, clear = true)
+            String note) {
     }
 
     // --- Observers ----------------------------------------------------------------------------
