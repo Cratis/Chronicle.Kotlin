@@ -297,6 +297,36 @@ data class CustomerRegistered(
 
 ---
 
+## @JsonSchemaType
+
+Overrides the type a class is represented as in the generated JSON schema.
+Apply it to a type that brings its own serializer and writes something other
+than its own shape on the wire — a value object collapsed into a single
+string, for instance. Without it the generated schema would describe the
+Kotlin shape, and the value would not round-trip through the kernel.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `type` | `KClass<*>` | *(required)* | Type the class is represented as. |
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.schemas.JsonSchemaType
+
+// Money serializes as a single string ("42.50 USD") through its own
+// serializer, so the schema needs to describe a string, not an object
+// with amount/currency fields.
+@JsonSchemaType(String::class)
+data class Money(val amount: Double, val currency: String)
+```
+
+Pointing the annotation at the annotated type itself throws
+`SelfReferencingJsonSchemaType` — generating that schema would recurse
+forever.
+
+---
+
 ## @FromEvent
 
 Applied to a read model class to declare that its fields are mapped from an

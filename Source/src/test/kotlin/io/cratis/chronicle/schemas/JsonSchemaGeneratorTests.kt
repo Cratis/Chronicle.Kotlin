@@ -13,6 +13,14 @@ import io.cratis.chronicle.geospatial.LineString
 import io.cratis.chronicle.geospatial.Point
 import io.cratis.chronicle.geospatial.Polygon
 import io.cratis.chronicle.readModels.ReadModel
+import java.math.BigDecimal
+import java.time.Duration
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.OffsetDateTime
+import java.util.UUID
 import kotlin.reflect.KClass
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -87,6 +95,43 @@ private data class Territory(
     val area: Polygon
 )
 
+private data class Numbers(
+    val small: Short,
+    val medium: Int,
+    val large: Long,
+    val single: Float,
+    val precise: Double,
+    val octet: Byte,
+    val price: BigDecimal
+)
+
+private data class ScalarFormats(
+    val id: UUID,
+    val decidedAt: LocalDateTime,
+    val validUntil: OffsetDateTime,
+    val recordedAt: Instant,
+    val startDate: LocalDate,
+    val startTime: LocalTime,
+    val timeout: Duration,
+    val payload: ByteArray
+)
+
+private data class MemberId(override val value: UUID) : ConceptAs<UUID>
+
+private data class LastSeen(override val value: Instant) : ConceptAs<Instant>
+
+private data class Membership(val member: MemberId, val lastSeen: LastSeen)
+
+@JsonSchemaType(String::class)
+private data class Price(val amount: Long, val currency: String)
+
+private data class Invoice(val total: Price)
+
+@JsonSchemaType(SelfReferencing::class)
+private data class SelfReferencing(val value: String)
+
+private data class HasSelfReferencing(val ref: SelfReferencing)
+
 class JsonSchemaGeneratorTests {
 
     @Test
@@ -126,13 +171,22 @@ class JsonSchemaGeneratorTests {
     }
 
     @Test
-    fun `generate maps enum properties to string schemas carrying the enum values`() {
+    fun `generate maps enum properties to integer schemas carrying the ordinal values`() {
         val properties = propertiesOf(Person::class)
         val status = properties["status"] as Map<*, *>
-        assertEquals("string", status["type"])
+        assertEquals("integer", status["type"])
         @Suppress("UNCHECKED_CAST")
-        val enumValues = status["enum"] as List<String>
-        assertEquals(listOf("Active", "Inactive"), enumValues)
+        val enumValues = status["enum"] as List<Double>
+        assertEquals(listOf(0.0, 1.0), enumValues)
+    }
+
+    @Test
+    fun `generate carries the enum constant names alongside the ordinal values as x-enumNames`() {
+        val properties = propertiesOf(Person::class)
+        val status = properties["status"] as Map<*, *>
+        @Suppress("UNCHECKED_CAST")
+        val enumNames = status["x-enumNames"] as List<String>
+        assertEquals(listOf("Active", "Inactive"), enumNames)
     }
 
     @Test
@@ -251,6 +305,83 @@ class JsonSchemaGeneratorTests {
         val area = properties["area"] as Map<*, *>
         assertEquals("object", area["type"])
         assertFalse(area.containsKey("properties"))
+    }
+
+    @Test
+    fun `generate marks integer properties with their kernel-recognized format`() {
+        val properties = propertiesOf(Numbers::class)
+        assertEquals("int16", formatOf(properties, "small"))
+        assertEquals("int32", formatOf(properties, "medium"))
+        assertEquals("int64", formatOf(properties, "large"))
+        assertEquals("byte", formatOf(properties, "octet"))
+        listOf("small", "medium", "large", "octet").forEach { assertEquals("integer", typeOf(properties, it)) }
+    }
+
+    @Test
+    fun `generate marks floating point and decimal properties with their kernel-recognized format`() {
+        val properties = propertiesOf(Numbers::class)
+        assertEquals("float", formatOf(properties, "single"))
+        assertEquals("double", formatOf(properties, "precise"))
+        assertEquals("decimal", formatOf(properties, "price"))
+        listOf("single", "precise", "price").forEach { assertEquals("number", typeOf(properties, it)) }
+    }
+
+    @Test
+    fun `generate marks a UUID property as a guid-formatted string`() {
+        val properties = propertiesOf(ScalarFormats::class)
+        assertEquals("string", typeOf(properties, "id"))
+        assertEquals("guid", formatOf(properties, "id"))
+    }
+
+    @Test
+    fun `generate marks date and time properties with their kernel-recognized format`() {
+        val properties = propertiesOf(ScalarFormats::class)
+        assertEquals("date-time", formatOf(properties, "decidedAt"))
+        assertEquals("date-time-offset", formatOf(properties, "validUntil"))
+        assertEquals("date-time-offset", formatOf(properties, "recordedAt"))
+        assertEquals("date", formatOf(properties, "startDate"))
+        assertEquals("time", formatOf(properties, "startTime"))
+        assertEquals("duration", formatOf(properties, "timeout"))
+        listOf("decidedAt", "validUntil", "recordedAt", "startDate", "startTime", "timeout")
+            .forEach { assertEquals("string", typeOf(properties, it)) }
+    }
+
+    @Test
+    fun `generate marks a ByteArray property as a byte-array-formatted string`() {
+        val properties = propertiesOf(ScalarFormats::class)
+        assertEquals("string", typeOf(properties, "payload"))
+        assertEquals("byte-array", formatOf(properties, "payload"))
+    }
+
+    @Test
+    fun `a concept wrapping a UUID carries the guid format and the wrapped scalar type`() {
+        val properties = propertiesOf(Membership::class)
+        val member = properties["member"] as Map<*, *>
+        assertEquals("string", member["type"])
+        assertEquals("guid", member["format"])
+    }
+
+    @Test
+    fun `a concept wrapping an Instant carries the date-time-offset format`() {
+        val properties = propertiesOf(Membership::class)
+        val lastSeen = properties["lastSeen"] as Map<*, *>
+        assertEquals("string", lastSeen["type"])
+        assertEquals("date-time-offset", lastSeen["format"])
+    }
+
+    @Test
+    fun `a type annotated with JsonSchemaType is represented as its declared override type`() {
+        val properties = propertiesOf(Invoice::class)
+        val total = properties["total"] as Map<*, *>
+        assertEquals("string", total["type"])
+        assertFalse(total.containsKey("properties"))
+    }
+
+    @Test
+    fun `a type annotated with JsonSchemaType pointing at itself throws`() {
+        assertThrows(SelfReferencingJsonSchemaType::class.java) {
+            JsonSchemaGenerator.generate(HasSelfReferencing::class)
+        }
     }
 
     private fun parse(cls: KClass<*>): Map<String, Any?> {
