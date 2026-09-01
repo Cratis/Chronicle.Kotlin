@@ -297,6 +297,36 @@ data class CustomerRegistered(
 
 ---
 
+## @Subject
+
+Marks a property as the compliance subject - the identity a release
+decrypts [@Pii](#pii) values against. `IReadModelsService.release` uses it
+to pick which property carries the subject; without it, release falls back
+to a property named `id` (case-insensitive), the convention every read
+model followed before this annotation existed.
+
+Add it whenever a read model's subject is not its `id` - for example a
+support ticket keyed by ticket id but holding a customer's PII, where the
+customer, not the ticket, is who the encryption key belongs to.
+
+No parameters.
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.Subject
+import io.cratis.chronicle.readModels.ReadModel
+
+@ReadModel
+data class SupportTicketSummary(
+    val id: String = "",
+    @Subject val customerId: String = "",
+    val topic: String = ""
+)
+```
+
+---
+
 ## @FromEvent
 
 Applied to a read model class to declare that its fields are mapped from an

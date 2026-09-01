@@ -8,7 +8,9 @@ import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.Readmodels
 import bcl.Bcl
+import io.cratis.chronicle.Subject
 import io.cratis.chronicle.compliance.ComplianceService
+import io.cratis.chronicle.concepts.ConceptAs
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.schemas.JsonSchemaGenerator
@@ -18,8 +20,11 @@ import kotlinx.coroutines.flow.map
 import java.time.Instant
 import java.util.UUID
 import kotlin.reflect.KClass
+import kotlin.reflect.KProperty1
 import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.full.hasAnnotation
 import kotlin.reflect.full.memberProperties
+import kotlin.reflect.jvm.isAccessible
 
 /** Resolves the read model identifier for [this] class: the [ReadModel.id] override, or the class simple name. */
 internal fun KClass<*>.readModelIdentifier(): String {
@@ -170,12 +175,45 @@ class ReadModelsService(
 
     override suspend fun <T : Any> releaseMany(instances: List<T>): List<T> = instances.map { release(it) }
 
-    /** Resolves the compliance subject for [instance] by looking for an `id` property, falling back to none. */
-    private fun resolveSubject(instance: Any): String? =
-        instance::class.memberProperties
+    /**
+     * Resolves the compliance subject for [instance].
+     *
+     * Resolution order: a property annotated [io.cratis.chronicle.Subject] that carries a value,
+     * falling back to a property named `id` (case-insensitive) - the convention every read model
+     * followed before [io.cratis.chronicle.Subject] existed, kept so nothing that already relies on
+     * it breaks.
+     */
+    private fun resolveSubject(instance: Any): String? {
+        val properties = instance::class.memberProperties
+        val explicit = properties
+            .firstOrNull { it.hasAnnotation<Subject>() }
+            ?.let { subjectValueOf(readProperty(it, instance)) }
+
+        return explicit ?: properties
             .firstOrNull { it.name.equals("id", ignoreCase = true) }
-            ?.call(instance)
-            ?.toString()
+            ?.let { subjectValueOf(readProperty(it, instance)) }
+    }
+
+    /**
+     * Reads [property] off [instance], forcing accessibility first.
+     *
+     * A Kotlin data class exposes a public getter, so this changes nothing for one. A Java `record`
+     * component has no such getter by Kotlin's reckoning - reflection falls back to the backing
+     * field directly, which a record always declares `private final` - so without this the call
+     * throws [IllegalAccessException] for every Java-authored read model.
+     */
+    private fun readProperty(property: KProperty1<out Any, *>, instance: Any): Any? {
+        property.isAccessible = true
+        return property.call(instance)
+    }
+
+    /** Unwraps a resolved subject property's value to the string a release call needs. */
+    private fun subjectValueOf(value: Any?): String? = when (value) {
+        null -> null
+        is ConceptAs<*> -> subjectValueOf(value.value)
+        is String -> value.ifEmpty { null }
+        else -> value.toString().ifEmpty { null }
+    }
 
     private fun <T : Any> Readmodels.ReadModelSnapshot.toTyped(readModelClass: KClass<T>): ReadModelSnapshot<T> =
         ReadModelSnapshot(

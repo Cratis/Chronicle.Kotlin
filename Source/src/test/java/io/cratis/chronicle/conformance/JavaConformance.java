@@ -4,6 +4,7 @@
 package io.cratis.chronicle.conformance;
 
 import io.cratis.chronicle.ChronicleOptions;
+import io.cratis.chronicle.Subject;
 import io.cratis.chronicle.auditing.Causation;
 import io.cratis.chronicle.auditing.CausationType;
 import io.cratis.chronicle.compliance.Pii;
@@ -158,6 +159,11 @@ public final class JavaConformance {
 
     /** A record whose {@link ConceptAs} component is annotated {@link Pii} directly - the constructor-parameter shape. */
     public record CustomerRegisteredWithPiiConcept(CustomerId customerId, @Pii NationalIdentifier nationalId) {
+    }
+
+    /** A read model whose compliance subject is not its {@code id} property. */
+    @ReadModel
+    public record CustomerOrderSummary(String id, @Subject String customerId, String status) {
     }
 
     // --- Observers ----------------------------------------------------------------------------

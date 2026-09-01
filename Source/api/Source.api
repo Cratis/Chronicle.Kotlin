@@ -147,6 +147,9 @@ public abstract interface class io/cratis/chronicle/IEventStore {
 	public abstract fun registerAll (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
+public abstract interface annotation class io/cratis/chronicle/Subject : java/lang/annotation/Annotation {
+}
+
 public final class io/cratis/chronicle/artifacts/ArtifactActivationFailed : java/lang/Exception {
 	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/Throwable;)V
 }
