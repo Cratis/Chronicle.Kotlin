@@ -257,10 +257,21 @@ Marks a class as a Chronicle event seeder. The class must implement `ICanSeedEve
 
 ## @Pii
 
-Marks a property as personally identifiable information. Chronicle encrypts
-annotated fields at rest using a per-subject key. See [PII
-Attribute](/chronicle/compliance/pii/) for the full compliance model this
-participates in.
+Marks a property, constructor parameter, field, or type as personally
+identifiable information. Chronicle encrypts annotated values at rest using a
+per-subject key. See [PII Attribute](/chronicle/compliance/pii/) for the full
+compliance model this participates in.
+
+Applying it directly to a property works, but the declare-once pattern is to
+put it on a `ConceptAs<T>` type instead: every event or read model property
+that reuses that concept is PII automatically, with nothing to repeat at each
+call site. It can also mark a composite value object type, in which case
+every value the type holds is treated as PII wherever that type appears.
+
+`@Pii` cannot be applied to an `EventSourceId` concept — Chronicle uses the
+event source id to look up the encryption key for every other PII value
+belonging to that source, so encrypting the id itself would make its own key
+unfindable.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
@@ -272,10 +283,15 @@ participates in.
 import io.cratis.chronicle.compliance.Pii
 import io.cratis.chronicle.events.EventType
 
+// Declared once on the concept, every event or read model property that
+// reuses EmailAddress is PII automatically.
+@Pii(description = "Customer email address")
+data class EmailAddress(override val value: String) : io.cratis.chronicle.concepts.ConceptAs<String>
+
 @EventType
 data class CustomerRegistered(
     val customerId: String,
-    @Pii(description = "Customer email address") val email: String
+    val email: EmailAddress
 )
 ```
 
