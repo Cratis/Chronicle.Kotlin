@@ -1,12 +1,12 @@
 ```java
 import io.cratis.chronicle.events.EventType;
 
-@EventType(id = "ComplianceClientEmployeeRegisteredWithConcept")
+@EventType
 record ComplianceClientEmployeeRegisteredWithConcept(ComplianceClientPersonName name, String department) {
 }
 
 // also encrypted
-@EventType(id = "ComplianceClientEmployeeNameChanged")
+@EventType
 record ComplianceClientEmployeeNameChanged(ComplianceClientPersonName newName) {
 }
 ```

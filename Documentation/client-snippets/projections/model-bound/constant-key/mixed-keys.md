@@ -4,10 +4,10 @@ import io.cratis.chronicle.projections.Count
 import io.cratis.chronicle.projections.FromEvent
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-constant-key-user-registered")
+@EventType
 class MbConstantKeyUserRegistered
 
-@EventType(id = "mb-constant-key-order-placed-global")
+@EventType
 class MbConstantKeyOrderPlacedGlobal
 
 @ReadModel

@@ -16,7 +16,7 @@ class InitialValuesAddress {
     }
 }
 
-@EventType(id = "initial-values-customer-registered")
+@EventType
 record InitialValuesCustomerRegistered(String name) {}
 
 class InitialValuesCustomerRecord {

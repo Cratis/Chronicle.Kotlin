@@ -3,13 +3,13 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 
-@EventType(id = "slice-created-for-nested-basic")
+@EventType
 record SliceCreatedForNestedBasic(String name) {}
 
-@EventType(id = "command-set-for-declarative-nested-basic")
+@EventType
 record CommandSetForDeclarativeNestedBasic(String name, String schema) {}
 
-@EventType(id = "command-cleared-for-declarative-nested-basic")
+@EventType
 record CommandClearedForDeclarativeNestedBasic() {}
 
 record SliceForNestedBasic(String name, CommandItemForNestedBasic command) {}

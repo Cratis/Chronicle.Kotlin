@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "event-processing-minimal-metric-recorded")
+@EventType
 data class EventProcessingMinimalMetricRecorded(val value: Double)
 
 @ReadModel

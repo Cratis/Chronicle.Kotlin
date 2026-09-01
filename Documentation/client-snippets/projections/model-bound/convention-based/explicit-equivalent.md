@@ -4,7 +4,7 @@ import io.cratis.chronicle.projections.FromEvent
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "explicit-convention-user-registered")
+@EventType
 data class ExplicitConventionUserRegistered(
     val name: String,
     val email: String,

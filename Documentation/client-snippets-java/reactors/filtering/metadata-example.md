@@ -4,7 +4,7 @@ import io.cratis.chronicle.eventSequences.IEventLog;
 import io.cratis.chronicle.java.AppendOptionsBuilder;
 import io.cratis.chronicle.java.EventLogJavaBridge;
 
-@EventType(id = "reactors-filtering-order-placed")
+@EventType
 record ReactorsFilteringOrderPlaced(double totalAmount) {}
 
 class ReactorsFilteringMetadataExampleService {

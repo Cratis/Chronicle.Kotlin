@@ -8,7 +8,7 @@ enum class InitialValuesOrderStatus {
     Submitted
 }
 
-@EventType(id = "initial-values-order-submitted")
+@EventType
 data class InitialValuesOrderSubmitted(val customerName: String, val totalAmount: Double)
 
 data class InitialValuesOrderSummary(

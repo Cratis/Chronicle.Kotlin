@@ -7,16 +7,16 @@ import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.projections.SetValue
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-clearing-contract-signed")
+@EventType
 data class MbClearingContractSigned(val title: String, val noticeGiven: String)
 
-@EventType(id = "mb-clearing-notice-withdrawn")
+@EventType
 data class MbClearingNoticeWithdrawn(val placeholder: Boolean = true)
 
-@EventType(id = "mb-clearing-contract-ended")
+@EventType
 data class MbClearingContractEnded(val placeholder: Boolean = true)
 
-@EventType(id = "mb-clearing-employee-hired")
+@EventType
 data class MbClearingEmployeeHired(val placeholder: Boolean = true)
 
 @FromEvent(MbClearingContractSigned::class)

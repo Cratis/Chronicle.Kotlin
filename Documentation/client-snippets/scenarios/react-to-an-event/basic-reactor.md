@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reactor
 
-@EventType(id = "scenarios-react-book-returned")
+@EventType
 data class ScenariosReactBookReturned(val isbn: String)
 
 interface ScenariosReactNotificationService {

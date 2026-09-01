@@ -8,10 +8,10 @@ import io.cratis.chronicle.readModels.ReadModel;
 
 import java.util.List;
 
-@EventType(id = "mb-children-no-automap-order-placed")
+@EventType
 record MbChildrenNoAutoMapOrderPlaced(String orderId) {}
 
-@EventType(id = "mb-children-no-automap-line-item-added")
+@EventType
 record MbChildrenNoAutoMapLineItemAdded(
     String itemId,
     String productName,

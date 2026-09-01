@@ -5,7 +5,7 @@ import io.cratis.chronicle.projections.IProjectionFor;
 
 import java.util.List;
 
-@EventType(id = "group-created-with-default-parent-key")
+@EventType
 record GroupCreatedWithDefaultParentKey(String name) {}
 
 record GroupWithDefaultParentKey(String name, List<GroupMemberWithDefaultParentKey> members) {}

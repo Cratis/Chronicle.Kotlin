@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventContext;
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.observation.Reactor;
 
-@EventType(id = "subscriptions-explicit-order-placed")
+@EventType
 record SubscriptionsExplicitOrderPlaced(String orderId, double amount) {}
 
 @Reactor

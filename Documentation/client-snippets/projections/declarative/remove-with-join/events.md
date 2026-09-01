@@ -1,25 +1,25 @@
 ```kotlin
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "dec-remove-with-join-user-registered")
+@EventType
 data class DecRemoveWithJoinUserRegistered(val username: String, val email: String)
 
-@EventType(id = "dec-remove-with-join-user-joined-group")
+@EventType
 data class DecRemoveWithJoinUserJoinedGroup(val userId: String, val groupId: String, val role: String)
 
-@EventType(id = "dec-remove-with-join-user-left-group")
+@EventType
 data class DecRemoveWithJoinUserLeftGroup(val userId: String, val groupId: String)
 
-@EventType(id = "dec-remove-with-join-group-created")
+@EventType
 data class DecRemoveWithJoinGroupCreated(val groupName: String, val groupType: String)
 
-@EventType(id = "dec-remove-with-join-group-disbanded")
+@EventType
 data class DecRemoveWithJoinGroupDisbanded(val placeholder: Boolean = true)
 
-@EventType(id = "dec-remove-with-join-developer-onboarded")
+@EventType
 data class DecRemoveWithJoinDeveloperOnboarded(val name: String, val skills: List<String>)
 
-@EventType(id = "dec-remove-with-join-developer-assigned-to-project")
+@EventType
 data class DecRemoveWithJoinDeveloperAssignedToProject(
     val developerId: String,
     val projectId: String,
@@ -27,19 +27,19 @@ data class DecRemoveWithJoinDeveloperAssignedToProject(
     val allocation: Int
 )
 
-@EventType(id = "dec-remove-with-join-developer-unassigned-from-project")
+@EventType
 data class DecRemoveWithJoinDeveloperUnassignedFromProject(val developerId: String, val projectId: String)
 
-@EventType(id = "dec-remove-with-join-project-initiated")
+@EventType
 data class DecRemoveWithJoinProjectInitiated(
     val projectName: String,
     val priority: String,
     val deadline: java.time.Instant
 )
 
-@EventType(id = "dec-remove-with-join-project-cancelled")
+@EventType
 data class DecRemoveWithJoinProjectCancelled(val placeholder: Boolean = true)
 
-@EventType(id = "dec-remove-with-join-project-completed")
+@EventType
 data class DecRemoveWithJoinProjectCompleted(val placeholder: Boolean = true)
 ```

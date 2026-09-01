@@ -6,7 +6,7 @@ import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.observation.FilterEventsByTag
 import io.cratis.chronicle.observation.Reactor
 
-@EventType(id = "reactors-filtering-by-tag-order-placed")
+@EventType
 data class ReactorsFilteringByTagOrderPlaced(val totalAmount: Double)
 
 class ReactorsFilteringByTagOrderService(private val eventLog: IEventLog) {

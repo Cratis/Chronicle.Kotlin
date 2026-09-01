@@ -3,7 +3,7 @@ import io.cratis.chronicle.constraints.IConstraint
 import io.cratis.chronicle.constraints.IConstraintBuilder
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "constraints-unique-message-project-created")
+@EventType
 data class ConstraintsUniqueMessageProjectCreated(val name: String)
 
 class ConstraintsUniqueMessageProjectName : IConstraint {

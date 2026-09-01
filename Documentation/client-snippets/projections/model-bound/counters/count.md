@@ -4,10 +4,10 @@ import io.cratis.chronicle.projections.Count
 import io.cratis.chronicle.projections.FromEvent
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-counters-order-placed")
+@EventType
 class MbCountersOrderPlaced
 
-@EventType(id = "mb-counters-order-cancelled")
+@EventType
 class MbCountersOrderCancelled
 
 @ReadModel

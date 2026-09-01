@@ -7,7 +7,7 @@ import io.cratis.chronicle.java.EventLogJavaBridge;
 import io.cratis.chronicle.observation.FilterEventsByTag;
 import io.cratis.chronicle.observation.Reactor;
 
-@EventType(id = "reactors-filtering-by-tag-order-placed")
+@EventType
 record ReactorsFilteringByTagOrderPlaced(double totalAmount) {}
 
 class ReactorsFilteringByTagOrderService {

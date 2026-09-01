@@ -5,7 +5,7 @@ import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
 import java.time.Instant
 
-@EventType(id = "passive-reducers-transaction-completed")
+@EventType
 data class PassiveReducersTransactionCompleted(val amount: Double)
 
 @ReadModel

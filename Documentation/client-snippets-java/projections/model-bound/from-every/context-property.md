@@ -4,10 +4,10 @@ import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.FromEvery;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "inventory-product-registered-for-every")
+@EventType
 record InventoryProductRegisteredForEvery(String productName) {}
 
-@EventType(id = "inventory-items-adjusted-for-every")
+@EventType
 record InventoryItemsAdjustedForEvery(int quantity) {}
 
 @ReadModel

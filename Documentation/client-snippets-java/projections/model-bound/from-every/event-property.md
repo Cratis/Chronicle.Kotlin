@@ -10,10 +10,10 @@ enum OrderStateFromEvery {
     Shipped
 }
 
-@EventType(id = "order-confirmed-for-every")
+@EventType
 record OrderConfirmedForEvery(OrderStateFromEvery status) {}
 
-@EventType(id = "order-shipped-for-every")
+@EventType
 record OrderShippedForEvery(OrderStateFromEvery status) {}
 
 @ReadModel

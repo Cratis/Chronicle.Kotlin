@@ -5,10 +5,10 @@ import io.cratis.chronicle.projections.RemovedWith
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-removal-account-opened")
+@EventType
 data class MbRemovalAccountOpened(val name: String, val balance: Double)
 
-@EventType(id = "mb-removal-account-closed")
+@EventType
 class MbRemovalAccountClosed
 
 @ReadModel

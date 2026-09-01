@@ -5,7 +5,7 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.java.WebhookDefinitionBuilderJavaBridge;
 import io.cratis.chronicle.java.WebhooksServiceJavaBridge;
 
-@EventType(id = "webhooks-index-order-placed")
+@EventType
 record WebhooksIndexOrderPlaced(String orderId) {}
 
 class WebhooksIndexRegistration {

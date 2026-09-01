@@ -4,7 +4,7 @@ import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 import java.math.BigDecimal
 
-@EventType(id = "dec-functions-transaction")
+@EventType
 data class DecFunctionsTransaction(val amount: BigDecimal)
 
 data class DecFunctionsTransactionSummary(

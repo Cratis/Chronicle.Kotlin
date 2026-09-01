@@ -2,16 +2,16 @@
 import io.cratis.chronicle.events.EventType;
 
 // User stream events
-@EventType(id = "dec-joins-user-created")
+@EventType
 record DecJoinsUserCreated(String name, String email) {}
 
-@EventType(id = "dec-joins-user-assigned-to-group")
+@EventType
 record DecJoinsUserAssignedToGroup(String userId, String groupId) {}
 
 // Group stream events
-@EventType(id = "dec-joins-group-created")
+@EventType
 record DecJoinsGroupCreated(String name, String description) {}
 
-@EventType(id = "dec-joins-group-renamed")
+@EventType
 record DecJoinsGroupRenamed(String newName) {}
 ```

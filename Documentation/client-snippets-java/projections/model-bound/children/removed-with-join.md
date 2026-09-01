@@ -9,10 +9,10 @@ import io.cratis.chronicle.readModels.ReadModel;
 import java.util.Collections;
 import java.util.List;
 
-@EventType(id = "mb-children-removed-feature-activated")
+@EventType
 record MbChildrenRemovedFeatureActivated(String featureId, String name) {}
 
-@EventType(id = "mb-children-removed-feature-deactivated")
+@EventType
 record MbChildrenRemovedFeatureDeactivated(String featureId) {}
 
 @ReadModel

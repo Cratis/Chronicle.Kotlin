@@ -5,7 +5,7 @@ import io.cratis.chronicle.projections.SetFrom;
 import io.cratis.chronicle.projections.SetFromContext;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "order-placed-for-audit")
+@EventType
 record OrderPlacedForAudit(String customerName) {}
 
 @ReadModel

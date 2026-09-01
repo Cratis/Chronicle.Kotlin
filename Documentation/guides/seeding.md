@@ -12,14 +12,14 @@ Seeding](/chronicle/event-seeding/) for the concept this page assumes.
 ```kotlin
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "account-opened")
+@EventType
 data class AccountOpened(
     val accountId: String,
     val ownerName: String,
     val initialBalance: Double
 )
 
-@EventType(id = "funds-deposited")
+@EventType
 data class FundsDeposited(val accountId: String, val amount: Double)
 ```
 

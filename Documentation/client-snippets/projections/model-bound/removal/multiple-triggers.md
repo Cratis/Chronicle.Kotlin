@@ -6,16 +6,16 @@ import io.cratis.chronicle.projections.RemovedWithJoin
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-removal-multiple-account-opened")
+@EventType
 data class MbRemovalMultipleAccountOpened(val name: String)
 
-@EventType(id = "mb-removal-multiple-account-closed")
+@EventType
 class MbRemovalMultipleAccountClosed
 
-@EventType(id = "mb-removal-multiple-account-merged")
+@EventType
 data class MbRemovalMultipleAccountMerged(val sourceAccountId: String)
 
-@EventType(id = "mb-removal-multiple-organization-closed")
+@EventType
 class MbRemovalMultipleOrganizationClosed
 
 @ReadModel

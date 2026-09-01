@@ -3,16 +3,16 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 
-@EventType(id = "slice-created-for-nested-automap")
+@EventType
 record SliceCreatedForNestedAutoMap(String name) {}
 
-@EventType(id = "command-set-for-nested-automap")
+@EventType
 record CommandSetForNestedAutoMap(String name, String schema) {}
 
-@EventType(id = "command-updated-for-nested-automap")
+@EventType
 record CommandUpdatedForNestedAutoMap(String schema) {}
 
-@EventType(id = "command-cleared-for-nested-automap")
+@EventType
 record CommandClearedForNestedAutoMap() {}
 
 record SliceForNestedAutoMap(String name, CommandItemForNestedAutoMap command) {}

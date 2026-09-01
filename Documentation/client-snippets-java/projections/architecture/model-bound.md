@@ -4,7 +4,7 @@ import io.cratis.chronicle.projections.Count;
 import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "architecture-model-bound-item-added")
+@EventType
 record ArchitectureModelBoundItemAdded(String category) {}
 
 @ReadModel

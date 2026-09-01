@@ -4,17 +4,17 @@ import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 import java.time.Instant
 
-@EventType(id = "product-listed-with-nested-promotion")
+@EventType
 data class ProductListedWithNestedPromotion(val name: String, val basePrice: Double)
 
-@EventType(id = "promotion-applied-with-nested-promotion")
+@EventType
 data class PromotionAppliedWithNestedPromotion(
     val label: String,
     val discountPercent: Int,
     val validUntil: Instant
 )
 
-@EventType(id = "promotion-removed-with-nested-promotion")
+@EventType
 data class PromotionRemovedWithNestedPromotion(val placeholder: Boolean = true)
 
 data class ProductWithNestedPromotion(

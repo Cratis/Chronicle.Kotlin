@@ -5,10 +5,10 @@ import io.cratis.chronicle.projections.FromEvent
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "agg-only-arrangement-set")
+@EventType
 data class AggOnlyArrangementSet(val location: String)
 
-@EventType(id = "agg-only-candidate-submitted")
+@EventType
 data class AggOnlyCandidateSubmitted(val name: String, val location: String)
 
 @ReadModel

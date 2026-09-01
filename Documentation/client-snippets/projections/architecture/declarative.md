@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "architecture-declarative-item-added")
+@EventType
 data class ArchitectureDeclarativeItemAdded(val category: String)
 
 data class ArchitectureDeclarativeSummary(

@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "event-processing-basic-sync-recorded")
+@EventType
 data class EventProcessingBasicSyncRecorded(val value: Double)
 
 @ReadModel

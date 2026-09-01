@@ -5,13 +5,13 @@ import io.cratis.chronicle.projections.IProjectionFor;
 
 import java.util.List;
 
-@EventType(id = "group-created-with-multiple-collections")
+@EventType
 record GroupCreatedWithMultipleCollections(String name) {}
 
-@EventType(id = "member-added-to-group")
+@EventType
 record MemberAddedToGroup(String userId, String role) {}
 
-@EventType(id = "task-assigned-to-group")
+@EventType
 record TaskAssignedToGroup(String taskId, String title) {}
 
 record GroupWithMultipleCollections(

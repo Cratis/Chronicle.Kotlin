@@ -6,7 +6,7 @@ import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.observation.EventSourceType
 import io.cratis.chronicle.observation.Reactor
 
-@EventType(id = "reactors-filtering-customer-registered")
+@EventType
 data class ReactorsFilteringCustomerRegistered(val emailAddress: String)
 
 class ReactorsFilteringCustomerService(private val eventLog: IEventLog) {

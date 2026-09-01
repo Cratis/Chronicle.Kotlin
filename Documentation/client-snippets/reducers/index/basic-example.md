@@ -4,10 +4,10 @@ import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
 import java.time.Instant
 
-@EventType(id = "reducers-index-deposit-made")
+@EventType
 data class ReducersIndexDepositMade(val amount: Double)
 
-@EventType(id = "reducers-index-withdrawal-made")
+@EventType
 data class ReducersIndexWithdrawalMade(val amount: Double)
 
 @ReadModel

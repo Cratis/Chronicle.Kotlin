@@ -5,10 +5,10 @@ import io.cratis.chronicle.projections.NoAutoMap
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "no-auto-map-work-arrangement-set")
+@EventType
 data class NoAutoMapWorkArrangementSet(val location: String, val workMode: Int)
 
-@EventType(id = "no-auto-map-candidate-submitted")
+@EventType
 data class NoAutoMapCandidateSubmitted(val name: String, val location: String)
 
 @ReadModel

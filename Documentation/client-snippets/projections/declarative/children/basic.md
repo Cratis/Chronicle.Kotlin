@@ -3,13 +3,13 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "group-created-for-children")
+@EventType
 data class GroupCreatedForChildren(val name: String, val description: String)
 
-@EventType(id = "user-added-to-group-for-children")
+@EventType
 data class UserAddedToGroupForChildren(val userId: String, val role: String)
 
-@EventType(id = "user-role-changed-for-children")
+@EventType
 data class UserRoleChangedForChildren(val userId: String, val role: String)
 
 data class GroupForChildren(

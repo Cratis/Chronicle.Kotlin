@@ -7,7 +7,7 @@ import io.cratis.chronicle.java.EventLogJavaBridge;
 import io.cratis.chronicle.observation.EventSourceType;
 import io.cratis.chronicle.observation.Reactor;
 
-@EventType(id = "reactors-filtering-customer-registered")
+@EventType
 record ReactorsFilteringCustomerRegistered(String emailAddress) {}
 
 class ReactorsFilteringCustomerService {

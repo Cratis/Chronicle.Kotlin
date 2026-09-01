@@ -5,13 +5,13 @@ import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
 import java.util.UUID
 
-@EventType(id = "event-processing-account-opened")
+@EventType
 data class EventProcessingAccountOpened(val accountId: UUID)
 
-@EventType(id = "event-processing-deposit-made")
+@EventType
 data class EventProcessingDepositMade(val amount: Double)
 
-@EventType(id = "event-processing-account-closed")
+@EventType
 class EventProcessingAccountClosed
 
 @ReadModel

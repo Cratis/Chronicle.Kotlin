@@ -5,10 +5,10 @@ import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.projections.SetValue
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-set-value-invoice-issued")
+@EventType
 data class MbSetValueInvoiceIssued(val amount: Double)
 
-@EventType(id = "mb-set-value-invoice-paid")
+@EventType
 data class MbSetValueInvoicePaid(val placeholder: Boolean = true)
 
 @ReadModel

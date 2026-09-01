@@ -3,13 +3,13 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "nod-declarative-slice-created")
+@EventType
 data class NodDeclarativeSliceCreated(val name: String)
 
-@EventType(id = "nod-declarative-command-set")
+@EventType
 data class NodDeclarativeCommandSet(val name: String, val schema: String)
 
-@EventType(id = "nod-declarative-command-cleared")
+@EventType
 class NodDeclarativeCommandCleared
 
 data class NodDeclarativeSlice(

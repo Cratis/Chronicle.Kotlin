@@ -7,10 +7,10 @@ import io.cratis.chronicle.readModels.ReadModel;
 import java.time.Instant;
 import java.util.UUID;
 
-@EventType(id = "event-processing-order-created")
+@EventType
 record EventProcessingOrderCreated(UUID orderId) {}
 
-@EventType(id = "event-processing-item-added")
+@EventType
 record EventProcessingItemAdded(double price) {}
 
 @ReadModel

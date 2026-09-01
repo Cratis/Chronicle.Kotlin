@@ -4,12 +4,12 @@ import io.cratis.chronicle.concepts.ConceptAs;
 import io.cratis.chronicle.events.EventType;
 
 // Property-level: requires repetition across every event
-@EventType(id = "PiiConceptsComparisonEmployeeRegistered")
+@EventType
 record PiiConceptsComparisonEmployeeRegistered(@Pii String name, String department) {
 }
 
 // must remember @Pii again
-@EventType(id = "PiiConceptsComparisonEmployeeNameChanged")
+@EventType
 record PiiConceptsComparisonEmployeeNameChanged(@Pii String newName) {
 }
 
@@ -23,12 +23,12 @@ record PiiConceptsComparisonPersonName(String value) implements ConceptAs<String
 }
 
 // name is encrypted
-@EventType(id = "PiiConceptsComparisonEmployeeRegisteredGood")
+@EventType
 record PiiConceptsComparisonEmployeeRegisteredGood(PiiConceptsComparisonPersonName name, String department) {
 }
 
 // also encrypted, no extra annotation needed
-@EventType(id = "PiiConceptsComparisonEmployeeNameChangedGood")
+@EventType
 record PiiConceptsComparisonEmployeeNameChangedGood(PiiConceptsComparisonPersonName newName) {
 }
 ```

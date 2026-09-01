@@ -1,12 +1,12 @@
 ```kotlin
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "GetStartedBookAdded")
+@EventType
 data class GetStartedBookAdded(val title: String, val isbn: String)
 
-@EventType(id = "GetStartedBookBorrowed")
+@EventType
 data class GetStartedBookBorrowed(val memberName: String)
 
-@EventType(id = "GetStartedBookReturned")
+@EventType
 class GetStartedBookReturned
 ```

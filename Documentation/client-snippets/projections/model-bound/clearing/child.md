@@ -6,13 +6,13 @@ import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.projections.SetValue
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-clearing-task-list-started")
+@EventType
 data class MbClearingTaskListStarted(val name: String)
 
-@EventType(id = "mb-clearing-task-added")
+@EventType
 data class MbClearingTaskAdded(val listId: String, val taskId: String, val title: String, val due: String)
 
-@EventType(id = "mb-clearing-task-deferred")
+@EventType
 data class MbClearingTaskDeferred(val listId: String, val taskId: String)
 
 data class MbClearingTask(

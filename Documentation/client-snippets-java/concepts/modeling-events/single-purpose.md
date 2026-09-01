@@ -7,7 +7,7 @@ record ModelingEventsDeactivationReason(String value) {}
 record ModelingEventsCustomerAddress(String street, String city) {}
 
 // One event trying to be everything — consumers must guess what changed
-@EventType(id = "modeling-events-customer-updated")
+@EventType
 record ModelingEventsCustomerUpdated(
     ModelingEventsCustomerName name,
     ModelingEventsCustomerAddress address,
@@ -15,12 +15,12 @@ record ModelingEventsCustomerUpdated(
     Boolean deactivated) {}
 
 // Distinct facts — each consumer subscribes to exactly what it cares about
-@EventType(id = "modeling-events-customer-renamed")
+@EventType
 record ModelingEventsCustomerRenamed(ModelingEventsCustomerName name) {}
 
-@EventType(id = "modeling-events-customer-address-changed")
+@EventType
 record ModelingEventsCustomerAddressChanged(ModelingEventsCustomerAddress address) {}
 
-@EventType(id = "modeling-events-customer-deactivated")
+@EventType
 record ModelingEventsCustomerDeactivated(ModelingEventsDeactivationReason reason) {}
 ```

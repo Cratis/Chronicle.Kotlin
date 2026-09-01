@@ -5,7 +5,7 @@ import io.cratis.chronicle.observation.FilterEventsByTag
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.observation.Tag
 
-@EventType(id = "reactors-filtering-tag-vs-filter-invoice-issued")
+@EventType
 data class ReactorsFilteringInvoiceIssued(val amount: Double)
 
 // @Tag labels the reactor itself and shows up in tooling - it changes nothing about

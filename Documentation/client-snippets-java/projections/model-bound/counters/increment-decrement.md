@@ -5,10 +5,10 @@ import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.Increment;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "mb-counters-user-connected")
+@EventType
 class MbCountersUserConnected {}
 
-@EventType(id = "mb-counters-user-disconnected")
+@EventType
 class MbCountersUserDisconnected {}
 
 @ReadModel

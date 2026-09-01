@@ -7,7 +7,7 @@ import io.cratis.chronicle.java.EventLogJavaBridge;
 import io.cratis.chronicle.observation.EventStreamType;
 import io.cratis.chronicle.observation.Reactor;
 
-@EventType(id = "reactors-filtering-payment-captured")
+@EventType
 record ReactorsFilteringPaymentCaptured(double amount) {}
 
 class ReactorsFilteringPaymentsService {

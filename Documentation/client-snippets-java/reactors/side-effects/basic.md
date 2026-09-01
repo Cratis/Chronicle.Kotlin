@@ -3,13 +3,13 @@ import io.cratis.chronicle.events.EventContext;
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.observation.Reactor;
 
-@EventType(id = "side-effects-book-reserved")
+@EventType
 record SideEffectsBookReserved(String isbn) {}
 
-@EventType(id = "side-effects-stock-check-requested")
+@EventType
 record SideEffectsStockCheckRequested(String isbn) {}
 
-@EventType(id = "side-effects-stock-decreased")
+@EventType
 record StockDecreased(String isbn, int quantity) {}
 
 @Reactor

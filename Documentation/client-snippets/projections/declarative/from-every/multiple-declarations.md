@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "user-changed-declarative-every-multiple")
+@EventType
 data class UserChangedDeclarativeEveryMultiple(val name: String)
 
 data class UserAuditDeclarativeEveryMultiple(

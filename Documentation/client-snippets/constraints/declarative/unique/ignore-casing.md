@@ -3,7 +3,7 @@ import io.cratis.chronicle.constraints.IConstraint
 import io.cratis.chronicle.constraints.IConstraintBuilder
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "constraints-unique-casing-user-registered")
+@EventType
 data class ConstraintsUniqueCasingUserRegistered(val email: String)
 
 class ConstraintsUniqueCasingEmail : IConstraint {

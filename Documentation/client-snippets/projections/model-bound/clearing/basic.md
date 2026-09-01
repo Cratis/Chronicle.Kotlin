@@ -5,10 +5,10 @@ import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.projections.SetValue
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-clearing-project-noted")
+@EventType
 data class MbClearingProjectNoted(val note: String)
 
-@EventType(id = "mb-clearing-project-note-cleared")
+@EventType
 data class MbClearingProjectNoteCleared(val placeholder: Boolean = true)
 
 @ReadModel

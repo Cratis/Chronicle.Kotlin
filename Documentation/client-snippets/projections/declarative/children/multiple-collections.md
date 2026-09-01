@@ -3,13 +3,13 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "group-created-with-multiple-collections")
+@EventType
 data class GroupCreatedWithMultipleCollections(val name: String)
 
-@EventType(id = "member-added-to-group")
+@EventType
 data class MemberAddedToGroup(val userId: String, val role: String)
 
-@EventType(id = "task-assigned-to-group")
+@EventType
 data class TaskAssignedToGroup(val taskId: String, val title: String)
 
 data class GroupWithMultipleCollections(

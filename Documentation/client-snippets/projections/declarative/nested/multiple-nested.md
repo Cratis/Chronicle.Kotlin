@@ -3,19 +3,19 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "slice-created-with-multiple-nested")
+@EventType
 data class SliceCreatedWithMultipleNested(val name: String)
 
-@EventType(id = "command-set-with-multiple-nested")
+@EventType
 data class CommandSetWithMultipleNested(val name: String, val schema: String)
 
-@EventType(id = "command-cleared-with-multiple-nested")
+@EventType
 data class CommandClearedWithMultipleNested(val placeholder: Boolean = true)
 
-@EventType(id = "validation-configured-with-multiple-nested")
+@EventType
 data class ValidationConfiguredWithMultipleNested(val ruleName: String)
 
-@EventType(id = "validation-removed-with-multiple-nested")
+@EventType
 data class ValidationRemovedWithMultipleNested(val placeholder: Boolean = true)
 
 data class SliceWithMultipleNested(

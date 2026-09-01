@@ -5,10 +5,10 @@ import io.cratis.chronicle.projections.Join;
 import io.cratis.chronicle.projections.SetFrom;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "mb-joins-order-placed")
+@EventType
 record MbJoinsOrderPlaced(String customerId, double amount) {}
 
-@EventType(id = "mb-joins-customer-created")
+@EventType
 record MbJoinsCustomerCreated(String name) {}
 
 @ReadModel

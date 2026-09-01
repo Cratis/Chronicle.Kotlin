@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "auto-map-disabled-account-registered")
+@EventType
 data class AutoMapDisabledAccountRegistered(val accountName: String, val contactEmail: String)
 
 data class AutoMapDisabledAccount(

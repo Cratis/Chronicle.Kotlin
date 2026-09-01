@@ -4,10 +4,10 @@ import io.cratis.chronicle.projections.FromEvent
 import io.cratis.chronicle.projections.FromEvery
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "product-renamed-for-every-convention")
+@EventType
 data class ProductRenamedForEveryConvention(val name: String, val version: Int)
 
-@EventType(id = "product-price-changed-for-every-convention")
+@EventType
 data class ProductPriceChangedForEveryConvention(val price: Double, val version: Int)
 
 @ReadModel

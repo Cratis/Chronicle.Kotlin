@@ -7,16 +7,16 @@ import io.cratis.chronicle.projections.SetFrom;
 import io.cratis.chronicle.projections.SetValue;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "mb-clearing-contract-signed")
+@EventType
 record MbClearingContractSigned(String title, String noticeGiven) {}
 
-@EventType(id = "mb-clearing-notice-withdrawn")
+@EventType
 record MbClearingNoticeWithdrawn() {}
 
-@EventType(id = "mb-clearing-contract-ended")
+@EventType
 record MbClearingContractEnded() {}
 
-@EventType(id = "mb-clearing-employee-hired")
+@EventType
 record MbClearingEmployeeHired() {}
 
 @FromEvent(eventType = MbClearingContractSigned.class)

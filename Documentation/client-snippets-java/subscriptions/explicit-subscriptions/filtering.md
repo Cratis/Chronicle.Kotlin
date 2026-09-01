@@ -5,10 +5,10 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.java.EventStoreSubscriptionBuilderJavaBridge;
 import io.cratis.chronicle.java.EventStoreSubscriptionsServiceJavaBridge;
 
-@EventType(id = "subscriptions-explicit-filtering-payroll-run-completed")
+@EventType
 record SubscriptionsExplicitFilteringPayrollRunCompleted(String employeeId) {}
 
-@EventType(id = "subscriptions-explicit-filtering-payroll-run-failed")
+@EventType
 record SubscriptionsExplicitFilteringPayrollRunFailed(String employeeId, String reason) {}
 
 class SubscriptionsExplicitFiltering {

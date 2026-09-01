@@ -7,13 +7,13 @@ import io.cratis.chronicle.projections.Increment;
 import io.cratis.chronicle.readModels.ReadModel;
 
 // Events
-@EventType(id = "mb-constant-key-product-purchased")
+@EventType
 record MbConstantKeyProductPurchased(String productId, double amount) {}
 
-@EventType(id = "mb-constant-key-product-returned")
+@EventType
 record MbConstantKeyProductReturned(String productId, double amount) {}
 
-@EventType(id = "mb-constant-key-page-viewed")
+@EventType
 record MbConstantKeyPageViewed(String pageUrl) {}
 
 // Global read model

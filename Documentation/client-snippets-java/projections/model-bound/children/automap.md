@@ -7,7 +7,7 @@ import io.cratis.chronicle.readModels.ReadModel;
 import java.util.Collections;
 import java.util.List;
 
-@EventType(id = "mb-children-automap-line-item-added")
+@EventType
 record MbChildrenAutoMapLineItemAdded(
     String itemId,
     String productName,

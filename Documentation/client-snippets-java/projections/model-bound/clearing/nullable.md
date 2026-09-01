@@ -4,10 +4,10 @@ import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.SetValue;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "mb-clearing-shift-planned")
+@EventType
 record MbClearingShiftPlanned(String assignee, int hours) {}
 
-@EventType(id = "mb-clearing-shift-released")
+@EventType
 record MbClearingShiftReleased() {}
 
 @ReadModel

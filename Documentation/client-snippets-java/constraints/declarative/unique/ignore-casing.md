@@ -4,7 +4,7 @@ import io.cratis.chronicle.constraints.IConstraintBuilder;
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.java.UniqueConstraintBuilderJavaBridge;
 
-@EventType(id = "constraints-unique-casing-user-registered")
+@EventType
 record ConstraintsUniqueCasingUserRegistered(String email) {}
 
 class ConstraintsUniqueCasingEmail implements IConstraint {

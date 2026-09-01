@@ -6,7 +6,7 @@ import io.cratis.chronicle.observation.Reactor;
 import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "filtering-with-reactor-order-placed")
+@EventType
 record FilteringWithReactorOrderPlaced(String customerId, double totalAmount) {}
 
 // --- Append call ---

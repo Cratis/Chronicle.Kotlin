@@ -9,13 +9,13 @@ import io.cratis.chronicle.readModels.ReadModel;
 import java.util.Collections;
 import java.util.List;
 
-@EventType(id = "mb-clearing-task-list-started")
+@EventType
 record MbClearingTaskListStarted(String name) {}
 
-@EventType(id = "mb-clearing-task-added")
+@EventType
 record MbClearingTaskAdded(String listId, String taskId, String title, String due) {}
 
-@EventType(id = "mb-clearing-task-deferred")
+@EventType
 record MbClearingTaskDeferred(String listId, String taskId) {}
 
 class MbClearingTask {

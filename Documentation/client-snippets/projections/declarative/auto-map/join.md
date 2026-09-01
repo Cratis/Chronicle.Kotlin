@@ -3,10 +3,10 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "auto-map-employee-hired")
+@EventType
 data class AutoMapEmployeeHired(val employeeName: String, val departmentId: String)
 
-@EventType(id = "auto-map-department-renamed")
+@EventType
 data class AutoMapDepartmentRenamed(val departmentName: String)
 
 data class AutoMapEmployee(

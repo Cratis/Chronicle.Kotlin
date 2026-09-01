@@ -1,18 +1,18 @@
 ```java
 import io.cratis.chronicle.events.EventType;
 
-@EventType(id = "dec-from-event-sequence-order-created")
+@EventType
 record DecFromEventSequenceOrderCreated(
     String orderNumber,
     String customerId,
     double totalAmount) {}
 
-@EventType(id = "dec-from-event-sequence-order-updated")
+@EventType
 record DecFromEventSequenceOrderUpdated(
     String orderNumber,
     double newTotalAmount) {}
 
-@EventType(id = "dec-from-event-sequence-order-shipped")
+@EventType
 record DecFromEventSequenceOrderShipped(
     String orderNumber,
     String shippedAt) {}

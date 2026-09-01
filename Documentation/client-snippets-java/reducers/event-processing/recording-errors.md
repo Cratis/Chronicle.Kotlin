@@ -6,7 +6,7 @@ import io.cratis.chronicle.readModels.ReadModel;
 import java.util.ArrayList;
 import java.util.List;
 
-@EventType(id = "event-processing-invalid-data-detected")
+@EventType
 record EventProcessingInvalidDataDetected(String reason) {}
 
 @ReadModel

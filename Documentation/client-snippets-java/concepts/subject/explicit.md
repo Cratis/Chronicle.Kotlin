@@ -4,7 +4,7 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.java.AppendOptionsBuilder;
 import io.cratis.chronicle.java.EventLogJavaBridge;
 
-@EventType(id = "subject-shipping-address-changed")
+@EventType
 record SubjectShippingAddressChanged(String street) {}
 
 class SubjectShippingService {

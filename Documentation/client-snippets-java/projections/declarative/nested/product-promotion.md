@@ -5,13 +5,13 @@ import io.cratis.chronicle.projections.IProjectionFor;
 
 import java.time.Instant;
 
-@EventType(id = "product-listed-with-nested-promotion")
+@EventType
 record ProductListedWithNestedPromotion(String name, double basePrice) {}
 
-@EventType(id = "promotion-applied-with-nested-promotion")
+@EventType
 record PromotionAppliedWithNestedPromotion(String label, int discountPercent, Instant validUntil) {}
 
-@EventType(id = "promotion-removed-with-nested-promotion")
+@EventType
 record PromotionRemovedWithNestedPromotion() {}
 
 record ProductWithNestedPromotion(String name, double basePrice, PromotionForNestedProduct promotion) {}

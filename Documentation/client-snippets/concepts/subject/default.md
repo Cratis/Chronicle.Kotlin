@@ -2,7 +2,7 @@
 import io.cratis.chronicle.IEventStore
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "subject-author-registered")
+@EventType
 data class SubjectAuthorRegistered(val name: String)
 
 class SubjectAuthorService(private val eventStore: IEventStore) {

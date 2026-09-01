@@ -2,7 +2,7 @@
 import io.cratis.chronicle.EventStore
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "subscriptions-explicit-payroll-run-completed")
+@EventType
 data class SubscriptionsExplicitPayrollRunCompleted(val employeeId: String, val amount: Double)
 
 suspend fun subscribeToPayroll(store: EventStore) {

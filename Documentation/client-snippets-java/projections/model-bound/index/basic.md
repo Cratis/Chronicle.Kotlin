@@ -4,7 +4,7 @@ import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.SetFrom;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "index-account-opened")
+@EventType
 record IndexAccountOpened(String name, double initialBalance) {}
 
 @ReadModel

@@ -2,7 +2,7 @@
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reactor
 
-@EventType(id = "reactors-event-sequence-order-shipped")
+@EventType
 data class ReactorsEventSequenceOrderShipped(val orderId: String)
 
 @Reactor(id = "shipping-notifications", eventSequence = "outbox")

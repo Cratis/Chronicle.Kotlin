@@ -5,19 +5,19 @@ import io.cratis.chronicle.observation.Reactor;
 
 import java.util.List;
 
-@EventType(id = "event-processing-signatures-order-placed")
+@EventType
 record EventProcessingSignaturesOrderPlaced(String orderId) {}
 
-@EventType(id = "event-processing-signatures-order-shipped")
+@EventType
 record EventProcessingSignaturesOrderShipped(String orderId) {}
 
-@EventType(id = "event-processing-signatures-order-cancelled")
+@EventType
 record EventProcessingSignaturesOrderCancelled(String orderId) {}
 
-@EventType(id = "event-processing-signatures-refund-issued")
+@EventType
 record EventProcessingSignaturesRefundIssued(String orderId, double amount) {}
 
-@EventType(id = "event-processing-signatures-order-archived")
+@EventType
 record EventProcessingSignaturesOrderArchived(String orderId) {}
 
 @Reactor

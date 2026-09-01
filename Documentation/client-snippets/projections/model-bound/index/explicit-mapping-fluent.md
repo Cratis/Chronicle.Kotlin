@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "index-explicit-account-opened")
+@EventType
 data class IndexExplicitAccountOpened(
     val name: String,
     val initialBalance: Double

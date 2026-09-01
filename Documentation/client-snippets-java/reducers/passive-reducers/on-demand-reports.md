@@ -9,7 +9,7 @@ import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
-@EventType(id = "passive-reducers-payment-received")
+@EventType
 record PassiveReducersPaymentReceived(String category, double amount) {}
 
 @ReadModel

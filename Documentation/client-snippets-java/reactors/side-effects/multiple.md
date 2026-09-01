@@ -5,13 +5,13 @@ import io.cratis.chronicle.observation.Reactor;
 
 import java.util.List;
 
-@EventType(id = "side-effects-multiple-book-reserved")
+@EventType
 record MultipleSideEffectsBookReserved(String isbn) {}
 
-@EventType(id = "side-effects-multiple-stock-decreased")
+@EventType
 record MultipleStockDecreased(String isbn, int quantity) {}
 
-@EventType(id = "side-effects-stock-low")
+@EventType
 record StockLow(String isbn) {}
 
 @Reactor

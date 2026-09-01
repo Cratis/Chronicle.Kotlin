@@ -4,10 +4,10 @@ import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 import java.time.Instant
 
-@EventType(id = "order-created-declarative-every-children")
+@EventType
 data class OrderCreatedDeclarativeEveryChildren(val orderNumber: String)
 
-@EventType(id = "item-added-declarative-every-children")
+@EventType
 data class ItemAddedDeclarativeEveryChildren(
     val orderId: String,
     val productId: String,
@@ -15,7 +15,7 @@ data class ItemAddedDeclarativeEveryChildren(
     val quantity: Int
 )
 
-@EventType(id = "item-quantity-changed-declarative-every-children")
+@EventType
 data class ItemQuantityChangedDeclarativeEveryChildren(
     val orderId: String,
     val productId: String,

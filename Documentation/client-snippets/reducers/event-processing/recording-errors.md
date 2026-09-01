@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "event-processing-invalid-data-detected")
+@EventType
 data class EventProcessingInvalidDataDetected(val reason: String)
 
 @ReadModel

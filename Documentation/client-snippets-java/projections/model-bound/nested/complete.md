@@ -6,10 +6,10 @@ import io.cratis.chronicle.projections.Nested;
 import io.cratis.chronicle.projections.SetFrom;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "slice-created-for-nested-complete")
+@EventType
 record SliceCreatedForNestedComplete(String name) {}
 
-@EventType(id = "command-set-for-nested-complete")
+@EventType
 record CommandSetForNestedComplete(
     String commandId,
     String name,
@@ -18,10 +18,10 @@ record CommandSetForNestedComplete(
     String stateSchema
 ) {}
 
-@EventType(id = "command-renamed-for-nested-complete")
+@EventType
 record CommandRenamedForNestedComplete(String commandId, String name) {}
 
-@EventType(id = "command-definition-updated-for-nested-complete")
+@EventType
 record CommandDefinitionUpdatedForNestedComplete(
     String commandId,
     String schema,
@@ -29,7 +29,7 @@ record CommandDefinitionUpdatedForNestedComplete(
     String stateSchema
 ) {}
 
-@EventType(id = "command-cleared-for-nested-complete")
+@EventType
 record CommandClearedForNestedComplete() {}
 
 @ReadModel

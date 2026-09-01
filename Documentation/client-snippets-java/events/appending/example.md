@@ -3,7 +3,7 @@ import io.cratis.chronicle.IEventStore;
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.java.BlockingEventStore;
 
-@EventType(id = "OrderPlaced")
+@EventType
 record OrderPlaced(String customerId, double total) {}
 
 class CheckoutService {

@@ -6,13 +6,13 @@ import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.projections.SubtractFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "balance-account-opened")
+@EventType
 data class BalanceAccountOpened(val initialBalance: Double)
 
-@EventType(id = "balance-deposit-made")
+@EventType
 data class BalanceDepositMade(val amount: Double)
 
-@EventType(id = "balance-withdrawal-made")
+@EventType
 data class BalanceWithdrawalMade(val amount: Double)
 
 @ReadModel

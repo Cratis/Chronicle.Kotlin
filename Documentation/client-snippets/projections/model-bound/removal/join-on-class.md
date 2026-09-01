@@ -6,13 +6,13 @@ import io.cratis.chronicle.projections.RemovedWithJoin
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-removal-join-class-employee-hired")
+@EventType
 data class MbRemovalJoinClassEmployeeHired(val name: String)
 
-@EventType(id = "mb-removal-join-class-company-registered")
+@EventType
 data class MbRemovalJoinClassCompanyRegistered(val name: String)
 
-@EventType(id = "mb-removal-join-class-company-dissolved")
+@EventType
 class MbRemovalJoinClassCompanyDissolved
 
 @ReadModel

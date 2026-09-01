@@ -5,7 +5,7 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.java.EventStoreSubscriptionBuilderJavaBridge;
 import io.cratis.chronicle.java.EventStoreSubscriptionsServiceJavaBridge;
 
-@EventType(id = "subscriptions-explicit-payroll-run-completed")
+@EventType
 record SubscriptionsExplicitPayrollRunCompleted(String employeeId, double amount) {}
 
 class SubscriptionsExplicitBasic {

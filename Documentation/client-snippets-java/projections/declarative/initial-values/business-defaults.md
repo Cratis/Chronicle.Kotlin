@@ -8,7 +8,7 @@ enum InitialValuesOrderStatus {
     Submitted
 }
 
-@EventType(id = "initial-values-order-submitted")
+@EventType
 record InitialValuesOrderSubmitted(String customerName, double totalAmount) {}
 
 class InitialValuesOrderSummary {

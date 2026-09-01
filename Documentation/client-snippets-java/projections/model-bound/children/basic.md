@@ -7,7 +7,7 @@ import io.cratis.chronicle.readModels.ReadModel;
 import java.util.Collections;
 import java.util.List;
 
-@EventType(id = "mb-children-line-item-added")
+@EventType
 record MbChildrenLineItemAdded(
     String itemId,
     String productName,

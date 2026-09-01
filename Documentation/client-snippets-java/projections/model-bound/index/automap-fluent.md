@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 
-@EventType(id = "index-automap-account-opened")
+@EventType
 record IndexAutoMapAccountOpened(String name, double balance) {}
 
 class IndexAutoMapAccountInfo {

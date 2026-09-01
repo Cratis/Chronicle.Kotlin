@@ -4,7 +4,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "event-processing-order-placed")
+@EventType
 data class EventProcessingOrderPlaced(val orderId: String)
 
 @ReadModel

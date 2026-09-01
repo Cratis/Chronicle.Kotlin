@@ -4,7 +4,7 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.java.AppendOptionsBuilder;
 import io.cratis.chronicle.java.BlockingEventStore;
 
-@EventType(id = "TaggedOrderPlaced")
+@EventType
 record TaggedOrderPlaced(String customerId, double total) {}
 
 class TaggedCheckoutService {

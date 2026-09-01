@@ -4,7 +4,7 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.java.AppendOptionsBuilder;
 import io.cratis.chronicle.java.EventLogJavaBridge;
 
-@EventType(id = "tagging-user-logged-in")
+@EventType
 record TaggingUserLoggedIn(String userId) {}
 
 class TaggingUserLoginService {

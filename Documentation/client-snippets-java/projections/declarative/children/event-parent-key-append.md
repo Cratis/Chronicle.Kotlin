@@ -3,7 +3,7 @@ import io.cratis.chronicle.EventStore;
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.java.EventLogJavaBridge;
 
-@EventType(id = "user-added-with-event-parent-key")
+@EventType
 record UserAddedWithEventParentKey(String groupId, String userId, String role) {}
 
 class GroupMembershipWithEventParentKey {

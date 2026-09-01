@@ -9,10 +9,10 @@ import io.cratis.chronicle.readModels.ReadModel;
 import java.util.Collections;
 import java.util.List;
 
-@EventType(id = "mb-children-removal-property-line-item-added")
+@EventType
 record MbChildrenRemovalPropertyLineItemAdded(String itemId, String description) {}
 
-@EventType(id = "mb-children-removal-property-line-item-removed")
+@EventType
 record MbChildrenRemovalPropertyLineItemRemoved(String itemId) {}
 
 @ReadModel

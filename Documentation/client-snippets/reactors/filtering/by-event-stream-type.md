@@ -6,7 +6,7 @@ import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.observation.EventStreamType
 import io.cratis.chronicle.observation.Reactor
 
-@EventType(id = "reactors-filtering-payment-captured")
+@EventType
 data class ReactorsFilteringPaymentCaptured(val amount: Double)
 
 class ReactorsFilteringPaymentsService(private val eventLog: IEventLog) {

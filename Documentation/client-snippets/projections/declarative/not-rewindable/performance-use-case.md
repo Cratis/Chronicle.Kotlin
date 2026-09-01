@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "dec-not-rewindable-api-request-completed")
+@EventType
 data class DecNotRewindableApiRequestCompleted(val endpoint: String, val statusCode: Int, val durationMilliseconds: Long)
 
 data class DecNotRewindablePerformanceMetric(val timestamp: String = "")

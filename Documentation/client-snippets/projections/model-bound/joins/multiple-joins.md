@@ -5,16 +5,16 @@ import io.cratis.chronicle.projections.Join
 import io.cratis.chronicle.projections.SetFrom
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "mb-joins-multiple-order-placed")
+@EventType
 data class MbJoinsMultipleOrderPlaced(val customerId: String)
 
-@EventType(id = "mb-joins-multiple-customer-created")
+@EventType
 data class MbJoinsMultipleCustomerCreated(val name: String)
 
-@EventType(id = "mb-joins-customer-updated")
+@EventType
 data class MbJoinsCustomerUpdated(val email: String)
 
-@EventType(id = "mb-joins-shipping-address-set")
+@EventType
 data class MbJoinsShippingAddressSet(val address: String)
 
 @ReadModel

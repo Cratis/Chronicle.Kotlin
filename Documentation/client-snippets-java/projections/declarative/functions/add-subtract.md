@@ -5,13 +5,13 @@ import io.cratis.chronicle.projections.IProjectionFor;
 
 import java.math.BigDecimal;
 
-@EventType(id = "dec-functions-account-opened")
+@EventType
 record DecFunctionsAccountOpened(String number) {}
 
-@EventType(id = "dec-functions-money-deposited")
+@EventType
 record DecFunctionsMoneyDeposited(BigDecimal amount) {}
 
-@EventType(id = "dec-functions-money-withdrawn")
+@EventType
 record DecFunctionsMoneyWithdrawn(BigDecimal amount) {}
 
 class DecFunctionsAccount {

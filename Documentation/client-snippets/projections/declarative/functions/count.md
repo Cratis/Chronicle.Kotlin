@@ -3,10 +3,10 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "dec-functions-user-logged-in")
+@EventType
 data class DecFunctionsUserLoggedIn(val username: String)
 
-@EventType(id = "dec-functions-user-performed-action")
+@EventType
 data class DecFunctionsUserPerformedAction(val username: String, val actionType: String)
 
 data class DecFunctionsUserActivity(

@@ -4,7 +4,7 @@ import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 import java.time.OffsetDateTime
 
-@EventType(id = "dec-index-user-registered")
+@EventType
 data class DecIndexUserRegistered(val name: String, val email: String, val registeredAt: OffsetDateTime)
 
 data class DecIndexUserProfile(

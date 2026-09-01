@@ -3,16 +3,16 @@ import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 
-@EventType(id = "dec-joins-multiple-employee-assigned")
+@EventType
 record DecJoinsMultipleEmployeeAssigned(String groupId, String departmentId, String locationId) {}
 
-@EventType(id = "dec-joins-multiple-group-created")
+@EventType
 record DecJoinsMultipleGroupCreated(String name) {}
 
-@EventType(id = "dec-joins-multiple-department-created")
+@EventType
 record DecJoinsMultipleDepartmentCreated(String name) {}
 
-@EventType(id = "dec-joins-multiple-location-updated")
+@EventType
 record DecJoinsMultipleLocationUpdated(String address) {}
 
 class DecJoinsMultipleEmployeeSummary {

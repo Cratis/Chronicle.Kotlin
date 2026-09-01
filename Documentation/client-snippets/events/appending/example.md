@@ -2,7 +2,7 @@
 import io.cratis.chronicle.IEventStore
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "OrderPlaced")
+@EventType
 data class OrderPlaced(
     val customerId: String,
     val total: Double

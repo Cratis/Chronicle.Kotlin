@@ -2,7 +2,7 @@
 import io.cratis.chronicle.EventStore
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "webhooks-index-order-placed")
+@EventType
 data class WebhooksIndexOrderPlaced(val orderId: String)
 
 suspend fun registerOrderWebhook(store: EventStore) {

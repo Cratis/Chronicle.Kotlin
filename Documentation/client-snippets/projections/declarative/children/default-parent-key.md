@@ -3,10 +3,10 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "group-created-with-default-parent-key")
+@EventType
 data class GroupCreatedWithDefaultParentKey(val name: String)
 
-@EventType(id = "user-added-with-default-parent-key")
+@EventType
 data class UserAddedWithDefaultParentKey(val userId: String, val role: String)
 
 data class GroupWithDefaultParentKey(

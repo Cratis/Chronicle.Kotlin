@@ -4,7 +4,7 @@ import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "TaggedOrderPlaced")
+@EventType
 data class TaggedOrderPlaced(val customerId: String, val total: Double)
 
 class TaggedCheckoutService(private val eventStore: IEventStore) {

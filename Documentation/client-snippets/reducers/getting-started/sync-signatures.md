@@ -4,13 +4,13 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
 
-@EventType(id = "reducers-signatures-opened")
+@EventType
 data class ReducersSignaturesOpened(val orderId: String)
 
-@EventType(id = "reducers-signatures-item-added")
+@EventType
 data class ReducersSignaturesItemAdded(val amount: Double)
 
-@EventType(id = "reducers-signatures-closed")
+@EventType
 data class ReducersSignaturesClosed(val reason: String)
 
 @ReadModel

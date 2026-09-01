@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-@EventType(id = "event-processing-reuse-item-added")
+@EventType
 record EventProcessingReuseItemAdded(UUID itemId, String name) {}
 
 record EventProcessingItem(UUID itemId, String name) {}

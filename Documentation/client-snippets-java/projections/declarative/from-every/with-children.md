@@ -6,13 +6,13 @@ import io.cratis.chronicle.projections.IProjectionFor;
 import java.time.Instant;
 import java.util.List;
 
-@EventType(id = "order-created-declarative-every-children")
+@EventType
 record OrderCreatedDeclarativeEveryChildren(String orderNumber) {}
 
-@EventType(id = "item-added-declarative-every-children")
+@EventType
 record ItemAddedDeclarativeEveryChildren(String orderId, String productId, String productName, int quantity) {}
 
-@EventType(id = "item-quantity-changed-declarative-every-children")
+@EventType
 record ItemQuantityChangedDeclarativeEveryChildren(String orderId, String productId, int quantity) {}
 
 class OrderDeclarativeEveryChildren {

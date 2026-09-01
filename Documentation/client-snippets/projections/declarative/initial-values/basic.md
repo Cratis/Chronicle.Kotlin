@@ -8,7 +8,7 @@ enum class InitialValuesUserStatus {
     Active
 }
 
-@EventType(id = "initial-values-user-created")
+@EventType
 data class InitialValuesUserCreated(val name: String, val email: String)
 
 // Kotlin default parameter values are the read model's initial values — the kernel builds

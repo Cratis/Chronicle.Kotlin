@@ -10,17 +10,17 @@ import io.cratis.chronicle.readModels.ReadModel;
 import java.util.Collections;
 import java.util.List;
 
-@EventType(id = "mb-children-counters-item-added-to-cart")
+@EventType
 record MbChildrenCountersItemAddedToCart(
     String itemId,
     String productName,
     double price,
     int initialQuantity) {}
 
-@EventType(id = "mb-children-counters-quantity-increased")
+@EventType
 record MbChildrenCountersQuantityIncreased(String itemId) {}
 
-@EventType(id = "mb-children-counters-quantity-decreased")
+@EventType
 record MbChildrenCountersQuantityDecreased(String itemId) {}
 
 @ReadModel

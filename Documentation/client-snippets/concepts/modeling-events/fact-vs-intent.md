@@ -4,10 +4,10 @@ import io.cratis.chronicle.events.EventType
 data class ModelingEventsAddress(val street: String, val city: String)
 
 // A fact that happened
-@EventType(id = "modeling-events-address-changed")
+@EventType
 data class ModelingEventsAddressChanged(val address: ModelingEventsAddress)
 
 // An intent (that's a command) or a state blob (that's a read model) — not an event
-@EventType(id = "modeling-events-update-address")
+@EventType
 data class ModelingEventsUpdateAddress(val address: ModelingEventsAddress)
 ```

@@ -4,13 +4,13 @@ import io.cratis.chronicle.projections.ClearWith
 import io.cratis.chronicle.projections.FromEvent
 import io.cratis.chronicle.projections.SetFrom
 
-@EventType(id = "command-set-for-nested-explicit")
+@EventType
 data class CommandSetForNestedExplicit(val commandName: String, val jsonSchema: String)
 
-@EventType(id = "command-schema-updated-for-nested-explicit")
+@EventType
 data class CommandSchemaUpdatedForNestedExplicit(val updatedSchema: String)
 
-@EventType(id = "command-cleared-for-nested-explicit")
+@EventType
 data class CommandClearedForNestedExplicit(val placeholder: Boolean = true)
 
 @FromEvent(CommandSetForNestedExplicit::class)

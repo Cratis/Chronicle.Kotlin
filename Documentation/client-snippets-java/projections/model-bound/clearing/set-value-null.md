@@ -4,10 +4,10 @@ import io.cratis.chronicle.projections.FromEvent;
 import io.cratis.chronicle.projections.SetValue;
 import io.cratis.chronicle.readModels.ReadModel;
 
-@EventType(id = "mb-clearing-invoice-issued")
+@EventType
 record MbClearingInvoiceIssued(String reference) {}
 
-@EventType(id = "mb-clearing-invoice-voided")
+@EventType
 record MbClearingInvoiceVoided() {}
 
 @ReadModel

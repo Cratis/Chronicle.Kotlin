@@ -4,10 +4,10 @@ import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.events.EventType
 
-@EventType(id = "TaggedMoneyWithdrawn")
+@EventType
 data class TaggedMoneyWithdrawn(val amount: Double)
 
-@EventType(id = "TaggedMoneyDeposited")
+@EventType
 data class TaggedMoneyDeposited(val amount: Double)
 
 class TaggedTransferService(private val eventStore: IEventStore) {

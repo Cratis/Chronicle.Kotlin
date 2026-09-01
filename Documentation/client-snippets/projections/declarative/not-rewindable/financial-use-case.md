@@ -3,7 +3,7 @@ import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
 
-@EventType(id = "dec-not-rewindable-payment-processed")
+@EventType
 data class DecNotRewindablePaymentProcessed(val paymentId: String, val amount: Double)
 
 data class DecNotRewindableLedgerEntry(
