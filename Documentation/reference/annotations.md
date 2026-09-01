@@ -329,6 +329,54 @@ data class OrderTracking(
 
 ---
 
+## @Key
+
+Marks a property on an event as the key a projection correlates that event
+to a read model instance by. [@FromEvent](#fromevent)'s `key` parameter
+takes this today as a bare property-name string; `@Key` is the
+strongly-typed alternative for consumers that resolve the key by
+reflection instead of by name.
+
+No parameters.
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.keys.Key
+
+@EventType
+data class PickTicketOpened(@Key val orderId: String, val warehouse: String)
+```
+
+---
+
+## @ContextKey
+
+Marks a function as deriving its key from the event context — for example
+the event source id, or a correlation id — rather than from a property on
+the event payload.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `property` | `String` | *(required)* | `EventContext` property to use. |
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.keys.ContextKey
+
+class PickTicketHandlers {
+    @ContextKey(property = "EventSourceId")
+    fun pickTicketOpened(event: PickTicketOpened) = Unit
+}
+```
+
+`IKeyBuilder`/`KeyBuilder` build the same resolution fluently instead of
+declaratively — see the `io.cratis.chronicle.keys` package.
+
+---
+
 ## @SetFrom
 
 Applied to a read model property to override auto-mapping by name and

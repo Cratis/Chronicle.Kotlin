@@ -2095,6 +2095,74 @@ public final class io/cratis/chronicle/json/PolygonTypeAdapter : com/google/gson
 	public synthetic fun write (Lcom/google/gson/stream/JsonWriter;Ljava/lang/Object;)V
 }
 
+public abstract interface annotation class io/cratis/chronicle/keys/ContextKey : java/lang/annotation/Annotation {
+	public abstract fun property ()Ljava/lang/String;
+}
+
+public abstract interface class io/cratis/chronicle/keys/ICompositeKeyBuilder {
+	public abstract fun add (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/keys/ICompositeKeyBuilder;
+	public abstract fun addWithPropertyName (Ljava/lang/String;)Lio/cratis/chronicle/keys/ICompositeKeyBuilder;
+}
+
+public abstract interface class io/cratis/chronicle/keys/IKeyBuilder {
+	public abstract fun usingCompositeKey (Lkotlin/jvm/functions/Function1;)V
+	public abstract fun usingKey (Lkotlin/reflect/KProperty1;)V
+	public abstract fun usingKeyFromContext (Ljava/lang/String;)V
+	public abstract fun usingKeyWithPropertyName (Ljava/lang/String;)V
+}
+
+public abstract interface annotation class io/cratis/chronicle/keys/Key : java/lang/annotation/Annotation {
+}
+
+public final class io/cratis/chronicle/keys/KeyBuilder : io/cratis/chronicle/keys/IKeyBuilder {
+	public fun <init> ()V
+	public final fun build ()Lio/cratis/chronicle/keys/ResolvedKey;
+	public fun usingCompositeKey (Lkotlin/jvm/functions/Function1;)V
+	public fun usingKey (Lkotlin/reflect/KProperty1;)V
+	public fun usingKeyFromContext (Ljava/lang/String;)V
+	public fun usingKeyWithPropertyName (Ljava/lang/String;)V
+}
+
+public abstract class io/cratis/chronicle/keys/ResolvedKey {
+}
+
+public final class io/cratis/chronicle/keys/ResolvedKey$Composite : io/cratis/chronicle/keys/ResolvedKey {
+	public fun <init> (Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;)Lio/cratis/chronicle/keys/ResolvedKey$Composite;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/keys/ResolvedKey$Composite;Ljava/util/List;ILjava/lang/Object;)Lio/cratis/chronicle/keys/ResolvedKey$Composite;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getProperties ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/keys/ResolvedKey$Context : io/cratis/chronicle/keys/ResolvedKey {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lio/cratis/chronicle/keys/ResolvedKey$Context;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/keys/ResolvedKey$Context;Ljava/lang/String;ILjava/lang/Object;)Lio/cratis/chronicle/keys/ResolvedKey$Context;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getProperty ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/keys/ResolvedKey$EventSourceId : io/cratis/chronicle/keys/ResolvedKey {
+	public static final field INSTANCE Lio/cratis/chronicle/keys/ResolvedKey$EventSourceId;
+}
+
+public final class io/cratis/chronicle/keys/ResolvedKey$Property : io/cratis/chronicle/keys/ResolvedKey {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lio/cratis/chronicle/keys/ResolvedKey$Property;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/keys/ResolvedKey$Property;Ljava/lang/String;ILjava/lang/Object;)Lio/cratis/chronicle/keys/ResolvedKey$Property;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public final class io/cratis/chronicle/namespaces/DefaultEventStoreNamespaceResolver : io/cratis/chronicle/namespaces/IEventStoreNamespaceResolver {
 	public static final field INSTANCE Lio/cratis/chronicle/namespaces/DefaultEventStoreNamespaceResolver;
 	public fun resolve ()Ljava/lang/String;

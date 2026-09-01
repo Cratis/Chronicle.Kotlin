@@ -23,6 +23,12 @@ import io.cratis.chronicle.geospatial.Point;
 import io.cratis.chronicle.java.AppendOptionsBuilder;
 import io.cratis.chronicle.java.BlockingReactorMethodArgumentResolver;
 import io.cratis.chronicle.java.BlockingReactorMiddleware;
+import io.cratis.chronicle.keys.ContextKey;
+import io.cratis.chronicle.keys.ICompositeKeyBuilder;
+import io.cratis.chronicle.keys.IKeyBuilder;
+import io.cratis.chronicle.keys.Key;
+import io.cratis.chronicle.keys.KeyBuilder;
+import io.cratis.chronicle.keys.ResolvedKey;
 import io.cratis.chronicle.observation.EventSequence;
 import io.cratis.chronicle.observation.FilterEventsByTag;
 import io.cratis.chronicle.observation.ICanBeNotifiedAboutReplay;
@@ -90,6 +96,39 @@ public final class JavaConformance {
     /** A second generation of an event type. */
     @EventType(id = "EmployeeHired", generation = 2)
     public record EmployeeHiredV2(EmployeeId employee, String title) {
+    }
+
+    // --- Keys -----------------------------------------------------------------------------------
+
+    /** An event type with a strongly-typed key, in place of a magic string. */
+    @EventType
+    public record OrderLineAdded(@Key String orderId, String product, int quantity) {
+    }
+
+    /** A handler deriving its key from the event context rather than the event payload. */
+    public static class OrderLineHandlers {
+        @ContextKey(property = "EventSourceId")
+        public void orderLineAdded(OrderLineAdded event) {
+        }
+    }
+
+    /** Every method on {@link IKeyBuilder} and {@link ICompositeKeyBuilder}, as reached from Java. */
+    public static ResolvedKey resolvedKeys() {
+        var byProperty = new KeyBuilder<OrderLineAdded>();
+        byProperty.usingKeyWithPropertyName("orderId");
+
+        var fromContext = new KeyBuilder<OrderLineAdded>();
+        fromContext.usingKeyFromContext("EventSourceId");
+
+        var composite = new KeyBuilder<OrderLineAdded>();
+        composite.usingCompositeKey(builder -> {
+            ICompositeKeyBuilder<OrderLineAdded> b = builder;
+            b.addWithPropertyName("orderId");
+            b.addWithPropertyName("product");
+            return kotlin.Unit.INSTANCE;
+        });
+
+        return composite.build();
     }
 
     // --- Read models --------------------------------------------------------------------------
