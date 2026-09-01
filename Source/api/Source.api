@@ -425,8 +425,15 @@ public abstract interface annotation class io/cratis/chronicle/compliance/Pii : 
 	public abstract fun description ()Ljava/lang/String;
 }
 
+public final class io/cratis/chronicle/compliance/PiiNotSupportedOnEventSourceId : java/lang/Exception {
+	public fun <init> (Lkotlin/reflect/KClass;)V
+}
+
 public abstract interface class io/cratis/chronicle/concepts/ConceptAs {
 	public abstract fun getValue ()Ljava/lang/Object;
+}
+
+public abstract interface class io/cratis/chronicle/concepts/EventSourceId : io/cratis/chronicle/concepts/ConceptAs {
 }
 
 public final class io/cratis/chronicle/concepts/EventSourceIdConcepts {
