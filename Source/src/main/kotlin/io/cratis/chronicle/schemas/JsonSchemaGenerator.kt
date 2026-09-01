@@ -260,7 +260,7 @@ object JsonSchemaGenerator {
      * record's constructor parameter does.
      */
     private fun piiConstructorParameterFallback(prop: KProperty1<*, *>, cls: KClass<*>): Pii? {
-        cls.primaryConstructor?.parameters
+        cls.kotlinPrimaryConstructor()?.parameters
             ?.firstOrNull { it.name.equals(prop.name, ignoreCase = true) }
             ?.let { piiOf(it) }
             ?.let { return it }
@@ -270,6 +270,18 @@ object JsonSchemaGenerator {
             .firstOrNull { it.name.equals(prop.name, ignoreCase = true) }
             ?.getAnnotation(Pii::class.java)
     }
+
+    /**
+     * The Kotlin primary constructor of [this], or `null` when there is no such thing to ask for.
+     *
+     * Asking Kotlin reflection for the primary constructor of a Java `record` whose components
+     * include a primitive throws - it cannot name `double` as a classifier while it builds the
+     * canonical constructor's descriptor. A Java class has no primary constructor in the Kotlin
+     * sense anyway, and the plain Java reflection that follows reads its parameters perfectly well,
+     * so the question is simply not worth asking of one.
+     */
+    private fun KClass<*>.kotlinPrimaryConstructor() =
+        if (java.isAnnotationPresent(Metadata::class.java)) primaryConstructor else null
 
     /** Converts a resolved [Pii] annotation into the `compliance` schema extension the kernel expects. */
     private fun complianceMetadata(pii: Pii): List<Map<String, String>> =
