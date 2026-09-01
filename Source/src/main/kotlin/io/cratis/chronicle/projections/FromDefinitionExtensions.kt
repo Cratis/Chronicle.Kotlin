@@ -71,12 +71,12 @@ internal fun buildPropertyMappingsForEvent(readModelClass: KClass<*>, eventKClas
             mappings[prop.name] = "\$eventContext($resolved)"
         }
         prop.findAnnotations<SetValue>().firstOrNull { it.eventType == eventKClass }?.let { setValue ->
-            mappings[prop.name] = if (setValue.clear) {
-                if (!prop.returnType.isMarkedNullable) throw CannotClearNonNullableProperty(readModelClass, prop.name)
-                "\$null"
-            } else {
-                "\$value(${setValue.value})"
-            }
+            // Kotlin's reflection has no reliable way to tell a genuinely non-nullable property from an
+            // unannotated Java one - a plain Java `String` reports isMarkedNullable == false exactly like
+            // a Kotlin non-null `String` does, so rejecting the latter would reject the former too.
+            // Declaring the property nullable is the author's responsibility, same as .NET treats a
+            // member compiled outside a nullable-aware context as able to hold null.
+            mappings[prop.name] = if (setValue.clear) "\$null" else "\$value(${setValue.value})"
         }
     }
     return PropertyMappings(mappings, constantKey)

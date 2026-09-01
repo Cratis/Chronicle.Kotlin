@@ -18,7 +18,8 @@ import kotlin.reflect.KClass
  * @property eventType The event class that triggers the value assignment.
  * @property value The constant value to set, as its literal string form. Ignored when [clear] is `true`.
  * @property clear When `true`, clears the property back to no value instead of setting [value]. The
- *   property must be declared nullable - registration fails otherwise.
+ *   property should be declared nullable - a non-nullable one silently receives no value at runtime,
+ *   the same way Gson leaves any other missing JSON field.
  */
 @Target(AnnotationTarget.PROPERTY, AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)

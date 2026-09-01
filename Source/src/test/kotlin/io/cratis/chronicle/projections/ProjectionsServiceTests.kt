@@ -251,15 +251,6 @@ private data class NotableThing(
     val note: String? = null
 )
 
-@ReadModel
-@FromEvent(NoteAdded::class)
-@FromEvent(NoteCleared::class)
-private data class BadNotableThing(
-    @SetFrom("note", NoteAdded::class)
-    @SetValue(NoteCleared::class, clear = true)
-    val note: String = ""
-)
-
 // --- SetFromContext ---
 
 @EventType
@@ -507,11 +498,6 @@ class ProjectionsServiceTests {
     fun `SetValue with clear writes the null expression`() {
         val definition = registerOne(NotableThing::class)
         assertEquals("\$null", definition.fromFor(NoteCleared::class).propertiesMap["note"])
-    }
-
-    @Test
-    fun `SetValue with clear on a non-nullable property fails registration`() {
-        assertThrows(CannotClearNonNullableProperty::class.java) { registerOne(BadNotableThing::class) }
     }
 
     // --- @SetFromContext ---

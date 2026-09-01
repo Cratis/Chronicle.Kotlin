@@ -2359,10 +2359,6 @@ public final class io/cratis/chronicle/projections/AllSetBuilderFor : io/cratis/
 	public fun toProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 }
 
-public final class io/cratis/chronicle/projections/CannotClearNonNullableProperty : java/lang/IllegalArgumentException {
-	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;)V
-}
-
 public final class io/cratis/chronicle/projections/ChildFromBuilderFor : io/cratis/chronicle/projections/IChildFromBuilderFor {
 	public fun <init> (Lkotlin/reflect/KClass;)V
 	public final fun getKey ()Ljava/lang/String;
