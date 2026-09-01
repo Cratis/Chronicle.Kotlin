@@ -1,5 +1,31 @@
-```text
-Java does not support this workflow yet.
-`IProjectionBuilderFor.children()` takes a `KProperty1<TReadModel, *>` and a `KClass<TChild>` with no
-`Class<T>`-based overload and no bridge in `io.cratis.chronicle.java`, so Java cannot call it at all.
+```java title="Default parent key"
+import io.cratis.chronicle.events.EventType;
+import io.cratis.chronicle.projections.IProjectionBuilderFor;
+import io.cratis.chronicle.projections.IProjectionFor;
+
+import java.util.List;
+
+@EventType(id = "group-created-with-default-parent-key")
+record GroupCreatedWithDefaultParentKey(String name) {}
+
+record GroupWithDefaultParentKey(String name, List<GroupMemberWithDefaultParentKey> members) {}
+
+record GroupMemberWithDefaultParentKey(String userId, String role) {}
+
+class GroupWithDefaultParentKeyProjection implements IProjectionFor<GroupWithDefaultParentKey> {
+    @Override
+    public void define(IProjectionBuilderFor<GroupWithDefaultParentKey> builder) {
+        builder
+            .from(GroupCreatedWithDefaultParentKey.class)
+            .children("members", GroupMemberWithDefaultParentKey.class, children -> {
+                children
+                    .identifiedBy("userId")
+                    .from(UserAddedWithDefaultParentKey.class, fb -> {
+                        fb.usingKey("userId");
+                        return null; // Java lambda returning Unit
+                    });
+                return null; // Java lambda returning Unit
+            });
+    }
+}
 ```

@@ -1,7 +1,32 @@
-```text
-Java does not support this workflow yet.
-The fluent `IProjectionBuilderFor` API has no `.nested()`/`.clearWith()`
-equivalent — it can only map flat properties, not a single nested sub-object
-that gets cleared by a specific event. Track the client SDK issue before
-relying on nested object projection from Java.
+```java
+import io.cratis.chronicle.events.EventType;
+import io.cratis.chronicle.projections.IProjectionBuilderFor;
+import io.cratis.chronicle.projections.IProjectionFor;
+
+@EventType
+record NodDeclarativeSliceCreated(String name) {}
+
+@EventType
+record NodDeclarativeCommandSet(String name, String schema) {}
+
+@EventType
+record NodDeclarativeCommandCleared() {}
+
+record NodDeclarativeSlice(String name, NodDeclarativeCommandItem command) {}
+
+record NodDeclarativeCommandItem(String name, String schema) {}
+
+class NodDeclarativeSliceProjection implements IProjectionFor<NodDeclarativeSlice> {
+    @Override
+    public void define(IProjectionBuilderFor<NodDeclarativeSlice> builder) {
+        builder
+            .from(NodDeclarativeSliceCreated.class)
+            .nested("command", NodDeclarativeCommandItem.class, nested -> {
+                nested
+                    .from(NodDeclarativeCommandSet.class)
+                    .clearWith(NodDeclarativeCommandCleared.class);
+                return null; // Java lambda returning Unit
+            });
+    }
+}
 ```
