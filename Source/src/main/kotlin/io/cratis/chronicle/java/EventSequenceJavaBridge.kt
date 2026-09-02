@@ -3,36 +3,61 @@
 
 package io.cratis.chronicle.java
 
+import io.cratis.chronicle.OperationContext
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.IEventSequence
+import io.cratis.chronicle.eventSequences.RedactionReason
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
-import java.util.UUID
 import kotlinx.coroutines.runBlocking
 
-/**
- * Java-friendly bridge for the multi-event-source [IEventSequence.appendMany].
- *
- * Java can neither call a `suspend` function nor fill in Kotlin default arguments, so this blocks on
- * the coroutine and is `@JvmOverloads` to give Java the shorter forms.
- */
+/** Java bridge for multi-source atomic append operations. */
 object EventSequenceJavaBridge {
-    /**
-     * Appends events spanning any number of event sources as a single atomic batch.
-     *
-     * @param eventSequence The event sequence to append to.
-     * @param events The events to append, in the order they should be appended.
-     * @param concurrencyScopes Optional [ConcurrencyScope] per event source id. Sources left out are
-     *   appended without a concurrency check.
-     * @param correlationId Optional correlation identifier for the whole batch.
-     * @return A list of [AppendResult], one per event, in the order of [events].
-     */
+    /** Appends using a fresh per-call system context. */
     @JvmStatic
     @JvmOverloads
     fun appendMany(
         eventSequence: IEventSequence,
         events: List<EventForEventSourceId>,
-        concurrencyScopes: Map<String, ConcurrencyScope> = emptyMap(),
-        correlationId: UUID? = null
-    ): List<AppendResult> = runBlocking { eventSequence.appendMany(events, concurrencyScopes, correlationId) }
+        concurrencyScopes: Map<String, ConcurrencyScope> = emptyMap()
+    ): List<AppendResult> = runBlocking { eventSequence.appendMany(events, concurrencyScopes) }
+
+    /** Appends using explicit immutable metadata for the whole batch. */
+    @JvmStatic
+    @JvmOverloads
+    fun appendMany(
+        eventSequence: IEventSequence,
+        events: List<EventForEventSourceId>,
+        context: OperationContext,
+        concurrencyScopes: Map<String, ConcurrencyScope> = emptyMap()
+    ): List<AppendResult> = runBlocking { eventSequence.appendMany(events, context, concurrencyScopes) }
+
+    /** Redacts matching events with a fresh per-call system context. */
+    @JvmStatic
+    @JvmOverloads
+    fun redactForEventSource(
+        eventSequence: IEventSequence,
+        eventSourceId: String,
+        reason: String,
+        eventTypes: List<Class<*>> = emptyList()
+    ) {
+        runBlocking {
+            eventSequence.redactForEventSource(eventSourceId, RedactionReason(reason), eventTypes = eventTypes.map { it.kotlin })
+        }
+    }
+
+    /** Redacts matching events with explicit immutable metadata. */
+    @JvmStatic
+    @JvmOverloads
+    fun redactForEventSource(
+        eventSequence: IEventSequence,
+        eventSourceId: String,
+        reason: String,
+        context: OperationContext,
+        eventTypes: List<Class<*>> = emptyList()
+    ) {
+        runBlocking {
+            eventSequence.redactForEventSource(eventSourceId, RedactionReason(reason), context, eventTypes.map { it.kotlin })
+        }
+    }
 }

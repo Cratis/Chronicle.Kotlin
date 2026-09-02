@@ -3,49 +3,66 @@
 
 package io.cratis.chronicle.java
 
+import io.cratis.chronicle.eventSequences.AppendError
+import io.cratis.chronicle.eventSequences.AppendOptions
+import io.cratis.chronicle.eventSequences.ConstraintViolation
+import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyViolation
 import io.cratis.chronicle.transactions.IUnitOfWork
 import kotlinx.coroutines.runBlocking
 
-/**
- * A unit of work for Java, without the coroutines.
- *
- * @param unitOfWork The unit of work to forward to.
- */
+/** Blocking, ordinary-Java view of an explicit unit of work. */
 class BlockingUnitOfWork(private val unitOfWork: IUnitOfWork) : AutoCloseable {
-
     /** The suspending unit of work underneath. */
     fun unwrap(): IUnitOfWork = unitOfWork
 
-    /** Whether it has been committed or rolled back. */
+    /** Whether the unit of work is terminal: committed, rolled back, or failed. */
     val isCompleted: Boolean get() = unitOfWork.isCompleted
 
-    /** Whether it completed without a constraint violation or error. */
+    /** Whether the completed commit succeeded. */
     val isSuccess: Boolean get() = unitOfWork.isSuccess
 
-    /** The correlation identifier the whole unit of work is held under. */
-    val correlationId: String get() = unitOfWork.correlationId.value.toString()
+    /** Correlation identifier for the atomic batch. */
+    val correlationId: String get() = unitOfWork.correlationId.toString()
 
-    /** Commits everything staged, appending it as one atomic operation. */
+    /** Constraint violations returned by the completed commit. */
+    val constraintViolations: List<ConstraintViolation> get() = unitOfWork.getConstraintViolations()
+
+    /** Every concurrency violation returned by the completed commit. */
+    val concurrencyViolations: List<ConcurrencyViolation> get() = unitOfWork.getConcurrencyViolations()
+
+    /** Append errors returned by the completed commit. */
+    val appendErrors: List<AppendError> get() = unitOfWork.getAppendErrors()
+
+    /** Event payloads currently staged in commit order. */
+    val stagedEvents: List<Any> get() = unitOfWork.getEvents()
+
+    /** Greatest committed sequence number, or `null` when no event was committed. */
+    val lastCommittedSequenceNumber: Long?
+        get() = unitOfWork.tryGetLastCommittedEventSequenceNumber()?.value
+
+    /** Stages one event. */
+    @JvmOverloads
+    fun append(eventSourceId: String, event: Any, options: AppendOptions? = null) {
+        unitOfWork.append(eventSourceId, event, options)
+    }
+
+    /** Stages events in order. */
+    @JvmOverloads
+    fun appendMany(eventSourceId: String, events: List<Any>, options: AppendOptions? = null) {
+        unitOfWork.appendMany(eventSourceId, events, options)
+    }
+
+    /** Commits the complete ordered batch with one append-many RPC. */
     fun commit() {
         runBlocking { unitOfWork.commit() }
     }
 
-    /** Discards everything staged. */
+    /** Discards the staged batch. */
     fun rollback() {
         runBlocking { unitOfWork.rollback() }
     }
 
-    /**
-     * Rolls back unless the unit of work was already completed, so try-with-resources does the right
-     * thing on both paths:
-     *
-     * ```java
-     * try (var unitOfWork = store.getUnitOfWorkManager().begin()) {
-     *     eventLog.append("order-123", new OrderPlaced(...));
-     *     unitOfWork.commit();
-     * }   // committed above; nothing to undo. On a throw, rolled back here.
-     * ```
-     */
+    /** Rolls back an uncompleted transaction for try-with-resources. */
     override fun close() {
         if (!isCompleted) rollback()
     }

@@ -1,0 +1,43 @@
+name: Real Kernel Compatibility
+
+on:
+  workflow_call: {}
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - "**"
+    paths:
+      - "Source/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle/**"
+      - ".github/workflows/real-kernel-compatibility.yml"
+      - ".github/workflows/publish.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  real-kernel-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Setup JDK
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+        with:
+          gradle-version: '8.13'
+
+      - name: Verify Chronicle 16.44.1 compatibility
+        run: gradle :Source:realKernelTest --no-configuration-cache

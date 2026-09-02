@@ -53,6 +53,5 @@ class ResolvedEventStoreTests {
 
         assertThat(subject.eventLog).isNotNull()
         assertThat(subject.readModels).isNotNull()
-        assertThat(subject.unitOfWorkManager).isNotNull()
     }
 }

@@ -3,10 +3,14 @@
 
 package io.cratis.chronicle.testing
 
+import io.cratis.chronicle.OperationContext
 import io.cratis.chronicle.eventSequences.AppendOptions
+import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.eventSequences.IEventSequence
+import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.identity.Identity
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -14,6 +18,7 @@ import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import java.time.Instant
+import java.util.UUID
 
 @EventType
 data class EmployeeHired(val firstName: String = "", val lastName: String = "", val title: String = "")
@@ -171,6 +176,76 @@ class EventScenarioTests {
         assertFalse(scenario.eventLog.hasEventsFor("employee-3"))
         assertEquals(1, scenario.eventLog.getForEventSourceIdAndEventTypes("employee-2", listOf(EmployeeHired::class)).size)
         assertEquals(listOf("employee-1", "employee-2"), scenario.eventSourceIds())
+    }
+
+    @Test
+    fun `atomic batch partitions identical stream keys by event source`() = runBlocking {
+        val sequence = InMemoryEventSequence()
+        val setupContext = OperationContext.system()
+        sequence.append("source-a", EmployeeHired("Ada"), setupContext, AppendOptions(eventStreamId = "shared"))
+        sequence.append("source-b", EmployeeHired("Grace"), setupContext, AppendOptions(eventStreamId = "shared"))
+        val batchContext = OperationContext(UUID.randomUUID(), causedBy = Identity("user-1", "User"))
+
+        val results = sequence.appendMany(
+            listOf(
+                EventForEventSourceId("source-a", EmployeePromoted("Principal"), eventStreamId = "shared"),
+                EventForEventSourceId("source-b", EmployeePromoted("Staff"), eventStreamId = "shared")
+            ),
+            batchContext,
+            mapOf(
+                "source-a" to ConcurrencyScope(EventSequenceNumber(0), eventSourceId = true, eventStreamId = "shared"),
+                "source-b" to ConcurrencyScope(EventSequenceNumber(1), eventSourceId = true, eventStreamId = "shared")
+            )
+        )
+
+        assertTrue(results.all { it.isSuccess })
+        assertEquals(4, sequence.count)
+        assertEquals(
+            listOf(batchContext.correlationId, batchContext.correlationId),
+            sequence.events.takeLast(2).map { it.context.correlationId }
+        )
+        assertEquals(
+            listOf(batchContext.causedBy, batchContext.causedBy),
+            sequence.events.takeLast(2).map { it.context.causedBy }
+        )
+    }
+
+    @Test
+    fun `failed atomic batch leaves no committed residue`() = runBlocking {
+        val sequence = InMemoryEventSequence()
+        sequence.append("source-a", EmployeeHired("Ada"), OperationContext.system(), null)
+        val before = sequence.events
+
+        val results = sequence.appendMany(
+            listOf(
+                EventForEventSourceId("source-a", EmployeePromoted("Principal")),
+                EventForEventSourceId("source-b", EmployeeHired("Grace"))
+            ),
+            OperationContext.system(),
+            mapOf("source-a" to ConcurrencyScope(EventSequenceNumber(99), eventSourceId = true))
+        )
+
+        assertTrue(results.all { !it.isSuccess })
+        assertEquals(before, sequence.events)
+        assertEquals(1, sequence.count)
+    }
+
+    @Test
+    fun `invalid event anywhere in atomic batch leaves no committed residue`() = runBlocking {
+        val sequence = InMemoryEventSequence()
+
+        assertThrows(IllegalArgumentException::class.java) {
+            runBlocking {
+                sequence.appendMany(
+                    "source-a",
+                    listOf(EmployeeHired("Ada"), "not an event"),
+                    OperationContext.system(),
+                    null
+                )
+            }
+        }
+
+        assertEquals(0, sequence.count)
     }
 
     @Test

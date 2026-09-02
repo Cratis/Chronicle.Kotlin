@@ -5,146 +5,103 @@ package io.cratis.chronicle.eventSequences
 
 import Cratis.Chronicle.Contracts.EventSequences.Eventsequences
 import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
+import io.cratis.chronicle.OperationContext
 import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.auditing.CausationType
-import io.cratis.chronicle.auditing.causationManager
 import io.cratis.chronicle.events.EventType
-import io.mockk.CapturingSlot
+import io.cratis.chronicle.identity.Identity
 import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.slot
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
 import java.time.Instant
+import java.util.Collections
+import java.util.UUID
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Test
 
 @EventType
 private data class CausationTestEvent(val value: String)
 
-/**
- * Causation is ambient by default - taken from the chain the current thread has built up - which is
- * what nearly every append wants. These pin the override that lets an append attribute itself to
- * something else, and the one shape the wire cannot carry.
- */
 class AppendCausationTests {
-
-    private val imported = listOf(
+    private val causation = listOf(
         Causation(Instant.parse("2020-03-01T10:15:30Z"), CausationType("LegacyImport"), mapOf("file" to "1998.csv"))
     )
-
-    private fun stubReturningOneAppend(request: CapturingSlot<Eventsequences.AppendRequest>) =
-        mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>().also { stub ->
-            coEvery { stub.append(capture(request), any()) } returns
-                Eventsequences.AppendResponse.newBuilder().setSequenceNumber(0).build()
-        }
+    private val identity = Identity("user-42", "Ada", "ada")
 
     private fun sequenceFor(stub: EventSequencesGrpcKt.EventSequencesCoroutineStub) =
         EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
 
     @Test
-    fun `an append with no override carries the ambient chain`() = runBlocking {
+    fun `append maps the explicit operation context exactly`() = runBlocking {
         val request = slot<Eventsequences.AppendRequest>()
-        val sequence = sequenceFor(stubReturningOneAppend(request))
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        coEvery { stub.append(capture(request), any()) } returns
+            Eventsequences.AppendResponse.newBuilder().setSequenceNumber(0).build()
+        val correlationId = UUID.randomUUID()
 
-        sequence.append("source-1", CausationTestEvent("hello"))
+        withContext(Dispatchers.Default) {
+            sequenceFor(stub).append(
+                "source-1",
+                CausationTestEvent("hello"),
+                OperationContext(correlationId, causation, identity)
+            )
+        }
 
-        val types = request.captured.causationList.map { it.type }
-        assertTrue(types.contains(CausationType.appendEvent.name), "expected the ambient append entry, got $types")
-    }
-
-    @Test
-    fun `an append with an override carries that chain instead`() = runBlocking {
-        val request = slot<Eventsequences.AppendRequest>()
-        val sequence = sequenceFor(stubReturningOneAppend(request))
-
-        sequence.append("source-1", CausationTestEvent("hello"), AppendOptions(causation = imported))
-
+        assertEquals(correlationId, request.captured.correlationId.toUuid())
         assertEquals(listOf("LegacyImport"), request.captured.causationList.map { it.type })
         assertEquals(mapOf("file" to "1998.csv"), request.captured.causationList.single().propertiesMap)
+        assertEquals("user-42", request.captured.causedBy.subject)
     }
 
     @Test
-    fun `an override leaves the ambient chain alone`() = runBlocking {
-        val request = slot<Eventsequences.AppendRequest>()
-        val sequence = sequenceFor(stubReturningOneAppend(request))
-        causationManager.clear()
-        val before = causationManager.currentChain
-
-        sequence.append("source-1", CausationTestEvent("hello"), AppendOptions(causation = imported))
-
-        assertEquals(before, causationManager.currentChain)
-    }
-
-    @Test
-    fun `a batch carries the causation its events agree on`() = runBlocking {
+    fun `append many uses one exact context for the whole batch`() = runBlocking {
         val request = slot<Eventsequences.AppendManyRequest>()
         val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
-        coEvery { stub.appendMany(capture(request), any()) } returns
-            Eventsequences.AppendManyResponse.newBuilder().build()
+        coEvery { stub.appendMany(capture(request), any()) } returns Eventsequences.AppendManyResponse.getDefaultInstance()
+        val context = OperationContext(UUID.randomUUID(), causation, identity)
 
         sequenceFor(stub).appendMany(
             listOf(
-                EventForEventSourceId("source-1", CausationTestEvent("a"), causation = imported),
-                EventForEventSourceId("source-2", CausationTestEvent("b"), causation = imported)
-            )
+                EventForEventSourceId("source-1", CausationTestEvent("a")),
+                EventForEventSourceId("source-2", CausationTestEvent("b"))
+            ),
+            context
         )
 
+        assertEquals(context.correlationId, request.captured.correlationId.toUuid())
         assertEquals(listOf("LegacyImport"), request.captured.causationList.map { it.type })
+        assertEquals("user-42", request.captured.causedBy.subject)
+        assertEquals(2, request.captured.eventsCount)
     }
 
     @Test
-    fun `a batch whose events disagree on causation is rejected rather than losing one of them`() {
+    fun `parallel convenience calls receive distinct contexts without contamination`() = runBlocking {
+        val requests = Collections.synchronizedList(mutableListOf<Eventsequences.AppendRequest>())
         val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        coEvery { stub.append(capture(requests), any()) } returns
+            Eventsequences.AppendResponse.newBuilder().setSequenceNumber(0).build()
         val sequence = sequenceFor(stub)
 
-        val error = assertThrows(CausationDiffersAcrossBatch::class.java) {
-            runBlocking {
-                sequence.appendMany(
-                    listOf(
-                        EventForEventSourceId("source-1", CausationTestEvent("a"), causation = imported),
-                        EventForEventSourceId(
-                            "source-2",
-                            CausationTestEvent("b"),
-                            causation = listOf(Causation(Instant.EPOCH, CausationType("SomethingElse")))
-                        )
-                    )
-                )
-            }
-        }
+        (1..20).map { index ->
+            async(Dispatchers.Default) { sequence.append("source-$index", CausationTestEvent(index.toString())) }
+        }.awaitAll()
 
-        assertTrue(error.message!!.contains("one chain"))
+        val ids = requests.map { it.correlationId.toUuid() }
+        assertEquals(20, ids.toSet().size)
+        assertEquals(setOf("[System]"), requests.map { it.causedBy.name }.toSet())
     }
 
     @Test
-    fun `a batch with no override carries the ambient chain`() = runBlocking {
-        val request = slot<Eventsequences.AppendManyRequest>()
-        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
-        coEvery { stub.appendMany(capture(request), any()) } returns
-            Eventsequences.AppendManyResponse.newBuilder().build()
-
-        sequenceFor(stub).appendMany(
-            listOf(EventForEventSourceId("source-1", CausationTestEvent("a")))
-        )
-
-        val types = request.captured.causationList.map { it.type }
-        assertTrue(types.contains(CausationType.appendManyEvents.name), "expected the ambient batch entry, got $types")
+    fun `system factory creates a fresh context per call`() {
+        assertNotEquals(OperationContext.system().correlationId, OperationContext.system().correlationId)
     }
 
-    @Test
-    fun `the single source batch form passes its causation through`() = runBlocking {
-        val request = slot<Eventsequences.AppendManyRequest>()
-        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
-        coEvery { stub.appendMany(capture(request), any()) } returns
-            Eventsequences.AppendManyResponse.newBuilder().build()
-
-        sequenceFor(stub).appendMany(
-            "source-1",
-            listOf(CausationTestEvent("a"), CausationTestEvent("b")),
-            AppendOptions(causation = imported)
-        )
-
-        assertEquals(listOf("LegacyImport"), request.captured.causationList.map { it.type })
-    }
+    private fun bcl.Bcl.Guid.toUuid(): UUID =
+        UUID(java.lang.Long.reverseBytes(lo), java.lang.Long.reverseBytes(hi))
 }

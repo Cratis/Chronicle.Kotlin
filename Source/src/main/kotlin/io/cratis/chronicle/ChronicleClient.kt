@@ -19,7 +19,7 @@ class ChronicleClient(private val options: ChronicleOptions) : IChronicleClient 
     private val eventStores = ConcurrentHashMap<String, EventStore>()
 
     override fun getEventStore(name: String, namespace: String): EventStore {
-        return eventStores.getOrPut("$name/$namespace") {
+        return eventStores.computeIfAbsent("$name/$namespace") {
             EventStore(
                 name,
                 namespace,

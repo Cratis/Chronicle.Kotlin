@@ -8,8 +8,7 @@ import Cratis.Chronicle.Contracts.Jobs.JobsOuterClass
 import Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.ObservationEventstoresubscriptions
 import Cratis.Chronicle.Contracts.Observation.Webhooks.ObservationWebhooks
 import io.cratis.chronicle.IEventStore
-import io.cratis.chronicle.auditing.CausationManager
-import io.cratis.chronicle.auditing.CausationType
+import io.cratis.chronicle.OperationContext
 import io.cratis.chronicle.compliance.IComplianceService
 import io.cratis.chronicle.eventSequences.AppendedEvent
 import io.cratis.chronicle.eventSequences.AppendOptions
@@ -17,7 +16,6 @@ import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.CompleteStreamResult
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.eventSequences.IEventLog
-import io.cratis.chronicle.eventSequences.ITransactionalEventSequence
 import io.cratis.chronicle.eventSequences.RedactionReason
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScopeBuilder
 import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionsService
@@ -69,8 +67,26 @@ object EventLogJavaBridge {
         runBlocking { eventLog.append(eventSourceId, event, options) }
 
     @JvmStatic
+    fun append(
+        eventLog: IEventLog,
+        eventSourceId: String,
+        event: Any,
+        context: OperationContext,
+        options: AppendOptions?
+    ): AppendResult = runBlocking { eventLog.append(eventSourceId, event, context, options) }
+
+    @JvmStatic
     fun appendMany(eventLog: IEventLog, eventSourceId: String, events: List<Any>, options: AppendOptions?): List<AppendResult> =
         runBlocking { eventLog.appendMany(eventSourceId, events, options) }
+
+    @JvmStatic
+    fun appendMany(
+        eventLog: IEventLog,
+        eventSourceId: String,
+        events: List<Any>,
+        context: OperationContext,
+        options: AppendOptions?
+    ): List<AppendResult> = runBlocking { eventLog.appendMany(eventSourceId, events, context, options) }
 
     @JvmStatic
     fun hasEventsFor(eventLog: IEventLog, eventSourceId: String): Boolean =
@@ -124,10 +140,40 @@ object EventLogJavaBridge {
         runBlocking { eventLog.redact(EventSequenceNumber(sequenceNumber), RedactionReason(reason)) }
     }
 
+    /** Permanently redacts one event with explicit immutable operation metadata. */
+    @JvmStatic
+    fun redact(
+        eventLog: IEventLog,
+        sequenceNumber: Long,
+        reason: String,
+        context: OperationContext
+    ) {
+        runBlocking { eventLog.redact(EventSequenceNumber(sequenceNumber), RedactionReason(reason), context) }
+    }
+
     /** Permanently redacts all events for [eventSourceId], optionally narrowed to [eventTypes]. */
     @JvmStatic
     fun redactForEventSource(eventLog: IEventLog, eventSourceId: String, reason: String, eventTypes: List<Class<*>>) {
         runBlocking { eventLog.redactForEventSource(eventSourceId, RedactionReason(reason), eventTypes.map { it.kotlin }) }
+    }
+
+    /** Permanently redacts matching events with explicit immutable operation metadata. */
+    @JvmStatic
+    fun redactForEventSource(
+        eventLog: IEventLog,
+        eventSourceId: String,
+        reason: String,
+        context: OperationContext,
+        eventTypes: List<Class<*>>
+    ) {
+        runBlocking {
+            eventLog.redactForEventSource(
+                eventSourceId,
+                RedactionReason(reason),
+                context,
+                eventTypes.map { it.kotlin }
+            )
+        }
     }
 
     /**
@@ -157,19 +203,6 @@ object ConcurrencyScopeBuilderJavaBridge {
     @JvmStatic
     fun withSequenceNumber(builder: ConcurrencyScopeBuilder, sequenceNumber: Long): ConcurrencyScopeBuilder =
         builder.withSequenceNumber(io.cratis.chronicle.eventSequences.EventSequenceNumber(sequenceNumber))
-}
-
-/**
- * Java-friendly bridge for ITransactionalEventSequence operations.
- */
-object TransactionalEventSequenceJavaBridge {
-    @JvmStatic
-    fun append(sequence: ITransactionalEventSequence, eventSourceId: String, event: Any, options: AppendOptions?): AppendResult =
-        runBlocking { sequence.append(eventSourceId, event, options) }
-
-    @JvmStatic
-    fun appendMany(sequence: ITransactionalEventSequence, eventSourceId: String, events: List<Any>, options: AppendOptions?): List<AppendResult> =
-        runBlocking { sequence.appendMany(eventSourceId, events, options) }
 }
 
 /**
@@ -669,16 +702,6 @@ object WebhooksServiceJavaBridge {
     @JvmStatic
     fun remove(service: IWebhooksService, id: String) {
         runBlocking { service.remove(id) }
-    }
-}
-
-/**
- * Java-friendly bridge for CausationManager operations.
- */
-object CausationManagerJavaBridge {
-    @JvmStatic
-    fun add(manager: CausationManager, typeName: String, properties: Map<String, String>) {
-        manager.add(CausationType(typeName), properties)
     }
 }
 

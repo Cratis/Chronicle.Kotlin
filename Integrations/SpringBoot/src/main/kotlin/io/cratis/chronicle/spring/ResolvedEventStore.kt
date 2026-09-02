@@ -24,7 +24,6 @@ import io.cratis.chronicle.observation.IReducersService
 import io.cratis.chronicle.projections.IProjectionsService
 import io.cratis.chronicle.readModels.IReadModelsService
 import io.cratis.chronicle.seeding.IEventSeedingService
-import io.cratis.chronicle.transactions.UnitOfWorkManager
 import io.cratis.chronicle.webhooks.IWebhooksService
 
 /**
@@ -59,7 +58,6 @@ class ResolvedEventStore(
     override val constraints: IConstraintsService get() = current.constraints
     override val seeding: IEventSeedingService get() = current.seeding
     override val readModels: IReadModelsService get() = current.readModels
-    override val unitOfWorkManager: UnitOfWorkManager get() = current.unitOfWorkManager
     override val compliance: IComplianceService get() = current.compliance
     override val eventTypes: IEventTypesService get() = current.eventTypes
     override val namespaces: INamespacesService get() = current.namespaces

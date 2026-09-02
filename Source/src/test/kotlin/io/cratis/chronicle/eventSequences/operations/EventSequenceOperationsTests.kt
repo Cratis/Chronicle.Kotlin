@@ -5,6 +5,7 @@ package io.cratis.chronicle.eventSequences.operations
 
 import Cratis.Chronicle.Contracts.EventSequences.Eventsequences
 import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
+import io.cratis.chronicle.OperationContext
 import io.cratis.chronicle.eventSequences.EventSequence
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
@@ -128,8 +129,8 @@ class EventSequenceOperationsTests {
         val correlationId = UUID.randomUUID()
 
         sequenceFor(stubCapturing(request))
+            .operations(OperationContext(correlationId))
             .forEventSourceId("order-1") { append(OrderPlaced("order-1")) }
-            .withCorrelationId(correlationId)
             .perform()
 
         assertEquals(correlationId, request.captured.correlationUuid())
@@ -185,8 +186,8 @@ class EventSequenceOperationsTests {
     @Test
     fun `clear removes everything composed so far`() {
         val operations = sequenceFor(mockk())
+            .operations(OperationContext(UUID.randomUUID()))
             .forEventSourceId("order-1") { append(OrderPlaced("order-1")) }
-            .withCorrelationId(UUID.randomUUID())
 
         operations.clear()
 

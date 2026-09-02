@@ -56,7 +56,6 @@ interface IEventStore {
     val constraints: IConstraintsService
     val seeding: IEventSeedingService
     val readModels: IReadModelsService
-    val unitOfWorkManager: UnitOfWorkManager
     val compliance: IComplianceService
     val eventTypes: IEventTypesService
     val namespaces: INamespacesService
@@ -85,8 +84,7 @@ id — for example one used exclusively by a specific subsystem.
 
 ## IEventSequence and IEventLog
 
-`IEventLog` is `IEventSequence` plus a `transactional` entry point; both
-share the same read/write surface.
+`IEventLog` is the default `IEventSequence`; it has no ambient transactional view.
 
 <!-- validate: skip -->
 
@@ -100,15 +98,27 @@ interface IEventSequence {
         event: Any,
         options: AppendOptions? = null
     ): AppendResult
+    suspend fun append(
+        eventSourceId: String,
+        event: Any,
+        context: OperationContext,
+        options: AppendOptions? = null
+    ): AppendResult
     suspend fun appendMany(
         eventSourceId: String,
         events: List<Any>,
         options: AppendOptions? = null
     ): List<AppendResult>
     suspend fun appendMany(
+        eventSourceId: String,
+        events: List<Any>,
+        context: OperationContext,
+        options: AppendOptions? = null
+    ): List<AppendResult>
+    suspend fun appendMany(
         events: List<EventForEventSourceId>,
-        concurrencyScopes: Map<String, ConcurrencyScope> = emptyMap(),
-        correlationId: UUID? = null
+        context: OperationContext,
+        concurrencyScopes: Map<String, ConcurrencyScope> = emptyMap()
     ): List<AppendResult>
     suspend fun hasEventsFor(eventSourceId: String): Boolean
 
@@ -125,7 +135,8 @@ interface IEventSequence {
     suspend fun getFromSequenceNumber(
         sequenceNumber: EventSequenceNumber,
         eventSourceId: String? = null,
-        eventTypes: List<KClass<*>>? = null
+        eventTypes: List<KClass<*>>? = null,
+        tags: List<String> = emptyList()
     ): List<AppendedEvent>
     suspend fun getNextSequenceNumber(): EventSequenceNumber
     suspend fun getTailSequenceNumberForObserver(
@@ -141,16 +152,25 @@ interface IEventSequence {
         sequenceNumber: EventSequenceNumber,
         reason: RedactionReason
     )
+    suspend fun redact(
+        sequenceNumber: EventSequenceNumber,
+        reason: RedactionReason,
+        context: OperationContext
+    )
     suspend fun redactForEventSource(
         eventSourceId: String,
         reason: RedactionReason,
         eventTypes: List<KClass<*>> = emptyList()
     )
+    suspend fun redactForEventSource(
+        eventSourceId: String,
+        reason: RedactionReason,
+        context: OperationContext,
+        eventTypes: List<KClass<*>> = emptyList()
+    )
 }
 
-interface IEventLog : IEventSequence {
-    val transactional: ITransactionalEventSequence
-}
+interface IEventLog : IEventSequence
 ```
 
 ### Appending across event sources
@@ -185,8 +205,9 @@ resolved against that event's own event source id.
 
 `IEventSequenceOperations` composes a batch that is decided in more than
 one place, then commits it with a single `perform()`. Start one with the
-`operations()` or `forEventSourceId(...)` extension on any
-`IEventSequence`. Nothing reaches the kernel until `perform()` runs, and
+`operations(context)` or `forEventSourceId(..., context)` extension on any
+`IEventSequence` (the no-context convenience creates a fresh system context).
+Nothing reaches the kernel until `perform()` runs, and
 `getEventsToAppend()` shows exactly what it will send.
 
 <!-- validate: skip -->
@@ -194,13 +215,12 @@ one place, then commits it with a single `perform()`. Start one with the
 ```kotlin
 interface IEventSequenceOperations {
     val eventSequence: IEventSequence
+    val context: OperationContext
 
     fun forEventSourceId(
         eventSourceId: String,
         configure: IEventSourceOperations.() -> Unit
     ): IEventSequenceOperations
-    fun withCorrelationId(correlationId: UUID): IEventSequenceOperations
-    fun withCausation(causation: List<Causation>): IEventSequenceOperations
     fun getAppendedEvents(): List<Any>
     fun getEventsToAppend(): List<EventForEventSourceId>
     fun clear()
@@ -211,7 +231,9 @@ interface IEventSourceOperations {
     val operations: List<IEventSequenceOperation>
     val concurrencyScope: ConcurrencyScope
 
-    fun withConcurrencyScope(concurrencyScope: ConcurrencyScope): IEventSourceOperations
+    fun withConcurrencyScope(
+        concurrencyScope: ConcurrencyScope
+    ): IEventSourceOperations
     fun withConcurrencyScope(
         configure: ConcurrencyScopeBuilder.() -> Unit
     ): IEventSourceOperations
@@ -224,7 +246,9 @@ interface IEventSourceOperations {
         occurred: Instant? = null,
         subject: String? = null
     ): IEventSourceOperations
-    fun <T : IEventSequenceOperation> getOperationsOfType(type: KClass<T>): List<T>
+    fun <T : IEventSequenceOperation> getOperationsOfType(
+        type: KClass<T>
+    ): List<T>
     fun getAppendedEvents(): List<Any>
 }
 ```
@@ -236,8 +260,8 @@ that never sets one is appended unchecked, and a scope already set is never
 cleared by a later `ConcurrencyScope.notSet` — so a call that expresses no
 expectation cannot silently disable a check that was explicitly asked for.
 
-Causation is not composed here; it is derived from the ambient
-`CausationManager` when `perform()` runs.
+The `OperationContext` supplied when composition starts is used unchanged when
+`perform()` runs.
 
 Java reaches this through `EventSequenceOperationsJavaBridge`
 (`operationsFor`, `forEventSourceId`, `perform`) and
@@ -250,7 +274,7 @@ parameters Kotlin default arguments cannot give Java.
 `getForEventSourceIdAndEventTypes` gets events for one event source,
 narrowed to specific event types and (optionally) a specific stream.
 `getFromSequenceNumber` instead reads forward from a position in the
-sequence, optionally narrowed by event source and/or event type —
+sequence, optionally narrowed by event source, event type, and/or tags —
 useful for catching up from a bookmark. `getTailSequenceNumber` and
 `getNextSequenceNumber` report the current end of the sequence (or of one
 event source's events within it) and the sequence number the *next*
@@ -313,10 +337,9 @@ completed. Completing an already-completed stream returns
 `appendOperations` is a hot `SharedFlow` that emits after every append made
 *through that specific `IEventSequence` instance* completes, whether it
 succeeded or failed — a single-event `append` emits a list of one element,
-a batch `appendMany` emits the whole batch. It does not emit for
-transactional appends made through `ITransactionalEventSequence` (those
-only emit, as part of the underlying batch, once the unit of work commits
-and the real append happens). Being a *hot* flow, only appends made after a
+a batch `appendMany` emits the whole batch. An explicit unit-of-work commit
+emits once through its bound sequence because it performs one append-many
+operation. Being a *hot* flow, only appends made after a
 subscriber starts collecting are seen — nothing is replayed.
 
 <!-- validate: skip -->
@@ -338,15 +361,13 @@ Optimistic concurrency is opt-in per append, via
 
 ```kotlin
 data class AppendOptions(
-    val correlationId: UUID? = null,
     val concurrencyScope: ConcurrencyScope? = null,
     val eventSourceType: String? = null,
     val eventStreamType: String? = null,
     val eventStreamId: String? = null,
     val subject: String? = null,
     val tags: List<String> = emptyList(),
-    val occurred: Instant? = null,
-    val causation: List<Causation> = emptyList()
+    val occurred: Instant? = null
 )
 
 data class ConcurrencyScope(
@@ -355,7 +376,8 @@ data class ConcurrencyScope(
     val eventStreamType: String? = null,
     val eventStreamId: String? = null,
     val eventSourceType: String? = null,
-    val eventTypes: List<EventTypeDescriptor> = emptyList()
+    val eventTypes: List<EventTypeDescriptor> = emptyList(),
+    val expectsNoMatchingEvent: Boolean = false
 )
 ```
 
@@ -365,53 +387,34 @@ directly — `withSequenceNumber` sets the expected position, and
 `withEventSourceType`/`withEventType(s)` each narrow which dimension the
 check applies to. Leaving `concurrencyScope` unset (the default) is
 equivalent to `ConcurrencyScope.none` — the append is not concurrency
-checked. When the scope no longer matches, the append fails with
-`AppendResult.concurrencyViolation` set instead of throwing.
+checked. `expectsNoMatchingEvent` uses the dedicated 16.44.1 wire flag. When a
+scope no longer matches, the append fails with all violations in
+`AppendResult.concurrencyViolations`.
 
-### Causation
+### Operation context
 
-Every append carries a causation chain describing what led to it. By default
-that chain is ambient: `CausationManager` builds one up per thread, and the
-append reads it as it goes. Nearly every append should leave it at that.
+The mutating operations that carry audit metadata are precisely `append`, both
+forms of `appendMany`, `redact`, and `redactForEventSource`. Each has an explicit
+`OperationContext` overload and a convenience overload that creates a fresh
+system context for that call. A context maps directly onto `AppendRequest`, the
+whole `AppendManyRequest`, `RedactRequest`, or `RedactForEventSourceRequest`;
+individual events in an atomic batch cannot invent different identities.
+Composed operations and a unit-of-work commit ultimately use the explicit
+`appendMany` overload and preserve their one context unchanged.
 
-Set `AppendOptions.causation` to attribute an append to a different chain —
-an event imported from a legacy system, or a side effect that belongs to a
-chain of its own rather than to the work the current thread happens to be
-doing. An override deliberately leaves the ambient chain untouched, so later
-appends are not attributed to something they had nothing to do with.
-
-<!-- validate: body needs=store -->
+`completeStream` is also mutating, but the 16.44.1 complete-stream wire request
+has no correlation, causation, or identity fields, so that API does **not**
+accept `OperationContext`. No mutable global, request holder, coroutine context,
+or thread-local state is consulted to obtain audit metadata.
 
 ```kotlin
-import io.cratis.chronicle.auditing.Causation
-import io.cratis.chronicle.auditing.CausationType
-import io.cratis.chronicle.eventSequences.AppendOptions
-import java.time.Instant
-
+val context = OperationContext(correlationId, causation, identity)
 store.eventLog.append(
     "employee-1",
     EmployeeHired("Ada", "Lovelace", "Engineer"),
-    AppendOptions(
-        causation = listOf(
-            Causation(
-                Instant.parse("1998-06-01T09:00:00Z"),
-                CausationType("LegacyImport"),
-                mapOf("file" to "1998.csv")
-            )
-        )
-    )
+    context
 )
 ```
-
-`EventForEventSourceId` carries the same field, which is how a reactor side
-effect names its own chain. One caveat applies to batches: the kernel carries
-a single chain per `appendMany`, not one per event, so a batch whose events
-declare different chains throws `CausationDiffersAcrossBatch` rather than
-silently keeping one of them. Give them the same causation, leave it unset,
-or append them as separate batches. For a composed operation, set it once for
-the whole batch with `withCausation`.
-
-From Java, use `AppendOptionsBuilder.causation(...)`.
 
 ### AppendResult
 
@@ -421,57 +424,52 @@ From Java, use `AppendOptionsBuilder.causation(...)`.
 | `sequenceNumber` | `EventSequenceNumber` | Position in the event log |
 | `constraintViolations` | `List<ConstraintViolation>` | On failure |
 | `errors` | `List<AppendError>` | On failure |
-| `concurrencyViolation` | `ConcurrencyViolation?` | Set on stale scope |
+| `concurrencyViolations` | `List<ConcurrencyViolation>` | All stale scopes |
+| `concurrencyCheckPerformed` | `Boolean` | Whether checked |
 
 ---
 
 ## Unit of work
 
-`IEventStore.unitOfWorkManager` returns an `IUnitOfWorkManager`, which
-creates and tracks `IUnitOfWork` instances scoped to the current thread.
+A `UnitOfWork` is constructed explicitly with one `IEventSequence` and one
+`OperationContext`. It stages events across source identifiers but cannot cross
+its sequence boundary. `commit()` sends exactly one atomic `appendMany` request
+preserving original call order.
 
 <!-- validate: skip -->
 
 ```kotlin
-interface IUnitOfWorkManager {
-    val current: IUnitOfWork
-    val hasCurrent: Boolean
-    fun tryGetFor(correlationId: CorrelationId): IUnitOfWork?
-    fun begin(): IUnitOfWork
-    fun begin(correlationId: CorrelationId): IUnitOfWork
-    fun setCurrent(unitOfWork: IUnitOfWork)
-}
-
 interface IUnitOfWork {
+    val eventSequence: IEventSequence
+    val context: OperationContext
+    val correlationId: UUID
     val isCompleted: Boolean
-    val correlationId: CorrelationId
     val isSuccess: Boolean
 
-    fun addEvent(
-        eventSequenceId: EventSequenceId,
+    fun append(
         eventSourceId: String,
         event: Any,
+        options: AppendOptions? = null
+    )
+    fun appendMany(
+        eventSourceId: String,
+        events: List<Any>,
         options: AppendOptions? = null
     )
     fun getEvents(): List<Any>
     fun getConstraintViolations(): List<ConstraintViolation>
     fun getConcurrencyViolations(): List<ConcurrencyViolation>
     fun getAppendErrors(): List<AppendError>
-
     suspend fun commit()
     suspend fun rollback()
-
     fun onCompleted(callback: (IUnitOfWork) -> Unit)
     fun tryGetLastCommittedEventSequenceNumber(): EventSequenceNumber?
 }
 ```
 
-`current` throws `NoUnitOfWorkHasBeenStarted` if `begin` hasn't been called
-on this thread — check `hasCurrent` first if that's expected. Prefer
-staging events through `store.eventLog.transactional.append`/`appendMany`
-(see [Transactions](../guides/transactions.md)) over calling `addEvent`
-directly; the transactional event sequence resolves the right
-`EventSequenceId` for you.
+Repeated commit/rollback and staging after completion are rejected. Failure
+and cancellation are terminal, preventing partial client-side retries of a
+multi-source batch.
 
 After `commit()`, `isSuccess` reflects whether every staged event was
 appended without a constraint violation, concurrency violation, or append
@@ -481,7 +479,10 @@ error; `getConstraintViolations()`/`getConcurrencyViolations()`/
 number actually committed (`null` if nothing committed). `onCompleted`
 registers a callback invoked once, whether the unit of work ends via
 `commit()` or `rollback()` — it can be called multiple times to register
-several callbacks.
+several callbacks. A callback registered while commit is in flight waits until
+the state is terminal. Callback failures are isolated until every callback has
+run, then reported as `UnitOfWorkCompletionCallbackException`; a successful
+append remains committed and successful, and commit can never retry it.
 
 ---
 
@@ -881,16 +882,16 @@ so there is nothing to declare and nothing to sequence.
 
 - `BlockingChronicleClient` — `connect`, `getEventStore(s)`, `dispose`.
   Closeable.
-- `BlockingEventStore` — the event log and other sequences, transactional
-  appends, read models, reactors, units of work, and registration.
-- `BlockingEventSequence` — `append`, `appendMany`, `hasEventsFor`, sequence
-  numbers, reading events back, `redact`.
-- `BlockingTransactionalEventSequence` — `append` and `appendMany`, staged
-  against the current unit of work.
+- `BlockingEventStore` — event sequences, read models, reactors, registration.
+- `BlockingEventSequence` — `append`, `appendMany`, explicit
+  `beginUnitOfWork`, `hasEventsFor`, sequence numbers, reading events back,
+  and both single-event and event-source redaction, including explicit-context
+  overloads.
 - `BlockingReadModels` — `getInstanceByKey` and `register`, by plain `Class`.
 - `BlockingReactors` — `register`.
-- `BlockingUnitOfWork` — `commit`, `rollback`. Closeable, rolling back unless
-  it was committed.
+- `BlockingUnitOfWork` — `commit`, `rollback`, plus ordinary-Java getters for
+  staged events, constraint/concurrency violations, append errors, and the last
+  committed sequence number. Closeable, rolling back unless it was committed.
 
 Every call blocks until the kernel answers, which is what a `main`, a controller
 method or a scheduled job wants. Do not call them from inside a coroutine —
@@ -903,13 +904,11 @@ A unit of work reads as try-with-resources, so a throw needs no `catch`:
 
 ```java
 var eventStore = new BlockingEventStore(store);
+var context = OperationContext.system();
 
-try (var unitOfWork = eventStore.beginUnitOfWork()) {
-    var transactional = eventStore.getTransactional();
-
-    transactional.append("order-123", new OrderPlaced(99.95));
-    transactional.append("inventory-widget", new InventoryReserved("widget", 1));
-
+try (var unitOfWork = eventStore.getEventLog().beginUnitOfWork(context)) {
+    unitOfWork.append("order-123", new OrderPlaced(99.95));
+    unitOfWork.append("inventory-widget", new InventoryReserved("widget", 1));
     unitOfWork.commit();
 }
 ```
@@ -931,7 +930,6 @@ Java-facing signature. `Causation.of(timestamp, type)` exists for the same reaso
   `getForEventSourceIdAndEventTypes`, `getFromSequenceNumber`,
   `getTailSequenceNumber`, `getNextSequenceNumber`, `completeStream`,
   `redact`, `redactForEventSource`, `watchAppendOperations`
-- `TransactionalEventSequenceJavaBridge` — `append`, `appendMany`
 - `ConcurrencyScopeBuilderJavaBridge` — `withSequenceNumber`
 - `EventTypesServiceJavaBridge` — `register`, `registerSingle`,
   `getAllGenerationsForEventType`
@@ -947,6 +945,8 @@ Java-facing signature. `Causation.of(timestamp, type)` exists for the same reaso
   — `forEventType`
 - `NamespacesServiceJavaBridge` — `ensure`, `getAll`
 - `IdentityManagerServiceJavaBridge` — `rename`
+- `EventSequenceJavaBridge` — multi-source `appendMany` and event-source
+  redaction, both with explicit-context overloads
 - `UnitOfWorkJavaBridge` — `commit`, `rollback`
 - `ComplianceServiceJavaBridge` — `release`, `deleteEncryptionKey`
 
@@ -966,14 +966,17 @@ var result = EventLogJavaBridge.append(
     null);
 ```
 
-`EventSequenceNumber` is a Kotlin value class, so an `AppendResult` has no
-ordinary getter for it on the JVM. Read it with
-`EventLogJavaBridge.getSequenceNumber(result)`. The same applies to
-`getTailSequenceNumber`/`getNextSequenceNumber` (they return `long`
-directly) and to `redact`/`redactForEventSource` (they take a `long`
-sequence number and a plain `String` reason rather than
-`EventSequenceNumber`/`RedactionReason`).
+`EventSequenceNumber` is a Kotlin value class, so Java reads an append position
+through `AppendResult.getSequenceNumberValue()` (or
+`EventLogJavaBridge.getSequenceNumber(result)`). The same interop rule is why
+`getTailSequenceNumber`/`getNextSequenceNumber` return `long` directly and
+single-event `redact` takes a `long` sequence number plus a plain `String`
+reason. Event-source redaction has no sequence-number argument: both
+`BlockingEventSequence.redactForEventSource` and
+`EventSequenceJavaBridge.redactForEventSource` take the source id, a plain
+`String` reason, optional `OperationContext`, and event-type `Class` values.
 
-`ConstraintBuilderJavaBridge`, `UniqueConstraintBuilderJavaBridge`,
-`ProjectionBuilderJavaBridge`, and `CausationManagerJavaBridge` cover the
-builder APIs that take a `KClass` in Kotlin, accepting a `Class` instead.
+`ConstraintBuilderJavaBridge`, `UniqueConstraintBuilderJavaBridge`, and
+`ProjectionBuilderJavaBridge` cover builder APIs that take a `KClass` in
+Kotlin, accepting a `Class` instead. `OperationContext.builder()` is directly
+usable from ordinary Java.

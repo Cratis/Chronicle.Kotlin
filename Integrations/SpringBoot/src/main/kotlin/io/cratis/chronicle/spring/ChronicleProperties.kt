@@ -35,9 +35,6 @@ import java.time.Duration
  * @property registrationTimeout How long startup waits for artifacts to be registered before carrying
  *   on regardless, so an unreachable kernel degrades rather than blocks.
  * @property namespaceResolution How the namespace for a piece of work is decided.
- * @property unitOfWork Per-request unit of work behavior.
- * @property causation Per-request causation behavior.
- * @property identity Per-request identity behavior.
  */
 @ConfigurationProperties(prefix = "cratis.chronicle")
 class ChronicleProperties {
@@ -50,9 +47,6 @@ class ChronicleProperties {
     var programIdentifier: String? = null
     var registrationTimeout: Duration = Duration.ofSeconds(30)
     var namespaceResolution: NamespaceResolution = NamespaceResolution()
-    var unitOfWork: UnitOfWork = UnitOfWork()
-    var causation: Causation = Causation()
-    var identity: Identity = Identity()
 
     /**
      * How the namespace for a piece of work is decided.
@@ -82,33 +76,4 @@ class ChronicleProperties {
         }
     }
 
-    /**
-     * Per-request unit of work behavior.
-     *
-     * @property enabled Whether each HTTP request runs inside a unit of work that is committed when the
-     *   request completes, so a handler can append several events and have them land atomically.
-     */
-    class UnitOfWork {
-        var enabled: Boolean = true
-    }
-
-    /**
-     * Per-request causation behavior.
-     *
-     * @property enabled Whether each HTTP request contributes its route, method and host to the
-     *   causation chain recorded on every event appended while handling it.
-     */
-    class Causation {
-        var enabled: Boolean = true
-    }
-
-    /**
-     * Per-request identity behavior.
-     *
-     * @property enabled Whether the authenticated principal becomes the identity recorded on every
-     *   event appended while handling the request.
-     */
-    class Identity {
-        var enabled: Boolean = true
-    }
 }

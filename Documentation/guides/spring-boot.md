@@ -189,55 +189,43 @@ which is the full API.
 | `readModel(type, key)` | One read model instance by key |
 | `readModels(type)` | Every instance of a read model |
 | `readModelHistory(type, key)` | Every state an instance has been through |
-| `inUnitOfWork(work)` | Run work atomically outside a request |
+| `inUnitOfWork(context, work)` | Run explicit work atomically |
 | `getEventStore()` | The full `IEventStore` |
 
-## What you get per request
+## Request operation metadata
 
-In a servlet application the starter adds three filters. Each can be turned off
-on its own.
-
-### Identity
-
-The authenticated principal becomes the identity recorded on every event appended
-while handling the request, so the audit trail comes out right without any code
-passing a user around. Subject, name and username are read from the `sub`, `name`
-and `preferred_username` claims, falling back to the principal's name.
-
-Requires Spring Security on the classpath. Disable with
-`cratis.chronicle.identity.enabled: false`.
-
-### Causation
-
-The route, method, host, scheme and query of the request are recorded on the
-causation chain of every event it produces. "Why does this record say what it
-says?" is then answered by the event's own metadata rather than by correlating
-log files.
-
-Disable with `cratis.chronicle.causation.enabled: false`.
-
-### Unit of work
-
-Each request runs inside a unit of work that is committed when the request
-completes and rolled back if it throws. A handler can append several events
-across several event sources and have them land together or not at all:
+The starter deliberately installs no ambient identity, causation, correlation,
+or transaction filters. A controller constructs an immutable `OperationContext`
+from authenticated request data and passes it to each append or explicit
+transaction. Dispatcher hops cannot lose that value and
+parallel requests cannot contaminate one another.
 
 <!-- validate: skip -->
 
 ```kotlin
 @PostMapping("/{id}/hire")
-fun hire(@PathVariable id: String, @RequestBody hire: Hire) = runBlocking {
-    // Both events commit together when the request completes. If the email is
-    // already taken, the constraint stops both.
-    eventStore.eventLog.append(
-        id, EmployeeHired(hire.firstName, hire.lastName, hire.title))
-    eventStore.eventLog.append(id, EmployeeEmailSet(hire.email))
+fun hire(
+    @PathVariable id: String,
+    @RequestBody hire: Hire,
+    principal: Principal
+) = runBlocking {
+    val context = OperationContext.builder()
+        .causedBy(Identity(principal.name, principal.name))
+        .causation(
+            Causation(
+                Instant.now(),
+                CausationType("HttpRequest"),
+                mapOf("route" to "/{id}/hire")
+            )
+        )
+        .build()
+    val transaction = UnitOfWork(eventStore.eventLog, context)
+    transaction.append(id, EmployeeHired(hire.firstName, hire.lastName, hire.title))
+    transaction.append(id, EmployeeEmailSet(hire.email))
+    transaction.commit()
     ResponseEntity.accepted().build<Any>()
 }
 ```
-
-A handler that commits or rolls back itself is left alone. Disable with
-`cratis.chronicle.unit-of-work.enabled: false`.
 
 ## Multi-tenancy
 
@@ -304,9 +292,6 @@ degrades rather than blocks.
 | `namespace-resolution.strategy` | `fixed` | How the namespace is decided |
 | `namespace-resolution.http-header` | `x-cratis-tenant-id` | Header to read |
 | `namespace-resolution.claim` | `tenant_id` | Claim to read |
-| `unit-of-work.enabled` | `true` | Unit of work per request |
-| `causation.enabled` | `true` | Request causation on events |
-| `identity.enabled` | `true` | Authenticated user as event identity |
 
 ## Replacing what the starter provides
 
