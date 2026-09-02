@@ -50,6 +50,15 @@ interface IConstraintBuilder {
     fun <TEvent : Any> uniqueFor(eventClass: Class<TEvent>): IConstraintBuilder =
         uniqueFor(eventClass.kotlin, "")
     fun unique(configure: (IUniqueConstraintBuilder) -> Unit): IConstraintBuilder
+
+    /**
+     * The same, taking a Java [java.util.function.Consumer].
+     *
+     * A Kotlin function type is a `Function1` returning `Unit` from Java, which forces a
+     * `return null;` at the end of every lambda. Kotlin callers keep the trailing-lambda overload.
+     */
+    fun unique(configure: java.util.function.Consumer<IUniqueConstraintBuilder>): IConstraintBuilder =
+        unique { configure.accept(it) }
 }
 
 interface IUniqueConstraintBuilder {
