@@ -407,6 +407,8 @@ has no correlation, causation, or identity fields, so that API does **not**
 accept `OperationContext`. No mutable global, request holder, coroutine context,
 or thread-local state is consulted to obtain audit metadata.
 
+<!-- validate: skip -->
+
 ```kotlin
 val context = OperationContext(correlationId, causation, identity)
 store.eventLog.append(

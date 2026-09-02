@@ -1,12 +1,12 @@
 ```java
 import io.cratis.chronicle.EventStore;
 import io.cratis.chronicle.events.EventType;
-import io.cratis.chronicle.eventSequences.AppendOptions;
 import io.cratis.chronicle.eventSequences.AppendResult;
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope;
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScopeBuilder;
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyViolation;
 
+import io.cratis.chronicle.java.AppendOptionsBuilder;
 import io.cratis.chronicle.java.ConcurrencyScopeBuilderJavaBridge;
 import io.cratis.chronicle.java.EventLogJavaBridge;
 
@@ -23,7 +23,10 @@ class EventsConcurrencyBasic {
             .build();
 
         AppendResult result = EventLogJavaBridge.append(
-            store.getEventLog(), sku, new ConcurrencyStockReserved(sku, 1), new AppendOptions(null, scope));
+            store.getEventLog(),
+            sku,
+            new ConcurrencyStockReserved(sku, 1),
+            new AppendOptionsBuilder().concurrencyScope(scope).build());
 
         ConcurrencyViolation violation = result.getConcurrencyViolation();
         if (!result.isSuccess() && violation != null) {

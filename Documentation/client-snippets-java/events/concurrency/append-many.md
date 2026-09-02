@@ -37,7 +37,7 @@ class EventsConcurrencyAppendMany {
 
         Map<String, ConcurrencyScope> concurrencyScopes = Map.of(fromAccount, fromScope, toAccount, toScope);
 
-        return EventSequenceJavaBridge.appendMany(store.getEventLog(), events, concurrencyScopes, null);
+        return EventSequenceJavaBridge.appendMany(store.getEventLog(), events, concurrencyScopes);
     }
 }
 ```

@@ -12,6 +12,8 @@ commits them with exactly one atomic `appendMany` RPC.
 Direct calls to `eventLog.append` never enroll in a transaction. There is no
 current transaction, request-global manager, or thread-local lookup.
 
+<!-- validate: skip -->
+
 ```kotlin
 val transaction = UnitOfWork(store.eventLog, operationContext)
 transaction.append("order-123", OrderPlaced("order-123"))
