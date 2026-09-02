@@ -17,7 +17,6 @@ public class ExternalServices {
             builder
                 .http("https://payroll.example.com/api")
                 .withBearerToken("demo-payroll-integration-token");
-            return null; // Java lambda returning Unit
         });
         System.out.println("[external-services] Registered 'payroll-provider' as an HTTP external service.");
     }

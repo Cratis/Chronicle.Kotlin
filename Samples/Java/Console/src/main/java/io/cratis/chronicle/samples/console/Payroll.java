@@ -31,7 +31,6 @@ public class Payroll {
             PAYROLL_EVENT_STORE_NAME,
             builder -> {
                 EventStoreSubscriptionBuilderJavaBridge.withEventType(builder, PayrollRunCompleted.class);
-                return null; // Java lambda returning Unit
             }
         );
         ProjectionsServiceJavaBridge.register(store.getProjections(), PayrollRunSummary.class);
