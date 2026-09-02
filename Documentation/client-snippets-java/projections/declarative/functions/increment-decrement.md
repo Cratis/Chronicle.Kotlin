@@ -20,11 +20,9 @@ class DecFunctionsInventoryProjection implements IProjectionFor<DecFunctionsInve
             .autoMap()
             .from(DecFunctionsItemAdded.class, fb -> {
                 fb.increment("quantity");
-                return null; // Java lambda returning Unit
             })
             .from(DecFunctionsItemRemoved.class, fb -> {
                 fb.decrement("quantity");
-                return null; // Java lambda returning Unit
             });
     }
 }

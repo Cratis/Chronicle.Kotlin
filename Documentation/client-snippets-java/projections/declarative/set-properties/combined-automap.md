@@ -11,7 +11,6 @@ class DecSetPropsCombinedAccountProjection implements IProjectionFor<DecSetProps
             .from(DecSetPropsAccountOpened.class, fb -> {
                 fb.<String>set("customerName").to(e -> e.owner().name());
                 fb.<Boolean>set("isActive").to(e -> true);
-                return null; // Java lambda returning Unit
             })
             .from(DecSetPropsMoneyDeposited.class); // Uses AutoMap for all properties
     }

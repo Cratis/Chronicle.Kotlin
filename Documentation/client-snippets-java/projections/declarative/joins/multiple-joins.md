@@ -31,15 +31,12 @@ class DecJoinsMultipleEmployeeSummaryProjection implements IProjectionFor<DecJoi
             .from(DecJoinsMultipleEmployeeAssigned.class)
             .join(DecJoinsMultipleGroupCreated.class, jb -> {
                 jb.on("groupId");
-                return null; // Java lambda returning Unit
             })
             .join(DecJoinsMultipleDepartmentCreated.class, jb -> {
                 jb.on("departmentId");
-                return null; // Java lambda returning Unit
             })
             .join(DecJoinsMultipleLocationUpdated.class, jb -> {
                 jb.on("locationId");
-                return null; // Java lambda returning Unit
             });
     }
 }

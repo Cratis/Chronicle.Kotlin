@@ -9,12 +9,10 @@ class DecEventContextUserActivityProjection implements IProjectionFor<DecEventCo
             .from(DecEventContextUserLoggedIn.class, fb -> {
                 fb.set("userId").toEventSourceId();
                 fb.set("lastLogin").toEventContextProperty("occurred");
-                return null; // Java lambda returning Unit
             })
             .from(DecEventContextUserPerformedAction.class, fb -> {
                 fb.set("userId").toEventSourceId();
                 fb.set("lastActivity").toEventContextProperty("occurred");
-                return null; // Java lambda returning Unit
             });
     }
 }

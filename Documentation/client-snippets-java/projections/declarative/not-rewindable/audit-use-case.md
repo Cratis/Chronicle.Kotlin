@@ -22,7 +22,6 @@ class DecNotRewindableSecurityAuditProjection implements IProjectionFor<DecNotRe
             .fromEvery(feb -> {
                 feb.set("auditedAt").toEventContextProperty("occurred");
                 feb.set("sequenceNumber").toEventContextProperty("sequenceNumber");
-                return null; // Java lambda returning Unit
             })
             .from(DecNotRewindableUserLoginAttempt.class)
             .from(DecNotRewindablePermissionChange.class);

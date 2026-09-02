@@ -22,11 +22,9 @@ class DecFunctionsUserActivityProjection implements IProjectionFor<DecFunctionsU
             .autoMap()
             .from(DecFunctionsUserLoggedIn.class, fb -> {
                 fb.count("loginCount");
-                return null; // Java lambda returning Unit
             })
             .from(DecFunctionsUserPerformedAction.class, fb -> {
                 fb.count("actionCount");
-                return null; // Java lambda returning Unit
             });
     }
 }

@@ -12,7 +12,6 @@ class SubscriptionsExplicitBasic {
     void subscribeToPayroll(EventStore store) {
         EventStoreSubscriptionsServiceJavaBridge.subscribe(store.getEventStoreSubscriptions(), "payroll-inbox", "PayrollEventStore", builder -> {
             EventStoreSubscriptionBuilderJavaBridge.withEventType(builder, SubscriptionsExplicitPayrollRunCompleted.class);
-            return null; // Java lambda returning Unit
         });
     }
 }

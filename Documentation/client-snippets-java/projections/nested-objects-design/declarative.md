@@ -25,7 +25,6 @@ class NodDeclarativeSliceProjection implements IProjectionFor<NodDeclarativeSlic
                 nested
                     .from(NodDeclarativeCommandSet.class)
                     .clearWith(NodDeclarativeCommandCleared.class);
-                return null; // Java lambda returning Unit
             });
     }
 }

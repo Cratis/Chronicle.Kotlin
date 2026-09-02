@@ -18,7 +18,6 @@ class DecNotRewindablePerformanceMetricProjection implements IProjectionFor<DecN
             .autoMap()
             .from(DecNotRewindableApiRequestCompleted.class, fb -> {
                 fb.set("timestamp").toEventContextProperty("occurred");
-                return null; // Java lambda returning Unit
             });
     }
 }

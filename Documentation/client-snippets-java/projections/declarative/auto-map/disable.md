@@ -21,7 +21,6 @@ class AutoMapDisabledAccountProjection implements IProjectionFor<AutoMapDisabled
                 fb.set("name").toProperty("accountName");
                 fb.set("email").toProperty("contactEmail");
                 fb.set("createdAt").toEventContextProperty("occurred");
-                return null; // Java lambda returning Unit
             });
     }
 }

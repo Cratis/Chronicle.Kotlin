@@ -14,12 +14,10 @@ class DecSetPropsAccountProjection implements IProjectionFor<DecSetPropsAccount>
                 fb.<BigDecimal>set("balance").to(e -> new BigDecimal("42.0"));
                 fb.<Boolean>set("isActive").to(e -> true);
                 fb.<String>set("openedAt").to(e -> e.timestamp());
-                return null; // Java lambda returning Unit
             })
             .from(DecSetPropsMoneyDeposited.class, fb -> {
                 fb.<Double>set("balance").to(e -> e.amount());
                 fb.<String>set("lastTransaction").to(e -> e.timestamp());
-                return null; // Java lambda returning Unit
             });
     }
 }

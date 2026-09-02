@@ -8,16 +8,12 @@ class CompositeOrderProjection implements IProjectionFor<CompositeOrder> {
         builder.from(CompositeOrderCreated.class, it -> {
             it.usingCompositeKey(key -> {
                 key.property("customerId", "customerId").property("orderNumber", "orderNumber");
-                return null;
             });
-            return null;
         });
         builder.from(CompositeOrderShipped.class, it -> {
             it.usingCompositeKey(key -> {
                 key.property("customerId", "customerId").property("orderNumber", "orderNumber");
-                return null;
             });
-            return null;
         });
     }
 }

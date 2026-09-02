@@ -25,7 +25,6 @@ class SliceProjectionForNestedBasic implements IProjectionFor<SliceForNestedBasi
                 nested
                     .from(CommandSetForDeclarativeNestedBasic.class)
                     .clearWith(CommandClearedForDeclarativeNestedBasic.class);
-                return null; // Java lambda returning Unit
             });
     }
 }

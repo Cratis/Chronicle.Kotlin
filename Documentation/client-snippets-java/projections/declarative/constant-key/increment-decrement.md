@@ -24,17 +24,14 @@ class DecConstantKeySiteStatisticsProjection implements IProjectionFor<DecConsta
             .from(DecConstantKeyUserRegistered.class, fb -> {
                 fb.usingConstantKey("site");
                 fb.count("totalUsers");
-                return null; // Java lambda returning Unit
             })
             .from(DecConstantKeyUserLoggedIn.class, fb -> {
                 fb.usingConstantKey("site");
                 fb.increment("activeSessions");
-                return null; // Java lambda returning Unit
             })
             .from(DecConstantKeyUserLoggedOut.class, fb -> {
                 fb.usingConstantKey("site");
                 fb.decrement("activeSessions");
-                return null; // Java lambda returning Unit
             });
     }
 }

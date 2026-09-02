@@ -17,7 +17,6 @@ class DecNotRewindableTransactionLedgerProjection implements IProjectionFor<DecN
             .notRewindable()
             .fromEvery(feb -> {
                 feb.set("recordedAt").toEventContextProperty("occurred");
-                return null; // Java lambda returning Unit
             })
             .from(DecNotRewindablePaymentProcessed.class);
     }

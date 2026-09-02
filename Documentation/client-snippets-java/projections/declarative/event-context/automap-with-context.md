@@ -15,7 +15,6 @@ class DecEventContextAuditTrailProjection implements IProjectionFor<DecEventCont
                 fb.set("eventId").toEventContextProperty("sequenceNumber");
                 fb.set("occurredAt").toEventContextProperty("occurred");
                 fb.set("correlationId").toEventContextProperty("correlationId");
-                return null; // Java lambda returning Unit
             });
     }
 }

@@ -28,13 +28,10 @@ class GroupProjectionForChildren implements IProjectionFor<GroupForChildren> {
                     .identifiedBy("userId")
                     .from(UserAddedToGroupForChildren.class, fb -> {
                         fb.usingKey("userId");
-                        return null; // Java lambda returning Unit
                     })
                     .from(UserRoleChangedForChildren.class, fb -> {
                         fb.usingKey("userId");
-                        return null; // Java lambda returning Unit
                     });
-                return null; // Java lambda returning Unit
             });
     }
 }

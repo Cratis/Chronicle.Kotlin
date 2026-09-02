@@ -21,15 +21,12 @@ class OrderDeclarativeAllProjection implements IProjectionFor<OrderDeclarativeAl
         builder
             .fromAll(feb -> {
                 feb.set("lastModified").toEventContextProperty("occurred");
-                return null; // Java lambda returning Unit
             })
             .from(OrderCreatedDeclarativeAll.class, fb -> {
                 fb.<String>set("status").to(e -> "Placed");
-                return null; // Java lambda returning Unit
             })
             .from(OrderShippedDeclarativeAll.class, fb -> {
                 fb.<String>set("status").to(e -> "Shipped");
-                return null; // Java lambda returning Unit
             });
     }
 }

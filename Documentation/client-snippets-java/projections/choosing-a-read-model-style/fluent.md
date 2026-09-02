@@ -20,17 +20,14 @@ class ChoosingStyleBookStatusProjection implements IProjectionFor<ChoosingStyleB
                 fb.<String>set("isbn").to(e -> e.isbn());
                 fb.<Boolean>set("isBorrowed").to(e -> false);
                 fb.<String>set("borrowedBy").to(e -> null);
-                return null; // Java lambda returning Unit
             })
             .from(ChoosingStyleBookBorrowed.class, fb -> {
                 fb.<Boolean>set("isBorrowed").to(e -> true);
                 fb.<String>set("borrowedBy").to(e -> e.memberName());
-                return null; // Java lambda returning Unit
             })
             .from(ChoosingStyleBookReturned.class, fb -> {
                 fb.<Boolean>set("isBorrowed").to(e -> false);
                 fb.<String>set("borrowedBy").to(e -> null);
-                return null; // Java lambda returning Unit
             });
     }
 }
