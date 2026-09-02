@@ -121,6 +121,9 @@ internal fun collectFromEveryDefinition(readModelClass: KClass<*>): ProjectionsO
             if (fromEvery.contextProperty.isNotEmpty()) PropertyValidator.validatePropertyExists(EventContext::class, fromEvery.contextProperty)
             properties[prop.name] = fromEveryValue(prop.name, fromEvery.property, fromEvery.contextProperty)
         }
+        prop.findAnnotation<FromEventSourceId>()?.let {
+            properties[prop.name] = EVENT_SOURCE_ID
+        }
     }
     if (properties.isEmpty()) return null
     return ProjectionsOuterClass.FromEveryDefinition.newBuilder()
@@ -128,6 +131,9 @@ internal fun collectFromEveryDefinition(readModelClass: KClass<*>): ProjectionsO
         .setIncludeChildren(true)
         .build()
 }
+
+/** What the kernel resolves to the event source id of the event being projected. */
+private const val EVENT_SOURCE_ID = "\$eventSourceId"
 
 private fun fromEveryValue(propertyName: String, property: String, contextProperty: String): String = when {
     contextProperty.isNotEmpty() -> "\$eventContext($contextProperty)"
