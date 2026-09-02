@@ -1,26 +1,19 @@
 ```kotlin
 import io.cratis.chronicle.IEventStore
+import io.cratis.chronicle.OperationContext
+import io.cratis.chronicle.transactions.UnitOfWork
 
 data class TransactionalOrderPlaced(val orderId: String, val totalAmount: Double)
 data class TransactionalInventoryReserved(val sku: String, val quantity: Int)
 
-suspend fun commitOrder(store: IEventStore) {
-    val unitOfWork = store.unitOfWorkManager.begin()
-
+suspend fun commitOrder(store: IEventStore, context: OperationContext) {
+    val transaction = UnitOfWork(store.eventLog, context)
     try {
-        store.eventLog.transactional.append(
-            "order-123",
-            TransactionalOrderPlaced("order-123", 99.95)
-        )
-
-        store.eventLog.transactional.append(
-            "inventory-widget",
-            TransactionalInventoryReserved("widget", 1)
-        )
-
-        unitOfWork.commit()
+        transaction.append("order-123", TransactionalOrderPlaced("order-123", 99.95))
+        transaction.append("inventory-widget", TransactionalInventoryReserved("widget", 1))
+        transaction.commit()
     } catch (exception: Exception) {
-        unitOfWork.rollback()
+        if (!transaction.isCompleted) transaction.rollback()
         throw exception
     }
 }

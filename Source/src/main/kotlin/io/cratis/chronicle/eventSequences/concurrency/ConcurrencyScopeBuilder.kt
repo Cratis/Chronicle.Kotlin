@@ -16,9 +16,26 @@ class ConcurrencyScopeBuilder {
     private var eventStreamId: String? = null
     private var eventSourceType: String? = null
     private val eventTypes = mutableListOf<EventTypeDescriptor>()
+    private var expectsNoMatchingEvent: Boolean = false
+    private var hasExplicitSequenceNumber: Boolean = false
 
     /** Sets the expected [EventSequenceNumber] for the concurrency scope. */
-    fun withSequenceNumber(sequenceNumber: EventSequenceNumber) = apply { this.sequenceNumber = sequenceNumber }
+    fun withSequenceNumber(sequenceNumber: EventSequenceNumber) = apply {
+        check(!expectsNoMatchingEvent) {
+            "withSequenceNumber and expectsNoMatchingEvent are mutually exclusive"
+        }
+        hasExplicitSequenceNumber = true
+        this.sequenceNumber = sequenceNumber
+    }
+
+    /** Requires that no event matches the configured scope filters. */
+    fun expectsNoMatchingEvent() = apply {
+        check(!hasExplicitSequenceNumber) {
+            "expectsNoMatchingEvent and withSequenceNumber are mutually exclusive"
+        }
+        expectsNoMatchingEvent = true
+        sequenceNumber = EventSequenceNumber.beforeFirst
+    }
 
     /** Narrows the concurrency scope to the event source id the append targets. */
     fun withEventSourceId() = apply { this.eventSourceId = true }
@@ -45,6 +62,7 @@ class ConcurrencyScopeBuilder {
         eventStreamType = eventStreamType,
         eventStreamId = eventStreamId,
         eventSourceType = eventSourceType,
-        eventTypes = eventTypes.distinct()
+        eventTypes = eventTypes.distinct(),
+        expectsNoMatchingEvent = expectsNoMatchingEvent
     )
 }

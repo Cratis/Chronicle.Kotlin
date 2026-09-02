@@ -1,10 +1,11 @@
 ```kotlin
-import io.cratis.chronicle.correlation.correlationIdManager
+import io.cratis.chronicle.OperationContext
 import java.util.UUID
 
 class CorrelationIdentityCausationCorrelation {
-    fun getCurrent(): UUID = correlationIdManager.current
+    fun newRequest(): OperationContext = OperationContext.system()
 
-    fun setForRequest() = correlationIdManager.set(UUID.randomUUID())
+    fun continueRequest(context: OperationContext): OperationContext =
+        context.copy(correlationId = context.correlationId)
 }
 ```

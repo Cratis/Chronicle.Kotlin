@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.readModels
 
+import io.cratis.chronicle.OperationContext
 import io.cratis.chronicle.eventSequences.IEventLog
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -93,7 +94,10 @@ class ReadModelReactors(
     ) {
         for (method in handlers.resolve(readModelClass, changeset.changeType)) {
             try {
-                sideEffects.append(method.invoke(reactor, changeset), changeset.modelKey)
+                val context = OperationContext.system().let { fresh ->
+                    changeset.correlationId?.let { fresh.copy(correlationId = it) } ?: fresh
+                }
+                sideEffects.append(method.invoke(reactor, changeset), changeset.modelKey, context)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

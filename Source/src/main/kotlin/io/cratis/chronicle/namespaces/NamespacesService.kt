@@ -5,6 +5,7 @@ package io.cratis.chronicle.namespaces
 
 import Cratis.Chronicle.Contracts.Namespaces.NamespacesGrpcKt
 import Cratis.Chronicle.Contracts.Namespaces.NamespacesOuterClass
+import io.cratis.chronicle.connection.validateCommandResult
 import kotlinx.coroutines.flow.first
 
 class NamespacesService(
@@ -17,7 +18,13 @@ class NamespacesService(
             .setEventStore(eventStoreName)
             .setNamespace(namespaceName)
             .build()
-        stub.ensureNamespace(request)
+        val result = stub.ensureNamespace(request)
+        validateCommandResult(
+            "ensure namespace '$namespaceName' in event store '$eventStoreName'",
+            result.authorizationFailureReason,
+            result.validationResultsList.map { it.message },
+            result.exceptionMessagesList
+        )
     }
 
     /**

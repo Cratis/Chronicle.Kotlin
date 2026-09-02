@@ -3,112 +3,198 @@
 
 package io.cratis.chronicle.transactions
 
-import io.cratis.chronicle.IEventStore
-import io.cratis.chronicle.correlation.CorrelationId
+import io.cratis.chronicle.OperationContext
 import io.cratis.chronicle.eventSequences.AppendError
 import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.ConstraintViolation
-import io.cratis.chronicle.eventSequences.EventSequenceId
+import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
+import io.cratis.chronicle.eventSequences.IEventSequence
+import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyViolation
 
 /**
- * Represents an implementation of [IUnitOfWork].
- *
- * @property correlationId The [CorrelationId] for this [IUnitOfWork].
- * @param eventStore The [IEventStore] used to resolve event sequences when committing.
- * @param onCompleted Callback invoked when this [IUnitOfWork] completes.
+ * Explicit [IUnitOfWork] implementation bound to one [eventSequence] and one [context].
  */
-class UnitOfWork(
-    override val correlationId: CorrelationId = CorrelationId.create(),
-    private val eventStore: IEventStore,
-    onCompleted: (IUnitOfWork) -> Unit = {}
+class UnitOfWork @JvmOverloads constructor(
+    override val eventSequence: IEventSequence,
+    override val context: OperationContext = OperationContext.system()
 ) : IUnitOfWork {
-
     private data class StagedEvent(
-        val eventSequenceId: EventSequenceId,
         val eventSourceId: String,
         val event: Any,
         val options: AppendOptions?
     )
 
-    private val _stagedEvents = mutableListOf<StagedEvent>()
-    private val _onCompleted = mutableListOf(onCompleted)
-    private var _appendResults: List<AppendResult> = emptyList()
-    private var _lastCommittedEventSequenceNumber: EventSequenceNumber? = null
+    private enum class State { OPEN, COMMITTING, COMMITTED, ROLLED_BACK, FAILED }
 
-    var isCommitted: Boolean = false
-        private set
+    private val stagedEvents = mutableListOf<StagedEvent>()
+    private val completionCallbacks = mutableListOf<(IUnitOfWork) -> Unit>()
+    private var completionCallbacksDelivered: Boolean = false
+    private var appendResults: List<AppendResult> = emptyList()
+    private var lastCommittedEventSequenceNumber: EventSequenceNumber? = null
+    private var state: State = State.OPEN
 
-    private var isRolledBack: Boolean = false
+    override val isCompleted: Boolean
+        get() = synchronized(this) { state == State.COMMITTED || state == State.ROLLED_BACK || state == State.FAILED }
 
-    override val isCompleted: Boolean get() = isCommitted || isRolledBack
+    override val isSuccess: Boolean
+        get() = synchronized(this) {
+            state == State.COMMITTED && appendResults.all { it.isSuccess }
+        }
 
-    override val isSuccess: Boolean get() = _appendResults.all { it.isSuccess }
-
-    override fun addEvent(eventSequenceId: EventSequenceId, eventSourceId: String, event: Any, options: AppendOptions?) {
-        _stagedEvents.add(StagedEvent(eventSequenceId, eventSourceId, event, options))
+    override fun append(eventSourceId: String, event: Any, options: AppendOptions?) {
+        synchronized(this) {
+            requireOpen()
+            stagedEvents.add(StagedEvent(eventSourceId, event, options))
+        }
     }
 
-    override fun getEvents(): List<Any> = _stagedEvents.map { it.event }
+    override fun appendMany(eventSourceId: String, events: List<Any>, options: AppendOptions?) {
+        synchronized(this) {
+            requireOpen()
+            events.forEach { stagedEvents.add(StagedEvent(eventSourceId, it, options)) }
+        }
+    }
 
-    override fun getConstraintViolations(): List<ConstraintViolation> = _appendResults.flatMap { it.constraintViolations }
+    override fun getEvents(): List<Any> = synchronized(this) { stagedEvents.map { it.event } }
 
-    override fun getConcurrencyViolations(): List<ConcurrencyViolation> = _appendResults.mapNotNull { it.concurrencyViolation }
+    override fun getConstraintViolations(): List<ConstraintViolation> =
+        synchronized(this) { appendResults.flatMap { it.constraintViolations }.distinct() }
 
-    override fun getAppendErrors(): List<AppendError> = _appendResults.flatMap { it.errors }
+    override fun getConcurrencyViolations(): List<ConcurrencyViolation> =
+        synchronized(this) { appendResults.flatMap { it.concurrencyViolations }.distinct() }
+
+    override fun getAppendErrors(): List<AppendError> =
+        synchronized(this) { appendResults.flatMap { it.errors }.distinct() }
 
     override suspend fun commit() {
-        try {
-            if (_stagedEvents.isNotEmpty()) {
-                _appendResults = appendStagedEventsGroupedByStream()
-                _lastCommittedEventSequenceNumber = _appendResults
-                    .filter { it.sequenceNumber.isActualValue }
-                    .maxByOrNull { it.sequenceNumber.value }
-                    ?.sequenceNumber
-            }
-        } finally {
-            isCommitted = true
-            _onCompleted.forEach { it(this) }
+        val snapshot = synchronized(this) {
+            requireOpen()
+            state = State.COMMITTING
+            stagedEvents.toList()
         }
+
+        var appendFailure: Throwable? = null
+        try {
+            val results = if (snapshot.isEmpty()) {
+                emptyList()
+            } else {
+                eventSequence.appendMany(
+                    events = snapshot.map { it.toEvent() },
+                    context = context,
+                    concurrencyScopes = concurrencyScopesFor(snapshot)
+                )
+            }
+            synchronized(this) {
+                appendResults = results
+                lastCommittedEventSequenceNumber = results
+                    .asSequence()
+                    .map { it.sequenceNumber }
+                    .filter { it.isActualValue }
+                    .maxByOrNull { it.value }
+                state = State.COMMITTED
+            }
+        } catch (throwable: Throwable) {
+            synchronized(this) { state = State.FAILED }
+            appendFailure = throwable
+        }
+
+        val callbackFailure = notifyCompleted()
+        appendFailure?.let { failure ->
+            callbackFailure?.let(failure::addSuppressed)
+            throw failure
+        }
+        callbackFailure?.let { throw it }
     }
 
     override suspend fun rollback() {
-        isRolledBack = true
-        _stagedEvents.clear()
-        _appendResults = emptyList()
-        _onCompleted.forEach { it(this) }
+        synchronized(this) {
+            requireOpen()
+            state = State.ROLLED_BACK
+            stagedEvents.clear()
+            appendResults = emptyList()
+        }
+        notifyCompleted()?.let { throw it }
     }
 
     override fun onCompleted(callback: (IUnitOfWork) -> Unit) {
-        _onCompleted.add(callback)
+        val invokeImmediately = synchronized(this) {
+            if (state == State.OPEN || state == State.COMMITTING || !completionCallbacksDelivered) {
+                completionCallbacks.add(callback)
+                false
+            } else {
+                true
+            }
+        }
+        if (invokeImmediately) {
+            invokeCompletionCallbacks(listOf(callback))?.let { throw it }
+        }
     }
 
-    override fun tryGetLastCommittedEventSequenceNumber(): EventSequenceNumber? = _lastCommittedEventSequenceNumber
+    override fun tryGetLastCommittedEventSequenceNumber(): EventSequenceNumber? =
+        synchronized(this) { lastCommittedEventSequenceNumber }
 
-    /**
-     * Appends the staged events, grouped into consecutive runs sharing the same event sequence,
-     * event source id and options - each run is committed as a single atomic `appendMany` call,
-     * preserving the overall staging order across groups.
-     */
-    private suspend fun appendStagedEventsGroupedByStream(): List<AppendResult> {
-        val results = mutableListOf<AppendResult>()
-        var index = 0
-        while (index < _stagedEvents.size) {
-            val group = _stagedEvents[index]
-            val batch = mutableListOf<Any>()
-            while (index < _stagedEvents.size &&
-                _stagedEvents[index].eventSequenceId == group.eventSequenceId &&
-                _stagedEvents[index].eventSourceId == group.eventSourceId &&
-                _stagedEvents[index].options == group.options
-            ) {
-                batch.add(_stagedEvents[index].event)
-                index++
+    private fun requireOpen() {
+        check(state == State.OPEN) { "The unit of work is already terminal ($state)" }
+    }
+
+    private fun notifyCompleted(): UnitOfWorkCompletionCallbackException? {
+        val failures = mutableListOf<Throwable>()
+        while (true) {
+            val callbacks = synchronized(this) {
+                if (completionCallbacks.isEmpty()) {
+                    completionCallbacksDelivered = true
+                    emptyList()
+                } else {
+                    completionCallbacks.toList().also { completionCallbacks.clear() }
+                }
             }
-            val sequence = eventStore.getEventSequence(group.eventSequenceId)
-            results.addAll(sequence.appendMany(group.eventSourceId, batch, group.options))
+            if (callbacks.isEmpty()) break
+            invokeCompletionCallbacks(callbacks)?.let { failures.addAll(it.failures) }
         }
-        return results
+        return failures.takeIf { it.isNotEmpty() }?.let(::UnitOfWorkCompletionCallbackException)
+    }
+
+    private fun invokeCompletionCallbacks(
+        callbacks: List<(IUnitOfWork) -> Unit>
+    ): UnitOfWorkCompletionCallbackException? {
+        val failures = callbacks.mapNotNull { callback ->
+            try {
+                callback(this)
+                null
+            } catch (throwable: Throwable) {
+                throwable
+            }
+        }
+        return failures.takeIf { it.isNotEmpty() }?.let(::UnitOfWorkCompletionCallbackException)
+    }
+
+    private fun StagedEvent.toEvent(): EventForEventSourceId = EventForEventSourceId(
+        eventSourceId = eventSourceId,
+        event = event,
+        eventStreamType = options?.eventStreamType,
+        eventStreamId = options?.eventStreamId,
+        eventSourceType = options?.eventSourceType,
+        tags = options?.tags ?: emptyList(),
+        occurred = options?.occurred,
+        subject = options?.subject
+    )
+
+    private fun concurrencyScopesFor(events: List<StagedEvent>): Map<String, ConcurrencyScope> {
+        val scopes = linkedMapOf<String, ConcurrencyScope>()
+        events.forEach { staged ->
+            val scope = staged.options?.concurrencyScope ?: return@forEach
+            val previous = scopes.putIfAbsent(staged.eventSourceId, scope)
+            require(previous == null || previous == scope) {
+                "Event source '${staged.eventSourceId}' has conflicting concurrency scopes in one unit of work"
+            }
+        }
+        return scopes
     }
 }
+
+/** Starts an explicit transaction bound to this event sequence. */
+fun IEventSequence.beginUnitOfWork(context: OperationContext = OperationContext.system()): UnitOfWork =
+    UnitOfWork(this, context)

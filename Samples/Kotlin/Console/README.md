@@ -11,7 +11,7 @@ A runnable sample demonstrating the Chronicle Kotlin client.
 5. Queries a reducer-backed read model via `eventStore.readModels.getInstanceByKey(...)`
 6. Registers a discoverable `@Seeder` artifact (`EmployeeSeeder`) and seeds initial employee events
 7. Registers two discoverable `@Constraint` artifacts: `UniqueEmployeeHire` (unique-event-type constraint) and `UniqueEmployeeEmail` (unique property constraint with an index collection)
-8. Demonstrates Unit of Work transactions with `eventLog.transactional` and `unitOfWorkManager.begin()`
+8. Demonstrates explicit Unit of Work transactions bound to one event log and `OperationContext`
 9. Demonstrates compliance features via the `@Pii` decorator and the `Customer` read model
 
 ## Keyboard controls

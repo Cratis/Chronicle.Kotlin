@@ -12,6 +12,18 @@ val chronicleContractsVersion = "16.44.1"
 val dnsJavaVersion = "3.6.5"
 val classGraphVersion = "4.8.180"
 val openTelemetryVersion = "1.64.0"
+val testcontainersVersion = "1.21.4"
+val defaultChronicleKernelImage =
+    "cratis/chronicle:16.44.1-development@sha256:3e0216892632f87e5386649cf8c1a189573cf82999abf14b7f6031863a6e545f"
+
+val realKernelTest by sourceSets.creating {
+    compileClasspath += sourceSets.main.get().output
+    runtimeClasspath += sourceSets.main.get().output
+}
+configurations[realKernelTest.implementationConfigurationName]
+    .extendsFrom(configurations.implementation.get(), configurations.testImplementation.get())
+configurations[realKernelTest.runtimeOnlyConfigurationName]
+    .extendsFrom(configurations.runtimeOnly.get(), configurations.testRuntimeOnly.get())
 
 dependencies {
     api("io.cratis:chronicle-contracts:$chronicleContractsVersion")
@@ -19,7 +31,7 @@ dependencies {
     api("com.google.code.gson:gson:2.11.0")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
     api("dnsjava:dnsjava:$dnsJavaVersion")
-    api(kotlin("reflect"))
+    api("org.jetbrains.kotlin:kotlin-reflect:2.1.0")
 
     // The OpenTelemetry API only. It no-ops until an application registers an SDK, so instrumenting
     // stays the application's choice - one that does not is unaffected beyond a small jar.
@@ -37,6 +49,9 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.14")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+    add(realKernelTest.implementationConfigurationName, "org.testcontainers:testcontainers:$testcontainersVersion")
+    add(realKernelTest.runtimeOnlyConfigurationName, "org.junit.platform:junit-platform-launcher")
 }
 
 kotlin {
@@ -45,6 +60,19 @@ kotlin {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.register<Test>("realKernelTest") {
+    description = "Runs Chronicle.Kotlin compatibility tests against a real pinned Chronicle kernel."
+    group = LifecycleBasePlugin.VERIFICATION_GROUP
+    testClassesDirs = realKernelTest.output.classesDirs
+    classpath = realKernelTest.runtimeClasspath
+    useJUnitPlatform()
+    shouldRunAfter(tasks.test)
+    systemProperty(
+        "chronicle.realKernel.image",
+        providers.gradleProperty("chronicleKernelImage").getOrElse(defaultChronicleKernelImage)
+    )
 }
 
 mavenPublishing {

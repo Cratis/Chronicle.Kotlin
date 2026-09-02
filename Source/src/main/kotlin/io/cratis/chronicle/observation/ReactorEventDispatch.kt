@@ -115,7 +115,7 @@ internal class ReactorEventDispatch(
                     handler.invoke(reactor, event, *arguments.resolve(handler, context).toTypedArray())
                 }
             }
-            sideEffects.append(result, context.eventSourceId)
+            sideEffects.append(result, context)
             outcome.observed(context.sequenceNumber)
         } catch (e: Exception) {
             outcome.failed(e, handler.function.name)

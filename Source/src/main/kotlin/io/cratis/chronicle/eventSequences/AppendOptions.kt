@@ -3,23 +3,19 @@
 
 package io.cratis.chronicle.eventSequences
 
-import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import java.time.Instant
-import java.util.UUID
 
 /**
  * Options that can be supplied when appending events to an event sequence.
  *
- * Every property is optional and falls back to the same default the client has always used, so
- * supplying no options appends exactly as before.
+ * These options shape an event and its concurrency check. Correlation, causation, and identity
+ * belong to the explicit [io.cratis.chronicle.OperationContext] supplied to the append operation.
  *
  * The constructor is `@JvmOverloads` so that Java callers keep the shorter positional forms they
  * already compile against. For anything beyond the first argument or two, Java should prefer
  * [io.cratis.chronicle.java.AppendOptionsBuilder] rather than passing nulls positionally.
  *
- * @property correlationId Correlation identifier for this operation.
- *   Defaults to the current [io.cratis.chronicle.correlation.CorrelationIdManager] value.
  * @property concurrencyScope [ConcurrencyScope] to use for concurrency control.
  *   Defaults to [ConcurrencyScope.none], which does not concurrency-check the append.
  * @property eventSourceType The type of the event source. Defaults to `Default`.
@@ -32,22 +28,15 @@ import java.util.UUID
  * @property tags Tags to attach to the event. Observers can be filtered by tag.
  * @property occurred When the event actually occurred. Defaults to the time the kernel appends it -
  *   set this when importing or backfilling events that happened earlier.
- * @property causation The chain describing what caused this event. Defaults to the ambient chain
- *   held by [io.cratis.chronicle.auditing.CausationManager] for the current thread, which is what
- *   nearly every append should use. Set this only to attribute an append to something other than
- *   the work the current thread is doing - an imported event, or a side effect that belongs to a
- *   chain of its own. An empty list means "no override" and leaves the ambient chain in charge.
  */
 data class AppendOptions @JvmOverloads constructor(
-    val correlationId: UUID? = null,
     val concurrencyScope: ConcurrencyScope? = null,
     val eventSourceType: String? = null,
     val eventStreamType: String? = null,
     val eventStreamId: String? = null,
     val subject: String? = null,
     val tags: List<String> = emptyList(),
-    val occurred: Instant? = null,
-    val causation: List<Causation> = emptyList()
+    val occurred: Instant? = null
 ) {
     internal companion object {
         /** The event source type used when none is specified. */

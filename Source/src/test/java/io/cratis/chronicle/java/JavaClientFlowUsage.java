@@ -68,9 +68,9 @@ public final class JavaClientFlowUsage {
             .connect(ChronicleOptions.development())
             .getEventStore("ChronicleConsole");
 
-        try (var unitOfWork = eventStore.beginUnitOfWork()) {
-            eventStore.getTransactional().append("source-1", new TestEvent("one"));
-            eventStore.getTransactional().append("source-2", new TestEvent("two"));
+        try (var unitOfWork = eventStore.getEventLog().beginUnitOfWork()) {
+            unitOfWork.append("source-1", new TestEvent("one"));
+            unitOfWork.append("source-2", new TestEvent("two"));
             unitOfWork.commit();
         }
     }

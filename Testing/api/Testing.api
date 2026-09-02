@@ -24,24 +24,29 @@ public final class io/cratis/chronicle/testing/EventScenarioAssertions {
 public final class io/cratis/chronicle/testing/InMemoryEventSequence : io/cratis/chronicle/eventSequences/IEventSequence {
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun append (Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/OperationContext;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun append (Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun appendMany (Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/OperationContext;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun appendMany (Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public fun appendMany (Ljava/util/List;Ljava/util/Map;Ljava/util/UUID;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun appendMany (Ljava/util/List;Lio/cratis/chronicle/OperationContext;Ljava/util/Map;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun appendMany (Ljava/util/List;Ljava/util/Map;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun clear ()V
 	public fun completeStream (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getAppendOperations ()Lkotlinx/coroutines/flow/SharedFlow;
 	public final fun getCount ()I
 	public final fun getEvents ()Ljava/util/List;
 	public fun getForEventSourceIdAndEventTypes (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	public fun getFromSequenceNumber-ZSd2mZE (JLjava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun getFromSequenceNumber-WeBPDsQ (JLjava/lang/String;Ljava/util/List;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getId-h1zpJ0k ()Ljava/lang/String;
 	public fun getNextSequenceNumber-EnsJFvc (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getTailSequenceNumber-NETI2YA (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getTailSequenceNumberForObserver-NETI2YA (Lkotlin/reflect/KClass;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun hasEventsFor (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun isRedacted (J)Z
+	public fun redact-HS8ENJo (JLjava/lang/String;Lio/cratis/chronicle/OperationContext;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun redact-rxlEwpA (JLjava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun redactForEventSource-8d2Qhxo (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun redactForEventSource-98ofilM (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/OperationContext;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public final class io/cratis/chronicle/testing/ReadModelScenario {
