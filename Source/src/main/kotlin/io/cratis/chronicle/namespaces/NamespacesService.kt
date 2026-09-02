@@ -3,8 +3,9 @@
 
 package io.cratis.chronicle.namespaces
 
-import Cratis.Chronicle.Contracts.CratisChronicleContracts
-import Cratis.Chronicle.Contracts.NamespacesGrpcKt
+import Cratis.Chronicle.Contracts.Namespaces.NamespacesGrpcKt
+import Cratis.Chronicle.Contracts.Namespaces.NamespacesOuterClass
+import kotlinx.coroutines.flow.first
 
 class NamespacesService(
     private val eventStoreName: String,
@@ -12,18 +13,23 @@ class NamespacesService(
 ) : INamespacesService {
     /** Ensures a namespace exists in the event store, creating it if absent. */
     override suspend fun ensure(namespaceName: String) {
-        val request = CratisChronicleContracts.EnsureNamespace.newBuilder()
+        val request = NamespacesOuterClass.EnsureNamespaceRequest.newBuilder()
             .setEventStore(eventStoreName)
-            .setName(namespaceName)
+            .setNamespace(namespaceName)
             .build()
-        stub.ensure(request)
+        stub.ensureNamespace(request)
     }
 
-    /** Lists all namespaces in the event store. */
+    /**
+     * Lists all namespaces in the event store.
+     *
+     * The kernel serves this as an observable query - a stream that emits the whole list again
+     * every time it changes - so this takes the first emission and lets the subscription go.
+     */
     override suspend fun getAll(): List<String> {
-        val request = CratisChronicleContracts.GetNamespacesRequest.newBuilder()
+        val request = NamespacesOuterClass.AllNamespacesRequest.newBuilder()
             .setEventStore(eventStoreName)
             .build()
-        return stub.getNamespaces(request).itemsList
+        return stub.allNamespaces(request).first().dataList
     }
 }

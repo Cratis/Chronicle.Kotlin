@@ -6,6 +6,7 @@ package io.cratis.chronicle.jobs
 import Cratis.Chronicle.Contracts.Jobs.JobsGrpcKt
 import Cratis.Chronicle.Contracts.Jobs.JobsOuterClass
 import bcl.Bcl
+import kotlinx.coroutines.flow.first
 import java.util.UUID
 
 class JobsService(
@@ -15,8 +16,8 @@ class JobsService(
 ) : IJobsService {
 
     override suspend fun stop(jobId: String) {
-        stub.stop(
-            JobsOuterClass.StopJob.newBuilder()
+        stub.stopJob(
+            JobsOuterClass.StopJobRequest.newBuilder()
                 .setEventStore(eventStoreName)
                 .setNamespace(namespace)
                 .setJobId(jobId.toContractsGuid())
@@ -25,8 +26,8 @@ class JobsService(
     }
 
     override suspend fun resume(jobId: String) {
-        stub.resume(
-            JobsOuterClass.ResumeJob.newBuilder()
+        stub.resumeJob(
+            JobsOuterClass.ResumeJobRequest.newBuilder()
                 .setEventStore(eventStoreName)
                 .setNamespace(namespace)
                 .setJobId(jobId.toContractsGuid())
@@ -35,8 +36,8 @@ class JobsService(
     }
 
     override suspend fun delete(jobId: String) {
-        stub.delete(
-            JobsOuterClass.DeleteJob.newBuilder()
+        stub.deleteJob(
+            JobsOuterClass.DeleteJobRequest.newBuilder()
                 .setEventStore(eventStoreName)
                 .setNamespace(namespace)
                 .setJobId(jobId.toContractsGuid())
@@ -44,34 +45,38 @@ class JobsService(
         )
     }
 
-    override suspend fun getJob(jobId: String): JobsOuterClass.Job? {
-        val request = JobsOuterClass.GetJobRequest.newBuilder()
-            .setEventStore(eventStoreName)
-            .setNamespace(namespace)
-            .setJobId(jobId.toContractsGuid())
-            .build()
-
-        val response = stub.getJob(request)
-        return if (response.hasValue0()) response.value0 else null
+    /**
+     * The kernel has no single-job query - it serves the whole set and expects the caller to pick.
+     * Keeping this on [IJobsService] means a caller after one job still writes one line.
+     */
+    override suspend fun getJob(jobId: String): JobsOuterClass.JobSummaryResponse? {
+        val id = jobId.toContractsGuid()
+        return getJobs().firstOrNull { it.id == id }
     }
 
-    override suspend fun getJobs(): List<JobsOuterClass.Job> {
-        val request = JobsOuterClass.GetJobsRequest.newBuilder()
+    /**
+     * All jobs for the event store and namespace.
+     *
+     * The kernel serves this as an observable query - a stream that emits the whole set again every
+     * time a job changes - so this takes the first emission and lets the subscription go.
+     */
+    override suspend fun getJobs(): List<JobsOuterClass.JobSummaryResponse> {
+        val request = JobsOuterClass.AllJobsRequest.newBuilder()
             .setEventStore(eventStoreName)
             .setNamespace(namespace)
             .build()
 
-        return stub.getJobs(request).itemsList
+        return stub.allJobs(request).first().dataList
     }
 
-    override suspend fun getJobSteps(jobId: String): List<JobsOuterClass.JobStep> {
+    override suspend fun getJobSteps(jobId: String): List<JobsOuterClass.JobStepSummaryResponse> {
         val request = JobsOuterClass.GetJobStepsRequest.newBuilder()
             .setEventStore(eventStoreName)
             .setNamespace(namespace)
             .setJobId(jobId.toContractsGuid())
             .build()
 
-        return stub.getJobSteps(request).itemsList
+        return stub.getJobSteps(request).dataList
     }
 }
 
