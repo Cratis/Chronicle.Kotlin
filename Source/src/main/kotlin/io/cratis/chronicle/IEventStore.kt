@@ -21,7 +21,6 @@ import io.cratis.chronicle.observation.IReducersService
 import io.cratis.chronicle.projections.IProjectionsService
 import io.cratis.chronicle.readModels.IReadModelsService
 import io.cratis.chronicle.seeding.IEventSeedingService
-import io.cratis.chronicle.transactions.UnitOfWorkManager
 import io.cratis.chronicle.webhooks.IWebhooksService
 
 interface IEventStore {
@@ -34,7 +33,6 @@ interface IEventStore {
     val constraints: IConstraintsService
     val seeding: IEventSeedingService
     val readModels: IReadModelsService
-    val unitOfWorkManager: UnitOfWorkManager
     val compliance: IComplianceService
     val eventTypes: IEventTypesService
     val namespaces: INamespacesService

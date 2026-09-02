@@ -11,17 +11,21 @@ import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyViolation
  * @property sequenceNumber The [EventSequenceNumber] assigned to the appended event.
  * @property constraintViolations Any [ConstraintViolation]s that were detected.
  * @property errors Any [AppendError]s that occurred.
- * @property concurrencyViolation The [ConcurrencyViolation] that occurred, if the append was rejected
- *   because the supplied `ConcurrencyScope` no longer matched the event sequence.
- * @property isSuccess Whether the append succeeded (no violations, no errors, no concurrency violation).
+ * @property concurrencyViolations Every [ConcurrencyViolation] reported for the append or atomic batch.
+ * @property concurrencyCheckPerformed Whether the kernel performed optimistic concurrency validation.
+ * @property isSuccess Whether the append succeeded (no violations or errors).
  */
 data class AppendResult(
     val sequenceNumber: EventSequenceNumber,
     val constraintViolations: List<ConstraintViolation>,
     val errors: List<AppendError>,
     val isSuccess: Boolean,
-    val concurrencyViolation: ConcurrencyViolation? = null
+    val concurrencyViolations: List<ConcurrencyViolation> = emptyList(),
+    val concurrencyCheckPerformed: Boolean = false
 ) {
+    /** The first concurrency violation, for callers handling a single-source append. */
+    val concurrencyViolation: ConcurrencyViolation? get() = concurrencyViolations.firstOrNull()
+
     /**
      * The position as a plain `Long`.
      *

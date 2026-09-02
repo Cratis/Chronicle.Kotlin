@@ -26,11 +26,6 @@ class BlockingEventStore(private val store: IEventStore) {
     /** The default event log. */
     val eventLog: BlockingEventSequence by lazy { BlockingEventSequence(store.eventLog) }
 
-    /** The transactional view of the event log, staging appends against the current unit of work. */
-    val transactional: BlockingTransactionalEventSequence by lazy {
-        BlockingTransactionalEventSequence(store.eventLog.transactional)
-    }
-
     /** The read models, taking a plain `Class` rather than a Kotlin `KClass`. */
     val readModels: BlockingReadModels by lazy { BlockingReadModels(store.readModels) }
 
@@ -39,9 +34,6 @@ class BlockingEventStore(private val store: IEventStore) {
 
     /** The reducers, for registering one by hand. */
     val reducers: BlockingReducers by lazy { BlockingReducers(store.reducers) }
-
-    /** Begins a unit of work, so several appends commit as one atomic operation. */
-    fun beginUnitOfWork(): BlockingUnitOfWork = BlockingUnitOfWork(store.unitOfWorkManager.begin())
 
     /** Any other event sequence, by id. */
     fun getEventSequence(id: String): BlockingEventSequence =

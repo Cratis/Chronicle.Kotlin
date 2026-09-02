@@ -1,14 +1,12 @@
 ```java
+import io.cratis.chronicle.OperationContext;
 import io.cratis.chronicle.identity.Identity;
-import io.cratis.chronicle.identity.IdentityProviderKt;
 
 class CorrelationIdentityCausationIdentity {
-    void setForRequest(String subject, String name, String userName) {
-        IdentityProviderKt.getIdentityProvider().setCurrentIdentity(new Identity(subject, name, userName, null));
-    }
-
-    Identity getCurrent() {
-        return IdentityProviderKt.getIdentityProvider().getCurrentIdentity();
+    OperationContext forRequest(String subject, String name, String userName) {
+        return OperationContext.builder()
+            .causedBy(new Identity(subject, name, userName, null))
+            .build();
     }
 }
 ```
