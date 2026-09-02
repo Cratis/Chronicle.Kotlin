@@ -3,13 +3,15 @@
 
 package io.cratis.chronicle
 
-import Cratis.Chronicle.Contracts.CratisChronicleContracts
-import Cratis.Chronicle.Contracts.EventStoresGrpcKt
+import Cratis.Chronicle.Contracts.EventStores.EventStoresGrpcKt
+import Cratis.Chronicle.Contracts.EventStores.Eventstores
 import com.google.protobuf.Empty
 import io.cratis.chronicle.connection.ChronicleConnectionString
 import io.grpc.Grpc
 import io.grpc.InsecureServerCredentials
 import io.grpc.Server
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -30,8 +32,8 @@ class ChronicleClientTests {
 
     private fun startServerWithEventStores(names: List<String>): Server {
         val impl = object : EventStoresGrpcKt.EventStoresCoroutineImplBase() {
-            override suspend fun getEventStores(request: Empty): CratisChronicleContracts.IEnumerable_String =
-                CratisChronicleContracts.IEnumerable_String.newBuilder().addAllItems(names).build()
+            override fun allEventStores(request: Empty): Flow<Eventstores.QueryResult_IEnumerable_String> =
+                flowOf(Eventstores.QueryResult_IEnumerable_String.newBuilder().addAllData(names).build())
         }
         return Grpc.newServerBuilderForPort(0, InsecureServerCredentials.create())
             .addService(impl)

@@ -16,14 +16,14 @@ services:
       - "35000:35000"
 
   mongodb:
-    image: mongo:8
+    image: mongo:8.2
     profiles: [mongodb, ""]
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
       - "27017:27017"
 
   mongodb-init:
-    image: mongo:8
+    image: mongo:8.2
     profiles: [mongodb, ""]
     depends_on:
       - mongodb

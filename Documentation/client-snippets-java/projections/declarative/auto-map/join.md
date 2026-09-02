@@ -22,7 +22,6 @@ class AutoMapEmployeeProjection implements IProjectionFor<AutoMapEmployee> {
             .from(AutoMapEmployeeHired.class)
             .join(AutoMapDepartmentRenamed.class, jb -> {
                 jb.on("departmentId");
-                return null; // Java lambda returning Unit
             });
     }
 }

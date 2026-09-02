@@ -23,9 +23,7 @@ class GroupWithEventParentKeyProjection implements IProjectionFor<GroupWithEvent
                     .from(UserAddedWithEventParentKey.class, fb -> {
                         fb.usingParentKey("groupId");
                         fb.usingKey("userId");
-                        return null; // Java lambda returning Unit
                     });
-                return null; // Java lambda returning Unit
             });
     }
 }

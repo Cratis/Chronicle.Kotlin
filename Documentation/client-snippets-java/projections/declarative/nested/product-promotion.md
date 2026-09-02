@@ -27,7 +27,6 @@ class ProductProjectionWithNestedPromotion implements IProjectionFor<ProductWith
                 promotion
                     .from(PromotionAppliedWithNestedPromotion.class)
                     .clearWith(PromotionRemovedWithNestedPromotion.class);
-                return null; // Java lambda returning Unit
             });
     }
 }

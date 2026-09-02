@@ -9,7 +9,6 @@ class ExternalServicesIndexHttp {
             builder
                 .http("https://payroll.example.com/api")
                 .withBearerToken("payroll-integration-token");
-            return null; // Java lambda returning Unit
         });
     }
 }

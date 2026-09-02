@@ -22,9 +22,7 @@ class GroupWithDefaultParentKeyProjection implements IProjectionFor<GroupWithDef
                     .identifiedBy("userId")
                     .from(UserAddedWithDefaultParentKey.class, fb -> {
                         fb.usingKey("userId");
-                        return null; // Java lambda returning Unit
                     });
-                return null; // Java lambda returning Unit
             });
     }
 }

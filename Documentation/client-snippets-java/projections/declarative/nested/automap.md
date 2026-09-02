@@ -29,7 +29,6 @@ class SliceProjectionForNestedAutoMap implements IProjectionFor<SliceForNestedAu
                     .from(CommandSetForNestedAutoMap.class)
                     .from(CommandUpdatedForNestedAutoMap.class)
                     .clearWith(CommandClearedForNestedAutoMap.class);
-                return null; // Java lambda returning Unit
             });
     }
 }

@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.projections
 
+import java.util.function.Consumer
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.memberProperties
@@ -144,10 +145,10 @@ class ProjectionBuilderFor<TReadModel : Any>(
     override fun <TChild : Any> children(
         propertyName: String,
         childClass: Class<TChild>,
-        configure: (IChildrenBuilderFor<TChild>) -> Unit
+        configure: Consumer<IChildrenBuilderFor<TChild>>
     ): IProjectionBuilderFor<TReadModel> {
         val builder = ChildrenBuilderFor(childClass.kotlin)
-        configure(builder)
+        configure.accept(builder)
         childrenEntries.add(ChildrenEntry(requireProperty(readModelClass, propertyName), builder.identifiedBy, builder.fromEntries))
         return this
     }
@@ -166,10 +167,10 @@ class ProjectionBuilderFor<TReadModel : Any>(
     override fun <TNested : Any> nested(
         propertyName: String,
         nestedClass: Class<TNested>,
-        configure: (INestedBuilderFor<TNested>) -> Unit
+        configure: Consumer<INestedBuilderFor<TNested>>
     ): IProjectionBuilderFor<TReadModel> {
         val builder = NestedBuilderFor(nestedClass.kotlin)
-        configure(builder)
+        configure.accept(builder)
         nestedEntries.add(NestedEntry(requireProperty(readModelClass, propertyName), builder.fromEntries, builder.clearWithEventClasses))
         return this
     }

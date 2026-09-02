@@ -157,6 +157,8 @@ private data class WidgetRenamed(val name: String)
 @FromEvent(WidgetCreated::class)
 @FromEvent(WidgetRenamed::class)
 private data class WidgetAudit(
+    @FromEventSourceId
+    val id: String = "",
     @FromEvery(contextProperty = "occurred")
     val lastTouchedAt: String = "",
     @FromAll
@@ -427,6 +429,12 @@ class ProjectionsServiceTests {
     fun `FromEvery maps a context property across every subscribed event`() {
         val all = registerOne(WidgetAudit::class).all
         assertEquals("\$eventContext(occurred)", all.propertiesMap["lastTouchedAt"])
+    }
+
+    @Test
+    fun `FromEventSourceId maps the key across every subscribed event`() {
+        val all = registerOne(WidgetAudit::class).all
+        assertEquals("\$eventSourceId", all.propertiesMap["id"])
     }
 
     @Test

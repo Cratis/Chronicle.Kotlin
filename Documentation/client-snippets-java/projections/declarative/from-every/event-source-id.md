@@ -18,7 +18,6 @@ class AccountSummaryDeclarativeEveryProjection implements IProjectionFor<Account
             .from(AccountOpenedDeclarativeEvery.class)
             .fromEvery(feb -> {
                 feb.set("accountId").toEventSourceId();
-                return null; // Java lambda returning Unit
             });
     }
 }

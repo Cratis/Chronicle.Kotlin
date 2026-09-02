@@ -27,11 +27,9 @@ class DecFunctionsAccountProjection implements IProjectionFor<DecFunctionsAccoun
             .from(DecFunctionsAccountOpened.class)
             .from(DecFunctionsMoneyDeposited.class, fb -> {
                 fb.add("balance").with("amount");
-                return null; // Java lambda returning Unit
             })
             .from(DecFunctionsMoneyWithdrawn.class, fb -> {
                 fb.subtract("balance").with("amount");
-                return null; // Java lambda returning Unit
             });
     }
 }

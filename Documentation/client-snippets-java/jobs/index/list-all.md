@@ -9,8 +9,8 @@ import java.util.List;
 
 class JobsIndexListAll {
     void listJobs(EventStore store) {
-        List<JobsOuterClass.Job> jobs = JobsServiceJavaBridge.getJobs(store.getJobs());
-        for (JobsOuterClass.Job job : jobs) {
+        List<JobsOuterClass.JobSummaryResponse> jobs = JobsServiceJavaBridge.getJobs(store.getJobs());
+        for (JobsOuterClass.JobSummaryResponse job : jobs) {
             System.out.println(job.getType() + ": " + job.getStatus());
         }
     }

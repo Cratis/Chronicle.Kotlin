@@ -117,7 +117,9 @@ internal object ModelBoundConstraints {
         val builder = EventsConstraints.Constraint.newBuilder()
             .setName(name)
             .setScope(EventsConstraints.ConstraintScope.newBuilder().build())
-        removedWith[name]?.let { builder.setRemovedWith(it) }
+        // The contract carries several removal event types per constraint; a model-bound constraint
+        // declares at most one, so there is exactly one to add.
+        removedWith[name]?.let { builder.addRemovedWith(it) }
         return builder
     }
 }

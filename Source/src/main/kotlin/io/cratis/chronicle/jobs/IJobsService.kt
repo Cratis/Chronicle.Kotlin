@@ -24,15 +24,15 @@ interface IJobsService {
     /**
      * Gets the job with the specified [jobId], or `null` if it could not be found.
      */
-    suspend fun getJob(jobId: String): JobsOuterClass.Job?
+    suspend fun getJob(jobId: String): JobsOuterClass.JobSummaryResponse?
 
     /**
      * Gets all the jobs for the event store and namespace.
      */
-    suspend fun getJobs(): List<JobsOuterClass.Job>
+    suspend fun getJobs(): List<JobsOuterClass.JobSummaryResponse>
 
     /**
      * Gets the steps for the job with the specified [jobId].
      */
-    suspend fun getJobSteps(jobId: String): List<JobsOuterClass.JobStep>
+    suspend fun getJobSteps(jobId: String): List<JobsOuterClass.JobStepSummaryResponse>
 }

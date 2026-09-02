@@ -32,14 +32,11 @@ class SliceProjectionForNestedUpdates implements IProjectionFor<SliceForNestedUp
                     .from(CommandSetForNestedUpdates.class)
                     .from(CommandRenamedForNestedUpdates.class, fb -> {
                         fb.<String>set("name").to(e -> e.newName());
-                        return null; // Java lambda returning Unit
                     })
                     .from(CommandSchemaUpdatedForNestedUpdates.class, fb -> {
                         fb.<String>set("schema").to(e -> e.updatedSchema());
-                        return null; // Java lambda returning Unit
                     })
                     .clearWith(CommandClearedForNestedUpdates.class);
-                return null; // Java lambda returning Unit
             });
     }
 }

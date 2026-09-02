@@ -376,18 +376,6 @@ look for "[watch]" lines after actions that change title/address.
             // Reducers auto-register their read models (EmployeeState, CustomerDetails) with observerType=Reducer.
             ReducersServiceJavaBridge.register(store.getReducers(), new EmployeeStateReducer());
             ReducersServiceJavaBridge.register(store.getReducers(), new CustomerReducer());
-            // Typed watch(): observe live EmployeeDetails changes in the background for as long as the
-            // sample runs. Deserializes each changeset straight into EmployeeDetails — no manual JSON
-            // parsing. Watching follows a read model the kernel maintains, which means a projection —
-            // a reducer runs client-side, so there is nothing on the server to watch.
-            ReadModelsJavaBridge.watch(store.getReadModels(), EmployeeDetails.class, changeset -> {
-                EmployeeDetails model = changeset.getReadModel();
-                String summary = (changeset.getRemoved() || model == null)
-                    ? "removed"
-                    : model.getTitle() + " @ " + model.getCity();
-                System.out.println("\n[watch] EmployeeDetails '" + changeset.getModelKey() + "' " +
-                    changeset.getChangeType() + ": " + summary);
-            });
             // Declarative projection: a separate class implements IProjectionFor<Employee>.
             ProjectionsServiceJavaBridge.register(store.getProjections(), new EmployeeListProjection());
             // Model-bound projection: EmployeeDetails carries @FromEvent/@SetFrom — no separate projection class needed.
@@ -409,6 +397,26 @@ look for "[watch]" lines after actions that change title/address.
             EventSeedingServiceJavaBridge.seed(store.getSeeding(), new EmployeeSeeder());
             Thread.sleep(2000);
             ensureSeededEmployees(store);
+            // Typed watch(): observe live EmployeeDetails changes in the background for as long as the
+            // sample runs. Deserializes each changeset straight into EmployeeDetails — no manual JSON
+            // parsing. Watching follows a read model the kernel maintains, which means a projection —
+            // a reducer runs client-side, so there is nothing on the server to watch.
+            ReadModelsJavaBridge.watch(store.getReadModels(), EmployeeDetails.class, changeset -> {
+                EmployeeDetails model = changeset.getReadModel();
+                String summary = (changeset.getRemoved() || model == null)
+                    ? "removed"
+                    : model.getTitle() + " @ " + model.getCity();
+                System.out.println("\n[watch] EmployeeDetails '" + changeset.getModelKey() + "' " +
+                    changeset.getChangeType() + ": " + summary);
+            }, error -> {
+                // A watch that cannot be established is worth saying out loud, but it is a
+                // background convenience — it must not take the rest of the sample down with it.
+                System.out.println("[watch] Stopped watching EmployeeDetails: " + error.getMessage());
+            });
+
+            // Started after seeding on purpose: watching a read model with no instances yet
+            // throws (https://github.com/Cratis/Chronicle/issues/3925), and by here the seeded
+            // employees have given the projection something to watch.
             // Register constraints AFTER seeding so the reindex job can find existing email events
             // and populate the global uniqueness index before the user can interact.
             ConstraintsServiceJavaBridge.register(store.getConstraints(), new UniqueEmployeeHire(), new UniqueEmployeeEmail());

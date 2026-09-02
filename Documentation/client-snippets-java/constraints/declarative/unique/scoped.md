@@ -20,7 +20,6 @@ class ConstraintsUniqueScopedEmail implements IConstraint {
             UniqueConstraintBuilderJavaBridge.on(unique, ConstraintsUniqueScopedUserRegistered.class, "email")
                 .ignoreCasing()
                 .withMessage("Email must be unique per event source type.");
-            return null; // Java lambda returning Unit
         });
     }
 }

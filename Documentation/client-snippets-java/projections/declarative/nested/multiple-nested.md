@@ -36,13 +36,11 @@ class SliceProjectionWithMultipleNested implements IProjectionFor<SliceWithMulti
                 nested
                     .from(CommandSetWithMultipleNested.class)
                     .clearWith(CommandClearedWithMultipleNested.class);
-                return null; // Java lambda returning Unit
             })
             .nested("validation", ValidationConfigWithMultipleNested.class, nested -> {
                 nested
                     .from(ValidationConfiguredWithMultipleNested.class)
                     .clearWith(ValidationRemovedWithMultipleNested.class);
-                return null; // Java lambda returning Unit
             });
     }
 }

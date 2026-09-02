@@ -20,13 +20,11 @@ class SubscriptionsExplicitTypicalPattern {
     static void registerSubscriptions(EventStore eventStore) {
         EventStoreSubscriptionsServiceJavaBridge.subscribe(eventStore.getEventStoreSubscriptions(), "orders-from-fulfillment", "fulfillment-service", builder -> {
             EventStoreSubscriptionBuilderJavaBridge.withEventType(builder, SubscriptionsExplicitShipmentDispatched.class);
-            return null; // Java lambda returning Unit
         });
 
         EventStoreSubscriptionsServiceJavaBridge.subscribe(eventStore.getEventStoreSubscriptions(), "inventory-updates", "warehouse-service", builder -> {
             EventStoreSubscriptionBuilderJavaBridge.withEventType(builder, SubscriptionsExplicitStockAdjusted.class);
             EventStoreSubscriptionBuilderJavaBridge.withEventType(builder, SubscriptionsExplicitStockReserved.class);
-            return null; // Java lambda returning Unit
         });
     }
 

@@ -33,18 +33,14 @@ class GroupWithMultipleCollectionsProjection implements IProjectionFor<GroupWith
                     .identifiedBy("userId")
                     .from(MemberAddedToGroup.class, fb -> {
                         fb.usingKey("userId");
-                        return null; // Java lambda returning Unit
                     });
-                return null; // Java lambda returning Unit
             })
             .children("tasks", GroupTaskInMultipleCollections.class, children -> {
                 children
                     .identifiedBy("taskId")
                     .from(TaskAssignedToGroup.class, fb -> {
                         fb.usingKey("taskId");
-                        return null; // Java lambda returning Unit
                     });
-                return null; // Java lambda returning Unit
             });
     }
 }

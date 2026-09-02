@@ -9,11 +9,11 @@ import Cratis.Chronicle.Contracts.Compliance.ComplianceGrpcKt
 import Cratis.Chronicle.Contracts.Events.Constraints.ConstraintsGrpcKt
 import Cratis.Chronicle.Contracts.Events.EventTypesGrpcKt
 import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
-import Cratis.Chronicle.Contracts.EventStoresGrpcKt
+import Cratis.Chronicle.Contracts.EventStores.EventStoresGrpcKt
 import Cratis.Chronicle.Contracts.ExternalServices.ExternalServicesGrpcKt
 import Cratis.Chronicle.Contracts.Identities.IdentitiesGrpcKt
 import Cratis.Chronicle.Contracts.Jobs.JobsGrpcKt
-import Cratis.Chronicle.Contracts.NamespacesGrpcKt
+import Cratis.Chronicle.Contracts.Namespaces.NamespacesGrpcKt
 import Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionsGrpcKt
 import Cratis.Chronicle.Contracts.Observation.FailedPartitionsGrpcKt
 import Cratis.Chronicle.Contracts.Observation.ObserversGrpcKt

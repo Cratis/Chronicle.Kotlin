@@ -21,7 +21,6 @@ class AutoMapAccountProjection implements IProjectionFor<AutoMapAccount> {
         builder
             .from(AutoMapAccountOpened.class, fb -> {
                 fb.<String>set("status").to(e -> "Active");
-                return null; // Java lambda returning Unit
             })
             .from(AutoMapAccountEmailChanged.class);
     }

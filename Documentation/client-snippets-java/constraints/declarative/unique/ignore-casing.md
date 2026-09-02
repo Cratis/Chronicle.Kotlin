@@ -13,7 +13,6 @@ class ConstraintsUniqueCasingEmail implements IConstraint {
         builder.unique(unique -> {
             UniqueConstraintBuilderJavaBridge.on(unique, ConstraintsUniqueCasingUserRegistered.class, "email")
                 .ignoreCasing();
-            return null; // Java lambda returning Unit
         });
     }
 }

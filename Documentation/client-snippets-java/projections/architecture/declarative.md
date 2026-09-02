@@ -18,7 +18,6 @@ class ArchitectureDeclarativeSummaryProjection implements IProjectionFor<Archite
             .from(ArchitectureDeclarativeItemAdded.class, fb -> {
                 fb.usingKey("category");
                 fb.count("count");
-                return null; // Java lambda returning Unit
             });
     }
 }

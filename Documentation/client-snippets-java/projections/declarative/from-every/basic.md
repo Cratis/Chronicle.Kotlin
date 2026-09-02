@@ -23,7 +23,6 @@ class UserProfileDeclarativeEveryProjection implements IProjectionFor<UserProfil
             .from(UserEmailChangedDeclarativeEvery.class)
             .fromEvery(feb -> {
                 feb.set("lastUpdated").toEventContextProperty("occurred");
-                return null; // Java lambda returning Unit
             });
     }
 }

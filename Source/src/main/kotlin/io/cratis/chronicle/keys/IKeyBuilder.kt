@@ -43,4 +43,8 @@ interface IKeyBuilder<TEvent : Any> {
      * @param builderCallback Callback for building the composite key.
      */
     fun usingCompositeKey(builderCallback: (ICompositeKeyBuilder<TEvent>) -> Unit)
+
+    /** The same, taking a Java [java.util.function.Consumer] - see [IConstraintBuilder.unique]. */
+    fun usingCompositeKey(builderCallback: java.util.function.Consumer<ICompositeKeyBuilder<TEvent>>) =
+        usingCompositeKey { builderCallback.accept(it) }
 }

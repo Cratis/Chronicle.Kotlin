@@ -218,6 +218,28 @@ object ReadModelsJavaBridge {
         service.watch(readModelClass.kotlin).collect { changeset -> callback.accept(changeset) }
     }
 
+    /**
+     * The same, handing a failed stream to [onError] rather than letting it go unhandled.
+     *
+     * A Kotlin caller wraps `collect` in its own `try`; Java has no equivalent reach into the
+     * coroutine, so without this a watch that faults surfaces as an uncaught exception on a
+     * background dispatcher and takes the subscription with it silently.
+     */
+    @JvmStatic
+    fun <T : Any> watch(
+        service: IReadModelsService,
+        readModelClass: Class<T>,
+        callback: java.util.function.Consumer<ReadModelChangeset<T>>,
+        onError: java.util.function.Consumer<Throwable>
+    ): Job = CoroutineScope(Dispatchers.Default).launch {
+        try {
+            service.watch(readModelClass.kotlin).collect { changeset -> callback.accept(changeset) }
+        } catch (cause: Throwable) {
+            if (cause is kotlinx.coroutines.CancellationException) throw cause
+            onError.accept(cause)
+        }
+    }
+
     @JvmStatic
     fun dehydrateSession(service: IReadModelsService, readModelClass: Class<*>, key: String, sessionId: String) {
         runBlocking { service.dehydrateSession(readModelClass.kotlin, key, sessionId) }
@@ -251,6 +273,24 @@ object ReadModelsJavaBridge {
         callback: java.util.function.Consumer<List<T>>
     ): Job = CoroutineScope(Dispatchers.Default).launch {
         service.materialized.observeInstances(readModelClass.kotlin, skip, take).collect { callback.accept(it) }
+    }
+
+    /** The same, handing a failed stream to [onError] - see [watch]. */
+    @JvmStatic
+    fun <T : Any> observeMaterializedInstances(
+        service: IReadModelsService,
+        readModelClass: Class<T>,
+        skip: Int,
+        take: Int,
+        callback: java.util.function.Consumer<List<T>>,
+        onError: java.util.function.Consumer<Throwable>
+    ): Job = CoroutineScope(Dispatchers.Default).launch {
+        try {
+            service.materialized.observeInstances(readModelClass.kotlin, skip, take).collect { callback.accept(it) }
+        } catch (cause: Throwable) {
+            if (cause is kotlinx.coroutines.CancellationException) throw cause
+            onError.accept(cause)
+        }
     }
 }
 
@@ -529,8 +569,8 @@ object EventSeedingScopeBuilderJavaBridge {
  */
 object ExternalServicesServiceJavaBridge {
     @JvmStatic
-    fun register(service: IExternalServicesService, name: String, configure: (IExternalServiceBuilder) -> Unit) {
-        runBlocking { service.register(name, configure) }
+    fun register(service: IExternalServicesService, name: String, configure: java.util.function.Consumer<IExternalServiceBuilder>) {
+        runBlocking { service.register(name) { configure.accept(it) } }
     }
 }
 
@@ -554,15 +594,15 @@ object JobsServiceJavaBridge {
     }
 
     @JvmStatic
-    fun getJob(service: IJobsService, jobId: String): JobsOuterClass.Job? =
+    fun getJob(service: IJobsService, jobId: String): JobsOuterClass.JobSummaryResponse? =
         runBlocking { service.getJob(jobId) }
 
     @JvmStatic
-    fun getJobs(service: IJobsService): List<JobsOuterClass.Job> =
+    fun getJobs(service: IJobsService): List<JobsOuterClass.JobSummaryResponse> =
         runBlocking { service.getJobs() }
 
     @JvmStatic
-    fun getJobSteps(service: IJobsService, jobId: String): List<JobsOuterClass.JobStep> =
+    fun getJobSteps(service: IJobsService, jobId: String): List<JobsOuterClass.JobStepSummaryResponse> =
         runBlocking { service.getJobSteps(jobId) }
 }
 
@@ -584,9 +624,9 @@ object EventStoreSubscriptionsServiceJavaBridge {
         service: IEventStoreSubscriptionsService,
         id: String,
         sourceEventStore: String,
-        configure: (IEventStoreSubscriptionBuilder) -> Unit
+        configure: java.util.function.Consumer<IEventStoreSubscriptionBuilder>
     ) {
-        runBlocking { service.subscribe(id, sourceEventStore, configure) }
+        runBlocking { service.subscribe(id, sourceEventStore) { configure.accept(it) } }
     }
 
     @JvmStatic
@@ -618,8 +658,8 @@ object WebhooksServiceJavaBridge {
     }
 
     @JvmStatic
-    fun register(service: IWebhooksService, id: String, targetUrl: String, configure: (IWebhookDefinitionBuilder) -> Unit) {
-        runBlocking { service.register(id, targetUrl, configure) }
+    fun register(service: IWebhooksService, id: String, targetUrl: String, configure: java.util.function.Consumer<IWebhookDefinitionBuilder>) {
+        runBlocking { service.register(id, targetUrl) { configure.accept(it) } }
     }
 
     @JvmStatic

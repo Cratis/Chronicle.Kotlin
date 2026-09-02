@@ -21,7 +21,6 @@ class DeclAggAssignmentProjection implements IProjectionFor<DeclAggAssignmentSum
             .from(DeclAggArrangementSet.class)
             .from(DeclAggCandidateSubmitted.class, fb -> {
                 fb.count("candidateCount");
-                return null; // Java lambda returning Unit
             });
     }
 }

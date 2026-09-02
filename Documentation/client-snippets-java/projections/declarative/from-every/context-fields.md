@@ -21,7 +21,6 @@ class AccountAuditDeclarativeEveryProjection implements IProjectionFor<AccountAu
                 feb.set("lastUpdated").toEventContextProperty("occurred");
                 feb.set("lastEventSequence").toEventContextProperty("sequenceNumber");
                 feb.set("lastCorrelationId").toEventContextProperty("correlationId");
-                return null; // Java lambda returning Unit
             });
     }
 }

@@ -10,15 +10,12 @@ class DecJoinsUserProjection implements IProjectionFor<DecJoinsUser> {
             .from(DecJoinsUserAssignedToGroup.class, fb -> {
                 fb.usingKey("userId");
                 fb.set("groupId").toEventSourceId();
-                return null; // Java lambda returning Unit
             })
             .join(DecJoinsGroupCreated.class, jb -> {
                 jb.on("groupId");
-                return null; // Java lambda returning Unit
             })
             .join(DecJoinsGroupRenamed.class, jb -> {
                 jb.on("groupId");
-                return null; // Java lambda returning Unit
             });
     }
 }

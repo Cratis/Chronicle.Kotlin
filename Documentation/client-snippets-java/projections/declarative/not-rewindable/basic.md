@@ -9,7 +9,6 @@ class DecNotRewindableAuditLogProjection implements IProjectionFor<DecNotRewinda
             .notRewindable()
             .fromEvery(feb -> {
                 feb.set("processedAt").toEventContextProperty("occurred");
-                return null; // Java lambda returning Unit
             })
             .from(DecNotRewindableUserAction.class);
     }

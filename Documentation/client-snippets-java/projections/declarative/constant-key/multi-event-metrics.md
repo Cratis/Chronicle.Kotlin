@@ -25,17 +25,14 @@ class DecConstantKeyEngagementMetricsProjection implements IProjectionFor<DecCon
             .from(DecConstantKeyPageViewed.class, fb -> {
                 fb.usingConstantKey("metrics");
                 fb.count("pageViews");
-                return null; // Java lambda returning Unit
             })
             .from(DecConstantKeyButtonClicked.class, fb -> {
                 fb.usingConstantKey("metrics");
                 fb.count("buttonClicks");
-                return null; // Java lambda returning Unit
             })
             .from(DecConstantKeyFormSubmitted.class, fb -> {
                 fb.usingConstantKey("metrics");
                 fb.count("formSubmissions");
-                return null; // Java lambda returning Unit
             });
     }
 }

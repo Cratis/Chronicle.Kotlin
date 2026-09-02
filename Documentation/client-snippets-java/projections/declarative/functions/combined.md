@@ -22,7 +22,6 @@ class DecFunctionsTransactionSummaryProjection implements IProjectionFor<DecFunc
                 fb.count("transactionCount");
                 fb.add("totalAmount").with("amount");
                 fb.increment("processedEvents");
-                return null; // Java lambda returning Unit
             });
     }
 }

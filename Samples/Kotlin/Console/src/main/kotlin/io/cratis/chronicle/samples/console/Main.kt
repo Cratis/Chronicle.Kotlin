@@ -276,23 +276,6 @@ fun main() = runBlocking {
         // Reducers auto-register their read models (EmployeeState, CustomerDetails) with observerType=Reducer.
         store.reducers.register(EmployeeStateReducer())
         store.reducers.register(CustomerReducer())
-        // Typed watch(): observe live EmployeeDetails changes in the background for as long as the
-        // sample runs. Deserializes each changeset straight into EmployeeDetails — no manual JSON
-        // parsing. Watching follows a read model the kernel maintains, which means a projection —
-        // a reducer runs client-side, so there is nothing on the server to watch.
-        launch {
-            try {
-                store.readModels.watch(EmployeeDetails::class).collect { changeset ->
-                    val model = changeset.readModel
-                    val summary = if (changeset.removed || model == null) "removed" else "${model.title} @ ${model.city}"
-                    println("\n[watch] EmployeeDetails '${changeset.modelKey}' ${changeset.changeType}: $summary")
-                }
-            } catch (e: Exception) {
-                // A watch that cannot be established is worth saying out loud, but it is a
-                // background convenience — it must not take the rest of the sample down with it.
-                println("[watch] Stopped watching EmployeeDetails: ${e.message}")
-            }
-        }
         // Declarative projection: a separate class implements IProjectionFor<Employee>.
         store.projections.register(EmployeeListProjection())
         // Model-bound projection: EmployeeDetails carries @FromEvent/@SetFrom — no separate projection class needed.
@@ -314,6 +297,28 @@ fun main() = runBlocking {
         store.seeding.seed(EmployeeSeeder())
         kotlinx.coroutines.delay(2000)
         ensureSeededEmployees(store)
+        // Typed watch(): observe live EmployeeDetails changes in the background for as long as the
+        // sample runs. Deserializes each changeset straight into EmployeeDetails — no manual JSON
+        // parsing. Watching follows a read model the kernel maintains, which means a projection —
+        // a reducer runs client-side, so there is nothing on the server to watch.
+        //
+        // Started after seeding on purpose: watching a read model with no instances yet throws
+        // (https://github.com/Cratis/Chronicle/issues/3925), and by here the seeded employees have
+        // given the projection something to watch.
+        launch {
+            try {
+                store.readModels.watch(EmployeeDetails::class).collect { changeset ->
+                    val model = changeset.readModel
+                    val summary = if (changeset.removed || model == null) "removed" else "${model.title} @ ${model.city}"
+                    println("\n[watch] EmployeeDetails '${changeset.modelKey}' ${changeset.changeType}: $summary")
+                }
+            } catch (e: Exception) {
+                // A watch that cannot be established is worth saying out loud, but it is a
+                // background convenience — it must not take the rest of the sample down with it.
+                println("[watch] Stopped watching EmployeeDetails: ${e.message}")
+            }
+        }
+
         // Register constraints AFTER seeding so the reindex job can find existing email events
         // and populate the global uniqueness index before the user can interact.
         store.constraints.register(UniqueEmployeeHire(), UniqueEmployeeEmail())

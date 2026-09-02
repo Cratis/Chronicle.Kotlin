@@ -98,7 +98,7 @@ class ModelBoundConstraintsTests {
         )
 
         val constraint = constraints.single { it.name == "ModelBoundUniqueEmail" }
-        assertEquals("ModelBoundUserRemoved", constraint.removedWith)
+        assertEquals(listOf("ModelBoundUserRemoved"), constraint.removedWithList)
     }
 
     @Test
@@ -108,7 +108,7 @@ class ModelBoundConstraintsTests {
         )
 
         val constraint = constraints.single { it.name == "ModelBoundUniqueEmail" }
-        assertEquals("", constraint.removedWith)
+        assertEquals(emptyList<String>(), constraint.removedWithList)
     }
 
     @Test
@@ -117,8 +117,8 @@ class ModelBoundConstraintsTests {
             listOf(ModelBoundUserRegistered::class, ModelBoundUsernameClaimed::class, ModelBoundUserFullyRemoved::class)
         )
 
-        assertEquals("ModelBoundUserFullyRemoved", constraints.single { it.name == "ModelBoundUniqueEmail" }.removedWith)
-        assertEquals("ModelBoundUserFullyRemoved", constraints.single { it.name == "ModelBoundUniqueUsername" }.removedWith)
+        assertEquals(listOf("ModelBoundUserFullyRemoved"), constraints.single { it.name == "ModelBoundUniqueEmail" }.removedWithList)
+        assertEquals(listOf("ModelBoundUserFullyRemoved"), constraints.single { it.name == "ModelBoundUniqueUsername" }.removedWithList)
     }
 
     @Test
@@ -128,6 +128,6 @@ class ModelBoundConstraintsTests {
         )
 
         val constraint = constraints.single { it.name == "ModelBoundSharedName" }
-        assertEquals("ModelBoundFirstReleaser", constraint.removedWith)
+        assertEquals(listOf("ModelBoundFirstReleaser"), constraint.removedWithList)
     }
 }

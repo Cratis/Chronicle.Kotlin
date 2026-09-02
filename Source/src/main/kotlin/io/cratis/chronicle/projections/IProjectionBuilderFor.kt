@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.projections
 
+import java.util.function.Consumer
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 
@@ -24,8 +25,8 @@ interface IProjectionBuilderFor<TReadModel : Any> {
      */
     fun <TEvent : Any> from(
         eventClass: Class<TEvent>,
-        configure: ((IFromBuilderFor<TReadModel, TEvent>) -> Unit)?
-    ): IProjectionBuilderFor<TReadModel> = from(eventClass.kotlin, configure)
+        configure: Consumer<IFromBuilderFor<TReadModel, TEvent>>
+    ): IProjectionBuilderFor<TReadModel> = from(eventClass.kotlin) { configure.accept(it) }
 
     /** The same relying entirely on AutoMap, since Kotlin default arguments do not reach Java. */
     fun <TEvent : Any> from(eventClass: Class<TEvent>): IProjectionBuilderFor<TReadModel> =
@@ -40,8 +41,8 @@ interface IProjectionBuilderFor<TReadModel : Any> {
     /** The same, taking a Java [Class] - see [from]. */
     fun <TEvent : Any> join(
         eventClass: Class<TEvent>,
-        configure: ((IJoinBuilderFor<TReadModel, TEvent>) -> Unit)?
-    ): IProjectionBuilderFor<TReadModel> = join(eventClass.kotlin, configure)
+        configure: Consumer<IJoinBuilderFor<TReadModel, TEvent>>
+    ): IProjectionBuilderFor<TReadModel> = join(eventClass.kotlin) { configure.accept(it) }
 
     /** The same with no configuration, since Kotlin default arguments do not reach Java. */
     fun <TEvent : Any> join(eventClass: Class<TEvent>): IProjectionBuilderFor<TReadModel> =
@@ -50,8 +51,22 @@ interface IProjectionBuilderFor<TReadModel : Any> {
     /** Configures property mappings that apply to every event type the projection observes. Alias of [fromAll]. */
     fun fromEvery(configure: (IFromEveryBuilderFor<TReadModel>) -> Unit): IProjectionBuilderFor<TReadModel>
 
+    /**
+     * The same, taking a Java [Consumer] - see [from].
+     *
+     * A Kotlin function type is a `Function1` returning `Unit` from Java, which no Java lambda
+     * writes willingly. Kotlin callers keep using the trailing-lambda overload above; this exists
+     * so a Java projection can be written at all.
+     */
+    fun fromEvery(configure: Consumer<IFromEveryBuilderFor<TReadModel>>): IProjectionBuilderFor<TReadModel> =
+        fromEvery { configure.accept(it) }
+
     /** Configures property mappings that apply to every event type the projection observes. Alias of [fromEvery]. */
     fun fromAll(configure: (IFromEveryBuilderFor<TReadModel>) -> Unit): IProjectionBuilderFor<TReadModel>
+
+    /** The same, taking a Java [Consumer] - see [fromEvery]. */
+    fun fromAll(configure: Consumer<IFromEveryBuilderFor<TReadModel>>): IProjectionBuilderFor<TReadModel> =
+        fromAll { configure.accept(it) }
 
     /** Specifies the event type that removes this read model instance. */
     fun <TEvent : Any> removedWith(
@@ -62,8 +77,8 @@ interface IProjectionBuilderFor<TReadModel : Any> {
     /** The same, taking a Java [Class] - see [from]. */
     fun <TEvent : Any> removedWith(
         eventClass: Class<TEvent>,
-        configure: ((IKeyBuilderFor<TEvent>) -> Unit)?
-    ): IProjectionBuilderFor<TReadModel> = removedWith(eventClass.kotlin, configure)
+        configure: Consumer<IKeyBuilderFor<TEvent>>
+    ): IProjectionBuilderFor<TReadModel> = removedWith(eventClass.kotlin) { configure.accept(it) }
 
     /** The same with no configuration, since Kotlin default arguments do not reach Java. */
     fun <TEvent : Any> removedWith(eventClass: Class<TEvent>): IProjectionBuilderFor<TReadModel> =
@@ -78,8 +93,8 @@ interface IProjectionBuilderFor<TReadModel : Any> {
     /** The same, taking a Java [Class] - see [from]. */
     fun <TEvent : Any> removedWithJoin(
         eventClass: Class<TEvent>,
-        configure: ((IRemovedWithJoinBuilderFor<TEvent>) -> Unit)?
-    ): IProjectionBuilderFor<TReadModel> = removedWithJoin(eventClass.kotlin, configure)
+        configure: Consumer<IRemovedWithJoinBuilderFor<TEvent>>
+    ): IProjectionBuilderFor<TReadModel> = removedWithJoin(eventClass.kotlin) { configure.accept(it) }
 
     /** The same with no configuration, since Kotlin default arguments do not reach Java. */
     fun <TEvent : Any> removedWithJoin(eventClass: Class<TEvent>): IProjectionBuilderFor<TReadModel> =
@@ -101,7 +116,7 @@ interface IProjectionBuilderFor<TReadModel : Any> {
     fun <TChild : Any> children(
         propertyName: String,
         childClass: Class<TChild>,
-        configure: (IChildrenBuilderFor<TChild>) -> Unit
+        configure: Consumer<IChildrenBuilderFor<TChild>>
     ): IProjectionBuilderFor<TReadModel>
 
     /** Configures a nested single-object projection on [property]. */
@@ -120,7 +135,7 @@ interface IProjectionBuilderFor<TReadModel : Any> {
     fun <TNested : Any> nested(
         propertyName: String,
         nestedClass: Class<TNested>,
-        configure: (INestedBuilderFor<TNested>) -> Unit
+        configure: Consumer<INestedBuilderFor<TNested>>
     ): IProjectionBuilderFor<TReadModel>
 
     /** Marks this projection as forward-only. */
@@ -161,6 +176,10 @@ interface IFromBuilderFor<TReadModel : Any, TEvent : Any> {
 
     /** Uses a composite of multiple event properties as the key. */
     fun usingCompositeKey(configure: (ICompositeKeyBuilderFor) -> Unit): IFromBuilderFor<TReadModel, TEvent>
+
+    /** The same, taking a Java [Consumer] - see [IProjectionBuilderFor.from]. */
+    fun usingCompositeKey(configure: Consumer<ICompositeKeyBuilderFor>): IFromBuilderFor<TReadModel, TEvent> =
+        usingCompositeKey { configure.accept(it) }
 
     /** Turns [property] into an occurrence counter — every [TEvent] bumps it by one. */
     fun <TValue : Any?> count(property: KProperty1<TReadModel, TValue>): IFromBuilderFor<TReadModel, TEvent>
@@ -292,8 +311,8 @@ interface IChildrenBuilderFor<TChild : Any> {
     /** The same, taking a Java [Class] - see [IProjectionBuilderFor.from]. */
     fun <TEvent : Any> from(
         eventClass: Class<TEvent>,
-        configure: (IChildFromBuilderFor<TChild, TEvent>) -> Unit
-    ): IChildrenBuilderFor<TChild> = from(eventClass.kotlin, configure)
+        configure: Consumer<IChildFromBuilderFor<TChild, TEvent>>
+    ): IChildrenBuilderFor<TChild> = from(eventClass.kotlin) { configure.accept(it) }
 
     /** Sets the property on [TChild] that is the child's own identity within the collection. */
     fun identifiedBy(propertyName: String): IChildrenBuilderFor<TChild>
@@ -323,8 +342,8 @@ interface INestedBuilderFor<TNested : Any> {
     /** The same, taking a Java [Class] - see [IProjectionBuilderFor.from]. */
     fun <TEvent : Any> from(
         eventClass: Class<TEvent>,
-        configure: ((IFromBuilderFor<TNested, TEvent>) -> Unit)?
-    ): INestedBuilderFor<TNested> = from(eventClass.kotlin, configure)
+        configure: Consumer<IFromBuilderFor<TNested, TEvent>>
+    ): INestedBuilderFor<TNested> = from(eventClass.kotlin) { configure.accept(it) }
 
     /** The same with no configuration, since Kotlin default arguments do not reach Java. */
     fun <TEvent : Any> from(eventClass: Class<TEvent>): INestedBuilderFor<TNested> = from(eventClass.kotlin, null)

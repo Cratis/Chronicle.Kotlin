@@ -19,11 +19,9 @@ class UserAuditDeclarativeEveryMultipleProjection implements IProjectionFor<User
             .from(UserChangedDeclarativeEveryMultiple.class)
             .fromEvery(feb -> {
                 feb.set("lastUpdated").toEventContextProperty("occurred");
-                return null; // Java lambda returning Unit
             })
             .fromEvery(feb -> {
                 feb.set("modifiedBy").toEventContextProperty("causedBy");
-                return null; // Java lambda returning Unit
             });
     }
 }

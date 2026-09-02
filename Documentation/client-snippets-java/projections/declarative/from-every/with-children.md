@@ -30,7 +30,6 @@ class OrderDeclarativeEveryChildrenProjection implements IProjectionFor<OrderDec
             .from(OrderCreatedDeclarativeEveryChildren.class)
             .fromEvery(feb -> {
                 feb.set("lastModified").toEventContextProperty("occurred");
-                return null; // Java lambda returning Unit
             })
             .children("items", OrderItemDeclarativeEveryChildren.class, children -> {
                 children
@@ -38,14 +37,11 @@ class OrderDeclarativeEveryChildrenProjection implements IProjectionFor<OrderDec
                     .from(ItemAddedDeclarativeEveryChildren.class, fb -> {
                         fb.usingKey("productId");
                         fb.usingParentKey("orderId");
-                        return null; // Java lambda returning Unit
                     })
                     .from(ItemQuantityChangedDeclarativeEveryChildren.class, fb -> {
                         fb.usingKey("productId");
                         fb.usingParentKey("orderId");
-                        return null; // Java lambda returning Unit
                     });
-                return null; // Java lambda returning Unit
             });
     }
 }

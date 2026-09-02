@@ -13,7 +13,6 @@ class ConstraintsUniqueMessageProjectName implements IConstraint {
         builder.unique(unique -> {
             UniqueConstraintBuilderJavaBridge.on(unique, ConstraintsUniqueMessageProjectCreated.class, "name")
                 .withMessage("A project with this name already exists.");
-            return null; // Java lambda returning Unit
         });
     }
 }

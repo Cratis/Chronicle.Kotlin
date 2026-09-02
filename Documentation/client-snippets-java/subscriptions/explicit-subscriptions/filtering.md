@@ -16,7 +16,6 @@ class SubscriptionsExplicitFiltering {
         EventStoreSubscriptionsServiceJavaBridge.subscribe(store.getEventStoreSubscriptions(), "payroll-outcomes", "PayrollEventStore", builder -> {
             EventStoreSubscriptionBuilderJavaBridge.withEventType(builder, SubscriptionsExplicitFilteringPayrollRunCompleted.class);
             EventStoreSubscriptionBuilderJavaBridge.withEventType(builder, SubscriptionsExplicitFilteringPayrollRunFailed.class);
-            return null; // Java lambda returning Unit
         });
     }
 }

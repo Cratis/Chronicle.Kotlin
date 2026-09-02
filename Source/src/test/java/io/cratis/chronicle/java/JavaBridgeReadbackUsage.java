@@ -72,8 +72,18 @@ public final class JavaBridgeReadbackUsage {
             Product.class,
             0,
             50,
-            products -> System.out.println("Products updated: " + products.size() + " in view"));
+            products -> System.out.println("Products updated: " + products.size() + " in view"),
+            error -> System.out.println("Stopped observing: " + error.getMessage()));
 
         subscription.cancel(null);
+    }
+
+    /** Watching one read model, with somewhere for a failed stream to go. */
+    public static void watchWithErrorHandling(IReadModelsService readModels) {
+        ReadModelsJavaBridge.watch(
+            readModels,
+            Product.class,
+            changeset -> System.out.println("changed: " + changeset.getModelKey()),
+            error -> System.out.println("stopped: " + error.getMessage()));
     }
 }

@@ -7,7 +7,7 @@ import io.cratis.chronicle.java.JobsServiceJavaBridge;
 
 class JobsIndexGetOne {
     void getReindexJob(EventStore store, String jobId) {
-        JobsOuterClass.Job job = JobsServiceJavaBridge.getJob(store.getJobs(), jobId);
+        JobsOuterClass.JobSummaryResponse job = JobsServiceJavaBridge.getJob(store.getJobs(), jobId);
         if (job != null) {
             System.out.println(job.getType() + ": " + job.getStatus());
         }

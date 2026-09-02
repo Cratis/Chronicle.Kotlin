@@ -13,7 +13,6 @@ class WebhooksIndexRegistration {
         WebhooksServiceJavaBridge.register(store.getWebhooks(), "order-placed-webhook", "https://hooks.example.com/orders", builder -> {
             WebhookDefinitionBuilderJavaBridge.withEventType(builder, WebhooksIndexOrderPlaced.class)
                 .withBearerToken("webhook-token");
-            return null; // Java lambda returning Unit
         });
     }
 }

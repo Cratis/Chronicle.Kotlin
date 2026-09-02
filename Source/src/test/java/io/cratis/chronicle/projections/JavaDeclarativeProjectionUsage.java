@@ -142,25 +142,20 @@ public final class JavaDeclarativeProjectionUsage {
                 .from(JavaDeclarativeOrderPlaced.class, fb -> {
                     fb.set("id").toProperty("orderId");
                     fb.set("customerName").toProperty("customerId");
-                    return null; // Java lambda returning Unit
                 })
                 .from(JavaDeclarativeOrderLineAdded.class, fb -> {
                     // A counter: bumped by one every time this event fires for the instance.
                     fb.increment("version");
-                    return null; // Java lambda returning Unit
                 })
                 .join(JavaDeclarativeCustomerRenamed.class, jb -> {
                     jb.on("customerName");
                     jb.set("customerName").toProperty("name");
-                    return null; // Java lambda returning Unit
                 })
                 .nested("summary", JavaDeclarativeOrderSummary.class, nb -> {
                     nb.from(JavaDeclarativeOrderPlaced.class, fb -> {
                         fb.set("note").toProperty("orderId");
-                        return null; // Java lambda returning Unit
                     });
                     nb.clearWith(JavaDeclarativeOrderCancelled.class);
-                    return null; // Java lambda returning Unit
                 })
                 .children("lines", JavaDeclarativeOrderLine.class, cb -> {
                     cb.identifiedBy("product");
@@ -168,13 +163,10 @@ public final class JavaDeclarativeProjectionUsage {
                         cfb.usingKey("product");
                         cfb.usingParentKey("orderId");
                         cfb.set("quantity").toProperty("quantity");
-                        return null; // Java lambda returning Unit
                     });
-                    return null; // Java lambda returning Unit
                 })
                 .fromEvery(feb -> {
                     feb.set("id").toEventSourceId();
-                    return null; // Java lambda returning Unit
                 })
                 .noAutoMap();
         }

@@ -45,14 +45,14 @@ services:
       - "35000:35000"
 
   mongodb:
-    image: mongo:8
+    image: mongo:8.2
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     ports:
       - "27017:27017"
 
   # Chronicle's MongoDB storage needs a replica set — initiate it once.
   mongodb-init:
-    image: mongo:8
+    image: mongo:8.2
     depends_on:
       - mongodb
     restart: "no"
