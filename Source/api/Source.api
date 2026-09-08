@@ -529,10 +529,10 @@ public final class io/cratis/chronicle/connection/ChronicleServices {
 	public final fun getConnection ()LCratis/Chronicle/Contracts/Clients/ConnectionServiceGrpcKt$ConnectionServiceCoroutineStub;
 	public final fun getConstraints ()LCratis/Chronicle/Contracts/Events/Constraints/ConstraintsGrpcKt$ConstraintsCoroutineStub;
 	public final fun getEventSeeding ()LCratis/Chronicle/Contracts/Seeding/EventSeedingGrpcKt$EventSeedingCoroutineStub;
-	public final fun getEventSequences ()LCratis/Chronicle/Contracts/EventSequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;
+	public final fun getEventSequences ()LCratis/Chronicle/Contracts/Sequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;
 	public final fun getEventStoreSubscriptions ()LCratis/Chronicle/Contracts/Observation/EventStoreSubscriptions/EventStoreSubscriptionsGrpcKt$EventStoreSubscriptionsCoroutineStub;
 	public final fun getEventStores ()LCratis/Chronicle/Contracts/EventStores/EventStoresGrpcKt$EventStoresCoroutineStub;
-	public final fun getEventTypes ()LCratis/Chronicle/Contracts/Events/EventTypesGrpcKt$EventTypesCoroutineStub;
+	public final fun getEventTypes ()LCratis/Chronicle/Contracts/EventTypes/EventTypesGrpcKt$EventTypesCoroutineStub;
 	public final fun getExternalServices ()LCratis/Chronicle/Contracts/ExternalServices/ExternalServicesGrpcKt$ExternalServicesCoroutineStub;
 	public final fun getFailedPartitions ()LCratis/Chronicle/Contracts/Observation/FailedPartitionsGrpcKt$FailedPartitionsCoroutineStub;
 	public final fun getIdentities ()LCratis/Chronicle/Contracts/Identities/IdentitiesGrpcKt$IdentitiesCoroutineStub;
@@ -542,6 +542,7 @@ public final class io/cratis/chronicle/connection/ChronicleServices {
 	public final fun getObservers ()LCratis/Chronicle/Contracts/Observation/ObserversGrpcKt$ObserversCoroutineStub;
 	public final fun getProjections ()LCratis/Chronicle/Contracts/Projections/ProjectionsGrpcKt$ProjectionsCoroutineStub;
 	public final fun getReactors ()LCratis/Chronicle/Contracts/Observation/Reactors/ReactorsGrpcKt$ReactorsCoroutineStub;
+	public final fun getReadModelExplorer ()LCratis/Chronicle/Contracts/ReadModelExplorer/ReadModelExplorerGrpcKt$ReadModelExplorerCoroutineStub;
 	public final fun getReadModels ()LCratis/Chronicle/Contracts/ReadModels/ReadModelsGrpcKt$ReadModelsCoroutineStub;
 	public final fun getReducers ()LCratis/Chronicle/Contracts/Observation/Reducers/ReducersGrpcKt$ReducersCoroutineStub;
 	public final fun getWebhooks ()LCratis/Chronicle/Contracts/Observation/Webhooks/WebhooksGrpcKt$WebhooksCoroutineStub;
@@ -1008,6 +1009,10 @@ public final class io/cratis/chronicle/eventSequences/CausationDiffersAcrossBatc
 	public fun <init> (I)V
 }
 
+public final class io/cratis/chronicle/eventSequences/ChronicleCommandRejected : java/lang/RuntimeException {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+}
+
 public abstract class io/cratis/chronicle/eventSequences/CompleteStreamResult {
 }
 
@@ -1088,14 +1093,14 @@ public final class io/cratis/chronicle/eventSequences/EventForEventSourceId {
 }
 
 public final class io/cratis/chronicle/eventSequences/EventLog : io/cratis/chronicle/eventSequences/EventSequence, io/cratis/chronicle/eventSequences/IEventLog {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/EventSequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/transactions/IUnitOfWorkManager;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/artifacts/IRegistrationGate;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/EventSequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/transactions/IUnitOfWorkManager;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/artifacts/IRegistrationGate;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/Sequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/transactions/IUnitOfWorkManager;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/artifacts/IRegistrationGate;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/Sequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/transactions/IUnitOfWorkManager;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/artifacts/IRegistrationGate;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun getTransactional ()Lio/cratis/chronicle/eventSequences/ITransactionalEventSequence;
 }
 
 public class io/cratis/chronicle/eventSequences/EventSequence : io/cratis/chronicle/eventSequences/IEventSequence {
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/EventSequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/artifacts/IRegistrationGate;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/EventSequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/artifacts/IRegistrationGate;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/Sequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/artifacts/IRegistrationGate;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/Sequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/artifacts/IRegistrationGate;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun append (Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun appendMany (Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun appendMany (Ljava/util/List;Ljava/util/Map;Ljava/util/UUID;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -1542,7 +1547,7 @@ public final class io/cratis/chronicle/events/EventTypeId$Companion {
 }
 
 public final class io/cratis/chronicle/events/EventTypesService : io/cratis/chronicle/events/IEventTypesService {
-	public fun <init> (Ljava/lang/String;LCratis/Chronicle/Contracts/Events/EventTypesGrpcKt$EventTypesCoroutineStub;)V
+	public fun <init> (Ljava/lang/String;LCratis/Chronicle/Contracts/EventTypes/EventTypesGrpcKt$EventTypesCoroutineStub;)V
 	public fun getAllGenerationsForEventType (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getRegisteredEventTypes ()Ljava/util/List;
 	public fun register ([Lkotlin/reflect/KClass;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -3204,8 +3209,8 @@ public final class io/cratis/chronicle/readModels/ReadModelSnapshot {
 }
 
 public final class io/cratis/chronicle/readModels/ReadModelsService : io/cratis/chronicle/readModels/IReadModelsService {
-	public fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/ReadModels/ReadModelsGrpcKt$ReadModelsCoroutineStub;LCratis/Chronicle/Contracts/ReadModels/MaterializedReadModelsGrpcKt$MaterializedReadModelsCoroutineStub;LCratis/Chronicle/Contracts/Compliance/ComplianceGrpcKt$ComplianceCoroutineStub;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/ReadModels/ReadModelsGrpcKt$ReadModelsCoroutineStub;LCratis/Chronicle/Contracts/ReadModels/MaterializedReadModelsGrpcKt$MaterializedReadModelsCoroutineStub;LCratis/Chronicle/Contracts/Compliance/ComplianceGrpcKt$ComplianceCoroutineStub;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/ReadModels/ReadModelsGrpcKt$ReadModelsCoroutineStub;LCratis/Chronicle/Contracts/ReadModels/MaterializedReadModelsGrpcKt$MaterializedReadModelsCoroutineStub;LCratis/Chronicle/Contracts/ReadModelExplorer/ReadModelExplorerGrpcKt$ReadModelExplorerCoroutineStub;LCratis/Chronicle/Contracts/Compliance/ComplianceGrpcKt$ComplianceCoroutineStub;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/ReadModels/ReadModelsGrpcKt$ReadModelsCoroutineStub;LCratis/Chronicle/Contracts/ReadModels/MaterializedReadModelsGrpcKt$MaterializedReadModelsCoroutineStub;LCratis/Chronicle/Contracts/ReadModelExplorer/ReadModelExplorerGrpcKt$ReadModelExplorerCoroutineStub;LCratis/Chronicle/Contracts/Compliance/ComplianceGrpcKt$ComplianceCoroutineStub;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun dehydrateSession (Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getInstanceByKey (Lkotlin/reflect/KClass;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getInstances (Lkotlin/reflect/KClass;Ljava/lang/Long;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;

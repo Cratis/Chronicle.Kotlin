@@ -16,11 +16,11 @@ class ExternalServicesService(
         configure(builder)
         val definition = builder.build(name, name)
 
-        val request = Externalservices.AddExternalServices.newBuilder()
+        val request = Externalservices.AddExternalServicesRequest.newBuilder()
             .setEventStore(eventStoreName)
             .addExternalServices(definition)
             .build()
 
-        stub.add(request)
+        stub.addExternalServices(request)
     }
 }

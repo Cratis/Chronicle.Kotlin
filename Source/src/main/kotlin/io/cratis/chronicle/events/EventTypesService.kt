@@ -3,8 +3,8 @@
 
 package io.cratis.chronicle.events
 
-import Cratis.Chronicle.Contracts.Events.EventTypesGrpcKt
-import Cratis.Chronicle.Contracts.Events.Events
+import Cratis.Chronicle.Contracts.EventTypes.EventTypesGrpcKt
+import Cratis.Chronicle.Contracts.EventTypes.Eventtypes
 import io.cratis.chronicle.events.migrations.EventTypeMigrationBuilder
 import io.cratis.chronicle.events.migrations.IEventTypeMigration
 import io.cratis.chronicle.schemas.JsonSchemaGenerator
@@ -30,32 +30,32 @@ class EventTypesService(
         recordEventTypeDescriptors(eventClasses.toList())
         val registrations = buildRegistrations(eventClasses.toList())
         if (registrations.isEmpty()) return
-        val request = Events.RegisterEventTypesRequest.newBuilder()
+        val request = Eventtypes.RegisterEventTypesRequest.newBuilder()
             .setEventStore(eventStoreName)
             .addAllTypes(registrations)
             .setDisableValidation(false)
             .build()
-        stub.register(request)
+        stub.registerEventTypes(request)
     }
 
     /** Register a single event type with the event store. */
     override suspend fun registerSingle(eventClass: KClass<*>) {
         recordEventTypeDescriptors(listOf(eventClass))
         val registration = buildRegistrations(listOf(eventClass)).firstOrNull() ?: return
-        val request = Events.RegisterSingleEventTypeRequest.newBuilder()
+        val request = Eventtypes.RegisterSingleEventTypeRequest.newBuilder()
             .setEventStore(eventStoreName)
             .setType(registration)
             .build()
-        stub.registerSingle(request)
+        stub.registerSingleEventType(request)
     }
 
     /** Get all known generations, and their migrations, for the given [eventTypeId]. */
-    override suspend fun getAllGenerationsForEventType(eventTypeId: String): List<Events.EventTypeRegistration> {
-        val request = Events.GetEventTypeGenerationsRequest.newBuilder()
+    override suspend fun getAllGenerationsForEventType(eventTypeId: String): List<Eventtypes.EventTypeDetailsResponse> {
+        val request = Eventtypes.AllEventTypeGenerationsRequest.newBuilder()
             .setEventStore(eventStoreName)
             .setEventTypeId(eventTypeId)
             .build()
-        return stub.getAllGenerationsForEventType(request).itemsList
+        return stub.allEventTypeGenerations(request).dataList
     }
 
     override fun getRegisteredEventTypes(): List<EventTypeDescriptor> = registeredEventTypes.toList()
@@ -69,7 +69,7 @@ class EventTypesService(
         }
     }
 
-    private fun buildRegistrations(classes: List<KClass<*>>): List<Events.EventTypeRegistration> {
+    private fun buildRegistrations(classes: List<KClass<*>>): List<Eventtypes.EventTypeRegistration> {
         val eventEntries = classes.mapNotNull { cls -> cls.findAnnotation<EventType>()?.let { it to cls } }
         val eventsById = eventEntries.groupBy { (ann, cls) -> ann.id.ifEmpty { cls.simpleName!! } }
 
@@ -86,17 +86,17 @@ class EventTypesService(
         id: String,
         eventEntries: List<Pair<EventType, KClass<*>>>,
         migrations: List<IEventTypeMigration<Any, Any>>
-    ): Events.EventTypeRegistration {
+    ): Eventtypes.EventTypeRegistration {
         val latest = eventEntries.maxByOrNull { (ann, _) -> ann.generation }
         val generation = latest?.first?.generation ?: migrations.maxOf { it.targetGeneration() }
         val tombstone = latest?.first?.tombstone ?: false
         val latestClass = latest?.second ?: migrations.maxByOrNull { it.targetGeneration() }?.targetClass
         val schema = latestClass?.let { JsonSchemaGenerator.generate(it) } ?: "{}"
 
-        val builder = Events.EventTypeRegistration.newBuilder()
+        val builder = Eventtypes.EventTypeRegistration.newBuilder()
             .setSchema(schema)
             .setType(
-                Events.EventType.newBuilder()
+                Eventtypes.EventType.newBuilder()
                     .setId(id)
                     .setGeneration(generation)
                     .setTombstone(tombstone)
@@ -120,7 +120,7 @@ class EventTypesService(
             migration.downcast(downcastBuilder)
 
             builder.addMigrations(
-                Events.EventTypeMigrationDefinition.newBuilder()
+                Eventtypes.EventTypeMigrationDefinition.newBuilder()
                     .setFromGeneration(fromGeneration)
                     .setToGeneration(toGeneration)
                     .setUpcastJmesPath(upcastBuilder.toJson())
@@ -135,10 +135,10 @@ class EventTypesService(
         return builder.build()
     }
 
-    private fun Events.EventTypeRegistration.Builder.addGenerationIfAbsent(added: MutableSet<Int>, generation: Int, cls: KClass<*>?) {
+    private fun Eventtypes.EventTypeRegistration.Builder.addGenerationIfAbsent(added: MutableSet<Int>, generation: Int, cls: KClass<*>?) {
         if (added.add(generation)) {
             addGenerations(
-                Events.EventTypeGenerationDefinition.newBuilder()
+                Eventtypes.EventTypeGenerationDefinition.newBuilder()
                     .setGeneration(generation)
                     .setSchema(cls?.let { JsonSchemaGenerator.generate(it) } ?: "{}")
                     .build()

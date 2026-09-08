@@ -3,7 +3,7 @@
 
 package io.cratis.chronicle.readModels
 
-import Cratis.Chronicle.Contracts.ReadModels.Readmodels
+import Cratis.Chronicle.Contracts.ReadModelExplorer.Readmodelexplorer
 import java.time.Instant
 import java.util.UUID
 
@@ -18,7 +18,7 @@ import java.util.UUID
  */
 data class ReadModelSnapshot<T>(
     val instance: T,
-    val events: List<Readmodels.AppendedEvent>,
+    val events: List<Readmodelexplorer.Event>,
     val occurred: Instant?,
     val correlationId: UUID?
 )

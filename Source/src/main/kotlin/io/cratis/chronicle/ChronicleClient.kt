@@ -5,7 +5,6 @@ package io.cratis.chronicle
 
 import io.cratis.chronicle.diagnostics.ChronicleTraces
 import com.google.protobuf.Empty
-import kotlinx.coroutines.flow.first
 import io.cratis.chronicle.connection.ChronicleConnection
 import java.util.concurrent.ConcurrentHashMap
 
@@ -38,7 +37,7 @@ class ChronicleClient(private val options: ChronicleOptions) : IChronicleClient 
         val request = Empty.getDefaultInstance()
         // An observable query on the kernel side: it streams the whole list again whenever it
         // changes. This asks the question once, so it takes the first answer and unsubscribes.
-        return connection.services.eventStores.allEventStores(request).first().dataList
+        return connection.services.eventStores.allEventStores(request).dataList.map { it.name }
     }
 
     override fun evictEventStores() {
