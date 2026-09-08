@@ -15,6 +15,7 @@ import io.cratis.chronicle.events.EventTypeDescriptor
  * @property eventStreamId Optional event stream id to narrow the scope to. If not set, it is not used.
  * @property eventSourceType Optional event source type to narrow the scope to. If not set, it is not used.
  * @property eventTypes Optional collection of event types to narrow the scope to. If empty, it is not used.
+ * @property expectsNoMatchingEvent Whether the append requires the narrowed scope to match no event.
  */
 data class ConcurrencyScope(
     val sequenceNumber: EventSequenceNumber,
@@ -22,7 +23,8 @@ data class ConcurrencyScope(
     val eventStreamType: String? = null,
     val eventStreamId: String? = null,
     val eventSourceType: String? = null,
-    val eventTypes: List<EventTypeDescriptor> = emptyList()
+    val eventTypes: List<EventTypeDescriptor> = emptyList(),
+    val expectsNoMatchingEvent: Boolean = false
 ) {
     companion object {
         /** A concurrency scope that has not been specified yet. */
@@ -30,6 +32,12 @@ data class ConcurrencyScope(
 
         /** A concurrency scope that applies no constraints — the append is not concurrency-checked. */
         val none: ConcurrencyScope = ConcurrencyScope(EventSequenceNumber.unavailable)
+
+        /** A scope requiring that no event matches its filters. */
+        val noMatchingEvent: ConcurrencyScope = ConcurrencyScope(
+            EventSequenceNumber.beforeFirst,
+            expectsNoMatchingEvent = true
+        )
     }
 
     /**
@@ -40,5 +48,6 @@ data class ConcurrencyScope(
      * the kernel to validate against, so the append is checked against nothing. Use [none] to append
      * without a check, or [notSet] to have the expected sequence number resolved for you.
      */
-    val isIncomplete: Boolean get() = this != notSet && this != none && !sequenceNumber.isActualValue
+    val isIncomplete: Boolean get() =
+        this != notSet && this != none && !expectsNoMatchingEvent && !sequenceNumber.isActualValue
 }

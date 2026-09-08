@@ -3,100 +3,75 @@
 
 package io.cratis.chronicle.transactions
 
-import io.cratis.chronicle.correlation.CorrelationId
+import io.cratis.chronicle.OperationContext
 import io.cratis.chronicle.eventSequences.AppendError
 import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.ConstraintViolation
-import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
+import io.cratis.chronicle.eventSequences.IEventSequence
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyViolation
+import java.util.UUID
 
 /**
- * Represents a unit of work - a set of event appends that are staged and then committed or rolled
- * back together.
+ * An explicit atomic transaction bound to one [eventSequence] and one [context].
+ *
+ * Events may span event-source identifiers, but cannot cross the sequence boundary. A successful
+ * [commit] sends the complete ordered set in exactly one append-many request.
  */
 interface IUnitOfWork {
-    /**
-     * Gets a value indicating whether the unit of work is completed - either [commit]ed or
-     * [rollback]ed.
-     */
+    /** The only event sequence this transaction can append to. */
+    val eventSequence: IEventSequence
+
+    /** The immutable metadata used for the entire atomic batch. */
+    val context: OperationContext
+
+    /** Correlation identifier convenience for Java and existing result inspection. */
+    val correlationId: UUID get() = context.correlationId
+
+    /** Whether the unit of work is terminal: committed, rolled back, or failed. */
     val isCompleted: Boolean
 
-    /**
-     * Gets the [CorrelationId] for this [IUnitOfWork].
-     */
-    val correlationId: CorrelationId
-
-    /**
-     * Gets a value indicating whether this [IUnitOfWork] was successful.
-     *
-     * Before [commit], this is `true` unless something has already recorded a failure. After
-     * [commit], it reflects whether every staged event was appended without a constraint
-     * violation, concurrency violation, or append error.
-     */
+    /** Whether a completed commit succeeded without violations, errors, or an exception. */
     val isSuccess: Boolean
 
-    /**
-     * Add an event that has occurred to this [IUnitOfWork].
-     *
-     * @param eventSequenceId The [EventSequenceId] for the event.
-     * @param eventSourceId The identifier of the event source the event is for.
-     * @param event The event that has occurred.
-     * @param options Optional [AppendOptions] to use when this event is committed.
-     */
-    fun addEvent(eventSequenceId: EventSequenceId, eventSourceId: String, event: Any, options: AppendOptions? = null)
+    /** Stages one event in call order. */
+    fun append(eventSourceId: String, event: Any, options: AppendOptions? = null)
 
-    /**
-     * Get the events that have been added to this [IUnitOfWork] so far.
-     *
-     * @return A collection of events.
-     */
+    /** Stages multiple events in call order. */
+    fun appendMany(eventSourceId: String, events: List<Any>, options: AppendOptions? = null)
+
+    /** Returns staged event payloads in commit order. */
     fun getEvents(): List<Any>
 
-    /**
-     * Gets any [ConstraintViolation]s that occurred while committing this [IUnitOfWork].
-     *
-     * @return A collection of [ConstraintViolation].
-     */
+    /** Returns all constraint violations from the commit. */
     fun getConstraintViolations(): List<ConstraintViolation>
 
-    /**
-     * Gets any [ConcurrencyViolation]s that occurred while committing this [IUnitOfWork].
-     *
-     * @return A collection of [ConcurrencyViolation].
-     */
+    /** Returns every concurrency violation from the commit. */
     fun getConcurrencyViolations(): List<ConcurrencyViolation>
 
-    /**
-     * Gets any [AppendError]s that occurred while attempting to commit this [IUnitOfWork].
-     *
-     * @return A collection of [AppendError].
-     */
+    /** Returns all append errors from the commit. */
     fun getAppendErrors(): List<AppendError>
 
     /**
-     * Commit this [IUnitOfWork], appending all staged events.
+     * Commits all staged events in one atomic append-many request.
+     *
+     * Completion callbacks run only after the state becomes terminal. Their failures are isolated
+     * until every callback has run and are then reported as [UnitOfWorkCompletionCallbackException].
+     * A successful append remains committed and is never retried when a callback fails.
      */
     suspend fun commit()
 
-    /**
-     * Rollback this [IUnitOfWork], discarding all staged events.
-     */
+    /** Discards all staged events. */
     suspend fun rollback()
 
     /**
-     * Register a callback to be called when this [IUnitOfWork] completes, whether by [commit] or
-     * [rollback]. Can be called multiple times to register multiple callbacks.
+     * Registers a callback invoked once when the transaction becomes terminal.
      *
-     * @param callback The callback to call.
+     * Registration while commit is in flight queues the callback. Registration after termination
+     * invokes it immediately. Callback failures never prevent later registered callbacks from running.
      */
     fun onCompleted(callback: (IUnitOfWork) -> Unit)
 
-    /**
-     * Try to get the [EventSequenceNumber] of the last committed event.
-     *
-     * @return The [EventSequenceNumber] of the last committed event, or `null` if no events have
-     *   been committed.
-     */
+    /** Returns the greatest sequence number assigned by a successful commit. */
     fun tryGetLastCommittedEventSequenceNumber(): EventSequenceNumber?
 }

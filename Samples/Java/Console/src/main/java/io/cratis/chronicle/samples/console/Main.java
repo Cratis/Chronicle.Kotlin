@@ -8,21 +8,20 @@ import io.cratis.chronicle.ChronicleOptions;
 import io.cratis.chronicle.EventStore;
 import io.cratis.chronicle.EventStoreNamespaceName;
 import io.cratis.chronicle.IEventStore;
+import io.cratis.chronicle.OperationContext;
+import io.cratis.chronicle.auditing.Causation;
 import io.cratis.chronicle.eventSequences.AppendResult;
 import io.cratis.chronicle.identity.Identity;
 import io.cratis.chronicle.transactions.UnitOfWork;
-import io.cratis.chronicle.auditing.CausationType;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static io.cratis.chronicle.auditing.CausationManagerKt.getCausationManager;
-import static io.cratis.chronicle.identity.IdentityProviderKt.getIdentityProvider;
 import io.cratis.chronicle.java.EventLogJavaBridge;
-import io.cratis.chronicle.java.TransactionalEventSequenceJavaBridge;
 import io.cratis.chronicle.java.ReadModelsJavaBridge;
 import io.cratis.chronicle.java.ConstraintBuilderJavaBridge;
 import io.cratis.chronicle.java.EventTypesServiceJavaBridge;
@@ -33,7 +32,6 @@ import io.cratis.chronicle.java.ReducersServiceJavaBridge;
 import io.cratis.chronicle.java.ProjectionsServiceJavaBridge;
 import io.cratis.chronicle.java.NamespacesServiceJavaBridge;
 import io.cratis.chronicle.java.EventSeedingServiceJavaBridge;
-import io.cratis.chronicle.java.CausationManagerJavaBridge;
 import io.cratis.chronicle.java.WebhooksServiceJavaBridge;
 import io.cratis.chronicle.java.IdentityManagerServiceJavaBridge;
 import io.cratis.chronicle.readModels.ReadModelSnapshot;
@@ -87,10 +85,12 @@ public class Main {
         }
     }
 
-    private static void setupCausation(Identity user, String commandName, Map<String, String> properties) {
-        getIdentityProvider().setCurrentIdentity(user);
-        getCausationManager().defineRoot(Map.of("source", "console-sample"));
-        CausationManagerJavaBridge.add(getCausationManager(), commandName, properties);
+    private static OperationContext operationContext(Identity user, String commandName, Map<String, String> properties) {
+        return OperationContext.builder()
+            .causedBy(user)
+            .causation(Causation.of(Instant.now(), "Root", Map.of("source", "console-sample")))
+            .causation(Causation.of(Instant.now(), commandName, properties))
+            .build();
     }
 
     private static final List<String> seedTitles = Arrays.asList(
@@ -117,23 +117,23 @@ public class Main {
                 String title = seedTitles.get(index % seedTitles.size());
                 Address addr = seedAddresses.get(index % seedAddresses.size());
                 
-                getIdentityProvider().setCurrentIdentity(Identity.Companion.getSystem());
-                getCausationManager().defineRoot(Map.of("source", "console-sample-seed"));
-                
-                EventLogJavaBridge.append(store.getEventLog(), employee.getId(), 
-                    new EmployeeHired(employee.getFirstName(), employee.getLastName(), title), null);
-                EventLogJavaBridge.append(store.getEventLog(), employee.getId(), 
-                    new EmployeeEmailSet(Employees.emailFor(employee)), null);
-                EventLogJavaBridge.append(store.getEventLog(), employee.getId(), 
-                    new EmployeeAddressSet(addr.address, addr.city, addr.zipCode, addr.country), null);
+                OperationContext context = operationContext(
+                    Identity.Companion.getSystem(), "ConsoleSample.Seed", Map.of("employeeId", employee.getId()));
+                EventLogJavaBridge.append(store.getEventLog(), employee.getId(),
+                    new EmployeeHired(employee.getFirstName(), employee.getLastName(), title), context, null);
+                EventLogJavaBridge.append(store.getEventLog(), employee.getId(),
+                    new EmployeeEmailSet(Employees.emailFor(employee)), context, null);
+                EventLogJavaBridge.append(store.getEventLog(), employee.getId(),
+                    new EmployeeAddressSet(addr.address, addr.city, addr.zipCode, addr.country), context, null);
             }
         }
     }
 
     private static void promote(IEventStore store, Person person, Identity user, SimpleRandom random) throws Exception {
         String title = titles.get(random.next(titles.size()));
-        setupCausation(user, "ConsoleSample.Commands.Promote", Map.of("employeeId", person.getId()));
-        AppendResult result = EventLogJavaBridge.append(store.getEventLog(), person.getId(), new EmployeePromoted(title), null);
+        OperationContext context = operationContext(user, "ConsoleSample.Commands.Promote", Map.of("employeeId", person.getId()));
+        AppendResult result = EventLogJavaBridge.append(
+            store.getEventLog(), person.getId(), new EmployeePromoted(title), context, null);
         System.out.println("[" + person.getId() + "] Promoted " + person.getFirstName() + " " + 
                           person.getLastName() + " to '" + title + "' at sequence " + 
                           EventLogJavaBridge.getSequenceNumber(result) + "  [caused-by: " + user.getUserName() + "]");
@@ -141,9 +141,9 @@ public class Main {
 
     private static void move(IEventStore store, Person person, Identity user, SimpleRandom random) throws Exception {
         Address addr = addresses.get(random.next(addresses.size()));
-        setupCausation(user, "ConsoleSample.Commands.Move", Map.of("employeeId", person.getId()));
-        AppendResult result = EventLogJavaBridge.append(store.getEventLog(), person.getId(), 
-            new EmployeeMoved(addr.address, addr.city, addr.zipCode, addr.country), null);
+        OperationContext context = operationContext(user, "ConsoleSample.Commands.Move", Map.of("employeeId", person.getId()));
+        AppendResult result = EventLogJavaBridge.append(store.getEventLog(), person.getId(),
+            new EmployeeMoved(addr.address, addr.city, addr.zipCode, addr.country), context, null);
         System.out.println("[" + person.getId() + "] Moved " + person.getFirstName() + " " + 
                           person.getLastName() + " to " + addr.address + ", " + addr.city + 
                           ""  + 
@@ -152,8 +152,9 @@ public class Main {
 
     private static void setEmail(IEventStore store, Person person, Identity user) throws Exception {
         String email = Employees.emailFor(person);
-        setupCausation(user, "ConsoleSample.Commands.SetEmail", Map.of("employeeId", person.getId()));
-        AppendResult result = EventLogJavaBridge.append(store.getEventLog(), person.getId(), new EmployeeEmailSet(email), null);
+        OperationContext context = operationContext(user, "ConsoleSample.Commands.SetEmail", Map.of("employeeId", person.getId()));
+        AppendResult result = EventLogJavaBridge.append(
+            store.getEventLog(), person.getId(), new EmployeeEmailSet(email), context, null);
         if (result.isSuccess()) {
             System.out.println("[" + person.getId() + "] Set " + person.getFirstName() + " " + 
                               person.getLastName() + "'s email to " + email + " at sequence " + 
@@ -173,9 +174,10 @@ public class Main {
         Person victim = employees.get((selectedIndex + 1) % employees.size());
         String email = Employees.emailFor(victim);
         
-        setupCausation(user, "ConsoleSample.Commands.SetEmail", Map.of("employeeId", person.getId()));
-        AppendResult result = EventLogJavaBridge.append(store.getEventLog(), person.getId(), new EmployeeEmailSet(email), null);
-        
+        OperationContext context = operationContext(user, "ConsoleSample.Commands.SetEmail", Map.of("employeeId", person.getId()));
+        AppendResult result = EventLogJavaBridge.append(
+            store.getEventLog(), person.getId(), new EmployeeEmailSet(email), context, null);
+
         if (result.isSuccess()) {
             System.out.println("[" + person.getId() + "] Unexpectedly took " + email + 
                               ""  + 
@@ -199,15 +201,15 @@ public class Main {
         Address selectedAddr = addresses.get(random.next(addresses.size()));
         String secondTitle = titles.get(random.next(titles.size()));
 
-        setupCausation(user, "ConsoleSample.Commands.BulkUpdate", 
+        OperationContext context = operationContext(user, "ConsoleSample.Commands.BulkUpdate",
             Map.of("employees", selected.getId() + "," + alsoUpdate.getId()));
 
-        UnitOfWork unitOfWork = store.getUnitOfWorkManager().begin();
-        TransactionalEventSequenceJavaBridge.append(store.getEventLog().getTransactional(), selected.getId(), new EmployeePromoted(selectedTitle), null);
-        TransactionalEventSequenceJavaBridge.appendMany(store.getEventLog().getTransactional(), selected.getId(), 
-            Arrays.asList(new EmployeeMoved(selectedAddr.address, selectedAddr.city, 
+        UnitOfWork unitOfWork = new UnitOfWork(store.getEventLog(), context);
+        unitOfWork.append(selected.getId(), new EmployeePromoted(selectedTitle), null);
+        unitOfWork.appendMany(selected.getId(),
+            Arrays.asList(new EmployeeMoved(selectedAddr.address, selectedAddr.city,
                                            selectedAddr.zipCode, selectedAddr.country)), null);
-        TransactionalEventSequenceJavaBridge.append(store.getEventLog().getTransactional(), alsoUpdate.getId(), new EmployeePromoted(secondTitle), null);
+        unitOfWork.append(alsoUpdate.getId(), new EmployeePromoted(secondTitle), null);
         UnitOfWorkJavaBridge.commit(unitOfWork);
 
         System.out.println("[transaction] Committed staged events for " + selected.getFirstName() + " " + 

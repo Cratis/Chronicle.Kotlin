@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.readModels
 
+import io.cratis.chronicle.OperationContext
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.eventSequences.IEventLog
@@ -66,8 +67,8 @@ class ReadModelReactorsTests {
     }
 
     private fun eventLog(): IEventLog = mockk<IEventLog>().also {
-        coEvery { it.append(any(), any(), any()) } returns
-            AppendResult(EventSequenceNumber(0), emptyList(), emptyList(), true)
+        coEvery { it.appendMany(any(), any<OperationContext>(), any()) } returns
+            listOf(AppendResult(EventSequenceNumber(0), emptyList(), emptyList(), true))
     }
 
     @Test
@@ -133,7 +134,13 @@ class ReadModelReactorsTests {
 
         try {
             reactors.register(WelcomingReactor())
-            coVerify(timeout = WAIT_TIMEOUT_MS) { eventLog.append("employee-9", EmployeeWelcomed("Ada"), null) }
+            coVerify(timeout = WAIT_TIMEOUT_MS) {
+                eventLog.appendMany(
+                    match { it.single().eventSourceId == "employee-9" && it.single().event == EmployeeWelcomed("Ada") },
+                    any<OperationContext>(),
+                    any()
+                )
+            }
         } finally {
             reactors.stop()
         }

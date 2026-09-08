@@ -1,10 +1,13 @@
 ```kotlin
+import io.cratis.chronicle.OperationContext
+import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.auditing.CausationType
-import io.cratis.chronicle.auditing.causationManager
+import java.time.Instant
 
 class CorrelationIdentityCausationCausation {
-    fun recordPlaceOrder(orderId: String) {
-        causationManager.add(CausationType("MyApp.Commands.PlaceOrder"), mapOf("orderId" to orderId))
-    }
+    fun recordPlaceOrder(context: OperationContext, orderId: String): OperationContext =
+        context.causedBy(
+            Causation(Instant.now(), CausationType("MyApp.Commands.PlaceOrder"), mapOf("orderId" to orderId))
+        )
 }
 ```

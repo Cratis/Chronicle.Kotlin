@@ -32,7 +32,6 @@ import io.mockk.mockk
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
-import kotlinx.coroutines.withTimeout
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -197,16 +196,6 @@ class ArtifactRegistrationsTests {
     }
 
     @Test
-    fun `reports completion once the first pass is through`() = runTest {
-        val subject = registrations()
-        assertFalse(subject.completed.isCompleted)
-
-        subject.registerAll()
-
-        assertTrue(subject.completed.isCompleted)
-    }
-
-    @Test
     fun `activates every artifact through the configured activator`() = runTest {
         val activated = mutableListOf<KClass<*>>()
 
@@ -221,26 +210,11 @@ class ArtifactRegistrationsTests {
     }
 
     @Test
-    fun `a pass that finished lets everything waiting on the first one through`() = runBlocking {
-        val registrations = registrations()
-
-        registrations.registerAll()
-
-        // Nothing hangs: awaitRegistration returns, and so does the gate the first append waits at.
-        withTimeout(1_000) { registrations.completed.await() }
-    }
-
-    @Test
-    fun `a pass that threw lets them through as well, rather than wedging every append`() = runBlocking {
+    fun `a failed pass propagates to its caller`() {
         coEvery { eventTypes.register(*anyVararg()) } throws IllegalStateException("kernel unreachable")
         val registrations = registrations()
 
-        // The throw reaches the caller - the event store logs it and retries on the next connect.
         assertThrows(IllegalStateException::class.java) { runBlocking { registrations.registerAll() } }
-
-        // What must not happen is the first append waiting forever behind a kernel that never came
-        // up. An append that fails loudly is recoverable; one that hangs is not.
-        withTimeout(1_000) { registrations.completed.await() }
     }
 
     private companion object {

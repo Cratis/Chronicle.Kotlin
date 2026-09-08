@@ -40,20 +40,19 @@ class ArtifactRegistrations(
     private val initial = CompletableDeferred<Unit>()
     private var observersStarted = false
 
-    /** Completes once the first full registration pass has finished. */
+    /** Completes with the outcome of the first registration attempt. */
     val completed: Deferred<Unit> get() = initial
 
-    /** Registers everything with the kernel. */
-    suspend fun registerAll() = mutex.withLock {
+    /** Registers everything with the kernel. Passes are serialized to protect observer startup state. */
+    suspend fun registerAll(): Unit = mutex.withLock {
         try {
             register()
-        } finally {
-            // Even a pass that threw counts as attempted. Anything waiting on the first one - the
-            // first append, awaitRegistration() - has to be let through either way: registration is
-            // retried on the next connect, and an append that fails loudly beats one that hangs
-            // forever behind a kernel that never came up.
             initial.complete(Unit)
+        } catch (throwable: Throwable) {
+            initial.completeExceptionally(throwable)
+            throw throwable
         }
+        Unit
     }
 
     private suspend fun register() {
@@ -76,9 +75,9 @@ class ArtifactRegistrations(
         eventStore.webhooks.register(*instancesOf(artifacts.webhooks).toTypedArray())
 
         if (!observersStarted) {
-            observersStarted = true
             artifacts.reactors.forEach { eventStore.reactors.register(activator.activate(it)) }
             artifacts.reducers.forEach { eventStore.reducers.register(activator.activate(it)) }
+            observersStarted = true
         }
 
         // A capture appends events the moment it starts, so like seeding it goes behind every

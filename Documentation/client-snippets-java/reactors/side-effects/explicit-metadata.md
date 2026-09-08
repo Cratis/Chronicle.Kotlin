@@ -14,8 +14,7 @@ class ExplicitMetadataReactor {
             null,
             java.util.List.of(),
             null,
-            event.memberId(),
-            java.util.List.of());
+            event.memberId());
     }
 }
 ```

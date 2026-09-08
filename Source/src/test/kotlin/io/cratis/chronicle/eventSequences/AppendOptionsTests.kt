@@ -155,7 +155,6 @@ class AppendOptionsTests {
         // Everything untouched stays null so the append falls back to its defaults.
         assertEquals(null, options.eventStreamType)
         assertEquals(null, options.occurred)
-        assertEquals(null, options.correlationId)
     }
 
     @Test
@@ -171,10 +170,8 @@ class AppendOptionsTests {
         // fails to compile if that happens, and these assert the values still land where expected.
         assertEquals(null, JavaAppendOptionsUsage.empty().subject)
 
-        val correlationId = java.util.UUID.randomUUID()
         val scope = ConcurrencyScope(EventSequenceNumber(3), eventSourceId = true)
-        val options = JavaAppendOptionsUsage.withCorrelationAndScope(correlationId, scope)
-        assertEquals(correlationId, options.correlationId)
+        val options = JavaAppendOptionsUsage.withScope(scope)
         assertEquals(scope, options.concurrencyScope)
     }
 

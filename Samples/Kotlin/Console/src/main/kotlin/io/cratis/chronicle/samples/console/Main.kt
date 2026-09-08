@@ -7,10 +7,13 @@ import io.cratis.chronicle.ChronicleClient
 import io.cratis.chronicle.ChronicleOptions
 import io.cratis.chronicle.EventStore
 import io.cratis.chronicle.IEventStore
+import io.cratis.chronicle.OperationContext
+import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.auditing.CausationType
-import io.cratis.chronicle.auditing.causationManager
 import io.cratis.chronicle.identity.Identity
-import io.cratis.chronicle.identity.identityProvider
+import io.cratis.chronicle.transactions.UnitOfWork
+import java.time.Instant
+import java.util.UUID
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -44,11 +47,14 @@ class Random {
     }
 }
 
-private fun setupCausation(user: Identity, commandName: String, properties: Map<String, String>) {
-    identityProvider.setCurrentIdentity(user)
-    causationManager.defineRoot(mapOf("source" to "console-sample"))
-    causationManager.add(CausationType(commandName), properties)
-}
+private fun operationContext(user: Identity, commandName: String, properties: Map<String, String>) = OperationContext(
+    UUID.randomUUID(),
+    listOf(
+        Causation(Instant.now(), CausationType.root, mapOf("source" to "console-sample")),
+        Causation(Instant.now(), CausationType(commandName), properties)
+    ),
+    user
+)
 
 private val seedTitles = listOf("Software Engineer", "Senior Engineer", "Principal Engineer")
 private val seedAddresses = listOf(
@@ -69,34 +75,33 @@ private suspend fun ensureSeededEmployees(store: IEventStore) {
             val title = seedTitles[index % seedTitles.size]
             val (addr, country) = seedAddresses[index % seedAddresses.size]
             val (address, city, zipCode) = addr
-            identityProvider.setCurrentIdentity(Identity.system)
-            causationManager.defineRoot(mapOf("source" to "console-sample-seed"))
-            store.eventLog.append(employee.id, EmployeeHired(employee.firstName, employee.lastName, title))
-            store.eventLog.append(employee.id, EmployeeEmailSet(emailFor(employee)))
-            store.eventLog.append(employee.id, EmployeeAddressSet(address, city, zipCode, country))
+            val context = operationContext(Identity.system, "ConsoleSample.Seed", mapOf("employeeId" to employee.id))
+            store.eventLog.append(employee.id, EmployeeHired(employee.firstName, employee.lastName, title), context)
+            store.eventLog.append(employee.id, EmployeeEmailSet(emailFor(employee)), context)
+            store.eventLog.append(employee.id, EmployeeAddressSet(address, city, zipCode, country), context)
         }
     }
 }
 
 private suspend fun promote(store: IEventStore, person: Person, user: Identity, random: Random) {
     val title = titles[random.next(titles.size)]
-    setupCausation(user, "ConsoleSample.Commands.Promote", mapOf("employeeId" to person.id))
-    val result = store.eventLog.append(person.id, EmployeePromoted(title))
+    val context = operationContext(user, "ConsoleSample.Commands.Promote", mapOf("employeeId" to person.id))
+    val result = store.eventLog.append(person.id, EmployeePromoted(title), context)
     println("[${person.id}] Promoted ${person.firstName} ${person.lastName} to '$title' at sequence ${result.sequenceNumber.value}  [caused-by: ${user.userName}]")
 }
 
 private suspend fun move(store: IEventStore, person: Person, user: Identity, random: Random) {
     val (addr, country) = addresses[random.next(addresses.size)]
     val (address, city, zipCode) = addr
-    setupCausation(user, "ConsoleSample.Commands.Move", mapOf("employeeId" to person.id))
-    val result = store.eventLog.append(person.id, EmployeeMoved(address, city, zipCode, country))
+    val context = operationContext(user, "ConsoleSample.Commands.Move", mapOf("employeeId" to person.id))
+    val result = store.eventLog.append(person.id, EmployeeMoved(address, city, zipCode, country), context)
     println("[${person.id}] Moved ${person.firstName} ${person.lastName} to $address, $city at sequence ${result.sequenceNumber.value}  [caused-by: ${user.userName}]")
 }
 
 private suspend fun setEmail(store: IEventStore, person: Person, user: Identity) {
     val email = emailFor(person)
-    setupCausation(user, "ConsoleSample.Commands.SetEmail", mapOf("employeeId" to person.id))
-    val result = store.eventLog.append(person.id, EmployeeEmailSet(email))
+    val context = operationContext(user, "ConsoleSample.Commands.SetEmail", mapOf("employeeId" to person.id))
+    val result = store.eventLog.append(person.id, EmployeeEmailSet(email), context)
     if (result.isSuccess) {
         println("[${person.id}] Set ${person.firstName} ${person.lastName}'s email to $email at sequence ${result.sequenceNumber.value}  [caused-by: ${user.userName}]")
     } else {
@@ -108,8 +113,8 @@ private suspend fun stealEmail(store: IEventStore, selectedIndex: Int, user: Ide
     val person = employees[selectedIndex]
     val victim = employees[(selectedIndex + 1) % employees.size]
     val email = emailFor(victim)
-    setupCausation(user, "ConsoleSample.Commands.SetEmail", mapOf("employeeId" to person.id))
-    val result = store.eventLog.append(person.id, EmployeeEmailSet(email))
+    val context = operationContext(user, "ConsoleSample.Commands.SetEmail", mapOf("employeeId" to person.id))
+    val result = store.eventLog.append(person.id, EmployeeEmailSet(email), context)
     if (result.isSuccess) {
         println("[${person.id}] Unexpectedly took $email at sequence ${result.sequenceNumber.value}  [caused-by: ${user.userName}]")
     } else {
@@ -125,14 +130,18 @@ private suspend fun transact(store: IEventStore, selectedIndex: Int, user: Ident
     val (selectedAddress, selectedCity, selectedZip) = selectedAddr
     val secondTitle = titles[random.next(titles.size)]
 
-    setupCausation(user, "ConsoleSample.Commands.BulkUpdate", mapOf("employees" to "${selected.id},${alsoUpdate.id}"))
+    val context = operationContext(
+        user,
+        "ConsoleSample.Commands.BulkUpdate",
+        mapOf("employees" to "${selected.id},${alsoUpdate.id}")
+    )
 
-    val unitOfWork = store.unitOfWorkManager.begin()
-    store.eventLog.transactional.append(selected.id, EmployeePromoted(selectedTitle))
-    store.eventLog.transactional.appendMany(selected.id, listOf(
+    val unitOfWork = UnitOfWork(store.eventLog, context)
+    unitOfWork.append(selected.id, EmployeePromoted(selectedTitle))
+    unitOfWork.appendMany(selected.id, listOf(
         EmployeeMoved(selectedAddress, selectedCity, selectedZip, selectedCountry)
     ))
-    store.eventLog.transactional.append(alsoUpdate.id, EmployeePromoted(secondTitle))
+    unitOfWork.append(alsoUpdate.id, EmployeePromoted(secondTitle))
     unitOfWork.commit()
 
     println("[transaction] Committed staged events for ${selected.firstName} ${selected.lastName} and ${alsoUpdate.firstName} ${alsoUpdate.lastName}  [caused-by: ${user.userName}]")

@@ -9,9 +9,6 @@ package io.cratis.chronicle.eventSequences
 @JvmInline
 value class EventSequenceNumber(val value: Long) {
     companion object {
-        /** Sentinel value indicating an unset sequence number ([Long.MAX_VALUE]). */
-        val unset: EventSequenceNumber = EventSequenceNumber(Long.MAX_VALUE)
-
         /** The first sequence number in an event sequence. */
         val first: EventSequenceNumber = EventSequenceNumber(0)
 
@@ -21,18 +18,18 @@ value class EventSequenceNumber(val value: Long) {
          */
         val unavailable: EventSequenceNumber = EventSequenceNumber(-1L)
 
-        /**
-         * The maximum sequence number, encoded as `-3L` so it round-trips as `ulong.MaxValue - 2` on
-         * the wire, matching the .NET client's `EventSequenceNumber.Max`.
-         */
-        val max: EventSequenceNumber = EventSequenceNumber(-3L)
+        /** The maximum sequence-number sentinel used by the 16.44.1 wire contract. */
+        val max: EventSequenceNumber = EventSequenceNumber(-2L)
+
+        /** Internal position before the first event. It must never be sent as an expected number. */
+        internal val beforeFirst: EventSequenceNumber = EventSequenceNumber(-3L)
     }
 
     /**
      * Whether this represents an actual sequence number, as opposed to a system sentinel such as
-     * [unavailable] or [max].
+     * [unavailable], [max], or the internal before-first position.
      */
-    val isActualValue: Boolean get() = this != unavailable && this != max
+    val isActualValue: Boolean get() = value >= 0
 
     /** Whether this sequence number is [unavailable]. */
     val isUnavailable: Boolean get() = this == unavailable

@@ -12,6 +12,8 @@
   href: captures.md
 - name: Testing
   href: testing.md
+- name: Real-kernel Compatibility
+  href: real-kernel-compatibility.md
 - name: Appending Events
   href: appending-events.md
 - name: Reactors

@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.readModels
 
+import io.cratis.chronicle.OperationContext
 import io.cratis.chronicle.eventSequences.AppendError
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.EventForEventSourceId
@@ -12,7 +13,9 @@ import io.cratis.chronicle.events.EventType
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 
@@ -23,70 +26,42 @@ data class EmployeeWelcomed(val name: String)
 data class EmployeeAnnounced(val name: String)
 
 class ReadModelReactorSideEffectsTests {
-
     private val succeeded = AppendResult(EventSequenceNumber(0), emptyList(), emptyList(), true)
+    private val context = OperationContext.system()
 
     private fun eventLog(result: AppendResult = succeeded): IEventLog = mockk<IEventLog>().also {
-        coEvery { it.append(any(), any(), any()) } returns result
+        coEvery { it.appendMany(any(), any<OperationContext>(), any()) } returns listOf(result)
     }
 
     @Test
-    fun `a returned event is appended to the changed instance key`() = runBlocking {
+    fun `returned events are appended atomically in order under the supplied context`() = runBlocking {
         val eventLog = eventLog()
-        val event = EmployeeWelcomed("Ada")
+        val events = slot<List<EventForEventSourceId>>()
+        coEvery { eventLog.appendMany(capture(events), context, any()) } returns listOf(succeeded, succeeded)
 
-        ReadModelReactorSideEffects(eventLog).append(event, "employee-1")
-
-        coVerify(exactly = 1) { eventLog.append("employee-1", event, null) }
-    }
-
-    @Test
-    fun `every event in a returned list is appended`() = runBlocking {
-        val eventLog = eventLog()
-
-        ReadModelReactorSideEffects(eventLog)
-            .append(listOf(EmployeeWelcomed("Ada"), EmployeeAnnounced("Ada")), "employee-1")
-
-        coVerify(exactly = 2) { eventLog.append("employee-1", any(), null) }
-    }
-
-    @Test
-    fun `an event naming its own event source id is appended there`() = runBlocking {
-        val eventLog = eventLog()
-        val event = EmployeeAnnounced("Ada")
-
-        ReadModelReactorSideEffects(eventLog).append(EventForEventSourceId("department-1", event), "employee-1")
-
-        coVerify(exactly = 1) { eventLog.append("department-1", event, null) }
-    }
-
-    @Test
-    fun `a return value that is not an event is ignored`() = runBlocking {
-        val eventLog = eventLog()
-
-        ReadModelReactorSideEffects(eventLog).append("just a string", "employee-1")
-
-        coVerify(exactly = 0) { eventLog.append(any(), any(), any()) }
-    }
-
-    @Test
-    fun `a handler that returned nothing appends nothing`() = runBlocking {
-        val eventLog = eventLog()
-
-        ReadModelReactorSideEffects(eventLog).append(Unit, "employee-1")
-        ReadModelReactorSideEffects(eventLog).append(null, "employee-1")
-
-        coVerify(exactly = 0) { eventLog.append(any(), any(), any()) }
-    }
-
-    @Test
-    fun `a rejected append is surfaced rather than swallowed`() {
-        val eventLog = eventLog(
-            AppendResult(EventSequenceNumber(0), emptyList(), listOf(AppendError("boom")), false)
+        ReadModelReactorSideEffects(eventLog).append(
+            listOf(EmployeeWelcomed("Ada"), EventForEventSourceId("department-1", EmployeeAnnounced("Ada"))),
+            "employee-1",
+            context
         )
 
+        coVerify(exactly = 1) { eventLog.appendMany(any(), context, any()) }
+        assertEquals(listOf("employee-1", "department-1"), events.captured.map { it.eventSourceId })
+    }
+
+    @Test
+    fun `non events and unit append nothing`() = runBlocking {
+        val eventLog = eventLog()
+        ReadModelReactorSideEffects(eventLog).append("not-event", "employee-1", context)
+        ReadModelReactorSideEffects(eventLog).append(Unit, "employee-1", context)
+        coVerify(exactly = 0) { eventLog.appendMany(any(), any<OperationContext>(), any()) }
+    }
+
+    @Test
+    fun `a rejected append is surfaced`() {
+        val eventLog = eventLog(AppendResult(EventSequenceNumber.unavailable, emptyList(), listOf(AppendError("boom")), false))
         assertThrows(IllegalStateException::class.java) {
-            runBlocking { ReadModelReactorSideEffects(eventLog).append(EmployeeWelcomed("Ada"), "employee-1") }
+            runBlocking { ReadModelReactorSideEffects(eventLog).append(EmployeeWelcomed("Ada"), "employee-1", context) }
         }
     }
 }

@@ -8,6 +8,7 @@ import io.cratis.chronicle.events.EventTypeDescriptor
 import io.cratis.chronicle.events.EventTypeId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -69,6 +70,24 @@ class ConcurrencyScopeTests {
             .build()
 
         assertEquals(1, scope.eventTypes.size)
+    }
+
+    @Test
+    fun `builder rejects sequence number after expects no matching event`() {
+        val builder = ConcurrencyScopeBuilder().expectsNoMatchingEvent()
+
+        assertThrows(IllegalStateException::class.java) {
+            builder.withSequenceNumber(EventSequenceNumber(5))
+        }
+    }
+
+    @Test
+    fun `builder rejects expects no matching event after sequence number`() {
+        val builder = ConcurrencyScopeBuilder().withSequenceNumber(EventSequenceNumber(5))
+
+        assertThrows(IllegalStateException::class.java) {
+            builder.expectsNoMatchingEvent()
+        }
     }
 
     @Test

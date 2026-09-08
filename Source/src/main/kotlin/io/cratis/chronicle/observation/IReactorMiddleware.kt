@@ -8,7 +8,7 @@ import io.cratis.chronicle.events.EventContext
 /**
  * Wraps every reactor handler invocation, so cross-cutting concerns stay out of reactor code.
  *
- * Tracing, logging, metrics and correlation scoping all want to happen around every handler and
+ * Tracing, logging, and metrics all want to happen around every handler and
  * belong to none of them. Put them here and a reactor stays a description of what happens when a
  * fact arrives.
  *
@@ -21,14 +21,15 @@ import io.cratis.chronicle.events.EventContext
  *
  * ```kotlin
  * class HandlerTiming : IReactorMiddleware {
- *     private val started = ThreadLocal<Long>()
+ *     private val started = ConcurrentHashMap<Pair<UUID, Long>, Long>()
  *
  *     override suspend fun beforeInvoke(context: EventContext, event: Any) {
- *         started.set(System.nanoTime())
+ *         started[context.correlationId to context.sequenceNumber] = System.nanoTime()
  *     }
  *
  *     override suspend fun afterInvoke(context: EventContext, event: Any) {
- *         println("${event::class.simpleName} took ${System.nanoTime() - started.get()}ns")
+ *         val began = started.remove(context.correlationId to context.sequenceNumber) ?: return
+ *         println("${event::class.simpleName} took ${System.nanoTime() - began}ns")
  *     }
  * }
  * ```

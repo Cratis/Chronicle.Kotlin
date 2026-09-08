@@ -358,10 +358,8 @@ public final class JavaConformance {
     public static List<AppendOptions> appendOptions() {
         return List.of(
             new AppendOptions(),
-            new AppendOptions(UUID.randomUUID()),
-            new AppendOptions(UUID.randomUUID(), ConcurrencyScope.Companion.getNone()),
+            new AppendOptions(ConcurrencyScope.Companion.getNone()),
             new AppendOptionsBuilder()
-                .correlationId(UUID.randomUUID())
                 .concurrencyScope(ConcurrencyScope.Companion.getNone())
                 .eventSourceType("Employee")
                 .eventStreamType("Onboarding")
@@ -370,7 +368,6 @@ public final class JavaConformance {
                 .tag("gdpr")
                 .tags(List.of("hr"))
                 .occurred(Instant.EPOCH)
-                .causation(Causation.of(Instant.EPOCH, "Import"))
                 .build());
     }
 
@@ -383,8 +380,7 @@ public final class JavaConformance {
             new EventForEventSourceId("employee-1", event, "Onboarding", "stream-1"),
             new EventForEventSourceId(
                 "employee-1", event, "Onboarding", "stream-1", "Employee",
-                List.of("hr"), Instant.EPOCH, "employee-1",
-                List.of(Causation.of(Instant.EPOCH, "Import", Map.of("file", "1998.csv")))));
+                List.of("hr"), Instant.EPOCH, "employee-1"));
     }
 
     /**

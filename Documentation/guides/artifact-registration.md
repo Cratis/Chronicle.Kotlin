@@ -201,7 +201,7 @@ takes nothing, give its parameters defaults, or activate it through a container.
 
 ## Reactor middlewares
 
-Tracing, logging, metrics and correlation scoping want to happen around every
+Tracing, logging, and metrics want to happen around every
 reactor handler and belong to none of them. Put them in an `IReactorMiddleware`
 and every reactor stays a description of what happens when a fact arrives:
 
@@ -210,16 +210,20 @@ and every reactor stays a description of what happens when a fact arrives:
 ```kotlin
 import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.observation.IReactorMiddleware
+import java.util.concurrent.ConcurrentHashMap
 
 class HandlerTiming : IReactorMiddleware {
-    private val started = ThreadLocal<Long>()
+    private val started = ConcurrentHashMap<Pair<UUID, Long>, Long>()
 
     override suspend fun beforeInvoke(context: EventContext, event: Any) {
-        started.set(System.nanoTime())
+        started[context.correlationId to context.sequenceNumber] = System.nanoTime()
     }
 
     override suspend fun afterInvoke(context: EventContext, event: Any) {
-        println("${event::class.simpleName} took ${System.nanoTime() - started.get()}ns")
+        val key = context.correlationId to context.sequenceNumber
+        val began = started.remove(key) ?: return
+        val elapsed = System.nanoTime() - began
+        println("${event::class.simpleName} took ${elapsed}ns")
     }
 }
 ```

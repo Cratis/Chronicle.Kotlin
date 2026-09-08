@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.java
 
+import io.cratis.chronicle.OperationContext
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.IEventSequence
 import io.cratis.chronicle.eventSequences.operations.EventSequenceOperations
@@ -17,8 +18,8 @@ import kotlinx.coroutines.runBlocking
  *
  * Java cannot call the `operations()` extension function, pass a Kotlin lambda with receiver, or
  * call a `suspend` function - these three entry points cover all of it. Everything else on
- * [IEventSequenceOperations] (`withCorrelationId`, `getEventsToAppend`, `getAppendedEvents`,
- * `clear`) is a plain method Java calls directly.
+ * [IEventSequenceOperations] (`getEventsToAppend`, `getAppendedEvents`, `clear`) is a plain method
+ * Java calls directly. The context-aware factory makes operation metadata explicit.
  */
 object EventSequenceOperationsJavaBridge {
     /**
@@ -29,6 +30,11 @@ object EventSequenceOperationsJavaBridge {
      */
     @JvmStatic
     fun operationsFor(eventSequence: IEventSequence): EventSequenceOperations = eventSequence.operations()
+
+    /** Starts composing operations with explicit immutable metadata. */
+    @JvmStatic
+    fun operationsFor(eventSequence: IEventSequence, context: OperationContext): EventSequenceOperations =
+        eventSequence.operations(context)
 
     /**
      * Composes operations for a specific event source.

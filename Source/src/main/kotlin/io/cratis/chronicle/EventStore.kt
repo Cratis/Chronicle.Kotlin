@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle
 
+import Cratis.Chronicle.Contracts.EventStores.Eventstores
 import io.cratis.chronicle.artifacts.ArtifactActivator
 import io.cratis.chronicle.artifacts.ArtifactRegistrations
 import io.cratis.chronicle.artifacts.IArtifactActivator
@@ -54,15 +55,23 @@ import io.cratis.chronicle.observation.ReducersService
 import io.cratis.chronicle.projections.IProjectionsService
 import io.cratis.chronicle.projections.ProjectionsService
 import io.cratis.chronicle.connection.ConnectionLifecycle
+import io.cratis.chronicle.connection.validateCommandResult
 import io.cratis.chronicle.readModels.IReadModelsService
 import io.cratis.chronicle.readModels.ReadModelsService
 import io.cratis.chronicle.seeding.EventSeedingService
 import io.cratis.chronicle.seeding.IEventSeedingService
-import io.cratis.chronicle.transactions.UnitOfWorkManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -93,17 +102,18 @@ class EventStore(
 ) : IEventStore {
 
     private val registrations = ArtifactRegistrations(this, artifacts, artifactActivator)
-
-    override val unitOfWorkManager: UnitOfWorkManager = UnitOfWorkManager(this)
+    private val registrationScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val generationMutex = Mutex()
+    private var generation: RegistrationGeneration? = null
 
     /**
      * Held shut until the first registration pass is through, so the first append after
      * `getEventStore` cannot outrun the event type registration it depends on.
      */
-    private val registrationGate = IRegistrationGate { awaitRegistration() }
+    private val registrationGate = IRegistrationGate { ensureReady() }
 
     override val eventLog: IEventLog by lazy {
-        EventLog(name, namespace, services.eventSequences, unitOfWorkManager, traces, registrationGate)
+        EventLog(name, namespace, services.eventSequences, traces, registrationGate)
     }
 
     // ReadModelsService is shared so that reducers and projections can auto-register their read
@@ -224,34 +234,107 @@ class EventStore(
 
     init {
         if (autoDiscoverAndRegister) {
-            // Registration is redone on every connection, not just the first. A kernel that restarted
-            // has forgotten every declaration made to it, and the client is expected to state them again.
-            CoroutineScope(Dispatchers.IO).launch {
-                lifecycle.connections().collect {
-                    try {
-                        registrations.registerAll()
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        System.err.println("[EventStore] Automatic registration of artifacts failed: ${e.message}")
-                    }
+            // StateFlow replays the current state, so this one collector covers both a store opened
+            // after connection and every later reconnect. The deferred selected for a connection id
+            // is also the one awaited by the first append and by explicit registerAll callers.
+            registrationScope.launch {
+                lifecycle.state.collectLatest { state ->
+                    if (state.isConnected) registerAutomatically(state.connectionId) else invalidateGeneration()
                 }
             }
         }
     }
 
     override suspend fun registerAll() {
-        registrations.registerAll()
+        val connectionId = lifecycle.connections().first()
+        registrationFor(connectionId).await()
     }
 
     override suspend fun awaitRegistration() {
-        if (autoDiscoverAndRegister) registrations.completed.await()
+        if (autoDiscoverAndRegister) awaitRegistrationForCurrentConnection()
+    }
+
+    private suspend fun ensureReady() {
+        val connectionId = lifecycle.connections().first()
+        if (autoDiscoverAndRegister) {
+            registrationFor(connectionId).await()
+        } else {
+            provisioningFor(connectionId).await()
+        }
+    }
+
+    private suspend fun awaitRegistrationForCurrentConnection() {
+        val connectionId = lifecycle.connections().first()
+        registrationFor(connectionId).await()
+    }
+
+    private suspend fun registerAutomatically(connectionId: String) {
+        try {
+            registrationFor(connectionId).await()
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
+            System.err.println("[EventStore] Automatic registration of artifacts failed: ${exception.message}")
+        }
+    }
+
+    private suspend fun registrationFor(connectionId: String): Deferred<Unit> = generationMutex.withLock {
+        val current = generationFor(connectionId)
+        current.registration ?: registrationScope.async(start = CoroutineStart.LAZY) {
+            current.provisioning.await()
+            registrations.registerAll()
+        }.also {
+            current.registration = it
+            it.start()
+        }
+    }
+
+    private suspend fun provisioningFor(connectionId: String): Deferred<Unit> = generationMutex.withLock {
+        generationFor(connectionId).provisioning.also { it.start() }
+    }
+
+    private fun generationFor(connectionId: String): RegistrationGeneration {
+        generation?.takeIf { it.connectionId == connectionId }?.let { return it }
+        generation?.cancel()
+        return RegistrationGeneration(
+            connectionId,
+            registrationScope.async(start = CoroutineStart.LAZY) { provision() }
+        ).also { generation = it }
+    }
+
+    private suspend fun invalidateGeneration() = generationMutex.withLock {
+        generation?.cancel()
+        generation = null
+    }
+
+    private suspend fun provision() {
+        val request = Eventstores.EnsureEventStoreRequest.newBuilder()
+            .setName(name)
+            .build()
+        val result = services.eventStores.ensureEventStore(request)
+        validateCommandResult(
+            "ensure event store '$name'",
+            result.authorizationFailureReason,
+            result.validationResultsList.map { it.message },
+            result.exceptionMessagesList
+        )
+        namespaces.ensure(namespace)
+    }
+
+    private class RegistrationGeneration(
+        val connectionId: String,
+        val provisioning: Deferred<Unit>
+    ) {
+        var registration: Deferred<Unit>? = null
+
+        fun cancel() {
+            registration?.cancel()
+            provisioning.cancel()
+        }
     }
 
     override fun getEventSequence(id: EventSequenceId): IEventSequence =
-        // The default event log is special-cased so that anything resolving it by id - such as a
-        // UnitOfWork committing staged events - gets the same instance as `eventLog`, sharing its
-        // appendOperations flow and transactional wiring rather than a disconnected duplicate.
+        // The default event log is special-cased so every lookup shares one appendOperations flow.
         if (id == EventSequenceId.eventLog) {
             eventLog
         } else {

@@ -3,8 +3,8 @@
 
 package io.cratis.chronicle.eventSequences
 
+import io.cratis.chronicle.OperationContext
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
-import java.util.UUID
 import kotlinx.coroutines.flow.SharedFlow
 import kotlin.reflect.KClass
 
@@ -21,8 +21,8 @@ interface IEventSequence {
      *
      * A single-event [append] emits a list of one element; a batch [appendMany] emits the full
      * batch. Subscribers receive the emission after the operation has completed, whether it
-     * succeeded or failed. This flow does not emit for transactional appends through
-     * [ITransactionalEventSequence].
+     * succeeded or failed. Explicit [io.cratis.chronicle.transactions.UnitOfWork] commits emit
+     * through the same sequence because they perform one ordinary append-many operation.
      */
     val appendOperations: SharedFlow<List<AppendedEventWithResult>>
 
@@ -34,7 +34,16 @@ interface IEventSequence {
      * @param options Optional [AppendOptions].
      * @return The [AppendResult] of the operation.
      */
-    suspend fun append(eventSourceId: String, event: Any, options: AppendOptions? = null): AppendResult
+    suspend fun append(eventSourceId: String, event: Any, options: AppendOptions? = null): AppendResult =
+        append(eventSourceId, event, OperationContext.system(), options)
+
+    /** Appends one event using the supplied immutable operation metadata. */
+    suspend fun append(
+        eventSourceId: String,
+        event: Any,
+        context: OperationContext,
+        options: AppendOptions? = null
+    ): AppendResult
 
     /**
      * Appends multiple events for a single event source to the event sequence.
@@ -44,7 +53,16 @@ interface IEventSequence {
      * @param options Optional [AppendOptions].
      * @return A list of [AppendResult], one per event.
      */
-    suspend fun appendMany(eventSourceId: String, events: List<Any>, options: AppendOptions? = null): List<AppendResult>
+    suspend fun appendMany(eventSourceId: String, events: List<Any>, options: AppendOptions? = null): List<AppendResult> =
+        appendMany(eventSourceId, events, OperationContext.system(), options)
+
+    /** Appends events for one source as an atomic batch using [context] for the whole batch. */
+    suspend fun appendMany(
+        eventSourceId: String,
+        events: List<Any>,
+        context: OperationContext,
+        options: AppendOptions? = null
+    ): List<AppendResult>
 
     /**
      * Appends events spanning any number of event sources as a single atomic batch.
@@ -58,14 +76,18 @@ interface IEventSequence {
      * @param concurrencyScopes Optional [ConcurrencyScope] per event source id. Only the event
      *   sources present in the map are concurrency checked; any source left out is appended
      *   unchecked.
-     * @param correlationId Optional correlation identifier for the whole batch.
-     *   Defaults to the current [io.cratis.chronicle.correlation.CorrelationIdManager] value.
      * @return A list of [AppendResult], one per event, in the order of [events].
      */
     suspend fun appendMany(
         events: List<EventForEventSourceId>,
-        concurrencyScopes: Map<String, ConcurrencyScope> = emptyMap(),
-        correlationId: UUID? = null
+        concurrencyScopes: Map<String, ConcurrencyScope> = emptyMap()
+    ): List<AppendResult> = appendMany(events, OperationContext.system(), concurrencyScopes)
+
+    /** Appends a multi-source atomic batch using one [context] for every event in the batch. */
+    suspend fun appendMany(
+        events: List<EventForEventSourceId>,
+        context: OperationContext,
+        concurrencyScopes: Map<String, ConcurrencyScope> = emptyMap()
     ): List<AppendResult>
 
     /**
@@ -109,12 +131,14 @@ interface IEventSequence {
      * @param sequenceNumber The [EventSequenceNumber] of the first event to get from.
      * @param eventSourceId Optional event source identifier to filter by.
      * @param eventTypes Optional event types to filter by.
+     * @param tags Optional tags to filter by.
      * @return A list of [AppendedEvent].
      */
     suspend fun getFromSequenceNumber(
         sequenceNumber: EventSequenceNumber,
         eventSourceId: String? = null,
-        eventTypes: List<KClass<*>>? = null
+        eventTypes: List<KClass<*>>? = null,
+        tags: List<String> = emptyList()
     ): List<AppendedEvent>
 
     /**
@@ -154,7 +178,11 @@ interface IEventSequence {
      * @param sequenceNumber The [EventSequenceNumber] of the event to redact.
      * @param reason The [RedactionReason] for redacting.
      */
-    suspend fun redact(sequenceNumber: EventSequenceNumber, reason: RedactionReason)
+    suspend fun redact(sequenceNumber: EventSequenceNumber, reason: RedactionReason) =
+        redact(sequenceNumber, reason, OperationContext.system())
+
+    /** Redacts one event using explicit operation metadata. */
+    suspend fun redact(sequenceNumber: EventSequenceNumber, reason: RedactionReason, context: OperationContext)
 
     /**
      * Redacts all events for a specific event source, optionally filtered to specific event types.
@@ -164,5 +192,17 @@ interface IEventSequence {
      * @param eventTypes Optional event types to narrow the redaction to. If empty, all event types
      *   for the event source are redacted.
      */
-    suspend fun redactForEventSource(eventSourceId: String, reason: RedactionReason, eventTypes: List<KClass<*>> = emptyList())
+    suspend fun redactForEventSource(
+        eventSourceId: String,
+        reason: RedactionReason,
+        eventTypes: List<KClass<*>> = emptyList()
+    ) = redactForEventSource(eventSourceId, reason, OperationContext.system(), eventTypes)
+
+    /** Redacts matching events using explicit operation metadata. */
+    suspend fun redactForEventSource(
+        eventSourceId: String,
+        reason: RedactionReason,
+        context: OperationContext,
+        eventTypes: List<KClass<*>> = emptyList()
+    )
 }

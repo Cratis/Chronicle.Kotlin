@@ -3,8 +3,6 @@
 
 package io.cratis.chronicle.eventSequences
 
-import io.cratis.chronicle.auditing.Causation
-import io.cratis.chronicle.auditing.CausationType
 import java.time.Instant
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
@@ -31,7 +29,6 @@ class EventForEventSourceIdTests {
         assertNull(entry.subject)
         assertNull(entry.occurred)
         assertTrue(entry.tags.isEmpty())
-        assertTrue(entry.causation.isEmpty())
     }
 
     @Test
@@ -45,8 +42,7 @@ class EventForEventSourceIdTests {
             eventSourceType = "Patient",
             tags = listOf("gdpr"),
             occurred = occurred,
-            subject = "patient-42",
-            causation = listOf(Causation(occurred, CausationType("Import")))
+            subject = "patient-42"
         ).toAppendOptions()
 
         assertEquals("Onboarding", options.eventStreamType)
@@ -55,7 +51,6 @@ class EventForEventSourceIdTests {
         assertEquals(listOf("gdpr"), options.tags)
         assertEquals(occurred, options.occurred)
         assertEquals("patient-42", options.subject)
-        assertEquals(listOf(Causation(occurred, CausationType("Import"))), options.causation)
     }
 
     @Test
@@ -70,6 +65,5 @@ class EventForEventSourceIdTests {
         assertNull(options.subject)
         assertNull(options.occurred)
         assertTrue(options.tags.isEmpty())
-        assertTrue(options.causation.isEmpty())
     }
 }

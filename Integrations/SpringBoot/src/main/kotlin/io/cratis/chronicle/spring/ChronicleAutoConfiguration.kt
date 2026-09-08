@@ -35,8 +35,8 @@ import org.springframework.context.annotation.Bean
  * anywhere. Every bean here backs off the moment the application declares its own, so nothing has to
  * be turned off before it can be replaced.
  *
- * Web-specific behavior — per-request namespaces, identity, causation and units of work — is added by
- * [ChronicleWebAutoConfiguration] when the application is a servlet application.
+ * Servlet applications receive no ambient operation middleware. Request metadata is represented by
+ * an explicit [io.cratis.chronicle.OperationContext] created by application code.
  */
 @AutoConfiguration
 @EnableConfigurationProperties(ChronicleProperties::class)
