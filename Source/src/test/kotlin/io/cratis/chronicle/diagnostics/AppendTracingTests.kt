@@ -3,8 +3,8 @@
 
 package io.cratis.chronicle.diagnostics
 
-import Cratis.Chronicle.Contracts.EventSequences.Eventsequences
-import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
+import Cratis.Chronicle.Contracts.Sequences.Sequences
+import Cratis.Chronicle.Contracts.Sequences.EventSequencesGrpcKt
 import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.EventSequence
 import io.cratis.chronicle.eventSequences.EventSequenceId
@@ -53,7 +53,10 @@ class AppendTracingTests {
     private fun stubThatAppends(): EventSequencesGrpcKt.EventSequencesCoroutineStub =
         mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>().also {
             coEvery { it.append(any(), any()) } returns
-                Eventsequences.AppendResponse.newBuilder().setSequenceNumber(0).build()
+                Sequences.CommandResult_AppendResponse.newBuilder()
+                    .setIsAuthorized(true)
+                    .setResponse(Sequences.AppendResponse.newBuilder().setSequenceNumber(0).build())
+                    .build()
         }
 
     @Test
@@ -78,8 +81,11 @@ class AppendTracingTests {
     @Test
     fun `a batch is one span carrying how many events it held`() = runBlocking {
         val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
-        coEvery { stub.appendMany(any(), any()) } returns
-            Eventsequences.AppendManyResponse.newBuilder().build()
+        coEvery { stub.appendManyForEventSources(any(), any()) } returns
+            Sequences.CommandResult_AppendManyResponse.newBuilder()
+                .setIsAuthorized(true)
+                .setResponse(Sequences.AppendManyResponse.newBuilder().build())
+                .build()
 
         sequenceFor(stub).appendMany(
             listOf(
