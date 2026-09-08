@@ -5,7 +5,6 @@ package io.cratis.chronicle.identities
 
 import Cratis.Chronicle.Contracts.Identities.IdentitiesGrpcKt
 import Cratis.Chronicle.Contracts.Identities.IdentitiesOuterClass
-import com.google.protobuf.Empty
 import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.slot
@@ -19,7 +18,9 @@ class IdentityManagerServiceTests {
     fun `rename sends the event store, namespace, subject and new name to the kernel`() = runBlocking {
         val stub = mockk<IdentitiesGrpcKt.IdentitiesCoroutineStub>()
         val request = slot<IdentitiesOuterClass.RenameIdentityRequest>()
-        coEvery { stub.renameIdentity(capture(request), any()) } returns Empty.getDefaultInstance()
+        coEvery { stub.renameIdentity(capture(request), any()) } returns IdentitiesOuterClass.CommandResult.newBuilder()
+            .setIsAuthorized(true)
+            .build()
 
         val service = IdentityManagerService("my-event-store", "my-namespace", stub)
         service.rename("subject-123", "Jane Doe")
