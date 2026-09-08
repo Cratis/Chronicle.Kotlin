@@ -5,7 +5,6 @@ package io.cratis.chronicle.namespaces
 
 import Cratis.Chronicle.Contracts.Namespaces.NamespacesGrpcKt
 import Cratis.Chronicle.Contracts.Namespaces.NamespacesOuterClass
-import kotlinx.coroutines.flow.first
 
 class NamespacesService(
     private val eventStoreName: String,
@@ -30,6 +29,6 @@ class NamespacesService(
         val request = NamespacesOuterClass.AllNamespacesRequest.newBuilder()
             .setEventStore(eventStoreName)
             .build()
-        return stub.allNamespaces(request).first().dataList
+        return stub.allNamespaces(request).dataList.map { it.name }
     }
 }

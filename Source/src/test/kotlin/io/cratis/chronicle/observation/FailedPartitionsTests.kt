@@ -7,7 +7,6 @@ import Cratis.Chronicle.Contracts.Observation.FailedPartitionsGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Observation
 import Cratis.Chronicle.Contracts.Observation.ObserversGrpcKt
 import bcl.Bcl
-import com.google.protobuf.Empty
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
@@ -142,7 +141,7 @@ class FailedPartitionsTests {
     fun `retrying names the observer, the partition and the sequence`() = runBlocking {
         val retry = slot<Observation.RetryPartition>()
         val observers = mockk<ObserversGrpcKt.ObserversCoroutineStub>()
-        coEvery { observers.retryPartition(capture(retry), any()) } returns Empty.getDefaultInstance()
+        coEvery { observers.retryPartition(capture(retry), any()) } returns Observation.RetryPartitionResponse.newBuilder().build()
 
         failedPartitionsFor(onePartition(), observers = observers)
             .retry("employee-alerts", "employee-1", EventSequenceId.eventLog)
@@ -156,7 +155,7 @@ class FailedPartitionsTests {
     fun `retrying by type retries on the sequence that observer actually watches`() = runBlocking {
         val retry = slot<Observation.RetryPartition>()
         val observers = mockk<ObserversGrpcKt.ObserversCoroutineStub>()
-        coEvery { observers.retryPartition(capture(retry), any()) } returns Empty.getDefaultInstance()
+        coEvery { observers.retryPartition(capture(retry), any()) } returns Observation.RetryPartitionResponse.newBuilder().build()
 
         failedPartitionsFor(onePartition(), observers = observers).retry(AuditTrail::class, "employee-1")
 

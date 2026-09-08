@@ -3,8 +3,8 @@
 
 package io.cratis.chronicle.eventSequences.operations
 
-import Cratis.Chronicle.Contracts.EventSequences.Eventsequences
-import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
+import Cratis.Chronicle.Contracts.Sequences.Sequences
+import Cratis.Chronicle.Contracts.Sequences.EventSequencesGrpcKt
 import io.cratis.chronicle.eventSequences.EventSequence
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
@@ -24,23 +24,29 @@ private data class OrderPlaced(val id: String)
 
 private data class OrderShipped(val id: String)
 
-private fun Eventsequences.AppendManyRequest.correlationUuid(): UUID =
+private fun Sequences.AppendManyForEventSourcesRequest.correlationUuid(): UUID =
     UUID(java.lang.Long.reverseBytes(correlationId.lo), java.lang.Long.reverseBytes(correlationId.hi))
 
 /**
- * A composed operation is only observable through what it eventually puts on the wire, so these
- * capture the AppendMany request the client builds from it.
+ * A composed operation always spans potentially many event sources, so it is only observable
+ * through what it eventually puts on the wire via the multi-source AppendManyForEventSources RPC.
  */
 class EventSequenceOperationsTests {
 
     private fun stubCapturing(
-        request: CapturingSlot<Eventsequences.AppendManyRequest>,
+        request: CapturingSlot<Sequences.AppendManyForEventSourcesRequest>,
         sequenceNumbers: List<Long> = listOf(0L, 1L, 2L)
     ): EventSequencesGrpcKt.EventSequencesCoroutineStub {
         val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
-        coEvery { stub.appendMany(capture(request), any()) } returns Eventsequences.AppendManyResponse.newBuilder()
-            .addAllSequenceNumbers(sequenceNumbers)
-            .build()
+        coEvery { stub.appendManyForEventSources(capture(request), any()) } returns
+            Sequences.CommandResult_AppendManyResponse.newBuilder()
+                .setIsAuthorized(true)
+                .setResponse(
+                    Sequences.AppendManyResponse.newBuilder()
+                        .addAllSequenceNumbers(sequenceNumbers)
+                        .build()
+                )
+                .build()
         return stub
     }
 
@@ -49,7 +55,7 @@ class EventSequenceOperationsTests {
 
     @Test
     fun `perform commits every composed event through a single atomic AppendMany call`() = runBlocking {
-        val request = slot<Eventsequences.AppendManyRequest>()
+        val request = slot<Sequences.AppendManyForEventSourcesRequest>()
         val stub = stubCapturing(request)
 
         val results = sequenceFor(stub)
@@ -61,7 +67,7 @@ class EventSequenceOperationsTests {
             .perform()
 
         // The whole point of composing is that it commits as one unit - never one call per source.
-        coVerify(exactly = 1) { stub.appendMany(any(), any()) }
+        coVerify(exactly = 1) { stub.appendManyForEventSources(any(), any()) }
         coVerify(exactly = 0) { stub.append(any(), any()) }
 
         assertEquals(3, request.captured.eventsList.size)
@@ -71,7 +77,7 @@ class EventSequenceOperationsTests {
 
     @Test
     fun `perform sends each event with its own event source id`() = runBlocking {
-        val request = slot<Eventsequences.AppendManyRequest>()
+        val request = slot<Sequences.AppendManyForEventSourcesRequest>()
 
         sequenceFor(stubCapturing(request))
             .forEventSourceId("order-1") { append(OrderPlaced("order-1")) }
@@ -83,7 +89,7 @@ class EventSequenceOperationsTests {
 
     @Test
     fun `perform sends a concurrency scope only for the event sources that asked for one`() = runBlocking {
-        val request = slot<Eventsequences.AppendManyRequest>()
+        val request = slot<Sequences.AppendManyForEventSourcesRequest>()
 
         sequenceFor(stubCapturing(request))
             .forEventSourceId("order-1") {
@@ -93,15 +99,16 @@ class EventSequenceOperationsTests {
             .forEventSourceId("order-2") { append(OrderPlaced("order-2")) }
             .perform()
 
-        val scopes = request.captured.concurrencyScopesMap
-        assertEquals(setOf("order-1"), scopes.keys)
-        assertEquals(4L, scopes["order-1"]?.sequenceNumber)
-        assertTrue(scopes["order-1"]?.eventSourceId == true)
+        val scopes = request.captured.concurrencyScopesList
+        assertEquals(setOf("order-1"), scopes.map { it.eventSourceId }.toSet())
+        val orderOneScope = scopes.single { it.eventSourceId == "order-1" }.scope
+        assertEquals(4L, orderOneScope.sequenceNumber)
+        assertTrue(orderOneScope.eventSourceId)
     }
 
     @Test
     fun `perform sends the per-event shaping on the wire`() = runBlocking {
-        val request = slot<Eventsequences.AppendManyRequest>()
+        val request = slot<Sequences.AppendManyForEventSourcesRequest>()
 
         sequenceFor(stubCapturing(request))
             .forEventSourceId("visit-1") {
@@ -124,7 +131,7 @@ class EventSequenceOperationsTests {
 
     @Test
     fun `perform sends the correlation id composed onto the operation`() = runBlocking {
-        val request = slot<Eventsequences.AppendManyRequest>()
+        val request = slot<Sequences.AppendManyForEventSourcesRequest>()
         val correlationId = UUID.randomUUID()
 
         sequenceFor(stubCapturing(request))
@@ -142,12 +149,12 @@ class EventSequenceOperationsTests {
         val results = sequenceFor(stub).operations().perform()
 
         assertTrue(results.isEmpty())
-        coVerify(exactly = 0) { stub.appendMany(any(), any()) }
+        coVerify(exactly = 0) { stub.appendManyForEventSources(any(), any()) }
     }
 
     @Test
     fun `configuring the same event source twice adds to what is already staged`() = runBlocking {
-        val request = slot<Eventsequences.AppendManyRequest>()
+        val request = slot<Sequences.AppendManyForEventSourcesRequest>()
 
         // Composing across call sites is the reason this API exists, so a second visit to the same
         // event source has to accumulate rather than start over.
@@ -201,7 +208,7 @@ class EventSequenceOperationsTests {
 
     @Test
     fun `java composes and performs through the bridges`() {
-        val request = slot<Eventsequences.AppendManyRequest>()
+        val request = slot<Sequences.AppendManyForEventSourcesRequest>()
         val sequence = sequenceFor(stubCapturing(request, listOf(0L, 1L)))
 
         val results = JavaEventSequenceOperationsUsage.composeAndPerform(
@@ -213,8 +220,8 @@ class EventSequenceOperationsTests {
         assertEquals(2, results.size)
         assertEquals(listOf("customer-1", "customer-2"), request.captured.eventsList.map { it.eventSourceId })
         assertEquals("Onboarding", request.captured.eventsList[1].eventStreamType)
-        assertEquals(setOf("customer-1"), request.captured.concurrencyScopesMap.keys)
-        assertEquals(3L, request.captured.concurrencyScopesMap["customer-1"]?.sequenceNumber)
+        assertEquals(setOf("customer-1"), request.captured.concurrencyScopesList.map { it.eventSourceId }.toSet())
+        assertEquals(3L, request.captured.concurrencyScopesList.single { it.eventSourceId == "customer-1" }.scope.sequenceNumber)
     }
 
     @Test
@@ -224,12 +231,12 @@ class EventSequenceOperationsTests {
         val staged = JavaEventSequenceOperationsUsage.stagedEvents(sequenceFor(stub), OrderPlaced("order-1"))
 
         assertEquals(listOf("customer-1"), staged.map { it.eventSourceId })
-        coVerify(exactly = 0) { stub.appendMany(any(), any()) }
+        coVerify(exactly = 0) { stub.appendManyForEventSources(any(), any()) }
     }
 
     @Test
     fun `java appends across event sources through the bridge`() {
-        val request = slot<Eventsequences.AppendManyRequest>()
+        val request = slot<Sequences.AppendManyForEventSourcesRequest>()
         val sequence = sequenceFor(stubCapturing(request, listOf(0L, 1L)))
 
         val results = JavaEventSequenceOperationsUsage.appendManyAcrossEventSources(
@@ -241,12 +248,12 @@ class EventSequenceOperationsTests {
         assertEquals(2, results.size)
         assertEquals(listOf("customer-1", "customer-2"), request.captured.eventsList.map { it.eventSourceId })
         // Nothing asked for a concurrency check, so nothing is sent for the kernel to validate.
-        assertTrue(request.captured.concurrencyScopesMap.isEmpty())
+        assertTrue(request.captured.concurrencyScopesList.isEmpty())
     }
 
     @Test
     fun `a composed operation without a concurrency scope leaves every source unchecked`() = runBlocking {
-        val request = slot<Eventsequences.AppendManyRequest>()
+        val request = slot<Sequences.AppendManyForEventSourcesRequest>()
 
         sequenceFor(stubCapturing(request))
             .forEventSourceId("order-1") {
@@ -255,6 +262,6 @@ class EventSequenceOperationsTests {
             }
             .perform()
 
-        assertTrue(request.captured.concurrencyScopesMap.isEmpty())
+        assertTrue(request.captured.concurrencyScopesList.isEmpty())
     }
 }

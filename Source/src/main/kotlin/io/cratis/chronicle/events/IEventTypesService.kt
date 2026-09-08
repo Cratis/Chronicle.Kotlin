@@ -3,7 +3,7 @@
 
 package io.cratis.chronicle.events
 
-import Cratis.Chronicle.Contracts.Events.Events
+import Cratis.Chronicle.Contracts.EventTypes.Eventtypes
 import kotlin.reflect.KClass
 
 interface IEventTypesService {
@@ -19,7 +19,7 @@ interface IEventTypesService {
     suspend fun registerSingle(eventClass: KClass<*>)
 
     /** Get all known generations, and their migrations, for the given [eventTypeId]. */
-    suspend fun getAllGenerationsForEventType(eventTypeId: String): List<Events.EventTypeRegistration>
+    suspend fun getAllGenerationsForEventType(eventTypeId: String): List<Eventtypes.EventTypeDetailsResponse>
 
     /**
      * Gets every event type that has been registered through [register]/[registerSingle] so far on

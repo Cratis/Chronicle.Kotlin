@@ -7,8 +7,8 @@ import Cratis.Chronicle.Contracts.Captures.CapturesGrpcKt
 import Cratis.Chronicle.Contracts.Clients.ConnectionServiceGrpcKt
 import Cratis.Chronicle.Contracts.Compliance.ComplianceGrpcKt
 import Cratis.Chronicle.Contracts.Events.Constraints.ConstraintsGrpcKt
-import Cratis.Chronicle.Contracts.Events.EventTypesGrpcKt
-import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
+import Cratis.Chronicle.Contracts.EventTypes.EventTypesGrpcKt
+import Cratis.Chronicle.Contracts.Sequences.EventSequencesGrpcKt
 import Cratis.Chronicle.Contracts.EventStores.EventStoresGrpcKt
 import Cratis.Chronicle.Contracts.ExternalServices.ExternalServicesGrpcKt
 import Cratis.Chronicle.Contracts.Identities.IdentitiesGrpcKt
@@ -21,6 +21,7 @@ import Cratis.Chronicle.Contracts.Observation.Reactors.ReactorsGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Reducers.ReducersGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Webhooks.WebhooksGrpcKt
 import Cratis.Chronicle.Contracts.Projections.ProjectionsGrpcKt
+import Cratis.Chronicle.Contracts.ReadModelExplorer.ReadModelExplorerGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.Seeding.EventSeedingGrpcKt
@@ -46,6 +47,8 @@ class ChronicleServices(channel: io.grpc.Channel) {
         ReadModelsGrpcKt.ReadModelsCoroutineStub(channel)
     val materializedReadModels: MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub =
         MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub(channel)
+    val readModelExplorer: ReadModelExplorerGrpcKt.ReadModelExplorerCoroutineStub =
+        ReadModelExplorerGrpcKt.ReadModelExplorerCoroutineStub(channel)
     val compliance: ComplianceGrpcKt.ComplianceCoroutineStub =
         ComplianceGrpcKt.ComplianceCoroutineStub(channel)
     val eventTypes: EventTypesGrpcKt.EventTypesCoroutineStub =

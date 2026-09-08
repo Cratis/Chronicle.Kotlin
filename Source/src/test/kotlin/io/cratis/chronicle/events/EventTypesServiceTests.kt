@@ -3,10 +3,9 @@
 
 package io.cratis.chronicle.events
 
-import Cratis.Chronicle.Contracts.Events.EventTypesGrpcKt
-import Cratis.Chronicle.Contracts.Events.Events
+import Cratis.Chronicle.Contracts.EventTypes.EventTypesGrpcKt
+import Cratis.Chronicle.Contracts.EventTypes.Eventtypes
 import com.google.gson.Gson
-import com.google.protobuf.Empty
 import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.slot
@@ -24,8 +23,9 @@ class EventTypesServiceTests {
     @Test
     fun `register sends a real schema reflecting the event class's properties, not an empty object`() = runBlocking {
         val stub = mockk<EventTypesGrpcKt.EventTypesCoroutineStub>()
-        val request = slot<Events.RegisterEventTypesRequest>()
-        coEvery { stub.register(capture(request), any()) } returns Empty.getDefaultInstance()
+        val request = slot<Eventtypes.RegisterEventTypesRequest>()
+        coEvery { stub.registerEventTypes(capture(request), any()) } returns
+            Eventtypes.CommandResult.newBuilder().setIsAuthorized(true).build()
 
         val service = EventTypesService("my-event-store", stub)
         service.register(ProductRegistered::class)
@@ -54,7 +54,8 @@ class EventTypesServiceTests {
     @Test
     fun `getRegisteredEventTypes reflects every class registered through register`() = runBlocking {
         val stub = mockk<EventTypesGrpcKt.EventTypesCoroutineStub>()
-        coEvery { stub.register(any(), any()) } returns Empty.getDefaultInstance()
+        coEvery { stub.registerEventTypes(any(), any()) } returns
+            Eventtypes.CommandResult.newBuilder().setIsAuthorized(true).build()
 
         val service = EventTypesService("my-event-store", stub)
         service.register(ProductRegistered::class)
@@ -67,7 +68,8 @@ class EventTypesServiceTests {
     @Test
     fun `getRegisteredEventTypes reflects a class registered through registerSingle`() = runBlocking {
         val stub = mockk<EventTypesGrpcKt.EventTypesCoroutineStub>()
-        coEvery { stub.registerSingle(any(), any()) } returns Empty.getDefaultInstance()
+        coEvery { stub.registerSingleEventType(any(), any()) } returns
+            Eventtypes.CommandResult.newBuilder().setIsAuthorized(true).build()
 
         val service = EventTypesService("my-event-store", stub)
         service.registerSingle(ProductRegistered::class)

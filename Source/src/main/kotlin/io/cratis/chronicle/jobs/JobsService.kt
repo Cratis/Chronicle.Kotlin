@@ -6,7 +6,6 @@ package io.cratis.chronicle.jobs
 import Cratis.Chronicle.Contracts.Jobs.JobsGrpcKt
 import Cratis.Chronicle.Contracts.Jobs.JobsOuterClass
 import bcl.Bcl
-import kotlinx.coroutines.flow.first
 import java.util.UUID
 
 class JobsService(
@@ -66,7 +65,7 @@ class JobsService(
             .setNamespace(namespace)
             .build()
 
-        return stub.allJobs(request).first().dataList
+        return stub.allJobs(request).dataList
     }
 
     override suspend fun getJobSteps(jobId: String): List<JobsOuterClass.JobStepSummaryResponse> {

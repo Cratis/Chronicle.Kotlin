@@ -5,7 +5,6 @@ package io.cratis.chronicle.seeding
 
 import Cratis.Chronicle.Contracts.Seeding.EventSeedingGrpcKt
 import Cratis.Chronicle.Contracts.Seeding.Seeding
-import com.google.protobuf.Empty
 import io.cratis.chronicle.events.EventType
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -37,8 +36,9 @@ class EventSeedingServiceTests {
     @Test
     fun `seed sends everything under the event store's own namespace when forNamespace is never used`() = runBlocking {
         val stub = mockk<EventSeedingGrpcKt.EventSeedingCoroutineStub>()
-        val request = slot<Seeding.SeedRequest>()
-        coEvery { stub.seed(capture(request), any()) } returns Empty.getDefaultInstance()
+        val request = slot<Seeding.SeedEventsRequest>()
+        coEvery { stub.seedEvents(capture(request), any()) } returns
+            Seeding.CommandResult.newBuilder().setIsAuthorized(true).build()
 
         val service = EventSeedingService("my-store", "default", stub)
         service.seed(UnscopedSeeder())
@@ -52,8 +52,9 @@ class EventSeedingServiceTests {
     @Test
     fun `seed groups entries by namespace when forNamespace targets namespaces other than the ambient one`() = runBlocking {
         val stub = mockk<EventSeedingGrpcKt.EventSeedingCoroutineStub>()
-        val request = slot<Seeding.SeedRequest>()
-        coEvery { stub.seed(capture(request), any()) } returns Empty.getDefaultInstance()
+        val request = slot<Seeding.SeedEventsRequest>()
+        coEvery { stub.seedEvents(capture(request), any()) } returns
+            Seeding.CommandResult.newBuilder().setIsAuthorized(true).build()
 
         val service = EventSeedingService("my-store", "default", stub)
         service.seed(MultiNamespaceSeeder())

@@ -3,8 +3,8 @@
 
 package io.cratis.chronicle.eventSequences
 
-import Cratis.Chronicle.Contracts.EventSequences.Eventsequences
-import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
+import Cratis.Chronicle.Contracts.Sequences.Sequences
+import Cratis.Chronicle.Contracts.Sequences.EventSequencesGrpcKt
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import io.cratis.chronicle.java.AppendOptionsBuilder
 import io.mockk.coEvery
@@ -26,12 +26,14 @@ private data class OptionsEventHappened(val value: String)
  */
 class AppendOptionsTests {
 
-    private fun stubCapturing(request: io.mockk.CapturingSlot<Eventsequences.AppendRequest>):
+    private fun stubCapturing(request: io.mockk.CapturingSlot<Sequences.AppendRequest>):
         EventSequencesGrpcKt.EventSequencesCoroutineStub {
         val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
-        coEvery { stub.append(capture(request), any()) } returns Eventsequences.AppendResponse.newBuilder()
-            .setSequenceNumber(0)
-            .build()
+        coEvery { stub.append(capture(request), any()) } returns
+            Sequences.CommandResult_AppendResponse.newBuilder()
+                .setIsAuthorized(true)
+                .setResponse(Sequences.AppendResponse.newBuilder().setSequenceNumber(0).build())
+                .build()
         return stub
     }
 
@@ -40,7 +42,7 @@ class AppendOptionsTests {
 
     @Test
     fun `append without options keeps the previous defaults`() = runBlocking {
-        val request = slot<Eventsequences.AppendRequest>()
+        val request = slot<Sequences.AppendRequest>()
         sequenceFor(stubCapturing(request)).append("source-1", OptionsEventHappened("hello"))
 
         assertEquals("Default", request.captured.eventSourceType)
@@ -53,7 +55,7 @@ class AppendOptionsTests {
 
     @Test
     fun `append sends an explicit event source type`() = runBlocking {
-        val request = slot<Eventsequences.AppendRequest>()
+        val request = slot<Sequences.AppendRequest>()
         sequenceFor(stubCapturing(request))
             .append("source-1", OptionsEventHappened("hello"), AppendOptions(eventSourceType = "Patient"))
 
@@ -62,7 +64,7 @@ class AppendOptionsTests {
 
     @Test
     fun `append sends an explicit event stream type and id`() = runBlocking {
-        val request = slot<Eventsequences.AppendRequest>()
+        val request = slot<Sequences.AppendRequest>()
         sequenceFor(stubCapturing(request)).append(
             "source-1",
             OptionsEventHappened("hello"),
@@ -75,7 +77,7 @@ class AppendOptionsTests {
 
     @Test
     fun `append sends an explicit subject`() = runBlocking {
-        val request = slot<Eventsequences.AppendRequest>()
+        val request = slot<Sequences.AppendRequest>()
         sequenceFor(stubCapturing(request))
             .append("visit-1", OptionsEventHappened("hello"), AppendOptions(subject = "patient-42"))
 
@@ -87,7 +89,7 @@ class AppendOptionsTests {
 
     @Test
     fun `append sends tags`() = runBlocking {
-        val request = slot<Eventsequences.AppendRequest>()
+        val request = slot<Sequences.AppendRequest>()
         sequenceFor(stubCapturing(request))
             .append("source-1", OptionsEventHappened("hello"), AppendOptions(tags = listOf("gdpr", "import")))
 
@@ -96,7 +98,7 @@ class AppendOptionsTests {
 
     @Test
     fun `append sends an explicit occurred`() = runBlocking {
-        val request = slot<Eventsequences.AppendRequest>()
+        val request = slot<Sequences.AppendRequest>()
         val occurred = Instant.parse("2020-03-01T10:15:30Z")
         sequenceFor(stubCapturing(request))
             .append("source-1", OptionsEventHappened("hello"), AppendOptions(occurred = occurred))
@@ -108,39 +110,48 @@ class AppendOptionsTests {
     @Test
     fun `appendMany applies the options to every event in the batch`() = runBlocking {
         val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
-        val request = slot<Eventsequences.AppendManyRequest>()
+        val request = slot<Sequences.AppendManyRequest>()
         coEvery { stub.appendMany(capture(request), any()) } returns
-            Eventsequences.AppendManyResponse.newBuilder().addSequenceNumbers(0).addSequenceNumbers(1).build()
+            Sequences.CommandResult_AppendManyResponse.newBuilder()
+                .setIsAuthorized(true)
+                .setResponse(
+                    Sequences.AppendManyResponse.newBuilder()
+                        .addSequenceNumbers(0)
+                        .addSequenceNumbers(1)
+                        .build()
+                )
+                .build()
 
         sequenceFor(stub).appendMany(
             "source-1",
             listOf(OptionsEventHappened("one"), OptionsEventHappened("two")),
-            AppendOptions(subject = "patient-42", tags = listOf("gdpr"), eventStreamType = "Onboarding")
+            AppendOptions(subject = "patient-42", tags = listOf("gdpr"))
         )
 
+        // The single-event-source batch carries subject per event but tags once for the whole
+        // request - the wire has no per-event tags field, only a request-wide one.
         assertEquals(2, request.captured.eventsList.size)
+        assertEquals(listOf("gdpr"), request.captured.tagsList)
         request.captured.eventsList.forEach { event ->
             assertEquals("patient-42", event.subject)
-            assertEquals(listOf("gdpr"), event.tagsList)
-            assertEquals("Onboarding", event.eventStreamType)
         }
     }
 
     @Test
     fun `appendMany without options keeps the previous defaults`() = runBlocking {
         val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
-        val request = slot<Eventsequences.AppendManyRequest>()
+        val request = slot<Sequences.AppendManyRequest>()
         coEvery { stub.appendMany(capture(request), any()) } returns
-            Eventsequences.AppendManyResponse.newBuilder().addSequenceNumbers(0).build()
+            Sequences.CommandResult_AppendManyResponse.newBuilder()
+                .setIsAuthorized(true)
+                .setResponse(Sequences.AppendManyResponse.newBuilder().addSequenceNumbers(0).build())
+                .build()
 
         sequenceFor(stub).appendMany("source-1", listOf(OptionsEventHappened("one")))
 
-        val event = request.captured.eventsList.single()
-        assertEquals("Default", event.eventSourceType)
-        assertEquals("Default", event.eventStreamType)
-        assertEquals("source-1", event.eventStreamId)
-        assertEquals("source-1", event.subject)
-        assertTrue(event.tagsList.isEmpty())
+        assertEquals("source-1", request.captured.eventSourceId)
+        assertEquals("source-1", request.captured.eventsList.single().subject)
+        assertTrue(request.captured.tagsList.isEmpty())
     }
 
     @Test

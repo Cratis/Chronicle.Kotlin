@@ -5,6 +5,8 @@ package io.cratis.chronicle.readModels
 
 import Cratis.Chronicle.Contracts.Compliance.ComplianceGrpcKt
 import Cratis.Chronicle.Contracts.Compliance.ComplianceOuterClass
+import Cratis.Chronicle.Contracts.ReadModelExplorer.ReadModelExplorerGrpcKt
+import Cratis.Chronicle.Contracts.ReadModelExplorer.Readmodelexplorer
 import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.Readmodels
@@ -40,30 +42,37 @@ private fun UUID.toContractGuid(): Bcl.Guid = Bcl.Guid.newBuilder()
 
 class ReadModelsServiceTests {
 
-    private fun service(stub: ReadModelsGrpcKt.ReadModelsCoroutineStub): ReadModelsService = ReadModelsService(
+    private fun service(
+        stub: ReadModelsGrpcKt.ReadModelsCoroutineStub,
+        readModelExplorerStub: ReadModelExplorerGrpcKt.ReadModelExplorerCoroutineStub = mockk()
+    ): ReadModelsService = ReadModelsService(
         "my-store",
         "default",
         stub,
         mockk<MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub>(),
+        readModelExplorerStub,
         mockk<ComplianceGrpcKt.ComplianceCoroutineStub>()
     )
 
     @Test
     fun `getSnapshotsById deserializes the read model json into the caller's type, not the raw proto`() = runBlocking {
         val stub = mockk<ReadModelsGrpcKt.ReadModelsCoroutineStub>()
+        val readModelExplorerStub = mockk<ReadModelExplorerGrpcKt.ReadModelExplorerCoroutineStub>()
         val correlationId = UUID.randomUUID()
         val occurred = Instant.parse("2026-01-01T00:00:00Z")
 
-        val snapshot = Readmodels.ReadModelSnapshot.newBuilder()
-            .setReadModel("""{"name":"Ada","title":"Engineer"}""")
-            .setOccurred(Readmodels.SerializableDateTimeOffset.newBuilder().setValue(occurred.toString()))
+        val snapshot = Readmodelexplorer.ReadModelSnapshotResponse.newBuilder()
+            .setInstance("""{"name":"Ada","title":"Engineer"}""")
+            .setOccurred(Readmodelexplorer.SerializableDateTimeOffset.newBuilder().setValue(occurred.toString()))
             .setCorrelationId(correlationId.toContractGuid())
             .build()
-        coEvery { stub.getSnapshotsByKey(any(), any()) } returns Readmodels.GetSnapshotsByKeyResponse.newBuilder()
-            .addSnapshots(snapshot)
-            .build()
+        coEvery { readModelExplorerStub.allSnapshotsForReadModel(any(), any()) } returns
+            Readmodelexplorer.QueryResult_IEnumerable_ReadModelSnapshotResponse.newBuilder()
+                .addData(snapshot)
+                .setIsAuthorized(true)
+                .build()
 
-        val result = service(stub).getSnapshotsById(EmployeeState::class, "employee-1")
+        val result = service(stub, readModelExplorerStub).getSnapshotsById(EmployeeState::class, "employee-1")
 
         assertEquals(1, result.size)
         val single = result.single()
@@ -127,6 +136,7 @@ class ReadModelsServiceTests {
             "default",
             stub,
             mockk<MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub>(),
+            mockk<ReadModelExplorerGrpcKt.ReadModelExplorerCoroutineStub>(),
             complianceStub
         )
 
@@ -157,6 +167,7 @@ class ReadModelsServiceTests {
             "default",
             stub,
             mockk<MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub>(),
+            mockk<ReadModelExplorerGrpcKt.ReadModelExplorerCoroutineStub>(),
             complianceStub
         )
 
@@ -181,6 +192,7 @@ class ReadModelsServiceTests {
             "default",
             stub,
             mockk<MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub>(),
+            mockk<ReadModelExplorerGrpcKt.ReadModelExplorerCoroutineStub>(),
             complianceStub
         )
 
@@ -205,6 +217,7 @@ class ReadModelsServiceTests {
             "default",
             stub,
             mockk<MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub>(),
+            mockk<ReadModelExplorerGrpcKt.ReadModelExplorerCoroutineStub>(),
             complianceStub
         )
 

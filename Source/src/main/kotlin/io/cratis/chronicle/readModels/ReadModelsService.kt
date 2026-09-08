@@ -4,6 +4,8 @@
 package io.cratis.chronicle.readModels
 
 import Cratis.Chronicle.Contracts.Compliance.ComplianceGrpcKt
+import Cratis.Chronicle.Contracts.ReadModelExplorer.ReadModelExplorerGrpcKt
+import Cratis.Chronicle.Contracts.ReadModelExplorer.Readmodelexplorer
 import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.Readmodels
@@ -37,6 +39,7 @@ class ReadModelsService(
     private val namespace: String,
     private val stub: ReadModelsGrpcKt.ReadModelsCoroutineStub,
     materializedStub: MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub,
+    private val readModelExplorerStub: ReadModelExplorerGrpcKt.ReadModelExplorerCoroutineStub,
     complianceStub: ComplianceGrpcKt.ComplianceCoroutineStub,
     private val defaultSinkTypeId: String = WellKnownSinkTypes.MONGODB
 ) : IReadModelsService {
@@ -129,15 +132,16 @@ class ReadModelsService(
     }
 
     override suspend fun <T : Any> getSnapshotsById(readModelClass: KClass<T>, key: String): List<ReadModelSnapshot<T>> {
-        val request = Readmodels.GetSnapshotsByKeyRequest.newBuilder()
+        val request = Readmodelexplorer.AllSnapshotsForReadModelRequest.newBuilder()
             .setEventStore(eventStoreName)
             .setNamespace(namespace)
-            .setReadModelIdentifier(readModelClass.readModelIdentifier())
+            .setReadModel(readModelClass.readModelIdentifier())
             .setEventSequenceId(EventSequenceId.eventLog.value)
             .setReadModelKey(key)
+            .setGrouping("")
             .build()
 
-        return stub.getSnapshotsByKey(request).snapshotsList.map { it.toTyped(readModelClass) }
+        return readModelExplorerStub.allSnapshotsForReadModel(request).dataList.map { it.toTyped(readModelClass) }
     }
 
     override fun <T : Any> watch(readModelClass: KClass<T>): Flow<ReadModelChangeset<T>> {
@@ -215,9 +219,9 @@ class ReadModelsService(
         else -> value.toString().ifEmpty { null }
     }
 
-    private fun <T : Any> Readmodels.ReadModelSnapshot.toTyped(readModelClass: KClass<T>): ReadModelSnapshot<T> =
+    private fun <T : Any> Readmodelexplorer.ReadModelSnapshotResponse.toTyped(readModelClass: KClass<T>): ReadModelSnapshot<T> =
         ReadModelSnapshot(
-            instance = chronicleGson.fromJson(readModel, readModelClass.java),
+            instance = chronicleGson.fromJson(instance, readModelClass.java),
             events = eventsList,
             occurred = if (hasOccurred()) occurred.value.toInstantOrNull() else null,
             correlationId = if (hasCorrelationId()) correlationId.toUUID() else null

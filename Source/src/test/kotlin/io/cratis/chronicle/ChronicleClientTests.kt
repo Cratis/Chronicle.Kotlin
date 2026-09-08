@@ -10,8 +10,6 @@ import io.cratis.chronicle.connection.ChronicleConnectionString
 import io.grpc.Grpc
 import io.grpc.InsecureServerCredentials
 import io.grpc.Server
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -32,8 +30,11 @@ class ChronicleClientTests {
 
     private fun startServerWithEventStores(names: List<String>): Server {
         val impl = object : EventStoresGrpcKt.EventStoresCoroutineImplBase() {
-            override fun allEventStores(request: Empty): Flow<Eventstores.QueryResult_IEnumerable_String> =
-                flowOf(Eventstores.QueryResult_IEnumerable_String.newBuilder().addAllData(names).build())
+            override suspend fun allEventStores(request: Empty): Eventstores.QueryResult_IEnumerable_EventStoreNamesResponse =
+                Eventstores.QueryResult_IEnumerable_EventStoreNamesResponse.newBuilder()
+                    .addAllData(names.map { Eventstores.EventStoreNamesResponse.newBuilder().setName(it).build() })
+                    .setIsAuthorized(true)
+                    .build()
         }
         return Grpc.newServerBuilderForPort(0, InsecureServerCredentials.create())
             .addService(impl)

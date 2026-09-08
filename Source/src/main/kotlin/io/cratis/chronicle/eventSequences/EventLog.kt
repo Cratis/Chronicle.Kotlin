@@ -3,7 +3,7 @@
 
 package io.cratis.chronicle.eventSequences
 
-import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
+import Cratis.Chronicle.Contracts.Sequences.EventSequencesGrpcKt
 import io.cratis.chronicle.artifacts.IRegistrationGate
 import io.cratis.chronicle.diagnostics.ChronicleTraces
 import io.cratis.chronicle.transactions.IUnitOfWorkManager

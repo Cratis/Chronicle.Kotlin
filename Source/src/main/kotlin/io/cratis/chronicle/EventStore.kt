@@ -109,7 +109,15 @@ class EventStore(
     // ReadModelsService is shared so that reducers and projections can auto-register their read
     // models with the correct observer type without the caller having to set it on @ReadModel.
     private val readModelsService: ReadModelsService by lazy {
-        ReadModelsService(name, namespace, services.readModels, services.materializedReadModels, services.compliance, defaultSinkTypeId)
+        ReadModelsService(
+            name,
+            namespace,
+            services.readModels,
+            services.materializedReadModels,
+            services.readModelExplorer,
+            services.compliance,
+            defaultSinkTypeId
+        )
     }
 
     override val readModels: IReadModelsService get() = readModelsService

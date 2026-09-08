@@ -25,13 +25,12 @@ class WebhooksService(
 
         if (definitions.isEmpty()) return
 
-        val request = ObservationWebhooks.AddWebhooks.newBuilder()
+        val request = ObservationWebhooks.AddWebhooksRequest.newBuilder()
             .setEventStore(eventStoreName)
-            .setOwner(ObservationWebhooks.ObserverOwner.Client)
             .addAllWebhooks(definitions)
             .build()
 
-        stub.add(request)
+        stub.addWebhooks(request)
     }
 
     override suspend fun register(id: String, targetUrl: String, configure: (IWebhookDefinitionBuilder) -> Unit) {
@@ -39,13 +38,12 @@ class WebhooksService(
         configure(builder)
         val definition = builder.build(id, targetUrl)
 
-        val request = ObservationWebhooks.AddWebhooks.newBuilder()
+        val request = ObservationWebhooks.AddWebhooksRequest.newBuilder()
             .setEventStore(eventStoreName)
-            .setOwner(ObservationWebhooks.ObserverOwner.Client)
             .addWebhooks(definition)
             .build()
 
-        stub.add(request)
+        stub.addWebhooks(request)
     }
 
     override suspend fun getAll(): List<ObservationWebhooks.WebhookDefinition> {
@@ -53,15 +51,35 @@ class WebhooksService(
             .setEventStore(eventStoreName)
             .build()
 
-        return stub.getWebhooks(request).itemsList
+        return stub.getWebhooks(request).dataList.map { it.toDefinition() }
     }
 
     override suspend fun remove(id: String) {
-        val request = ObservationWebhooks.RemoveWebhooks.newBuilder()
+        val request = ObservationWebhooks.RemoveWebhooksRequest.newBuilder()
             .setEventStore(eventStoreName)
             .addWebhooks(id)
             .build()
 
-        stub.remove(request)
+        stub.removeWebhooks(request)
     }
 }
+
+/**
+ * Converts the flattened wire read shape back into a [ObservationWebhooks.WebhookDefinition],
+ * matching how the .NET client reconstructs it - the authorization details behind [WebhookTarget]
+ * are never sent back on read, so the reconstructed target carries only its URL and headers.
+ */
+private fun ObservationWebhooks.WebhookDetailsResponse.toDefinition(): ObservationWebhooks.WebhookDefinition =
+    ObservationWebhooks.WebhookDefinition.newBuilder()
+        .setEventSequenceId(eventSequenceId)
+        .setIdentifier(identifier)
+        .addAllEventTypes(eventTypesList)
+        .setTarget(
+            ObservationWebhooks.WebhookTarget.newBuilder()
+                .setUrl(url)
+                .putAllHeaders(headersMap)
+                .build()
+        )
+        .setIsReplayable(isReplayable)
+        .setIsActive(isActive)
+        .build()

@@ -50,7 +50,7 @@ class EventSeedingService(
 
         if (entriesByNamespace.isEmpty()) return
 
-        val requestBuilder = Seeding.SeedRequest.newBuilder().setEventStore(eventStoreName)
+        val requestBuilder = Seeding.SeedEventsRequest.newBuilder().setEventStore(eventStoreName)
         entriesByNamespace.forEach { (targetNamespace, eventSourceEntries) ->
             requestBuilder.addNamespacedEntries(
                 Seeding.NamespacedSeedEntries.newBuilder()
@@ -60,6 +60,6 @@ class EventSeedingService(
             )
         }
 
-        stub.seed(requestBuilder.build())
+        stub.seedEvents(requestBuilder.build())
     }
 }
