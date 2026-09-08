@@ -3,8 +3,8 @@
 
 package io.cratis.chronicle.eventSequences
 
-import Cratis.Chronicle.Contracts.EventSequences.Eventsequences
-import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
+import Cratis.Chronicle.Contracts.Sequences.Sequences
+import Cratis.Chronicle.Contracts.Sequences.EventSequencesGrpcKt
 import io.cratis.chronicle.artifacts.IRegistrationGate
 import io.cratis.chronicle.events.EventType
 import io.mockk.coEvery
@@ -33,9 +33,15 @@ class RegistrationGateTests {
 
     private fun stubThatAppends() = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>().also {
         coEvery { it.append(any(), any()) } returns
-            Eventsequences.AppendResponse.newBuilder().setSequenceNumber(0).build()
-        coEvery { it.appendMany(any(), any()) } returns
-            Eventsequences.AppendManyResponse.newBuilder().build()
+            Sequences.CommandResult_AppendResponse.newBuilder()
+                .setIsAuthorized(true)
+                .setResponse(Sequences.AppendResponse.newBuilder().setSequenceNumber(0).build())
+                .build()
+        coEvery { it.appendManyForEventSources(any(), any()) } returns
+            Sequences.CommandResult_AppendManyResponse.newBuilder()
+                .setIsAuthorized(true)
+                .setResponse(Sequences.AppendManyResponse.newBuilder().build())
+                .build()
     }
 
     private fun sequenceGatedBy(gate: IRegistrationGate) = EventSequence(
