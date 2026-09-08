@@ -3,8 +3,8 @@
 
 package io.cratis.chronicle.eventSequences
 
-import Cratis.Chronicle.Contracts.EventSequences.Eventsequences
-import Cratis.Chronicle.Contracts.EventSequences.EventSequencesGrpcKt
+import Cratis.Chronicle.Contracts.Sequences.Sequences
+import Cratis.Chronicle.Contracts.Sequences.EventSequencesGrpcKt
 import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.auditing.causationManager
@@ -34,10 +34,13 @@ class AppendCausationTests {
         Causation(Instant.parse("2020-03-01T10:15:30Z"), CausationType("LegacyImport"), mapOf("file" to "1998.csv"))
     )
 
-    private fun stubReturningOneAppend(request: CapturingSlot<Eventsequences.AppendRequest>) =
+    private fun stubReturningOneAppend(request: CapturingSlot<Sequences.AppendRequest>) =
         mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>().also { stub ->
             coEvery { stub.append(capture(request), any()) } returns
-                Eventsequences.AppendResponse.newBuilder().setSequenceNumber(0).build()
+                Sequences.CommandResult_AppendResponse.newBuilder()
+                    .setIsAuthorized(true)
+                    .setResponse(Sequences.AppendResponse.newBuilder().setSequenceNumber(0).build())
+                    .build()
         }
 
     private fun sequenceFor(stub: EventSequencesGrpcKt.EventSequencesCoroutineStub) =
@@ -45,7 +48,7 @@ class AppendCausationTests {
 
     @Test
     fun `an append with no override carries the ambient chain`() = runBlocking {
-        val request = slot<Eventsequences.AppendRequest>()
+        val request = slot<Sequences.AppendRequest>()
         val sequence = sequenceFor(stubReturningOneAppend(request))
 
         sequence.append("source-1", CausationTestEvent("hello"))
@@ -56,7 +59,7 @@ class AppendCausationTests {
 
     @Test
     fun `an append with an override carries that chain instead`() = runBlocking {
-        val request = slot<Eventsequences.AppendRequest>()
+        val request = slot<Sequences.AppendRequest>()
         val sequence = sequenceFor(stubReturningOneAppend(request))
 
         sequence.append("source-1", CausationTestEvent("hello"), AppendOptions(causation = imported))
@@ -67,7 +70,7 @@ class AppendCausationTests {
 
     @Test
     fun `an override leaves the ambient chain alone`() = runBlocking {
-        val request = slot<Eventsequences.AppendRequest>()
+        val request = slot<Sequences.AppendRequest>()
         val sequence = sequenceFor(stubReturningOneAppend(request))
         causationManager.clear()
         val before = causationManager.currentChain
@@ -79,10 +82,13 @@ class AppendCausationTests {
 
     @Test
     fun `a batch carries the causation its events agree on`() = runBlocking {
-        val request = slot<Eventsequences.AppendManyRequest>()
+        val request = slot<Sequences.AppendManyForEventSourcesRequest>()
         val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
-        coEvery { stub.appendMany(capture(request), any()) } returns
-            Eventsequences.AppendManyResponse.newBuilder().build()
+        coEvery { stub.appendManyForEventSources(capture(request), any()) } returns
+            Sequences.CommandResult_AppendManyResponse.newBuilder()
+                .setIsAuthorized(true)
+                .setResponse(Sequences.AppendManyResponse.newBuilder().build())
+                .build()
 
         sequenceFor(stub).appendMany(
             listOf(
@@ -119,10 +125,13 @@ class AppendCausationTests {
 
     @Test
     fun `a batch with no override carries the ambient chain`() = runBlocking {
-        val request = slot<Eventsequences.AppendManyRequest>()
+        val request = slot<Sequences.AppendManyForEventSourcesRequest>()
         val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
-        coEvery { stub.appendMany(capture(request), any()) } returns
-            Eventsequences.AppendManyResponse.newBuilder().build()
+        coEvery { stub.appendManyForEventSources(capture(request), any()) } returns
+            Sequences.CommandResult_AppendManyResponse.newBuilder()
+                .setIsAuthorized(true)
+                .setResponse(Sequences.AppendManyResponse.newBuilder().build())
+                .build()
 
         sequenceFor(stub).appendMany(
             listOf(EventForEventSourceId("source-1", CausationTestEvent("a")))
@@ -134,10 +143,13 @@ class AppendCausationTests {
 
     @Test
     fun `the single source batch form passes its causation through`() = runBlocking {
-        val request = slot<Eventsequences.AppendManyRequest>()
+        val request = slot<Sequences.AppendManyRequest>()
         val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
         coEvery { stub.appendMany(capture(request), any()) } returns
-            Eventsequences.AppendManyResponse.newBuilder().build()
+            Sequences.CommandResult_AppendManyResponse.newBuilder()
+                .setIsAuthorized(true)
+                .setResponse(Sequences.AppendManyResponse.newBuilder().build())
+                .build()
 
         sequenceFor(stub).appendMany(
             "source-1",
