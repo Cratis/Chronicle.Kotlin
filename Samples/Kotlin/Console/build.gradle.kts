@@ -10,11 +10,11 @@ repositories {
     mavenCentral()
 }
 
-val coroutinesVersion = "1.9.0"
+val coroutinesVersion = "1.11.0"
 
 dependencies {
     implementation(project(":Source"))
-    runtimeOnly("io.grpc:grpc-netty-shaded:1.70.0")
+    runtimeOnly("io.grpc:grpc-netty-shaded:1.84.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:$coroutinesVersion")
 }

@@ -14,7 +14,7 @@ repositories {
 dependencies {
     implementation project(':Integrations:SpringBoot')
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    runtimeOnly 'io.grpc:grpc-netty-shaded:1.70.0'
+    runtimeOnly 'io.grpc:grpc-netty-shaded:1.84.0'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
