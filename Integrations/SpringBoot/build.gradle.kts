@@ -8,8 +8,8 @@ plugins {
 group = "io.cratis"
 version = providers.gradleProperty("version").getOrElse("0.0.0-SNAPSHOT")
 
-val springBootVersion = "3.5.3"
-val coroutinesVersion = "1.9.0"
+val springBootVersion = "4.1.1"
+val coroutinesVersion = "1.11.0"
 
 dependencies {
     api(project(":Source"))
@@ -21,15 +21,15 @@ dependencies {
 
     // Web and security integration are wired only when the host application brings them in, so they
     // stay compile-only here - the starter works just as well in a plain worker application.
-    compileOnly("org.springframework:spring-web:6.2.8")
+    compileOnly("org.springframework:spring-web:7.0.9")
     compileOnly("jakarta.servlet:jakarta.servlet-api:6.1.0")
-    compileOnly("org.springframework.security:spring-security-core:6.5.1")
+    compileOnly("org.springframework.security:spring-security-core:7.1.1")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test:$springBootVersion")
     testImplementation("org.springframework.boot:spring-boot-starter-web:$springBootVersion")
-    testImplementation("org.springframework.security:spring-security-core:6.5.1")
+    testImplementation("org.springframework.security:spring-security-core:7.1.1")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
-    testImplementation("io.mockk:mockk:1.13.14")
+    testImplementation("io.mockk:mockk:1.14.11")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -42,7 +42,7 @@ tasks.test {
 }
 
 mavenPublishing {
-    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral()
     signAllPublications()
 
     coordinates("io.cratis", "chronicle-spring-boot-starter", version.toString())

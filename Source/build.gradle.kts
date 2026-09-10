@@ -7,16 +7,16 @@ plugins {
 group = "io.cratis"
 version = providers.gradleProperty("version").getOrElse("0.0.0-SNAPSHOT")
 
-val coroutinesVersion = "1.9.0"
-val chronicleContractsVersion = "18.0.0"
+val coroutinesVersion = "1.11.0"
+val chronicleContractsVersion = "18.1.0"
 val dnsJavaVersion = "3.6.5"
-val classGraphVersion = "4.8.180"
-val openTelemetryVersion = "1.64.0"
+val classGraphVersion = "4.8.195"
+val openTelemetryVersion = "1.65.0"
 
 dependencies {
     api("io.cratis:chronicle-contracts:$chronicleContractsVersion")
-    api("io.grpc:grpc-netty-shaded:1.70.0")
-    api("com.google.code.gson:gson:2.11.0")
+    api("io.grpc:grpc-netty-shaded:1.84.0")
+    api("com.google.code.gson:gson:2.14.0")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
     api("dnsjava:dnsjava:$dnsJavaVersion")
     api(kotlin("reflect"))
@@ -28,13 +28,13 @@ dependencies {
     // Classpath scanning behind automatic artifact discovery.
     implementation("io.github.classgraph:classgraph:$classGraphVersion")
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
     // The OpenTelemetry SDK is a test-only dependency: the client ships the API alone so that
     // instrumenting stays the application's choice. The in-memory exporter is what lets a spec
     // assert on the spans the client actually produced.
     testImplementation("io.opentelemetry:opentelemetry-sdk:$openTelemetryVersion")
     testImplementation("io.opentelemetry:opentelemetry-sdk-testing:$openTelemetryVersion")
-    testImplementation("io.mockk:mockk:1.13.14")
+    testImplementation("io.mockk:mockk:1.14.11")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
@@ -48,7 +48,7 @@ tasks.test {
 }
 
 mavenPublishing {
-    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral()
     signAllPublications()
 
     coordinates("io.cratis", "chronicle", version.toString())

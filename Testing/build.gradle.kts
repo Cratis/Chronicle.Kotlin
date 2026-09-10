@@ -7,13 +7,13 @@ plugins {
 group = "io.cratis"
 version = providers.gradleProperty("version").getOrElse("0.0.0-SNAPSHOT")
 
-val coroutinesVersion = "1.9.0"
+val coroutinesVersion = "1.11.0"
 
 dependencies {
     api(project(":Source"))
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
 
-    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
@@ -26,7 +26,7 @@ tasks.test {
 }
 
 mavenPublishing {
-    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+    publishToMavenCentral()
     signAllPublications()
 
     coordinates("io.cratis", "chronicle-testing", version.toString())

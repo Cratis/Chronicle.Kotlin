@@ -109,10 +109,11 @@ public final class io/cratis/chronicle/EventStoreNamespaceName$Companion {
 }
 
 public abstract interface class io/cratis/chronicle/IChronicleClient : java/lang/AutoCloseable {
-	public abstract fun close ()V
+	public fun close ()V
 	public abstract fun dispose ()V
 	public abstract fun evictEventStores ()V
 	public abstract fun getEventStore (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/EventStore;
+	public static synthetic fun getEventStore$default (Lio/cratis/chronicle/IChronicleClient;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/cratis/chronicle/EventStore;
 	public abstract fun getEventStores (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
@@ -392,7 +393,7 @@ public final class io/cratis/chronicle/captures/CapturesService : io/cratis/chro
 public abstract interface class io/cratis/chronicle/captures/ICapture {
 	public abstract fun getDeclaration ()Ljava/lang/String;
 	public abstract fun getId ()Ljava/lang/String;
-	public abstract fun getStartOnRegistration ()Z
+	public fun getStartOnRegistration ()Z
 }
 
 public final class io/cratis/chronicle/captures/ICapture$DefaultImpls {
@@ -418,6 +419,7 @@ public final class io/cratis/chronicle/compliance/ComplianceService : io/cratis/
 public abstract interface class io/cratis/chronicle/compliance/IComplianceService {
 	public abstract fun deleteEncryptionKey (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun release (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun release$default (Lio/cratis/chronicle/compliance/IComplianceService;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
 public final class io/cratis/chronicle/compliance/IComplianceService$DefaultImpls {
@@ -803,11 +805,12 @@ public abstract interface class io/cratis/chronicle/constraints/IConstraintBuild
 	public abstract fun perEventSourceType ()Lio/cratis/chronicle/constraints/IConstraintBuilder;
 	public abstract fun perEventStreamId ()Lio/cratis/chronicle/constraints/IConstraintBuilder;
 	public abstract fun perEventStreamType ()Lio/cratis/chronicle/constraints/IConstraintBuilder;
-	public abstract fun unique (Ljava/util/function/Consumer;)Lio/cratis/chronicle/constraints/IConstraintBuilder;
+	public fun unique (Ljava/util/function/Consumer;)Lio/cratis/chronicle/constraints/IConstraintBuilder;
 	public abstract fun unique (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/constraints/IConstraintBuilder;
-	public abstract fun uniqueFor (Ljava/lang/Class;)Lio/cratis/chronicle/constraints/IConstraintBuilder;
-	public abstract fun uniqueFor (Ljava/lang/Class;Ljava/lang/String;)Lio/cratis/chronicle/constraints/IConstraintBuilder;
+	public fun uniqueFor (Ljava/lang/Class;)Lio/cratis/chronicle/constraints/IConstraintBuilder;
+	public fun uniqueFor (Ljava/lang/Class;Ljava/lang/String;)Lio/cratis/chronicle/constraints/IConstraintBuilder;
 	public abstract fun uniqueFor (Lkotlin/reflect/KClass;Ljava/lang/String;)Lio/cratis/chronicle/constraints/IConstraintBuilder;
+	public static synthetic fun uniqueFor$default (Lio/cratis/chronicle/constraints/IConstraintBuilder;Lkotlin/reflect/KClass;Ljava/lang/String;ILjava/lang/Object;)Lio/cratis/chronicle/constraints/IConstraintBuilder;
 }
 
 public final class io/cratis/chronicle/constraints/IConstraintBuilder$DefaultImpls {
@@ -1178,19 +1181,26 @@ public abstract interface class io/cratis/chronicle/eventSequences/IEventLog : i
 
 public abstract interface class io/cratis/chronicle/eventSequences/IEventSequence {
 	public abstract fun append (Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun append$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun appendMany (Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun appendMany (Ljava/util/List;Ljava/util/Map;Ljava/util/UUID;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun appendMany$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun appendMany$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/util/List;Ljava/util/Map;Ljava/util/UUID;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun completeStream (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getAppendOperations ()Lkotlinx/coroutines/flow/SharedFlow;
 	public abstract fun getForEventSourceIdAndEventTypes (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun getForEventSourceIdAndEventTypes$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun getFromSequenceNumber-ZSd2mZE (JLjava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun getFromSequenceNumber-ZSd2mZE$default (Lio/cratis/chronicle/eventSequences/IEventSequence;JLjava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun getId-h1zpJ0k ()Ljava/lang/String;
 	public abstract fun getNextSequenceNumber-EnsJFvc (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getTailSequenceNumber-NETI2YA (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun getTailSequenceNumber-NETI2YA$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun getTailSequenceNumberForObserver-NETI2YA (Lkotlin/reflect/KClass;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun hasEventsFor (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun redact-rxlEwpA (JLjava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun redactForEventSource-8d2Qhxo (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun redactForEventSource-8d2Qhxo$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
 public final class io/cratis/chronicle/eventSequences/IEventSequence$DefaultImpls {
@@ -1205,7 +1215,9 @@ public final class io/cratis/chronicle/eventSequences/IEventSequence$DefaultImpl
 
 public abstract interface class io/cratis/chronicle/eventSequences/ITransactionalEventSequence {
 	public abstract fun append (Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun append$default (Lio/cratis/chronicle/eventSequences/ITransactionalEventSequence;Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun appendMany (Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun appendMany$default (Lio/cratis/chronicle/eventSequences/ITransactionalEventSequence;Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
 public final class io/cratis/chronicle/eventSequences/ITransactionalEventSequence$DefaultImpls {
@@ -1374,6 +1386,7 @@ public abstract interface class io/cratis/chronicle/eventSequences/operations/IE
 
 public abstract interface class io/cratis/chronicle/eventSequences/operations/IEventSourceOperations {
 	public abstract fun append (Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/time/Instant;Ljava/lang/String;)Lio/cratis/chronicle/eventSequences/operations/IEventSourceOperations;
+	public static synthetic fun append$default (Lio/cratis/chronicle/eventSequences/operations/IEventSourceOperations;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/time/Instant;Ljava/lang/String;ILjava/lang/Object;)Lio/cratis/chronicle/eventSequences/operations/IEventSourceOperations;
 	public abstract fun getAppendedEvents ()Ljava/util/List;
 	public abstract fun getConcurrencyScope ()Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScope;
 	public abstract fun getOperations ()Ljava/util/List;
@@ -1584,10 +1597,10 @@ public final class io/cratis/chronicle/events/migrations/EventTypeMigrationBuild
 }
 
 public abstract interface class io/cratis/chronicle/events/migrations/IEventTypeMigration {
-	public abstract fun downcast (Lio/cratis/chronicle/events/migrations/EventTypeMigrationBuilder;)V
+	public fun downcast (Lio/cratis/chronicle/events/migrations/EventTypeMigrationBuilder;)V
 	public abstract fun getSourceClass ()Lkotlin/reflect/KClass;
 	public abstract fun getTargetClass ()Lkotlin/reflect/KClass;
-	public abstract fun upcast (Lio/cratis/chronicle/events/migrations/EventTypeMigrationBuilder;)V
+	public fun upcast (Lio/cratis/chronicle/events/migrations/EventTypeMigrationBuilder;)V
 }
 
 public final class io/cratis/chronicle/events/migrations/IEventTypeMigration$DefaultImpls {
@@ -1616,7 +1629,9 @@ public final class io/cratis/chronicle/externalServices/ExternalServicesService 
 public abstract interface class io/cratis/chronicle/externalServices/IExternalServiceBuilder {
 	public abstract fun http (Ljava/lang/String;)Lio/cratis/chronicle/externalServices/IExternalServiceBuilder;
 	public abstract fun msSql (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)Lio/cratis/chronicle/externalServices/IExternalServiceBuilder;
+	public static synthetic fun msSql$default (Lio/cratis/chronicle/externalServices/IExternalServiceBuilder;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lio/cratis/chronicle/externalServices/IExternalServiceBuilder;
 	public abstract fun postgreSql (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)Lio/cratis/chronicle/externalServices/IExternalServiceBuilder;
+	public static synthetic fun postgreSql$default (Lio/cratis/chronicle/externalServices/IExternalServiceBuilder;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lio/cratis/chronicle/externalServices/IExternalServiceBuilder;
 	public abstract fun withBasicAuth (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/externalServices/IExternalServiceBuilder;
 	public abstract fun withBearerToken (Ljava/lang/String;)Lio/cratis/chronicle/externalServices/IExternalServiceBuilder;
 	public abstract fun withHeader (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/externalServices/IExternalServiceBuilder;
@@ -2142,7 +2157,7 @@ public abstract interface class io/cratis/chronicle/keys/ICompositeKeyBuilder {
 }
 
 public abstract interface class io/cratis/chronicle/keys/IKeyBuilder {
-	public abstract fun usingCompositeKey (Ljava/util/function/Consumer;)V
+	public fun usingCompositeKey (Ljava/util/function/Consumer;)V
 	public abstract fun usingCompositeKey (Lkotlin/jvm/functions/Function1;)V
 	public abstract fun usingKey (Lkotlin/reflect/KProperty1;)V
 	public abstract fun usingKeyFromContext (Ljava/lang/String;)V
@@ -2301,6 +2316,7 @@ public abstract interface class io/cratis/chronicle/observation/IFailedPartition
 	public abstract fun getFor (Lkotlin/reflect/KClass;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun retry (Lkotlin/reflect/KClass;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun retry-uzUZsrw (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun retry-uzUZsrw$default (Lio/cratis/chronicle/observation/IFailedPartitions;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
 public final class io/cratis/chronicle/observation/IFailedPartitions$DefaultImpls {
@@ -2641,7 +2657,7 @@ public abstract interface class io/cratis/chronicle/projections/IChildFromBuilde
 }
 
 public abstract interface class io/cratis/chronicle/projections/IChildrenBuilderFor {
-	public abstract fun from (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
+	public fun from (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
 	public abstract fun from (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
 	public abstract fun identifiedBy (Ljava/lang/String;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
 }
@@ -2668,7 +2684,7 @@ public abstract interface class io/cratis/chronicle/projections/IFromBuilderFor 
 	public abstract fun set (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISetBuilderFor;
 	public abstract fun subtract (Ljava/lang/String;)Lio/cratis/chronicle/projections/ISubtractBuilderFor;
 	public abstract fun subtract (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISubtractBuilderFor;
-	public abstract fun usingCompositeKey (Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public fun usingCompositeKey (Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun usingCompositeKey (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun usingConstantKey (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun usingKey (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
@@ -2696,11 +2712,12 @@ public abstract interface class io/cratis/chronicle/projections/IKeyBuilderFor {
 }
 
 public abstract interface class io/cratis/chronicle/projections/INestedBuilderFor {
-	public abstract fun clearWith (Ljava/lang/Class;)Lio/cratis/chronicle/projections/INestedBuilderFor;
+	public fun clearWith (Ljava/lang/Class;)Lio/cratis/chronicle/projections/INestedBuilderFor;
 	public abstract fun clearWith (Lkotlin/reflect/KClass;)Lio/cratis/chronicle/projections/INestedBuilderFor;
-	public abstract fun from (Ljava/lang/Class;)Lio/cratis/chronicle/projections/INestedBuilderFor;
-	public abstract fun from (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/INestedBuilderFor;
+	public fun from (Ljava/lang/Class;)Lio/cratis/chronicle/projections/INestedBuilderFor;
+	public fun from (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/INestedBuilderFor;
 	public abstract fun from (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/INestedBuilderFor;
+	public static synthetic fun from$default (Lio/cratis/chronicle/projections/INestedBuilderFor;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/cratis/chronicle/projections/INestedBuilderFor;
 }
 
 public final class io/cratis/chronicle/projections/INestedBuilderFor$DefaultImpls {
@@ -2714,26 +2731,30 @@ public abstract interface class io/cratis/chronicle/projections/IProjectionBuild
 	public abstract fun autoMap ()Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun children (Ljava/lang/String;Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun children (Lkotlin/reflect/KProperty1;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
-	public abstract fun from (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
-	public abstract fun from (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun from (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun from (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun from (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
-	public abstract fun fromAll (Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public static synthetic fun from$default (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun fromAll (Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun fromAll (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
-	public abstract fun fromEvery (Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun fromEvery (Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun fromEvery (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
-	public abstract fun join (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
-	public abstract fun join (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun join (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun join (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun join (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public static synthetic fun join$default (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun nested (Ljava/lang/String;Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun nested (Lkotlin/reflect/KProperty1;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun noAutoMap ()Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun notRewindable ()Lio/cratis/chronicle/projections/IProjectionBuilderFor;
-	public abstract fun removedWith (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
-	public abstract fun removedWith (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun removedWith (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun removedWith (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun removedWith (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
-	public abstract fun removedWithJoin (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
-	public abstract fun removedWithJoin (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public static synthetic fun removedWith$default (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun removedWithJoin (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun removedWithJoin (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun removedWithJoin (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public static synthetic fun removedWithJoin$default (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 }
 
 public final class io/cratis/chronicle/projections/IProjectionBuilderFor$DefaultImpls {
@@ -2759,6 +2780,7 @@ public abstract interface class io/cratis/chronicle/projections/IProjectionFor {
 
 public abstract interface class io/cratis/chronicle/projections/IProjectionsService {
 	public abstract fun query-s7YucsY (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun query-s7YucsY$default (Lio/cratis/chronicle/projections/IProjectionsService;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun register ([Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
@@ -3089,7 +3111,9 @@ public final class io/cratis/chronicle/projections/UnknownReadModelProperty : ja
 
 public abstract interface class io/cratis/chronicle/readModels/IMaterializedReadModels {
 	public abstract fun getInstances (Lkotlin/reflect/KClass;IILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun getInstances$default (Lio/cratis/chronicle/readModels/IMaterializedReadModels;Lkotlin/reflect/KClass;IILkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun observeInstances (Lkotlin/reflect/KClass;II)Lkotlinx/coroutines/flow/Flow;
+	public static synthetic fun observeInstances$default (Lio/cratis/chronicle/readModels/IMaterializedReadModels;Lkotlin/reflect/KClass;IIILjava/lang/Object;)Lkotlinx/coroutines/flow/Flow;
 }
 
 public final class io/cratis/chronicle/readModels/IMaterializedReadModels$DefaultImpls {
@@ -3109,10 +3133,12 @@ public abstract interface class io/cratis/chronicle/readModels/IReadModelsServic
 	public abstract fun dehydrateSession (Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getInstanceByKey (Lkotlin/reflect/KClass;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getInstances (Lkotlin/reflect/KClass;Ljava/lang/Long;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun getInstances$default (Lio/cratis/chronicle/readModels/IReadModelsService;Lkotlin/reflect/KClass;Ljava/lang/Long;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun getMaterialized ()Lio/cratis/chronicle/readModels/IMaterializedReadModels;
 	public abstract fun getSnapshotsById (Lkotlin/reflect/KClass;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun register ([Lkotlin/reflect/KClass;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun release (Ljava/lang/Object;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun release$default (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/lang/Object;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun releaseMany (Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun watch (Lkotlin/reflect/KClass;)Lkotlinx/coroutines/flow/Flow;
 }
@@ -3295,6 +3321,7 @@ public final class io/cratis/chronicle/sinks/WellKnownSinkTypes {
 
 public abstract interface class io/cratis/chronicle/transactions/IUnitOfWork {
 	public abstract fun addEvent-0WGEIS0 (Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;)V
+	public static synthetic fun addEvent-0WGEIS0$default (Lio/cratis/chronicle/transactions/IUnitOfWork;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;ILjava/lang/Object;)V
 	public abstract fun commit (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getAppendErrors ()Ljava/util/List;
 	public abstract fun getConcurrencyViolations ()Ljava/util/List;
@@ -3367,7 +3394,7 @@ public abstract interface class io/cratis/chronicle/webhooks/IWebhookDefinitionB
 	public abstract fun onEventSequence-WTFSefM (Ljava/lang/String;)Lio/cratis/chronicle/webhooks/IWebhookDefinitionBuilder;
 	public abstract fun withBasicAuth (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/webhooks/IWebhookDefinitionBuilder;
 	public abstract fun withBearerToken (Ljava/lang/String;)Lio/cratis/chronicle/webhooks/IWebhookDefinitionBuilder;
-	public abstract fun withEventType (Ljava/lang/Class;)Lio/cratis/chronicle/webhooks/IWebhookDefinitionBuilder;
+	public fun withEventType (Ljava/lang/Class;)Lio/cratis/chronicle/webhooks/IWebhookDefinitionBuilder;
 	public abstract fun withEventType (Lkotlin/reflect/KClass;)Lio/cratis/chronicle/webhooks/IWebhookDefinitionBuilder;
 	public abstract fun withHeader (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/webhooks/IWebhookDefinitionBuilder;
 	public abstract fun withOAuth (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/webhooks/IWebhookDefinitionBuilder;
