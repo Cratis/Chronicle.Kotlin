@@ -29,7 +29,7 @@ import kotlin.reflect.KClass
  *
  * Two .NET entries are deliberately absent: `uint`/`uint32` and `ulong`/`uint64`. Kotlin's unsigned
  * types ([UInt], [ULong]) are `@JvmInline value class`es whose constructors and accessors carry
- * mangled JVM signatures - see `.ai/rules/kotlin.md` - so they are never put on the Java surface,
+ * mangled JVM signatures (see the Kotlin guidance in Cratis/AI) - so they are never put on the Java surface,
  * and there is no other JVM type that means "unsigned integer".
  */
 internal object TypeFormats {
