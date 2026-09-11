@@ -8,7 +8,7 @@ group = "io.cratis"
 version = providers.gradleProperty("version").getOrElse("0.0.0-SNAPSHOT")
 
 val coroutinesVersion = "1.11.0"
-val chronicleContractsVersion = "18.1.0"
+val chronicleContractsVersion = "18.1.6"
 val dnsJavaVersion = "3.6.5"
 val classGraphVersion = "4.8.195"
 val openTelemetryVersion = "1.65.0"
