@@ -2560,6 +2560,10 @@ public abstract interface annotation class io/cratis/chronicle/projections/Count
 	public abstract fun value ()[Lio/cratis/chronicle/projections/Count;
 }
 
+public abstract interface annotation class io/cratis/chronicle/projections/CountFromAll : java/lang/annotation/Annotation {
+	public abstract fun keyFromContext ()Ljava/lang/String;
+}
+
 public abstract interface annotation class io/cratis/chronicle/projections/Decrement : java/lang/annotation/Annotation {
 	public abstract fun constantKey ()Ljava/lang/String;
 	public abstract fun eventType ()Ljava/lang/Class;
@@ -2567,6 +2571,10 @@ public abstract interface annotation class io/cratis/chronicle/projections/Decre
 
 public abstract interface annotation class io/cratis/chronicle/projections/Decrement$Container : java/lang/annotation/Annotation {
 	public abstract fun value ()[Lio/cratis/chronicle/projections/Decrement;
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/DecrementFromAll : java/lang/annotation/Annotation {
+	public abstract fun keyFromContext ()Ljava/lang/String;
 }
 
 public abstract interface annotation class io/cratis/chronicle/projections/FromAll : java/lang/annotation/Annotation {
@@ -2634,7 +2642,13 @@ public abstract interface annotation class io/cratis/chronicle/projections/FromE
 
 public final class io/cratis/chronicle/projections/FromEveryBuilderFor : io/cratis/chronicle/projections/IFromEveryBuilderFor {
 	public fun <init> (Lkotlin/reflect/KClass;)V
+	public fun count (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
+	public fun count (Lkotlin/reflect/KProperty1;Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
+	public fun decrement (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
+	public fun decrement (Lkotlin/reflect/KProperty1;Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public final fun getPropertyMappings ()Ljava/util/Map;
+	public fun increment (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
+	public fun increment (Lkotlin/reflect/KProperty1;Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public fun set (Ljava/lang/String;)Lio/cratis/chronicle/projections/IAllSetBuilderFor;
 	public fun set (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IAllSetBuilderFor;
 }
@@ -2695,6 +2709,12 @@ public final class io/cratis/chronicle/projections/IFromBuilderFor$DefaultImpls 
 }
 
 public abstract interface class io/cratis/chronicle/projections/IFromEveryBuilderFor {
+	public abstract fun count (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
+	public abstract fun count (Lkotlin/reflect/KProperty1;Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
+	public abstract fun decrement (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
+	public abstract fun decrement (Lkotlin/reflect/KProperty1;Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
+	public abstract fun increment (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
+	public abstract fun increment (Lkotlin/reflect/KProperty1;Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public abstract fun set (Ljava/lang/String;)Lio/cratis/chronicle/projections/IAllSetBuilderFor;
 	public abstract fun set (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IAllSetBuilderFor;
 }
@@ -2810,6 +2830,10 @@ public abstract interface annotation class io/cratis/chronicle/projections/Incre
 
 public abstract interface annotation class io/cratis/chronicle/projections/Increment$Container : java/lang/annotation/Annotation {
 	public abstract fun value ()[Lio/cratis/chronicle/projections/Increment;
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/IncrementFromAll : java/lang/annotation/Annotation {
+	public abstract fun keyFromContext ()Ljava/lang/String;
 }
 
 public final class io/cratis/chronicle/projections/InvalidPropertyForType : java/lang/IllegalArgumentException {

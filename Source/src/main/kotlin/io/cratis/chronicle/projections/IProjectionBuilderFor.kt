@@ -283,6 +283,57 @@ interface IFromEveryBuilderFor<TReadModel : Any> {
      * @throws UnknownReadModelProperty when [propertyName] is not a property of [TReadModel].
      */
     fun <TValue : Any?> set(propertyName: String): IAllSetBuilderFor<TReadModel, TValue>
+
+    /**
+     * Counts every event into a dictionary-typed property, with the key resolved from [EventContext].
+     * Each event increments the counter for the key produced by [keyFromContext].
+     *
+     * @param property The dictionary property (e.g., `Map<String, Long>`) to count into.
+     * @param keyFromContext The [EventContext] property name that provides the dictionary key (e.g., "eventType.id").
+     * @return This builder, for chaining.
+     */
+    fun <TValue : Any?> count(property: KProperty1<TReadModel, TValue>, keyFromContext: String): IFromEveryBuilderFor<TReadModel>
+
+    /**
+     * The same, by property name - for callers, such as Java, that cannot produce a [KProperty1].
+     *
+     * @throws UnknownReadModelProperty when [propertyName] is not a property of [TReadModel].
+     */
+    fun count(propertyName: String, keyFromContext: String): IFromEveryBuilderFor<TReadModel>
+
+    /**
+     * Increments a dictionary-typed property for each event, with the key resolved from [EventContext].
+     * Each event adds 1 to the value for the key produced by [keyFromContext].
+     *
+     * @param property The dictionary property to increment.
+     * @param keyFromContext The [EventContext] property name that provides the dictionary key.
+     * @return This builder, for chaining.
+     */
+    fun <TValue : Any?> increment(property: KProperty1<TReadModel, TValue>, keyFromContext: String): IFromEveryBuilderFor<TReadModel>
+
+    /**
+     * The same, by property name - for callers, such as Java, that cannot produce a [KProperty1].
+     *
+     * @throws UnknownReadModelProperty when [propertyName] is not a property of [TReadModel].
+     */
+    fun increment(propertyName: String, keyFromContext: String): IFromEveryBuilderFor<TReadModel>
+
+    /**
+     * Decrements a dictionary-typed property for each event, with the key resolved from [EventContext].
+     * Each event subtracts 1 from the value for the key produced by [keyFromContext].
+     *
+     * @param property The dictionary property to decrement.
+     * @param keyFromContext The [EventContext] property name that provides the dictionary key.
+     * @return This builder, for chaining.
+     */
+    fun <TValue : Any?> decrement(property: KProperty1<TReadModel, TValue>, keyFromContext: String): IFromEveryBuilderFor<TReadModel>
+
+    /**
+     * The same, by property name - for callers, such as Java, that cannot produce a [KProperty1].
+     *
+     * @throws UnknownReadModelProperty when [propertyName] is not a property of [TReadModel].
+     */
+    fun decrement(propertyName: String, keyFromContext: String): IFromEveryBuilderFor<TReadModel>
 }
 
 interface IAllSetBuilderFor<TReadModel : Any, TValue : Any?> {
