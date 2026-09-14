@@ -165,6 +165,22 @@ private data class WidgetAudit(
     val name: String = ""
 )
 
+// --- Dictionary counting from all events ---
+
+@ReadModel
+@FromEvent(WidgetCreated::class)
+@FromEvent(WidgetRenamed::class)
+private data class EventTypeStatistics(
+    @FromEventSourceId
+    val id: String = "",
+    @CountFromAll(keyFromContext = "eventType.id")
+    val eventCountByType: MutableMap<String, Long> = mutableMapOf(),
+    @IncrementFromAll(keyFromContext = "correlationId")
+    val eventCountByCorrelation: MutableMap<String, Long> = mutableMapOf(),
+    @DecrementFromAll(keyFromContext = "causedBy")
+    val eventCountByCausedBy: MutableMap<String, Long> = mutableMapOf()
+)
+
 // --- RemovedWith ---
 
 @EventType
@@ -441,6 +457,26 @@ class ProjectionsServiceTests {
     fun `FromAll defaults to the property's own name`() {
         val all = registerOne(WidgetAudit::class).all
         assertEquals("name", all.propertiesMap["name"])
+    }
+
+    // --- Dictionary counting from all events ---
+
+    @Test
+    fun `CountFromAll maps dictionary count with EventContext key`() {
+        val all = registerOne(EventTypeStatistics::class).all
+        assertEquals("\$count", all.propertiesMap["eventCountByType.\$eventContext.eventType.id"])
+    }
+
+    @Test
+    fun `IncrementFromAll maps dictionary increment with EventContext key`() {
+        val all = registerOne(EventTypeStatistics::class).all
+        assertEquals("\$increment", all.propertiesMap["eventCountByCorrelation.\$eventContext.correlationId"])
+    }
+
+    @Test
+    fun `DecrementFromAll maps dictionary decrement with EventContext key`() {
+        val all = registerOne(EventTypeStatistics::class).all
+        assertEquals("\$decrement", all.propertiesMap["eventCountByCausedBy.\$eventContext.causedBy"])
     }
 
     // --- @RemovedWith ---
