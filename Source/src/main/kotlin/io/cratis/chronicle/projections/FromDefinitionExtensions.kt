@@ -124,6 +124,18 @@ internal fun collectFromEveryDefinition(readModelClass: KClass<*>): ProjectionsO
         prop.findAnnotation<FromEventSourceId>()?.let {
             properties[prop.name] = EVENT_SOURCE_ID
         }
+        prop.findAnnotation<CountFromAll>()?.let { countFromAll ->
+            PropertyValidator.validatePropertyExists(EventContext::class, countFromAll.keyFromContext)
+            properties["${prop.name}.\$eventContext.${countFromAll.keyFromContext}"] = "\$count"
+        }
+        prop.findAnnotation<IncrementFromAll>()?.let { incrementFromAll ->
+            PropertyValidator.validatePropertyExists(EventContext::class, incrementFromAll.keyFromContext)
+            properties["${prop.name}.\$eventContext.${incrementFromAll.keyFromContext}"] = "\$increment"
+        }
+        prop.findAnnotation<DecrementFromAll>()?.let { decrementFromAll ->
+            PropertyValidator.validatePropertyExists(EventContext::class, decrementFromAll.keyFromContext)
+            properties["${prop.name}.\$eventContext.${decrementFromAll.keyFromContext}"] = "\$decrement"
+        }
     }
     if (properties.isEmpty()) return null
     return ProjectionsOuterClass.FromEveryDefinition.newBuilder()
