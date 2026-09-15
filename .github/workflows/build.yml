@@ -61,7 +61,7 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.13'
+          gradle-version: '8.14.4'
 
       # The whole workspace, not just the client: a change to the test-support module or an
       # integration has to be built and tested too, and apiCheck only runs as part of a module's
