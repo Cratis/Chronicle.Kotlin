@@ -354,6 +354,36 @@ class FromEveryBuilderFor<TReadModel : Any>(
 
     override fun <TValue : Any?> set(propertyName: String): IAllSetBuilderFor<TReadModel, TValue> =
         AllSetBuilderFor(propertyMappings, requireProperty(readModelClass, propertyName), this)
+
+    override fun <TValue : Any?> count(property: KProperty1<TReadModel, TValue>, keyFromContext: String): IFromEveryBuilderFor<TReadModel> {
+        propertyMappings["${property.name}.\$eventContext.$keyFromContext"] = "\$count"
+        return this
+    }
+
+    override fun count(propertyName: String, keyFromContext: String): IFromEveryBuilderFor<TReadModel> {
+        propertyMappings["${requireProperty(readModelClass, propertyName)}.\$eventContext.$keyFromContext"] = "\$count"
+        return this
+    }
+
+    override fun <TValue : Any?> increment(property: KProperty1<TReadModel, TValue>, keyFromContext: String): IFromEveryBuilderFor<TReadModel> {
+        propertyMappings["${property.name}.\$eventContext.$keyFromContext"] = "\$increment"
+        return this
+    }
+
+    override fun increment(propertyName: String, keyFromContext: String): IFromEveryBuilderFor<TReadModel> {
+        propertyMappings["${requireProperty(readModelClass, propertyName)}.\$eventContext.$keyFromContext"] = "\$increment"
+        return this
+    }
+
+    override fun <TValue : Any?> decrement(property: KProperty1<TReadModel, TValue>, keyFromContext: String): IFromEveryBuilderFor<TReadModel> {
+        propertyMappings["${property.name}.\$eventContext.$keyFromContext"] = "\$decrement"
+        return this
+    }
+
+    override fun decrement(propertyName: String, keyFromContext: String): IFromEveryBuilderFor<TReadModel> {
+        propertyMappings["${requireProperty(readModelClass, propertyName)}.\$eventContext.$keyFromContext"] = "\$decrement"
+        return this
+    }
 }
 
 class AllSetBuilderFor<TReadModel : Any, TValue : Any?>(

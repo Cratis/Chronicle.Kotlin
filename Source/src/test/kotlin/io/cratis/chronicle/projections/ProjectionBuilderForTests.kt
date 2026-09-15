@@ -30,7 +30,8 @@ private data class Order(
     val lines: List<OrderLine> = emptyList(),
     val summary: OrderSummary? = null,
     val version: Int = 0,
-    val totalQuantity: Int = 0
+    val totalQuantity: Int = 0,
+    val eventCountByType: MutableMap<String, Long> = mutableMapOf()
 )
 
 private data class OrderSummary(val note: String)
@@ -241,5 +242,62 @@ class ProjectionBuilderForTests {
         assertThrows(UnknownReadModelProperty::class.java) {
             builder.from(OrderPlaced::class) { it.set<String>("doesNotExist").toProperty("customerId") }
         }
+    }
+
+    @Test
+    fun `fromAll count with EventContext key produces a dictionary property path with dollar-count`() {
+        val builder = ProjectionBuilderFor(Order::class)
+        builder.fromAll { it.count(Order::eventCountByType, "eventType.id") }
+        assertEquals(
+            mapOf("eventCountByType.\$eventContext.eventType.id" to "\$count"),
+            builder.fromEveryProperties
+        )
+    }
+
+    @Test
+    fun `fromAll count by property name produces the same mapping as the KProperty1 form`() {
+        val byProperty = ProjectionBuilderFor(Order::class)
+        byProperty.fromAll { it.count(Order::eventCountByType, "eventType.id") }
+
+        val byName = ProjectionBuilderFor(Order::class)
+        byName.fromAll { it.count("eventCountByType", "eventType.id") }
+
+        assertEquals(byProperty.fromEveryProperties, byName.fromEveryProperties)
+    }
+
+    @Test
+    fun `fromEvery increment with EventContext key produces a dictionary property path with dollar-increment`() {
+        val builder = ProjectionBuilderFor(Order::class)
+        builder.fromEvery { it.increment(Order::eventCountByType, "eventType.id") }
+        assertEquals(
+            mapOf("eventCountByType.\$eventContext.eventType.id" to "\$increment"),
+            builder.fromEveryProperties
+        )
+    }
+
+    @Test
+    fun `fromAll decrement with EventContext key produces a dictionary property path with dollar-decrement`() {
+        val builder = ProjectionBuilderFor(Order::class)
+        builder.fromAll { it.decrement(Order::eventCountByType, "eventType.id") }
+        assertEquals(
+            mapOf("eventCountByType.\$eventContext.eventType.id" to "\$decrement"),
+            builder.fromEveryProperties
+        )
+    }
+
+    @Test
+    fun `fromAll can combine dictionary count with other property mappings`() {
+        val builder = ProjectionBuilderFor(Order::class)
+        builder.fromAll { feb ->
+            feb.count(Order::eventCountByType, "eventType.id")
+            feb.set(Order::customerName).toEventContextProperty("causedBy")
+        }
+        assertEquals(
+            mapOf(
+                "eventCountByType.\$eventContext.eventType.id" to "\$count",
+                "customerName" to "\$eventContext(causedBy)"
+            ),
+            builder.fromEveryProperties
+        )
     }
 }
