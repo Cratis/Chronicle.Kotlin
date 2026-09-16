@@ -202,6 +202,7 @@ class InMemoryEventSequence(
                     "which is what the kernel would insist on too"
             )
 
+        val route = InMemoryEventRoute.resolve(options)
         return EventContext(
             sequenceNumber = sequenceNumber,
             eventSourceId = eventSourceId,
@@ -213,9 +214,9 @@ class InMemoryEventSequence(
             occurred = options?.occurred ?: Instant.now(),
             correlationId = options?.correlationId ?: correlationIdManager.current,
             causedBy = identityProvider.currentIdentity,
-            eventSourceType = options?.eventSourceType ?: AppendOptionsDefaults.EVENT_SOURCE_TYPE,
-            eventStreamType = options?.eventStreamType ?: AppendOptionsDefaults.EVENT_STREAM_TYPE,
-            eventStreamId = options?.eventStreamId ?: eventSourceId,
+            eventSourceType = route.eventSourceType,
+            eventStreamType = route.eventStreamType,
+            eventStreamId = route.eventStreamId,
             eventStore = eventStoreName,
             namespace = namespace,
             causation = options?.causation?.ifEmpty { null } ?: causationManager.currentChain,
@@ -235,9 +236,8 @@ class InMemoryEventSequence(
     )
 }
 
-/** The defaults the kernel applies when an append does not name them. */
+/** The existing stream-completion sentinel; independent of append routing resolution. */
 internal object AppendOptionsDefaults {
-    const val EVENT_SOURCE_TYPE = "Default"
     const val EVENT_STREAM_TYPE = "Default"
 }
 

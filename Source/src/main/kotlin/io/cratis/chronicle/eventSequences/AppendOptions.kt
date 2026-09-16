@@ -11,8 +11,8 @@ import java.util.UUID
 /**
  * Options that can be supplied when appending events to an event sequence.
  *
- * Every property is optional and falls back to the same default the client has always used, so
- * supplying no options appends exactly as before.
+ * Every property is optional. Routing is forwarded without client-side defaults: missing or empty
+ * routing values are resolved by the kernel; every explicit nonempty value is preserved.
  *
  * The constructor is `@JvmOverloads` so that Java callers keep the shorter positional forms they
  * already compile against. For anything beyond the first argument or two, Java should prefer
@@ -22,10 +22,9 @@ import java.util.UUID
  *   Defaults to the current [io.cratis.chronicle.correlation.CorrelationIdManager] value.
  * @property concurrencyScope [ConcurrencyScope] to use for concurrency control.
  *   Defaults to [ConcurrencyScope.none], which does not concurrency-check the append.
- * @property eventSourceType The type of the event source. Defaults to `Default`.
- * @property eventStreamType The type of the event stream to append to. Defaults to `Default`.
- * @property eventStreamId The identifier of the event stream to append to.
- *   Defaults to the event source identifier.
+ * @property eventSourceType The type of the event source. Missing/empty uses the kernel default.
+ * @property eventStreamType The type of the event stream. Missing/empty uses the kernel default.
+ * @property eventStreamId The identifier of the event stream. Missing/empty uses the kernel default.
  * @property subject The compliance subject this event is about, which is what PII is held against.
  *   Defaults to the event source identifier - set this when the subject is someone other than the
  *   event source.
@@ -50,10 +49,10 @@ data class AppendOptions @JvmOverloads constructor(
     val causation: List<Causation> = emptyList()
 ) {
     internal companion object {
-        /** The event source type used when none is specified. */
+        /** Legacy JVM constant retained for compatibility; request construction does not apply it. */
         const val DEFAULT_EVENT_SOURCE_TYPE = "Default"
 
-        /** The event stream type used when none is specified. */
+        /** Legacy JVM constant retained for compatibility; request construction does not apply it. */
         const val DEFAULT_EVENT_STREAM_TYPE = "Default"
     }
 }

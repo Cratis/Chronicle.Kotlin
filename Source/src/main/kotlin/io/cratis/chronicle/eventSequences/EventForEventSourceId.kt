@@ -26,9 +26,9 @@ import java.time.Instant
  *
  * @property eventSourceId The identifier of the event source to append [event] to.
  * @property event The event object to append. Must be annotated with [@EventType][io.cratis.chronicle.events.EventType].
- * @property eventStreamType The type of the event stream to append to. Defaults to `Default`.
- * @property eventStreamId The identifier of the event stream to append to. Defaults to [eventSourceId].
- * @property eventSourceType The type of the event source. Defaults to `Default`.
+ * @property eventStreamType The type of the event stream. Missing/empty uses the kernel default.
+ * @property eventStreamId The identifier of the event stream. Missing/empty uses the kernel default.
+ * @property eventSourceType The type of the event source. Missing/empty uses the kernel default.
  * @property tags Tags to attach to the event. Observers can be filtered by tag.
  * @property occurred When the event actually occurred. Defaults to the time the kernel appends it -
  *   set this when importing or backfilling events that happened earlier.

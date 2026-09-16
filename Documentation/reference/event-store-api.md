@@ -303,9 +303,9 @@ sealed class CompleteStreamResult {
 
 `completeStream` marks an event stream type/id pair as closed so no further
 events can be appended to it, returning a `CompleteStreamResult`. The
-default stream (`"Default"` paired with the default event stream id, the
-one every plain `append`/`appendMany` call writes to) can never be
-completed. Completing an already-completed stream returns
+kernel's protected default stream cannot be completed; it returns
+`DefaultStreamCannotBeCompleted`. Do not infer this rule from client-side
+routing defaults. Completing an already-completed stream returns
 `CompleteStreamResult.AlreadyCompleted` rather than throwing.
 
 ### Observing appends: `appendOperations`
@@ -331,8 +331,14 @@ data class AppendedEventWithResult(
 
 ### Concurrency control
 
+Routing values in `AppendOptions` and `EventForEventSourceId` are forwarded
+unchanged. Missing or empty routing is resolved by the kernel, not by the
+client. Explicit values such as `Default` or an event-source id are never
+rewritten. See [Migrate append routing](../guides/migrate-append-routing.md)
+for the breaking default-route change and legacy-route examples.
+
 Optimistic concurrency is opt-in per append, via
-`AppendOptions.concurrencyScope`:
+`AppendOptions.concurrencyScope`; its defaults are independent of routing:
 
 <!-- validate: skip -->
 

@@ -88,10 +88,10 @@ open class EventSequence(
             this.namespace = ns
             this.eventSequenceId = id.value
             this.correlationId = correlationId.toContractsGuid()
-            this.eventSourceType = options.eventSourceTypeOrDefault()
+            options?.eventSourceType?.let { this.eventSourceType = it }
             this.eventSourceId = eventSourceId
-            this.eventStreamType = options.eventStreamTypeOrDefault()
-            this.eventStreamId = options.eventStreamIdOrDefault(eventSourceId)
+            options?.eventStreamType?.let { this.eventStreamType = it }
+            options?.eventStreamId?.let { this.eventStreamId = it }
             this.eventType = eventType.toContractsEventType()
             this.content = content
             addAllCausation(causationChain.map { c -> c.toContractsCausation() })
@@ -126,7 +126,30 @@ open class EventSequence(
         registrationGate.awaitOpen()
 
         return traces.span("Chronicle appendMany", appendManyAttributes(events.size)) {
-            appendManyInternal(eventSourceId, events, options)
+            // AppendManyRequest has no routing fields. The rich endpoint preserves supplied routes
+            // without changing the ordinary batch's single-source concurrency default.
+            if (options != null && (options.eventSourceType != null ||
+                    options.eventStreamType != null || options.eventStreamId != null)) {
+                appendManyForEventSourcesInternal(
+                    events.map { event ->
+                        EventForEventSourceId(
+                            eventSourceId = eventSourceId,
+                            event = event,
+                            eventSourceType = options.eventSourceType,
+                            eventStreamType = options.eventStreamType,
+                            eventStreamId = options.eventStreamId,
+                            subject = options.subject,
+                            occurred = options.occurred,
+                            tags = options.tags,
+                            causation = options.causation
+                        )
+                    },
+                    mapOf(eventSourceId to (options.concurrencyScope ?: ConcurrencyScope.none)),
+                    options.correlationId
+                )
+            } else {
+                appendManyInternal(eventSourceId, events, options)
+            }
         }
     }
 
@@ -268,7 +291,7 @@ open class EventSequence(
         }.build()
 
         val response = stub.forEventSourceIdAndEventTypes(request).ensureSuccess("for event source id and event types")
-        return response.dataList.map { it.toClient() }
+        return response.dataList.map { it.toClient(esName, ns) }
     }
 
     override suspend fun getFromSequenceNumber(
@@ -288,7 +311,7 @@ open class EventSequence(
         }.build()
 
         val response = stub.fromSequenceNumber(request).ensureSuccess("from sequence number")
-        return response.dataList.map { it.toClient() }
+        return response.dataList.map { it.toClient(esName, ns) }
     }
 
     override suspend fun getNextSequenceNumber(): EventSequenceNumber {
@@ -442,8 +465,8 @@ open class EventSequence(
 
     /**
      * The minimal shape carried inside a single-event-source [Sequences.AppendManyRequest] batch,
-     * where the event source and stream are shared, top-level fields on the request rather than
-     * repeated per event.
+     * where the event source is shared at the request level. This endpoint has no routing fields;
+     * batches with routing options use the rich endpoint instead.
      */
     private fun EventForEventSourceId.toContract(): Sequences.EventToAppend =
         Sequences.EventToAppend.newBuilder()
@@ -456,15 +479,15 @@ open class EventSequence(
      * The rich shape carried inside an [Sequences.AppendManyForEventSourcesRequest] batch, where each
      * event names its own event source and stream since the batch can span many of both.
      *
-     * Every unset field falls back to the same default the client has always used, resolved against
-     * the event's own event source id rather than a batch-wide one.
+     * Routing is sent only when supplied; the kernel owns missing/empty routing defaults.
+     * Subject fallback remains independent of routing.
      */
     private fun EventForEventSourceId.toContractForEventSource(): Sequences.EventForEventSourceId =
         Sequences.EventForEventSourceId.newBuilder().apply {
-            this.eventSourceType = this@toContractForEventSource.eventSourceType ?: AppendOptions.DEFAULT_EVENT_SOURCE_TYPE
+            this@toContractForEventSource.eventSourceType?.let { this.eventSourceType = it }
             this.eventSourceId = this@toContractForEventSource.eventSourceId
-            this.eventStreamType = this@toContractForEventSource.eventStreamType ?: AppendOptions.DEFAULT_EVENT_STREAM_TYPE
-            this.eventStreamId = this@toContractForEventSource.eventStreamId ?: this@toContractForEventSource.eventSourceId
+            this@toContractForEventSource.eventStreamType?.let { this.eventStreamType = it }
+            this@toContractForEventSource.eventStreamId?.let { this.eventStreamId = it }
             this.eventType = resolveEventType(this@toContractForEventSource.event).toContractsEventType()
             this.content = chronicleGson.toJson(this@toContractForEventSource.event)
             this.subject = this@toContractForEventSource.subject ?: this@toContractForEventSource.eventSourceId
@@ -585,20 +608,6 @@ open class EventSequence(
 // -------------------------------------------------------------------------
 
 /**
- * The append-shaping options below are read through these helpers so that `null` options and an
- * options object with the field unset behave identically, and so the defaults are stated once.
- */
-private fun AppendOptions?.eventSourceTypeOrDefault(): String =
-    this?.eventSourceType ?: AppendOptions.DEFAULT_EVENT_SOURCE_TYPE
-
-private fun AppendOptions?.eventStreamTypeOrDefault(): String =
-    this?.eventStreamType ?: AppendOptions.DEFAULT_EVENT_STREAM_TYPE
-
-/** The event stream defaults to one per event source, which is how the client has always appended. */
-private fun AppendOptions?.eventStreamIdOrDefault(eventSourceId: String): String =
-    this?.eventStreamId ?: eventSourceId
-
-/**
  * The compliance subject defaults to the event source, matching the .NET client - the event is
  * about the thing it happened to unless the caller says otherwise.
  */
@@ -670,44 +679,6 @@ private fun ChronicleIdentity.toContractsIdentity(): Sequences.Identity {
     onBehalfOf?.let { builder.setOnBehalfOf(it.toContractsIdentity()) }
     return builder.build()
 }
-
-private fun Bcl.Guid.toUUID(): UUID {
-    // Inverse of UUID.toContractsGuid(): reverse each half back to Java's big-endian representation.
-    val mostSignificantBits = java.lang.Long.reverseBytes(lo)
-    val leastSignificantBits = java.lang.Long.reverseBytes(hi)
-    return UUID(mostSignificantBits, leastSignificantBits)
-}
-
-private fun Sequences.Identity.toClient(): ChronicleIdentity = ChronicleIdentity(
-    subject = subject,
-    name = name,
-    userName = userName,
-    onBehalfOf = if (hasOnBehalfOf()) onBehalfOf.toClient() else null
-)
-
-private fun Sequences.EventContext.toClient(): io.cratis.chronicle.events.EventContext {
-    val occurredInstant = try {
-        Instant.parse(occurred.value)
-    } catch (e: Exception) {
-        Instant.now()
-    }
-    return io.cratis.chronicle.events.EventContext(
-        sequenceNumber = sequenceNumber,
-        eventSourceId = eventSourceId,
-        eventType = EventTypeDescriptor(
-            id = io.cratis.chronicle.events.EventTypeId(eventType.id),
-            generation = io.cratis.chronicle.events.EventTypeGeneration(eventType.generation)
-        ),
-        occurred = occurredInstant,
-        correlationId = correlationId.toUUID(),
-        causedBy = causedBy.toClient()
-    )
-}
-
-private fun Sequences.AppendedEventResponse.toClient(): AppendedEvent = AppendedEvent(
-    context = context.toClient(),
-    content = content
-)
 
 // -------------------------------------------------------------------------
 // Command/query envelope unwrapping

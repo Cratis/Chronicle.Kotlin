@@ -21,8 +21,7 @@ private data class OptionsEventHappened(val value: String)
 
 /**
  * The append-shaping options are only observable on the wire, so these capture the request the
- * client builds. The defaults matter as much as the overrides - appending without options has to
- * keep producing exactly what it always did.
+ * client builds. Routing defaults belong to the kernel; all other option defaults stay unchanged.
  */
 class AppendOptionsTests {
 
@@ -41,13 +40,13 @@ class AppendOptionsTests {
         EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
 
     @Test
-    fun `append without options keeps the previous defaults`() = runBlocking {
+    fun `append without options leaves routing to the kernel`() = runBlocking {
         val request = slot<Sequences.AppendRequest>()
         sequenceFor(stubCapturing(request)).append("source-1", OptionsEventHappened("hello"))
 
-        assertEquals("Default", request.captured.eventSourceType)
-        assertEquals("Default", request.captured.eventStreamType)
-        assertEquals("source-1", request.captured.eventStreamId)
+        assertEquals("", request.captured.eventSourceType)
+        assertEquals("", request.captured.eventStreamType)
+        assertEquals("", request.captured.eventStreamId)
         assertEquals("source-1", request.captured.subject)
         assertTrue(request.captured.tagsList.isEmpty())
         assertFalse(request.captured.hasOccurred())
