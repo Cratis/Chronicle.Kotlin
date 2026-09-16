@@ -3,6 +3,8 @@
 
 package io.cratis.chronicle
 
+import Cratis.Chronicle.Contracts.Clients.Clients
+import Cratis.Chronicle.Contracts.Clients.ConnectionServiceGrpcKt
 import Cratis.Chronicle.Contracts.EventStores.EventStoresGrpcKt
 import Cratis.Chronicle.Contracts.EventStores.Eventstores
 import com.google.protobuf.Empty
@@ -38,6 +40,10 @@ class ChronicleClientTests {
         }
         return Grpc.newServerBuilderForPort(0, InsecureServerCredentials.create())
             .addService(impl)
+            .addService(object : ConnectionServiceGrpcKt.ConnectionServiceCoroutineImplBase() {
+                override suspend fun checkCompatibility(request: Clients.CompatibilityRequest): Clients.CompatibilityResponse =
+                    Clients.CompatibilityResponse.newBuilder().setIsCompatible(true).build()
+            })
             .build()
             .start()
             .also { server = it }
