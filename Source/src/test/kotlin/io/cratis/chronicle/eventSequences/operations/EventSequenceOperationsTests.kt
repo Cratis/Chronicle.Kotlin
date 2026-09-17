@@ -123,9 +123,9 @@ class EventSequenceOperationsTests {
         assertEquals(listOf("gdpr"), first.tagsList)
 
         val second = request.captured.eventsList[1]
-        // Everything unset falls back to the same defaults a plain append uses.
-        assertEquals("Default", second.eventStreamType)
-        assertEquals("visit-1", second.eventStreamId)
+        // Missing routes remain omitted so the kernel owns their defaults.
+        assertEquals("", second.eventStreamType)
+        assertEquals("", second.eventStreamId)
         assertEquals("patient-42", second.subject)
     }
 

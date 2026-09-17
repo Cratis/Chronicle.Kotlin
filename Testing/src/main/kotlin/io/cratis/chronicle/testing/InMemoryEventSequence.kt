@@ -135,7 +135,12 @@ class InMemoryEventSequence(
     ): List<AppendedEvent> {
         val wanted = eventTypes.map { it.eventTypeId() }.toSet()
         return appended.filter {
-            it.context.eventSourceId == eventSourceId && it.context.eventType.id.value in wanted
+            it.context.eventSourceId == eventSourceId &&
+                it.context.eventType.id.value in wanted &&
+                it.context.eventStreamType.matches(eventStreamType) &&
+                it.context.eventStreamId.matches(eventStreamId)
+            // eventSourceType is deliberately not applied: the kernel's event-source query carries no
+            // such filter, so narrowing here would let a spec pass that the kernel would fail.
         }
     }
 
@@ -190,6 +195,14 @@ class InMemoryEventSequence(
     /** Whether the event at [sequenceNumber] has been redacted. */
     fun isRedacted(sequenceNumber: Long): Boolean = sequenceNumber in redacted
 
+    /**
+     * Whether a stored route satisfies a read's filter, on the kernel's terms: a missing or empty
+     * filter does not narrow, and anything else has to match what was stored. An append that named
+     * no route is stored on the kernel's defaults, so a read narrowed to a legacy route genuinely
+     * does not see it - and a double that ignored the filter would hide that.
+     */
+    private fun String.matches(filter: String?): Boolean = filter.isNullOrEmpty() || this == filter
+
     private fun contextFor(
         eventSourceId: String,
         event: Any,
@@ -202,6 +215,7 @@ class InMemoryEventSequence(
                     "which is what the kernel would insist on too"
             )
 
+        val route = InMemoryEventRoute.resolve(options)
         return EventContext(
             sequenceNumber = sequenceNumber,
             eventSourceId = eventSourceId,
@@ -213,9 +227,9 @@ class InMemoryEventSequence(
             occurred = options?.occurred ?: Instant.now(),
             correlationId = options?.correlationId ?: correlationIdManager.current,
             causedBy = identityProvider.currentIdentity,
-            eventSourceType = options?.eventSourceType ?: AppendOptionsDefaults.EVENT_SOURCE_TYPE,
-            eventStreamType = options?.eventStreamType ?: AppendOptionsDefaults.EVENT_STREAM_TYPE,
-            eventStreamId = options?.eventStreamId ?: eventSourceId,
+            eventSourceType = route.eventSourceType,
+            eventStreamType = route.eventStreamType,
+            eventStreamId = route.eventStreamId,
             eventStore = eventStoreName,
             namespace = namespace,
             causation = options?.causation?.ifEmpty { null } ?: causationManager.currentChain,
@@ -235,9 +249,8 @@ class InMemoryEventSequence(
     )
 }
 
-/** The defaults the kernel applies when an append does not name them. */
+/** The existing stream-completion sentinel; independent of append routing resolution. */
 internal object AppendOptionsDefaults {
-    const val EVENT_SOURCE_TYPE = "Default"
     const val EVENT_STREAM_TYPE = "Default"
 }
 

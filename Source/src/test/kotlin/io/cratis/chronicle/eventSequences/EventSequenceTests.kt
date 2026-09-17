@@ -212,9 +212,9 @@ class EventSequenceTests {
 
         io.mockk.coVerify(exactly = 1) { stub.appendManyForEventSources(any(), any()) }
         assertEquals(listOf("source-1", "source-2"), manyRequest.captured.eventsList.map { it.eventSourceId })
-        // Each event resolves its own defaults against its own event source id.
-        assertEquals("Default", manyRequest.captured.eventsList[0].eventStreamType)
-        assertEquals("source-1", manyRequest.captured.eventsList[0].eventStreamId)
+        // Missing routing remains omitted; only the kernel resolves defaults.
+        assertEquals("", manyRequest.captured.eventsList[0].eventStreamType)
+        assertEquals("", manyRequest.captured.eventsList[0].eventStreamId)
         assertEquals("Onboarding", manyRequest.captured.eventsList[1].eventStreamType)
         assertEquals("source-2", manyRequest.captured.eventsList[1].subject)
         assertEquals(2, results.size)

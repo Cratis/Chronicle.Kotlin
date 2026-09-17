@@ -22,18 +22,20 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
      * [rebuildChannel] possible: stubs live as long as this connection, while the managed
      * channel underneath is replaced whenever the session drops.
      */
-    private val channel: SwappableChannel by lazy {
+    private val channelDelegate = lazy {
         SwappableChannel(runBlocking(Dispatchers.IO) { dial() })
     }
+    private val channel: SwappableChannel by channelDelegate
 
     val services: ChronicleServices by lazy { ChronicleServices(channel) }
 
-    private val connectionManager: ConnectionManager by lazy {
+    private val connectionManagerDelegate = lazy {
         ConnectionManager(
             KeepAliveConnections(services.connection),
             refreshChannel = { rebuildChannel() }
         ).also { it.connect() }
     }
+    private val connectionManager: ConnectionManager by connectionManagerDelegate
 
     /** Tracks whether the client is connected, and under which connection ID. */
     val lifecycle: ConnectionLifecycle get() = connectionManager.lifecycle
@@ -60,7 +62,14 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
             connectionString.createCredentials()
         )
         builder.intercept(BearerTokenInterceptor(createTokenProvider(address)))
-        return builder.build()
+        val managed = builder.build()
+        try {
+            CompatibilityPreflight.verify(managed)
+            return managed
+        } catch (error: Throwable) {
+            managed.shutdownNow()
+            throw error
+        }
     }
 
     /**
@@ -114,7 +123,8 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
     }
 
     fun disconnect() {
-        connectionManager.close()
+        if (connectionManagerDelegate.isInitialized()) connectionManager.close()
+        if (!channelDelegate.isInitialized()) return
         val managed = channel.current
         if (!managed.isShutdown) {
             managed.shutdown()

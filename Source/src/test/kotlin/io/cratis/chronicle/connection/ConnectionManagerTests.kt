@@ -187,6 +187,27 @@ class ConnectionManagerTests {
     }
 
     @Test
+    fun `a failed compatibility check during refresh stays inside the reconnect boundary`() = runTest {
+        val connections = FakeConnections(keepAlives = 0, thenFail = true)
+        var refreshes = 0
+        val manager = managerFor(connections) {
+            refreshes++
+            // CompatibilityPreflight rejects an incompatible server with this exception type.
+            throw IllegalStateException("Chronicle server is incompatible. No operations were sent.")
+        }
+
+        try {
+            manager.connect()
+            advanceTimeBy(120_000)
+            assertTrue(refreshes >= 2, "expected contained refresh failures, got $refreshes")
+            assertEquals(1, connections.connectCount)
+            assertFalse(manager.lifecycle.isConnected)
+        } finally {
+            manager.close()
+        }
+    }
+
+    @Test
     fun `stops reporting a connection once disconnected`() = runTest {
         val manager = managerFor(FakeConnections(keepAlives = 1))
 

@@ -25,6 +25,7 @@ import java.util.UUID
  * @property causation The chain describing what caused this event.
  * @property tags The tags associated with this event.
  * @property hash The hash of the event content.
+ * @property subject The compliance subject acknowledged by the kernel, or empty when not supplied.
  * @property observationState The [EventObservationState] this event is being observed in.
  *   Use this to tell a live event from one arriving during a replay.
  */
@@ -43,5 +44,6 @@ data class EventContext(
     val causation: List<Causation> = emptyList(),
     val tags: List<String> = emptyList(),
     val hash: String = "",
-    val observationState: EventObservationState = EventObservationState.none
+    val observationState: EventObservationState = EventObservationState.none,
+    val subject: String = ""
 )

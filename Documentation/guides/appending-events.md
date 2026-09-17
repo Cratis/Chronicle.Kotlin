@@ -16,6 +16,9 @@ Use the [Kotlin get started
 page](/chronicle/clients/kotlin/get-started/) for JVM setup before running
 the shared examples.
 
+For the breaking change to omitted routing defaults and explicit legacy
+routes, see [Migrate append routing](migrate-append-routing.md).
+
 ## Kotlin client: `IEventSequence` and `IEventLog`
 
 Beyond `append`/`appendMany`, the Kotlin client's `store.eventLog` (and any
