@@ -11,7 +11,9 @@ Existing stored events are not moved or rewritten.
 ## Check the route your application needs
 
 With the matching kernel release, omitted or empty routing resolves as
-follows. Upgrade the kernel before deploying the new client.
+follows. Upgrade every kernel node before deploying the new client.
+The client verifies its contract descriptor before exposing each channel;
+an unsupported kernel cannot receive an append.
 
 | Route field | Previous single/rich-batch default | Kernel-owned default |
 | --- | --- | --- |
@@ -107,8 +109,6 @@ Read newly appended events back and check their route and metadata using
 `getForEventSourceIdAndEventTypes` or `getFromSequenceNumber`. These reads
 carry stored routing rather than guessing it from the append request.
 
-Do not use local `appendOperations` notifications as proof of stored
-routing until authoritative append receipts are supported. The in-memory
-testing sequence emulates the canonical kernel route defaults for fast
-specifications, but it is a server test double, not an integration test.
-Verify the deployed kernel's behavior before switching production routes.
+`EventContext` now carries the compliance `subject` the kernel stored, which
+changes its constructor and copy signatures. Recompile JVM consumers, including
+Java callers, when upgrading.

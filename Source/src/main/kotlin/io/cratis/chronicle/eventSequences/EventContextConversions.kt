@@ -38,7 +38,8 @@ internal fun Sequences.AppendedEventResponse.toClient(eventStore: String, namesp
             causation = context.causationList.map { it.toClient() },
             tags = context.tagsList.toList(),
             hash = context.hash,
-            observationState = EventObservationState(context.observationStateValue)
+            observationState = EventObservationState(context.observationStateValue),
+            subject = context.subject
         ),
         content = content
     )
