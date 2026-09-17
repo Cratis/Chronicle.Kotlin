@@ -262,10 +262,15 @@ Narrowing is opt-in everywhere here: a missing or empty filter means "do not
 narrow", and no read, tail, or observer tail substitutes a route of its own.
 Since the kernel resolves an append that named no route onto stream type `All`
 and stream id `Default`, narrowing a read to `eventStreamType = "Default"`
-returns none of those events. The `eventSourceType` parameter of
-`getForEventSourceIdAndEventTypes` is the one exception to "narrowing works":
-the kernel's event-source query carries no such filter, so it is not applied —
-read the stored type off the event context instead.
+returns none of those events. The same holds for `eventSourceType`, where
+`Default` and an unspecified value both mean "do not narrow".
+
+:::caution[Requires Chronicle 18.5.0]
+Before 18.5.0 the request carried no event source type field, so the
+`eventSourceType` parameter of `getForEventSourceIdAndEventTypes` was accepted
+and silently discarded — a caller that narrowed by it got every source type
+back with no way to tell. Against an older kernel it still does nothing.
+:::
 
 <!-- validate: skip -->
 
