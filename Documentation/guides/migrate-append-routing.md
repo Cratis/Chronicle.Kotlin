@@ -103,6 +103,51 @@ the event-source id, while an explicit subject is forwarded unchanged.
 Occurred time, tags, causation, identity, and correlation are retained when
 a single-source batch uses explicit routing.
 
+## Check how your reads narrow
+
+Reads narrow only by what you pass. A missing or empty filter means "do not
+narrow", which is how the kernel reads an unspecified value - the client never
+substitutes a route of its own on a read, a tail lookup, or an observer tail.
+
+The consequence is worth stating plainly, because it is the easiest way to lose
+sight of new events after upgrading: an append that named no route is stored on
+stream type `All` and stream id `Default`. A read narrowed to the route this
+client used to choose - `eventStreamType = "Default"` - therefore returns none
+of those events. It is a filter doing its job, not missing data.
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.eventSequences.AppendedEvent
+import io.cratis.chronicle.eventSequences.IEventSequence
+import kotlin.reflect.KClass
+
+/** Every event for the source, whatever route the kernel resolved. */
+suspend fun readEveryRoute(
+    sequence: IEventSequence,
+    eventSourceId: String,
+    eventTypes: List<KClass<*>>
+): List<AppendedEvent> =
+    sequence.getForEventSourceIdAndEventTypes(eventSourceId, eventTypes)
+
+/** Only the events the kernel routed by default. */
+suspend fun readKernelDefaultRoute(
+    sequence: IEventSequence,
+    eventSourceId: String,
+    eventTypes: List<KClass<*>>
+): List<AppendedEvent> = sequence.getForEventSourceIdAndEventTypes(
+    eventSourceId,
+    eventTypes,
+    eventStreamType = "All",
+    eventStreamId = "Default"
+)
+```
+
+`getForEventSourceIdAndEventTypes` also takes an `eventSourceType`, which the
+kernel's event-source query has no filter for: it is not applied, and every
+source type comes back regardless. Read the stored type off the event context
+when you need to tell them apart.
+
 ## Verify against the kernel
 
 Read newly appended events back and check their route and metadata using

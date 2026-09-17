@@ -258,6 +258,15 @@ appended event will receive, respectively. `getTailSequenceNumberForObserver`
 reports the tail relative to the event types a specific reactor or reducer
 type actually handles (discovered by reflection over its handler methods).
 
+Narrowing is opt-in everywhere here: a missing or empty filter means "do not
+narrow", and no read, tail, or observer tail substitutes a route of its own.
+Since the kernel resolves an append that named no route onto stream type `All`
+and stream id `Default`, narrowing a read to `eventStreamType = "Default"`
+returns none of those events. The `eventSourceType` parameter of
+`getForEventSourceIdAndEventTypes` is the one exception to "narrowing works":
+the kernel's event-source query carries no such filter, so it is not applied —
+read the stored type off the event context instead.
+
 <!-- validate: skip -->
 
 ```kotlin

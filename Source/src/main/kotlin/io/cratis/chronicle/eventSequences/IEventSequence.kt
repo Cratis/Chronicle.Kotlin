@@ -88,11 +88,19 @@ interface IEventSequence {
     /**
      * Gets all events for a specific event source, optionally filtered and narrowed further.
      *
+     * Narrowing is opt-in: a missing or empty route means "do not narrow", which is how the kernel
+     * reads an unspecified filter. That matters because the kernel resolves an append that supplied
+     * no routing onto `Default`/`All`/`Default` - narrowing a read to a legacy `Default` stream type
+     * returns nothing for those events rather than everything about the event source.
+     *
      * @param eventSourceId The event source identifier to get events for.
      * @param eventTypes The event types to filter for.
      * @param eventStreamType Optional event stream type to narrow to. Defaults to all stream types.
      * @param eventStreamId Optional event stream identifier to narrow to. Defaults to all streams.
-     * @param eventSourceType Optional event source type to narrow to. Defaults to all source types.
+     * @param eventSourceType Accepted for symmetry with appending, but **not applied**: the kernel's
+     *   event-source query carries no event-source-type filter, so every source type is returned
+     *   whatever is passed here. Read the stored type off [io.cratis.chronicle.events.EventContext]
+     *   when it has to be distinguished.
      * @return A list of [AppendedEvent].
      */
     suspend fun getForEventSourceIdAndEventTypes(
