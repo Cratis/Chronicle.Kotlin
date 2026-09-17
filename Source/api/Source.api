@@ -1252,22 +1252,24 @@ public final class io/cratis/chronicle/eventSequences/TransactionalEventSequence
 
 public final class io/cratis/chronicle/eventSequences/concurrency/ConcurrencyScope {
 	public static final field Companion Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScope$Companion;
-	public synthetic fun <init> (JZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	public synthetic fun <init> (JZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (JZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public synthetic fun <init> (JZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ZLkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1-hvNBoNI ()J
 	public final fun component2 ()Z
 	public final fun component3 ()Ljava/lang/String;
 	public final fun component4 ()Ljava/lang/String;
 	public final fun component5 ()Ljava/lang/String;
 	public final fun component6 ()Ljava/util/List;
-	public final fun copy-2HzkDR4 (JZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScope;
-	public static synthetic fun copy-2HzkDR4$default (Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScope;JZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScope;
+	public final fun component7 ()Z
+	public final fun copy-tCaTTjQ (JZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Z)Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScope;
+	public static synthetic fun copy-tCaTTjQ$default (Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScope;JZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ZILjava/lang/Object;)Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScope;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getEventSourceId ()Z
 	public final fun getEventSourceType ()Ljava/lang/String;
 	public final fun getEventStreamId ()Ljava/lang/String;
 	public final fun getEventStreamType ()Ljava/lang/String;
 	public final fun getEventTypes ()Ljava/util/List;
+	public final fun getExpectsNoMatchingEvent ()Z
 	public final fun getSequenceNumber-hvNBoNI ()J
 	public fun hashCode ()I
 	public final fun isIncomplete ()Z
@@ -1288,6 +1290,7 @@ public final class io/cratis/chronicle/eventSequences/concurrency/ConcurrencySco
 	public final fun withEventStreamType (Ljava/lang/String;)Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScopeBuilder;
 	public final fun withEventType (Lio/cratis/chronicle/events/EventTypeDescriptor;)Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScopeBuilder;
 	public final fun withEventTypes (Ljava/util/Collection;)Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScopeBuilder;
+	public final fun withExpectsNoMatchingEvent ()Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScopeBuilder;
 	public final fun withSequenceNumber-RYlZmC8 (J)Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScopeBuilder;
 }
 

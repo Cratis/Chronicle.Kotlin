@@ -7,6 +7,7 @@ import Cratis.Chronicle.Contracts.Sequences.Sequences
 import Cratis.Chronicle.Contracts.Sequences.EventSequencesGrpcKt
 import bcl.Bcl
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
+import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScopeBuilder
 import io.cratis.chronicle.events.EventType
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -74,6 +75,31 @@ class EventSequenceTests {
         assertEquals(7L, sentScope.sequenceNumber)
         assertTrue(sentScope.eventSourceId)
         assertEquals("Onboarding", sentScope.eventStreamType)
+    }
+
+    @Test
+    fun `append sends expectsNoMatchingEvent flag on the wire when set`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val request = slot<Sequences.AppendRequest>()
+        coEvery { stub.append(capture(request), any()) } returns
+            Sequences.CommandResult_AppendResponse.newBuilder()
+                .setIsAuthorized(true)
+                .setResponse(Sequences.AppendResponse.newBuilder().setSequenceNumber(0).build())
+                .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        val scope = ConcurrencyScopeBuilder()
+            .withEventSourceId()
+            .withExpectsNoMatchingEvent()
+            .build()
+
+        sequence.append("source-1", SomethingHappened("hello"), AppendOptions(concurrencyScope = scope))
+
+        val sentScope = request.captured.concurrencyScope
+        assertTrue(sentScope.eventSourceId)
+        assertTrue(sentScope.expectsNoMatchingEvent)
+        // SequenceNumber field must be the unavailable sentinel, not a concrete value.
+        assertEquals(EventSequenceNumber.unavailable.value, sentScope.sequenceNumber)
     }
 
     @Test

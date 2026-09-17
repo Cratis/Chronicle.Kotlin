@@ -16,6 +16,7 @@ class ConcurrencyScopeBuilder {
     private var eventStreamId: String? = null
     private var eventSourceType: String? = null
     private val eventTypes = mutableListOf<EventTypeDescriptor>()
+    private var expectsNoMatchingEvent: Boolean = false
 
     /** Sets the expected [EventSequenceNumber] for the concurrency scope. */
     fun withSequenceNumber(sequenceNumber: EventSequenceNumber) = apply { this.sequenceNumber = sequenceNumber }
@@ -38,6 +39,18 @@ class ConcurrencyScopeBuilder {
     /** Adds a collection of [EventTypeDescriptor]s to narrow the concurrency scope to. */
     fun withEventTypes(eventTypes: Collection<EventTypeDescriptor>) = apply { this.eventTypes.addAll(eventTypes) }
 
+    /**
+     * Instructs the kernel to reject the append if any event matching the scope already exists.
+     *
+     * This is the foundation for safe aggregate creation: an append guarded by this flag succeeds
+     * only when the event source has no history yet (or no history within the narrowed scope), so
+     * two concurrent "create" appends cannot both succeed.
+     *
+     * Cannot be combined with a concrete sequence number — calling [withSequenceNumber] with an
+     * actual value after this method (or vice versa) will cause [build] to throw [IllegalArgumentException].
+     */
+    fun withExpectsNoMatchingEvent() = apply { this.expectsNoMatchingEvent = true }
+
     /** Builds the [ConcurrencyScope] with the configured properties. */
     fun build(): ConcurrencyScope = ConcurrencyScope(
         sequenceNumber = sequenceNumber,
@@ -45,6 +58,7 @@ class ConcurrencyScopeBuilder {
         eventStreamType = eventStreamType,
         eventStreamId = eventStreamId,
         eventSourceType = eventSourceType,
-        eventTypes = eventTypes.distinct()
+        eventTypes = eventTypes.distinct(),
+        expectsNoMatchingEvent = expectsNoMatchingEvent
     )
 }

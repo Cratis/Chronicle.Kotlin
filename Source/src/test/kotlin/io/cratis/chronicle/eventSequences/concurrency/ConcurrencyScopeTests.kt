@@ -8,6 +8,7 @@ import io.cratis.chronicle.events.EventTypeDescriptor
 import io.cratis.chronicle.events.EventTypeId
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -78,5 +79,38 @@ class ConcurrencyScopeTests {
         assertEquals(EventSequenceNumber.unavailable, scope.sequenceNumber)
         assertFalse(scope.eventSourceId)
         assertEquals(emptyList<EventTypeDescriptor>(), scope.eventTypes)
+    }
+
+    @Test
+    fun `builder captures expectsNoMatchingEvent flag`() {
+        val scope = ConcurrencyScopeBuilder()
+            .withExpectsNoMatchingEvent()
+            .build()
+
+        assertTrue(scope.expectsNoMatchingEvent)
+    }
+
+    @Test
+    fun `a scope with expectsNoMatchingEvent is never incomplete`() {
+        val scope = ConcurrencyScope(EventSequenceNumber.unavailable, expectsNoMatchingEvent = true)
+
+        assertFalse(scope.isIncomplete)
+    }
+
+    @Test
+    fun `combining expectsNoMatchingEvent with a concrete sequence number is rejected`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ConcurrencyScope(EventSequenceNumber(5), expectsNoMatchingEvent = true)
+        }
+    }
+
+    @Test
+    fun `builder combining expectsNoMatchingEvent with a concrete sequence number is rejected`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ConcurrencyScopeBuilder()
+                .withExpectsNoMatchingEvent()
+                .withSequenceNumber(EventSequenceNumber(5))
+                .build()
+        }
     }
 }
