@@ -39,7 +39,7 @@ class CompatibilityPreflightTests {
                     assertFalse(request.descriptorSet.isEmpty)
                     if (unavailable) throw Status.UNAVAILABLE.asRuntimeException()
                     return Clients.CompatibilityResponse.newBuilder().setIsCompatible(compatible)
-                        .apply { if (!compatible || contradictory) addIncompatibilities("missing receipt") }.build()
+                        .apply { if (!compatible || contradictory) addIncompatibilities("unsupported contract") }.build()
                 }
             })
             .addService(object : EventSequencesGrpcKt.EventSequencesCoroutineImplBase() {
