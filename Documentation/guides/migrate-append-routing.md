@@ -143,10 +143,11 @@ suspend fun readKernelDefaultRoute(
 )
 ```
 
-`getForEventSourceIdAndEventTypes` also takes an `eventSourceType`, which the
-kernel's event-source query has no filter for: it is not applied, and every
-source type comes back regardless. Read the stored type off the event context
-when you need to tell them apart.
+`getForEventSourceIdAndEventTypes` also takes an `eventSourceType`, which
+narrows the read to one event source type. Omitting it, or passing `Default`,
+returns every source type. It reached nothing before Chronicle 18.5.0 — the
+request carried no such field, so a caller that passed it believed it had
+filtered and had not.
 
 ## Verify against the kernel
 

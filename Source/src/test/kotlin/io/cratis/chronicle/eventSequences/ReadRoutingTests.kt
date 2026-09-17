@@ -89,8 +89,11 @@ class ReadRoutingTests {
         sequence.getForEventSourceIdAndEventTypes("source-1", listOf(ReadRoutedEvent::class))
         assertEquals("source-1", request.captured.eventSourceId)
         assertEquals("ReadRoutedEvent", request.captured.eventTypeIds)
-        assertEquals("", request.captured.eventStreamType)
-        assertEquals("", request.captured.eventStreamId)
+        assertUnnarrowedRoute(
+            request.captured.eventSourceType,
+            request.captured.eventStreamType,
+            request.captured.eventStreamId
+        )
 
         sequence.getForEventSourceIdAndEventTypes(
             "source-1",
@@ -100,6 +103,43 @@ class ReadRoutingTests {
         )
         assertEquals("Orders", request.captured.eventStreamType)
         assertEquals("2026", request.captured.eventStreamId)
+    }
+
+    /**
+     * The event source type was accepted and never written to the request, so a caller narrowing by it
+     * got every source type back with no way to tell. The test above exercised this call with a stream
+     * scope and never asserted on the source type, which is what kept the drop invisible - an argument
+     * exercised but not asserted on. The kernel gained the field in 18.5.0. See Cratis/Chronicle#4049.
+     */
+    @Test
+    fun `reading an event source narrows by the event source type when one is supplied`() = runBlocking {
+        val request = slot<Sequences.ForEventSourceIdAndEventTypesRequest>()
+        val sequence = sequenceWith(forEventSource = request)
+
+        sequence.getForEventSourceIdAndEventTypes(
+            "source-1",
+            listOf(ReadRoutedEvent::class),
+            eventSourceType = "Order"
+        )
+        assertEquals("Order", request.captured.eventSourceType)
+        assertEquals("", request.captured.eventStreamType)
+        assertEquals("", request.captured.eventStreamId)
+
+        sequence.getForEventSourceIdAndEventTypes(
+            "source-1",
+            listOf(ReadRoutedEvent::class),
+            eventStreamType = "Orders",
+            eventStreamId = "2026",
+            eventSourceType = "Order"
+        )
+        assertEquals(
+            Triple("Order", "Orders", "2026"),
+            Triple(
+                request.captured.eventSourceType,
+                request.captured.eventStreamType,
+                request.captured.eventStreamId
+            )
+        )
     }
 
     private fun sequenceWith(

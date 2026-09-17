@@ -287,6 +287,7 @@ open class EventSequence(
             this.eventSourceId = eventSourceId
             eventStreamType?.let { this.eventStreamType = it }
             eventStreamId?.let { this.eventStreamId = it }
+            eventSourceType?.let { this.eventSourceType = it }
             this.eventTypeIds = joinEventTypeIds(eventTypes)
         }.build()
 
