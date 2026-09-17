@@ -657,6 +657,7 @@ private fun ConcurrencyScope.toContract(): Sequences.ConcurrencyScope {
         scope.eventStreamId?.let { this.eventStreamId = it }
         scope.eventSourceType?.let { this.eventSourceType = it }
         addAllEventTypes(scope.eventTypes.map { it.toContractsEventType() })
+        this.expectsNoMatchingEvent = scope.expectsNoMatchingEvent
     }.build()
 }
 
