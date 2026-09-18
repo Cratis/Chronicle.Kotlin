@@ -14,7 +14,9 @@ import io.cratis.chronicle.observation.IReactorMiddleware
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.projections.FromEvent
+import io.cratis.chronicle.projections.GlobalFor
 import io.cratis.chronicle.projections.IProjectionFor
+import io.cratis.chronicle.projections.VariantOf
 import io.cratis.chronicle.readModels.ReadModel
 import io.cratis.chronicle.seeding.ICanSeedEvents
 import io.cratis.chronicle.webhooks.IWebhookDefiner
@@ -72,9 +74,14 @@ class ClientArtifacts(
             // Kotlin compiles a repeatable annotation into a synthetic `Container` holding the
             // repeats, so a class carrying more than one @FromEvent is only annotated with the
             // container as far as the bytecode - and therefore the scanner - is concerned.
+            // A variant that only enters through @EntersOn, or a shared handler that only carries
+            // @GlobalFor + @FromEvent, would otherwise never be found by a scan gated on @FromEvent
+            // alone.
             modelBoundProjections = (
                 result.withAnnotation(FromEvent::class) { it.isModelBoundProjection() } +
-                    result.withAnnotationNamed(FROM_EVENT_CONTAINER) { it.isModelBoundProjection() }
+                    result.withAnnotationNamed(FROM_EVENT_CONTAINER) { it.isModelBoundProjection() } +
+                    result.withAnnotation(VariantOf::class) { it.isVariant() } +
+                    result.withAnnotation(GlobalFor::class) { it.isGlobalForHandler() }
                 ).distinct(),
             reactors = result.withAnnotation(Reactor::class) { it.isReactor() },
             reducers = result.withAnnotation(Reducer::class) { it.isReducer() },

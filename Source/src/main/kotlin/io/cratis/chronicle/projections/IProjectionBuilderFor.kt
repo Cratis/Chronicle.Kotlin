@@ -138,6 +138,41 @@ interface IProjectionBuilderFor<TReadModel : Any> {
         configure: Consumer<INestedBuilderFor<TNested>>
     ): IProjectionBuilderFor<TReadModel>
 
+    /**
+     * Declares this projection to be one of several mutually exclusive representations of the same
+     * logical entity. Every projection declaring the same [identity] forms a group. Entering one
+     * variant removes the entity from every other variant in that group. Only the events named with
+     * [entersOn] may create this variant; every other event it projects from becomes an update-only
+     * mapping that can bring an active instance up to date but never create or resurrect one.
+     *
+     * @param identity The type that anchors the logical identity shared by every variant in the group.
+     * @param key The property on this read model that carries the shared identity.
+     */
+    fun <TIdentity : Any> variantOf(identity: KClass<TIdentity>, key: KProperty1<TReadModel, *>): IProjectionBuilderFor<TReadModel>
+
+    /**
+     * The same, by property name - for callers, such as Java, that cannot produce a [KProperty1].
+     *
+     * @throws UnknownReadModelProperty when [keyPropertyName] is not a property of [TReadModel].
+     */
+    fun <TIdentity : Any> variantOf(identity: KClass<TIdentity>, keyPropertyName: String): IProjectionBuilderFor<TReadModel>
+
+    /** The same, taking a Java [Class] - see [from]. */
+    fun <TIdentity : Any> variantOf(identity: Class<TIdentity>, keyPropertyName: String): IProjectionBuilderFor<TReadModel> =
+        variantOf(identity.kotlin, keyPropertyName)
+
+    /**
+     * Declares the event that activates this variant. Only for a projection that also declares
+     * [variantOf]. The event keeps its ordinary create-or-update behavior; mapping its properties is
+     * still done with the usual [from] call.
+     *
+     * @param eventClass Type of event that activates this variant.
+     */
+    fun <TEvent : Any> entersOn(eventClass: KClass<TEvent>): IProjectionBuilderFor<TReadModel>
+
+    /** The same, taking a Java [Class] - see [from]. */
+    fun <TEvent : Any> entersOn(eventClass: Class<TEvent>): IProjectionBuilderFor<TReadModel> = entersOn(eventClass.kotlin)
+
     /** Marks this projection as forward-only. */
     fun notRewindable(): IProjectionBuilderFor<TReadModel>
 

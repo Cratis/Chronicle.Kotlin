@@ -2582,6 +2582,15 @@ public abstract interface annotation class io/cratis/chronicle/projections/Decre
 	public abstract fun keyFromContext ()Ljava/lang/String;
 }
 
+public abstract interface annotation class io/cratis/chronicle/projections/EntersOn : java/lang/annotation/Annotation {
+	public abstract fun eventType ()Ljava/lang/Class;
+	public abstract fun key ()Ljava/lang/String;
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/EntersOn$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Lio/cratis/chronicle/projections/EntersOn;
+}
+
 public abstract interface annotation class io/cratis/chronicle/projections/FromAll : java/lang/annotation/Annotation {
 	public abstract fun contextProperty ()Ljava/lang/String;
 	public abstract fun property ()Ljava/lang/String;
@@ -2656,6 +2665,14 @@ public final class io/cratis/chronicle/projections/FromEveryBuilderFor : io/crat
 	public fun increment (Lkotlin/reflect/KProperty1;Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public fun set (Ljava/lang/String;)Lio/cratis/chronicle/projections/IAllSetBuilderFor;
 	public fun set (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IAllSetBuilderFor;
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/GlobalFor : java/lang/annotation/Annotation {
+	public abstract fun identity ()Ljava/lang/Class;
+}
+
+public final class io/cratis/chronicle/projections/GlobalHandlerPropertyNotOnVariant : java/lang/IllegalStateException {
+	public fun <init> (Lkotlin/reflect/KClass;Lkotlin/reflect/KClass;Ljava/lang/String;)V
 }
 
 public abstract interface class io/cratis/chronicle/projections/IAddBuilderFor {
@@ -2756,6 +2773,8 @@ public abstract interface class io/cratis/chronicle/projections/IProjectionBuild
 	public abstract fun autoMap ()Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun children (Ljava/lang/String;Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun children (Lkotlin/reflect/KProperty1;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun entersOn (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public abstract fun entersOn (Lkotlin/reflect/KClass;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public fun from (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public fun from (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun from (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
@@ -2780,9 +2799,13 @@ public abstract interface class io/cratis/chronicle/projections/IProjectionBuild
 	public fun removedWithJoin (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public abstract fun removedWithJoin (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public static synthetic fun removedWithJoin$default (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun variantOf (Ljava/lang/Class;Ljava/lang/String;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public abstract fun variantOf (Lkotlin/reflect/KClass;Ljava/lang/String;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public abstract fun variantOf (Lkotlin/reflect/KClass;Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 }
 
 public final class io/cratis/chronicle/projections/IProjectionBuilderFor$DefaultImpls {
+	public static fun entersOn (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public static fun from (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public static fun from (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public static synthetic fun from$default (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
@@ -2797,6 +2820,7 @@ public final class io/cratis/chronicle/projections/IProjectionBuilderFor$Default
 	public static fun removedWithJoin (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public static fun removedWithJoin (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public static synthetic fun removedWithJoin$default (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public static fun variantOf (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Ljava/lang/Class;Ljava/lang/String;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 }
 
 public abstract interface class io/cratis/chronicle/projections/IProjectionFor {
@@ -2933,6 +2957,8 @@ public final class io/cratis/chronicle/projections/ProjectionBuilderFor : io/cra
 	public fun autoMap ()Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public fun children (Ljava/lang/String;Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public fun children (Lkotlin/reflect/KProperty1;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun entersOn (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun entersOn (Lkotlin/reflect/KClass;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public fun from (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public fun from (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public fun from (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
@@ -2942,12 +2968,15 @@ public final class io/cratis/chronicle/projections/ProjectionBuilderFor : io/cra
 	public fun fromEvery (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public final fun getAutoMapEnabled ()Z
 	public final fun getChildrenEntries ()Ljava/util/List;
+	public final fun getEnteringEventClasses ()Ljava/util/List;
 	public final fun getFromEntries ()Ljava/util/List;
 	public final fun getFromEveryProperties ()Ljava/util/Map;
 	public final fun getJoinEntries ()Ljava/util/List;
 	public final fun getNestedEntries ()Ljava/util/List;
 	public final fun getRemovedWithEntries ()Ljava/util/List;
 	public final fun getRemovedWithJoinEntries ()Ljava/util/List;
+	public final fun getVariantIdentity ()Lkotlin/reflect/KClass;
+	public final fun getVariantKey ()Ljava/lang/String;
 	public final fun isRewindable ()Z
 	public fun join (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public fun join (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
@@ -2962,6 +2991,9 @@ public final class io/cratis/chronicle/projections/ProjectionBuilderFor : io/cra
 	public fun removedWithJoin (Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public fun removedWithJoin (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public fun removedWithJoin (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun variantOf (Ljava/lang/Class;Ljava/lang/String;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun variantOf (Lkotlin/reflect/KClass;Ljava/lang/String;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
+	public fun variantOf (Lkotlin/reflect/KClass;Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 }
 
 public final class io/cratis/chronicle/projections/ProjectionDeclarationError {
@@ -3136,6 +3168,15 @@ public abstract interface annotation class io/cratis/chronicle/projections/Subtr
 
 public final class io/cratis/chronicle/projections/UnknownReadModelProperty : java/lang/IllegalArgumentException {
 	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;)V
+}
+
+public final class io/cratis/chronicle/projections/VariantMustDeclareEntersOnEvent : java/lang/IllegalStateException {
+	public fun <init> (Lkotlin/reflect/KClass;)V
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/VariantOf : java/lang/annotation/Annotation {
+	public abstract fun identity ()Ljava/lang/Class;
+	public abstract fun key ()Ljava/lang/String;
 }
 
 public abstract interface class io/cratis/chronicle/readModels/IMaterializedReadModels {
