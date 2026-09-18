@@ -75,6 +75,11 @@ class ProjectionBuilderFor<TReadModel : Any>(
         private set
     var autoMapEnabled = true
         private set
+    var variantIdentity: KClass<*>? = null
+        private set
+    var variantKey: String = "EventSourceId"
+        private set
+    val enteringEventClasses = mutableListOf<KClass<*>>()
 
     override fun <TEvent : Any> from(
         eventClass: KClass<TEvent>,
@@ -172,6 +177,28 @@ class ProjectionBuilderFor<TReadModel : Any>(
         val builder = NestedBuilderFor(nestedClass.kotlin)
         configure.accept(builder)
         nestedEntries.add(NestedEntry(requireProperty(readModelClass, propertyName), builder.fromEntries, builder.clearWithEventClasses))
+        return this
+    }
+
+    override fun <TIdentity : Any> variantOf(identity: KClass<TIdentity>, key: KProperty1<TReadModel, *>): IProjectionBuilderFor<TReadModel> {
+        variantIdentity = identity
+        variantKey = key.name
+        return this
+    }
+
+    override fun <TIdentity : Any> variantOf(identity: KClass<TIdentity>, keyPropertyName: String): IProjectionBuilderFor<TReadModel> {
+        variantIdentity = identity
+        variantKey = requireProperty(readModelClass, keyPropertyName)
+        return this
+    }
+
+    override fun <TEvent : Any> entersOn(eventClass: KClass<TEvent>): IProjectionBuilderFor<TReadModel> {
+        enteringEventClasses.add(eventClass)
+        // The entering event is what creates the variant, so it must have a From even when the
+        // author maps no properties on it explicitly and leaves the mapping to AutoMap.
+        if (fromEntries.none { it.eventClass == eventClass }) {
+            fromEntries.add(FromDefinitionEntry(eventClass = eventClass, properties = emptyMap()))
+        }
         return this
     }
 

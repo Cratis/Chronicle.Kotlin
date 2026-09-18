@@ -27,7 +27,8 @@ class KnownClientArtifacts(classes: Iterable<KClass<*>>) : IClientArtifacts {
     override val eventTypeMigrations: List<KClass<*>> = candidates.filter { it.isEventTypeMigration() }
     override val readModels: List<KClass<*>> = candidates.filter { it.isReadModel() }
     override val projections: List<KClass<*>> = candidates.filter { it.isDeclarativeProjection() }
-    override val modelBoundProjections: List<KClass<*>> = candidates.filter { it.isModelBoundProjection() }
+    override val modelBoundProjections: List<KClass<*>> =
+        candidates.filter { it.isModelBoundProjection() || it.isVariant() || it.isGlobalForHandler() }
     override val reactors: List<KClass<*>> = candidates.filter { it.isReactor() }
     override val reducers: List<KClass<*>> = candidates.filter { it.isReducer() }
     override val constraints: List<KClass<*>> = candidates.filter { it.isConstraint() }

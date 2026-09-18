@@ -15,7 +15,9 @@ import io.cratis.chronicle.observation.ReadModelArgument
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.projections.FromEvent
+import io.cratis.chronicle.projections.GlobalFor
 import io.cratis.chronicle.projections.IProjectionFor
+import io.cratis.chronicle.projections.VariantOf
 import io.cratis.chronicle.readModels.ReadModel
 import io.cratis.chronicle.seeding.ICanSeedEvents
 import io.cratis.chronicle.webhooks.IWebhookDefiner
@@ -75,6 +77,17 @@ internal fun KClass<*>.isDeclarativeProjection(): Boolean =
 
 /** Whether this class is a model-bound projection — a read model that declares the events it projects from. */
 internal fun KClass<*>.isModelBoundProjection(): Boolean = findAnnotations<FromEvent>().isNotEmpty()
+
+/** Whether this class is one of several mutually exclusive read model variants of the same logical entity. */
+internal fun KClass<*>.isVariant(): Boolean = hasAnnotation<VariantOf>()
+
+/**
+ * Whether this class declares event handlers shared across every variant of a logical identity.
+ *
+ * A type carrying only this annotation is never registered as its own projection — it is merged
+ * into its siblings instead, so it must still be discovered to be found as a merge source.
+ */
+internal fun KClass<*>.isGlobalForHandler(): Boolean = hasAnnotation<GlobalFor>()
 
 /** Whether this class is a reactor. */
 internal fun KClass<*>.isReactor(): Boolean = isInstantiableArtifact() && hasAnnotation<Reactor>()
