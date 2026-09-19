@@ -5,6 +5,7 @@ package io.cratis.chronicle.events
 
 import Cratis.Chronicle.Contracts.EventTypes.EventTypesGrpcKt
 import Cratis.Chronicle.Contracts.EventTypes.Eventtypes
+import io.cratis.chronicle.eventSequences.ChronicleCommandRejected
 import io.cratis.chronicle.events.migrations.EventTypeMigrationBuilder
 import io.cratis.chronicle.events.migrations.IEventTypeMigration
 import io.cratis.chronicle.schemas.JsonSchemaGenerator
@@ -35,7 +36,7 @@ class EventTypesService(
             .addAllTypes(registrations)
             .setDisableValidation(false)
             .build()
-        stub.registerEventTypes(request)
+        stub.registerEventTypes(request).ensureSuccess("register event types")
     }
 
     /** Register a single event type with the event store. */
@@ -46,7 +47,7 @@ class EventTypesService(
             .setEventStore(eventStoreName)
             .setType(registration)
             .build()
-        stub.registerSingleEventType(request)
+        stub.registerSingleEventType(request).ensureSuccess("register event type")
     }
 
     /** Get all known generations, and their migrations, for the given [eventTypeId]. */
@@ -146,6 +147,18 @@ class EventTypesService(
         }
     }
 }
+
+// A successful envelope carries no diagnostic worth reporting - the wire type only marks the
+// diagnostic fields as present because protobuf makes every singular/repeated field technically
+// optional. Registration silently dropping an event type is otherwise indistinguishable from a
+// successful no-op registration, so every registration call must be checked (#86).
+private fun ensureSuccessMessage(operation: String, isAuthorized: Boolean, authorizationFailureReason: String, exceptionMessages: List<String>) {
+    if (!isAuthorized) throw ChronicleCommandRejected(operation, authorizationFailureReason.ifEmpty { "not authorized" })
+    if (exceptionMessages.isNotEmpty()) throw ChronicleCommandRejected(operation, exceptionMessages.joinToString("; "))
+}
+
+private fun Eventtypes.CommandResult.ensureSuccess(operation: String) =
+    ensureSuccessMessage(operation, isAuthorized, authorizationFailureReason, exceptionMessagesList)
 
 @Suppress("UNCHECKED_CAST")
 private fun KClass<*>.instantiateMigration(): IEventTypeMigration<Any, Any> =
