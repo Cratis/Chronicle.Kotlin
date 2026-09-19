@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle
 
+import Cratis.Chronicle.Contracts.EventStores.Eventstores
 import io.cratis.chronicle.artifacts.ArtifactActivator
 import io.cratis.chronicle.artifacts.ArtifactRegistrations
 import io.cratis.chronicle.artifacts.IArtifactActivator
@@ -237,6 +238,7 @@ class EventStore(
             CoroutineScope(Dispatchers.IO).launch {
                 lifecycle.connections().collect {
                     try {
+                        ensureEventStore()
                         registrations.registerAll()
                     } catch (e: CancellationException) {
                         throw e
@@ -249,7 +251,14 @@ class EventStore(
     }
 
     override suspend fun registerAll() {
+        ensureEventStore()
         registrations.registerAll()
+    }
+
+    private suspend fun ensureEventStore() {
+        services.eventStores.ensureEventStore(
+            Eventstores.EnsureEventStoreRequest.newBuilder().setName(name).build()
+        )
     }
 
     override suspend fun awaitRegistration() {
