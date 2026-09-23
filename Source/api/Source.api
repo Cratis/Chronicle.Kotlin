@@ -456,6 +456,28 @@ public final class io/cratis/chronicle/concepts/EventSourceIdConcepts {
 	public static synthetic fun redactForEventSource-QtCcaVM$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Lio/cratis/chronicle/concepts/ConceptAs;Ljava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
+public abstract interface annotation class io/cratis/chronicle/confidentiality/Encrypted : java/lang/annotation/Annotation {
+	public abstract fun description ()Ljava/lang/String;
+	public abstract fun scope ()Lio/cratis/chronicle/confidentiality/EncryptionScope;
+}
+
+public final class io/cratis/chronicle/confidentiality/EncryptedNotSupportedOnEventSourceId : java/lang/Exception {
+	public fun <init> (Lkotlin/reflect/KClass;)V
+}
+
+public final class io/cratis/chronicle/confidentiality/EncryptionScope : java/lang/Enum {
+	public static final field Global Lio/cratis/chronicle/confidentiality/EncryptionScope;
+	public static final field Namespace Lio/cratis/chronicle/confidentiality/EncryptionScope;
+	public static final field Subject Lio/cratis/chronicle/confidentiality/EncryptionScope;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/cratis/chronicle/confidentiality/EncryptionScope;
+	public static fun values ()[Lio/cratis/chronicle/confidentiality/EncryptionScope;
+}
+
+public final class io/cratis/chronicle/confidentiality/PiiAndEncryptedCombinedNotSupported : java/lang/Exception {
+	public fun <init> (Ljava/lang/String;)V
+}
+
 public final class io/cratis/chronicle/connection/BearerTokenInterceptor : io/grpc/ClientInterceptor {
 	public fun <init> (Lio/cratis/chronicle/connection/ITokenProvider;)V
 	public fun interceptCall (Lio/grpc/MethodDescriptor;Lio/grpc/CallOptions;Lio/grpc/Channel;)Lio/grpc/ClientCall;
