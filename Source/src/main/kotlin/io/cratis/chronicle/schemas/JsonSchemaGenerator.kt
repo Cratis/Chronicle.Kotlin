@@ -6,6 +6,10 @@ package io.cratis.chronicle.schemas
 import com.google.gson.Gson
 import io.cratis.chronicle.compliance.Pii
 import io.cratis.chronicle.compliance.PiiNotSupportedOnEventSourceId
+import io.cratis.chronicle.confidentiality.Encrypted
+import io.cratis.chronicle.confidentiality.EncryptedNotSupportedOnEventSourceId
+import io.cratis.chronicle.confidentiality.EncryptionScope
+import io.cratis.chronicle.confidentiality.PiiAndEncryptedCombinedNotSupported
 import io.cratis.chronicle.concepts.ConceptAs
 import io.cratis.chronicle.concepts.EventSourceId
 import io.cratis.chronicle.geospatial.LineString
@@ -60,7 +64,11 @@ object JsonSchemaGenerator {
         try {
             val properties = cls.memberProperties.associate { prop -> prop.name to propertySchema(prop, cls, visiting) }
             val schema = mutableMapOf<String, Any>("type" to "object", "properties" to properties)
-            piiOf(cls)?.let { addComplianceMetadata(schema, complianceMetadata(it)) }
+            val pii = piiOf(cls)
+            val encrypted = encryptedOf(cls)
+            throwIfBothPiiAndEncrypted(cls.qualifiedName ?: cls.java.name, pii, encrypted)
+            pii?.let { addComplianceMetadata(schema, complianceMetadata(it)) }
+            encrypted?.let { addSecurityMetadata(schema, securityMetadata(it)) }
             return schema
         } finally {
             visiting.remove(cls)
@@ -83,7 +91,18 @@ object JsonSchemaGenerator {
             ?: piiConstructorParameterFallback(prop, cls)
             ?: piiOf(typeClass)
             ?: piiOf(cls)
+
+        // Mirrors the pii resolution chain above exactly, through the same fallback paths, over the
+        // completely separate @Encrypted annotation vocabulary.
+        val encrypted = encryptedOf(prop)
+            ?: encryptedFieldFallback(prop)
+            ?: encryptedConstructorParameterFallback(prop, cls)
+            ?: encryptedOf(typeClass)
+            ?: encryptedOf(cls)
+
+        throwIfBothPiiAndEncrypted(prop.name, pii, encrypted)
         pii?.let { addComplianceMetadata(schema, complianceMetadata(it)) }
+        encrypted?.let { addSecurityMetadata(schema, securityMetadata(it)) }
         return schema
     }
 
@@ -171,7 +190,11 @@ object JsonSchemaGenerator {
         val itemSchema: MutableMap<String, Any> =
             if (elementType != null) schemaForType(elementType, visiting) else mutableMapOf("type" to "object")
         val elementClass = elementType?.classifier as? KClass<*>
-        piiOf(elementClass)?.let { addComplianceMetadata(itemSchema, complianceMetadata(it)) }
+        val pii = piiOf(elementClass)
+        val encrypted = encryptedOf(elementClass)
+        throwIfBothPiiAndEncrypted(elementClass?.qualifiedName ?: elementClass?.java?.name ?: "array element", pii, encrypted)
+        pii?.let { addComplianceMetadata(itemSchema, complianceMetadata(it)) }
+        encrypted?.let { addSecurityMetadata(itemSchema, securityMetadata(it)) }
         return mutableMapOf("type" to "array", "items" to itemSchema)
     }
 
@@ -286,4 +309,87 @@ object JsonSchemaGenerator {
     /** Converts a resolved [Pii] annotation into the `compliance` schema extension the kernel expects. */
     private fun complianceMetadata(pii: Pii): List<Map<String, String>> =
         listOf(mapOf("metadataType" to "PII", "details" to pii.description))
+
+    /**
+     * Adds [metadata] to [schema] under the `security` schema key, descending into an object's
+     * `properties` exactly as [addComplianceMetadata] does for `compliance` - see its remarks for
+     * why metadata is pushed to leaves and why an array is left as a container. Written to a
+     * separate key, a sibling of `compliance` rather than a shared one, so the kernel routes a
+     * value into exactly one protection path.
+     */
+    private fun addSecurityMetadata(schema: MutableMap<String, Any>, metadata: List<Map<String, String>>) {
+        @Suppress("UNCHECKED_CAST")
+        val properties = schema["properties"] as? Map<String, MutableMap<String, Any>>
+        if (!properties.isNullOrEmpty()) {
+            properties.values.forEach { addSecurityMetadata(it, metadata) }
+            return
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        val security = schema.getOrPut("security") { mutableListOf<Map<String, String>>() } as MutableList<Map<String, String>>
+        metadata.filter { entry -> !hasMetadataOfType(security, entry.getValue("metadataType")) }
+            .forEach { security.add(it) }
+    }
+
+    /** Reads the [Encrypted] annotation from a property or constructor parameter, when present. */
+    private fun encryptedOf(element: KAnnotatedElement?): Encrypted? = element?.findAnnotation<Encrypted>()
+
+    /**
+     * Reads the [Encrypted] annotation from [cls], when present.
+     *
+     * Rejects [cls] when it is also an [EventSourceId]: the event source id is what the kernel uses
+     * to look up the encryption key for every other value belonging to that source, so encrypting
+     * the id itself would make its own key unfindable.
+     */
+    private fun encryptedOf(cls: KClass<*>?): Encrypted? {
+        val encrypted = cls?.findAnnotation<Encrypted>() ?: return null
+        if (cls.isSubclassOf(EventSourceId::class)) throw EncryptedNotSupportedOnEventSourceId(cls)
+        return encrypted
+    }
+
+    /**
+     * Falls back to reading [Encrypted] off the property's backing field - mirrors [piiFieldFallback]
+     * for the same reason, over the [Encrypted] annotation vocabulary.
+     */
+    private fun encryptedFieldFallback(prop: KProperty1<*, *>): Encrypted? = prop.javaField?.getAnnotation(Encrypted::class.java)
+
+    /**
+     * Falls back to reading [Encrypted] off the constructor parameter [cls] built [prop] from -
+     * mirrors [piiConstructorParameterFallback] for the same reason, over the [Encrypted] annotation
+     * vocabulary.
+     */
+    private fun encryptedConstructorParameterFallback(prop: KProperty1<*, *>, cls: KClass<*>): Encrypted? {
+        cls.kotlinPrimaryConstructor()?.parameters
+            ?.firstOrNull { it.name.equals(prop.name, ignoreCase = true) }
+            ?.let { encryptedOf(it) }
+            ?.let { return it }
+
+        val constructor = cls.java.declaredConstructors.maxByOrNull { it.parameterCount } ?: return null
+        return constructor.parameters
+            .firstOrNull { it.name.equals(prop.name, ignoreCase = true) }
+            ?.getAnnotation(Encrypted::class.java)
+    }
+
+    /** Converts a resolved [Encrypted] annotation into the `security` schema extension the kernel expects. */
+    private fun securityMetadata(encrypted: Encrypted): List<Map<String, String>> =
+        listOf(mapOf("metadataType" to metadataTypeFor(encrypted.scope), "details" to encrypted.description))
+
+    /** Maps an [EncryptionScope] to the metadata type string the kernel's value handlers dispatch on. */
+    private fun metadataTypeFor(scope: EncryptionScope): String = when (scope) {
+        EncryptionScope.Subject -> "EncryptedSubject"
+        EncryptionScope.Namespace -> "EncryptedNamespace"
+        EncryptionScope.Global -> "EncryptedGlobal"
+    }
+
+    /**
+     * Rejects a property or type that resolved both [Pii] and [Encrypted] metadata.
+     *
+     * This is not merely redundant - it corrupts the value. The kernel applies every matching
+     * handler for a property in sequence, so a value marked both ways is encrypted first under the
+     * PII key and then again under the Encrypted key; releasing it decrypts with the wrong key
+     * against ciphertext, which fails loudly rather than returning a wrong value.
+     */
+    private fun throwIfBothPiiAndEncrypted(name: String, pii: Pii?, encrypted: Encrypted?) {
+        if (pii != null && encrypted != null) throw PiiAndEncryptedCombinedNotSupported(name)
+    }
 }
