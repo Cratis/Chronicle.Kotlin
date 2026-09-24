@@ -44,6 +44,7 @@ on:
       - "Integrations/SpringBoot/**"
 
 permissions:
+  issues: write
   contents: write
 
 jobs:
