@@ -32,6 +32,15 @@ data class ConnectionState(val connectionId: String, val isConnected: Boolean)
  */
 class ConnectionLifecycle {
     private val _state = MutableStateFlow(ConnectionState(newConnectionId(), false))
+    private val _terminalFailure = MutableStateFlow<Throwable?>(null)
+
+    /** Last non-transient connection failure, until the kernel acknowledges a connection. */
+    val terminalFailure: StateFlow<Throwable?> = _terminalFailure.asStateFlow()
+
+    /** Records a failure that cannot succeed without changed credentials or compatibility. */
+    fun markTerminalFailure(cause: Throwable) {
+        _terminalFailure.value = cause
+    }
 
     /** The current connection state, and every change to it. */
     val state: StateFlow<ConnectionState> = _state.asStateFlow()
@@ -53,6 +62,7 @@ class ConnectionLifecycle {
 
     /** Marks the connection as acknowledged by the kernel under [connectionId]. */
     fun markConnected(connectionId: String) {
+        _terminalFailure.value = null
         _state.update { current ->
             if (current.isConnected && current.connectionId == connectionId) {
                 current

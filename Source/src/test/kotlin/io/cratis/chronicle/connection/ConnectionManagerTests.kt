@@ -4,10 +4,12 @@
 package io.cratis.chronicle.connection
 
 import Cratis.Chronicle.Contracts.Clients.Clients
+import io.grpc.Status
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
@@ -58,6 +60,52 @@ class ConnectionManagerTests {
         currentTimeMillis = { testScheduler.currentTime },
         refreshChannel = refreshChannel
     )
+
+    @Test
+    fun `unauthenticated failures are retained until an acknowledged retry`() = runTest {
+        var reject = true
+        val connections = object : IKeepAliveConnections {
+            override fun connect(request: Clients.ConnectRequest): Flow<Clients.ConnectionKeepAlive> = flow {
+                if (reject) throw Status.UNAUTHENTICATED.asRuntimeException()
+                emit(Clients.ConnectionKeepAlive.getDefaultInstance())
+                awaitCancellation()
+            }
+            override suspend fun answer(connectionId: String) = Unit
+        }
+        val manager = managerFor(connections)
+        try {
+            manager.connect()
+            runCurrent()
+            assertEquals(Status.Code.UNAUTHENTICATED, Status.fromThrowable(manager.lifecycle.terminalFailure.value).code)
+            reject = false
+            advanceTimeBy(30_000)
+            runCurrent()
+            assertTrue(manager.lifecycle.isConnected)
+            assertEquals(null, manager.lifecycle.terminalFailure.value)
+        } finally {
+            manager.close()
+        }
+    }
+
+    @Test
+    fun `permission denied is terminal but unavailable stays transient`() = runTest {
+        for (status in listOf(Status.PERMISSION_DENIED, Status.UNAVAILABLE)) {
+            val connections = object : IKeepAliveConnections {
+                override fun connect(request: Clients.ConnectRequest): Flow<Clients.ConnectionKeepAlive> = flow {
+                    throw status.asRuntimeException()
+                }
+                override suspend fun answer(connectionId: String) = Unit
+            }
+            val manager = managerFor(connections)
+            try {
+                manager.connect()
+                runCurrent()
+                assertEquals(status.code == Status.Code.PERMISSION_DENIED, manager.lifecycle.terminalFailure.value != null)
+            } finally {
+                manager.close()
+            }
+        }
+    }
 
     @Test
     fun `answers every keep-alive the kernel sends`() = runTest {
@@ -202,6 +250,7 @@ class ConnectionManagerTests {
             assertTrue(refreshes >= 2, "expected contained refresh failures, got $refreshes")
             assertEquals(1, connections.connectCount)
             assertFalse(manager.lifecycle.isConnected)
+            assertTrue(manager.lifecycle.terminalFailure.value is IllegalStateException)
         } finally {
             manager.close()
         }

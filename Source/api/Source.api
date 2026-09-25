@@ -493,6 +493,10 @@ public final class io/cratis/chronicle/connection/ChronicleConnection : java/lan
 	public final fun getServices ()Lio/cratis/chronicle/connection/ChronicleServices;
 }
 
+public final class io/cratis/chronicle/connection/ChronicleConnectionFailed : java/lang/RuntimeException {
+	public fun <init> (Ljava/lang/Throwable;)V
+}
+
 public final class io/cratis/chronicle/connection/ChronicleConnectionString {
 	public static final field Companion Lio/cratis/chronicle/connection/ChronicleConnectionString$Companion;
 	public static final field DEVELOPMENT_CLIENT Ljava/lang/String;
@@ -581,9 +585,11 @@ public final class io/cratis/chronicle/connection/ConnectionLifecycle {
 	public final fun connections ()Lkotlinx/coroutines/flow/Flow;
 	public final fun getConnectionId ()Ljava/lang/String;
 	public final fun getState ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun getTerminalFailure ()Lkotlinx/coroutines/flow/StateFlow;
 	public final fun isConnected ()Z
 	public final fun markConnected (Ljava/lang/String;)V
 	public final fun markDisconnected ()V
+	public final fun markTerminalFailure (Ljava/lang/Throwable;)V
 }
 
 public final class io/cratis/chronicle/connection/ConnectionManager {
