@@ -5,6 +5,9 @@ package io.cratis.chronicle.projections;
 
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.readModels.ReadModel;
+import kotlin.jvm.JvmClassMappingKt;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * A fluent projection written in Java, the way a reader would write one.
@@ -17,6 +20,14 @@ import io.cratis.chronicle.readModels.ReadModel;
 public final class JavaFluentProjectionUsage {
 
     private JavaFluentProjectionUsage() {
+    }
+
+    @Test
+    public static void toValueIsCallableFromJava() {
+        var builder = new ProjectionBuilderFor<>(JvmClassMappingKt.getKotlinClass(AccountInfo.class));
+        new AccountProjection().define(builder);
+        assertEquals("$value(42.5)", builder.getFromEntries().get(0).getProperties().get("balance"));
+        assertEquals("$value(created)", builder.getFromEveryProperties().get("lastTouched"));
     }
 
     /** The event being projected from. */
@@ -45,10 +56,10 @@ public final class JavaFluentProjectionUsage {
             builder
                 .from(AccountOpened.class, from -> {
                     from.set("name").toProperty("name");
-                    from.set("balance").toProperty("initialBalance");
+                    from.set("balance").toValue(42.5);
                 })
                 .fromEvery(every -> {
-                    every.set("lastTouched").toEventContextProperty("occurred");
+                    every.set("lastTouched").toValue("created");
                 })
                 .removedWith(AccountClosed.class, key -> {
                     key.usingKey("reason");

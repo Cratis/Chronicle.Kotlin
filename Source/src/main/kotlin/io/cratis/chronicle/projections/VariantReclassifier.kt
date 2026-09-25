@@ -100,7 +100,7 @@ internal object VariantReclassifier {
             } else {
                 val join = ProjectionsOuterClass.JoinDefinition.newBuilder()
                     .setOn(variantKey)
-                    .setKey(EVENT_SOURCE_ID_KEY)
+                    .setKey(EVENT_SOURCE_ID_EXPRESSION)
                     .putAllProperties(pair.value.propertiesMap)
                     .build()
                 reclassifiedJoins.add(
@@ -142,8 +142,8 @@ internal object VariantReclassifier {
                         .setKey(eventType)
                         .setValue(
                             ProjectionsOuterClass.RemovedWithDefinition.newBuilder()
-                                .setKey(EVENT_SOURCE_ID_KEY)
-                                .setParentKey(EVENT_SOURCE_ID_KEY)
+                                .setKey(EVENT_SOURCE_ID_EXPRESSION)
+                                .setParentKey(EVENT_SOURCE_ID_EXPRESSION)
                                 .build()
                         )
                         .build()

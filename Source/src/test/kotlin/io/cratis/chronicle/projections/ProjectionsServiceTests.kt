@@ -66,6 +66,13 @@ private data class ItemAddedToCart(val cartId: String, val itemId: String, val n
 
 @ReadModel
 @FromEvent(ShoppingCartStarted::class)
+private data class ShoppingCartDefaultChild(
+    @ChildrenFrom(ItemAddedToCart::class)
+    val items: List<CartItem> = emptyList()
+)
+
+@ReadModel
+@FromEvent(ShoppingCartStarted::class)
 private data class ShoppingCart(
     @ChildrenFrom(ItemAddedToCart::class, key = "itemId", identifiedBy = "itemId")
     val items: List<CartItem> = emptyList()
@@ -338,9 +345,31 @@ private data class WildcardAccount(
     val accountName: String = ""
 )
 
+private data class FluentState(val name: String = "", val children: List<FluentChild> = emptyList())
+@Passive
+private data class FluentPassiveState(val name: String = "")
+private class FluentPassiveProjection : IProjectionFor<FluentPassiveState> {
+    override fun define(builder: IProjectionBuilderFor<FluentPassiveState>) {
+        builder.from(TicketOpened::class)
+    }
+}
+private data class FluentChild(val name: String = "")
+
+private class FluentDefaults : IProjectionFor<FluentState> {
+    override fun define(builder: IProjectionBuilderFor<FluentState>) {
+        builder.noAutoMap()
+            .from(TicketOpened::class)
+            .join(TicketOpened::class) { it.on(FluentState::name) }
+            .removedWith(SubscriptionCancelled::class)
+            .removedWithJoin(SubscriptionCancelled::class)
+            .children(FluentState::children, FluentChild::class) { it.from(TicketOpened::class) { } }
+            .nested(FluentState::name, String::class) { it.clearWith(SubscriptionCancelled::class) }
+    }
+}
+
 class ProjectionsServiceTests {
 
-    private fun register(vararg classes: KClass<*>): List<ProjectionsOuterClass.ProjectionDefinition> {
+    private fun register(vararg classes: Any): List<ProjectionsOuterClass.ProjectionDefinition> {
         val stub = mockk<ProjectionsGrpcKt.ProjectionsCoroutineStub>()
         val request = slot<ProjectionsOuterClass.RegisterRequest>()
         coEvery { stub.register(capture(request), any()) } returns Empty.getDefaultInstance()
@@ -349,7 +378,7 @@ class ProjectionsServiceTests {
         return request.captured.projectionsList
     }
 
-    private fun registerOne(cls: KClass<*>): ProjectionsOuterClass.ProjectionDefinition = register(cls).single()
+    private fun registerOne(cls: Any): ProjectionsOuterClass.ProjectionDefinition = register(cls).single()
 
     private fun ProjectionsOuterClass.ProjectionDefinition.fromFor(eventType: KClass<*>): ProjectionsOuterClass.FromDefinition =
         fromList.first { it.key.id == eventType.simpleName }.value
@@ -357,8 +386,30 @@ class ProjectionsServiceTests {
     // --- @FromEvent key resolution ---
 
     @Test
+    fun `fluent projection of a passive read model is inactive`() {
+        assertFalse(registerOne(FluentPassiveProjection()).isActive)
+    }
+
+    @Test
+    fun `fluent defaults are kernel expressions while read model paths stay unchanged`() {
+        val definition = registerOne(FluentDefaults())
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, definition.fromFor(TicketOpened::class).key)
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, definition.joinList.single().value.key)
+        assertEquals("name", definition.joinList.single().value.on)
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, definition.removedWithList.single().value.key)
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, definition.removedWithList.single().value.parentKey)
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, definition.removedWithJoinList.single().value.key)
+        val children = definition.childrenMap.getValue("children")
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, children.identifiedBy)
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, children.fromList.single().value.key)
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, children.fromList.single().value.parentKey)
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, definition.nestedMap.getValue("name").removedWithList.single().value.key)
+        assertEquals(ProjectionsOuterClass.AutoMap.Disabled, definition.autoMap)
+    }
+
+    @Test
     fun `FromEvent defaults the key to EventSourceId`() {
-        assertEquals(EVENT_SOURCE_ID_KEY, registerOne(Ticket::class).fromFor(TicketOpened::class).key)
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, registerOne(Ticket::class).fromFor(TicketOpened::class).key)
     }
 
     @Test
@@ -373,7 +424,7 @@ class ProjectionsServiceTests {
         val definition = registerOne(InvoiceWithCustomer::class)
         val join = definition.joinList.first { it.key.id == CustomerRegistered::class.simpleName }.value
         assertEquals("customerId", join.on)
-        assertEquals(EVENT_SOURCE_ID_KEY, join.key)
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, join.key)
         assertEquals(mapOf("customerName" to "name"), join.propertiesMap)
     }
 
@@ -386,7 +437,16 @@ class ProjectionsServiceTests {
         assertEquals("itemId", children.identifiedBy)
         val from = children.fromList.first { it.key.id == ItemAddedToCart::class.simpleName }.value
         assertEquals("itemId", from.key)
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, from.parentKey)
         assertEquals(mapOf("name" to "name"), from.propertiesMap)
+    }
+
+    @Test
+    fun `ChildrenFrom default identifiers and parent key use the event source expression`() {
+        val children = registerOne(ShoppingCartDefaultChild::class).childrenMap.getValue("items")
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, children.identifiedBy)
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, children.fromList.single().value.key)
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, children.fromList.single().value.parentKey)
     }
 
     // --- @Nested ---
@@ -396,6 +456,7 @@ class ProjectionsServiceTests {
         val definition = registerOne(Employee::class)
         val nested = definition.nestedMap.getValue("contract")
         val from = nested.fromList.first { it.key.id == ContractSigned::class.simpleName }.value
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, from.key)
         assertEquals(mapOf("title" to "title"), from.propertiesMap)
     }
 
@@ -404,7 +465,7 @@ class ProjectionsServiceTests {
         val definition = registerOne(Employee::class)
         val nested = definition.nestedMap.getValue("contract")
         val removedWith = nested.removedWithList.single().value
-        assertEquals(EVENT_SOURCE_ID_KEY, removedWith.key)
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, removedWith.key)
     }
 
     // --- Counters ---
@@ -485,7 +546,8 @@ class ProjectionsServiceTests {
     fun `RemovedWith registers a removal keyed on EventSourceId by default`() {
         val removedWith = registerOne(Subscription::class).removedWithList.single()
         assertEquals(SubscriptionCancelled::class.simpleName, removedWith.key.id)
-        assertEquals(EVENT_SOURCE_ID_KEY, removedWith.value.key)
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, removedWith.value.key)
+        assertEquals(EVENT_SOURCE_ID_EXPRESSION, removedWith.value.parentKey)
     }
 
     // --- @NotRewindable ---

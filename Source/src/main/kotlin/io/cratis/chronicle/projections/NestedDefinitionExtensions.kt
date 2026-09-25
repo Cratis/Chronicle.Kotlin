@@ -26,7 +26,7 @@ internal fun collectNestedMap(readModelClass: KClass<*>): Map<String, Projection
             val eventTypeId = eventAnnotation.id.ifEmpty { clearWith.eventType.simpleName!! }
             ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithDefinition.newBuilder()
                 .setKey(toWireEventType(eventTypeId, eventAnnotation.generation))
-                .setValue(ProjectionsOuterClass.RemovedWithDefinition.newBuilder().setKey(EVENT_SOURCE_ID_KEY).build())
+                .setValue(ProjectionsOuterClass.RemovedWithDefinition.newBuilder().setKey(EVENT_SOURCE_ID_EXPRESSION).build())
                 .build()
         }
         val autoMapEnabled = nestedClass.findAnnotation<NoAutoMap>() == null && readModelClass.findAnnotation<NoAutoMap>() == null
@@ -50,7 +50,7 @@ internal fun buildNestedMapFromEntries(entries: List<NestedEntry>): Map<String, 
             val eventTypeId = eventAnnotation.id.ifEmpty { eventClass.simpleName!! }
             ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithDefinition.newBuilder()
                 .setKey(toWireEventType(eventTypeId, eventAnnotation.generation))
-                .setValue(ProjectionsOuterClass.RemovedWithDefinition.newBuilder().setKey(EVENT_SOURCE_ID_KEY).build())
+                .setValue(ProjectionsOuterClass.RemovedWithDefinition.newBuilder().setKey(EVENT_SOURCE_ID_EXPRESSION).build())
                 .build()
         }
         entry.propertyName to ProjectionsOuterClass.ChildrenDefinition.newBuilder()

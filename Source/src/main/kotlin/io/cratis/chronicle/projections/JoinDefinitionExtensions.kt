@@ -36,7 +36,7 @@ internal fun collectJoinPairs(readModelClass: KClass<*>): List<ProjectionsOuterC
         val eventTypeId = eventAnnotation.id.ifEmpty { eventClass.simpleName!! }
         val joinDef = ProjectionsOuterClass.JoinDefinition.newBuilder()
             .setOn(accumulator.on)
-            .setKey(EVENT_SOURCE_ID_KEY)
+            .setKey(EVENT_SOURCE_ID_EXPRESSION)
             .putAllProperties(accumulator.properties)
             .build()
         ProjectionsOuterClass.KeyValuePair_EventType_JoinDefinition.newBuilder()
@@ -53,7 +53,7 @@ internal fun buildJoinPairsFromEntries(entries: List<JoinDefinitionEntry>): List
         val eventTypeId = eventAnnotation.id.ifEmpty { entry.eventClass.simpleName!! }
         val joinDef = ProjectionsOuterClass.JoinDefinition.newBuilder()
             .setOn(entry.on)
-            .setKey(EVENT_SOURCE_ID_KEY)
+            .setKey(EVENT_SOURCE_ID_EXPRESSION)
             .putAllProperties(entry.properties)
             .build()
         ProjectionsOuterClass.KeyValuePair_EventType_JoinDefinition.newBuilder()

@@ -11,7 +11,9 @@ import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.Readmodels
 import bcl.Bcl
+import com.google.protobuf.Empty
 import io.cratis.chronicle.Subject
+import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -27,6 +29,9 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 private data class EmployeeState(val name: String, val title: String)
+
+@Passive
+private data class PassiveEmployee(val name: String = "")
 
 // Not file-private: ReadModelsService.resolveSubject() invokes the `id` property reflectively via
 // KProperty1.call(), which requires the declaring class itself to be JVM-accessible (public).
@@ -53,6 +58,18 @@ class ReadModelsServiceTests {
         readModelExplorerStub,
         mockk<ComplianceGrpcKt.ComplianceCoroutineStub>()
     )
+
+    @Test
+    fun `passive read models register without a sink and active ones retain the configured sink`() = runBlocking {
+        val stub = mockk<ReadModelsGrpcKt.ReadModelsCoroutineStub>()
+        val registrations = mutableListOf<Readmodels.RegisterManyRequest>()
+        coEvery { stub.registerMany(capture(registrations), any()) } returns Empty.getDefaultInstance()
+
+        service(stub).register(PassiveEmployee::class, EmployeeState::class)
+
+        assertEquals(WellKnownSinkTypes.NONE, registrations[0].readModelsList.single().sink.typeId)
+        assertEquals(WellKnownSinkTypes.MONGODB, registrations[1].readModelsList.single().sink.typeId)
+    }
 
     @Test
     fun `getSnapshotsById deserializes the read model json into the caller's type, not the raw proto`() = runBlocking {

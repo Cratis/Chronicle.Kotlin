@@ -11,6 +11,9 @@ package io.cratis.chronicle.sinks
  * `CHRONICLE_SINK_TYPE` environment variable.
  */
 object WellKnownSinkTypes {
+    /** No materialized sink — passive read models are projected when read. */
+    const val NONE = "None"
+
     /** MongoDB sink — the default when no sink type is configured. */
     const val MONGODB = "MongoDB"
 
