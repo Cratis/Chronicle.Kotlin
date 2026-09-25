@@ -7,6 +7,7 @@ import io.cratis.chronicle.IEventStore
 import io.cratis.chronicle.captures.ICapture
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionFor
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.sync.Mutex
@@ -24,8 +25,10 @@ import kotlin.reflect.full.memberFunctions
  *
  * Calling [registerAll] more than once is safe and expected — the client calls it again on every
  * reconnect, since a kernel that restarted has forgotten the declarations made to it. Reactors and
- * reducers are started only on the first pass: each one already re-establishes its own observation
- * whenever the connection comes back.
+ * reducers that started successfully already re-establish their own observations; those that failed
+ * are retried on the next pass. An observer failure does not block the remaining observers, captures,
+ * or seeding. The initial gate completes even when a pass has observer failures, so appends never
+ * wait indefinitely on a broken artifact; each failure is reported with its artifact name.
  *
  * @param eventStore The event store to register into.
  * @param artifacts The artifacts to register.
@@ -38,7 +41,8 @@ class ArtifactRegistrations(
 ) {
     private val mutex = Mutex()
     private val initial = CompletableDeferred<Unit>()
-    private var observersStarted = false
+    private val startedReactors = mutableSetOf<KClass<*>>()
+    private val startedReducers = mutableSetOf<KClass<*>>()
 
     /** Completes once the first full registration pass has finished. */
     val completed: Deferred<Unit> get() = initial
@@ -75,10 +79,27 @@ class ArtifactRegistrations(
         eventStore.projections.register(*projections.toTypedArray())
         eventStore.webhooks.register(*instancesOf(artifacts.webhooks).toTypedArray())
 
-        if (!observersStarted) {
-            observersStarted = true
-            artifacts.reactors.forEach { eventStore.reactors.register(activator.activate(it)) }
-            artifacts.reducers.forEach { eventStore.reducers.register(activator.activate(it)) }
+        for (reactor in artifacts.reactors) {
+            if (reactor in startedReactors) continue
+            try {
+                eventStore.reactors.register(activator.activate(reactor))
+                startedReactors += reactor
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                System.err.println("[ArtifactRegistrations] Reactor '${reactor.qualifiedName}' could not be started: ${e.message}")
+            }
+        }
+        for (reducer in artifacts.reducers) {
+            if (reducer in startedReducers) continue
+            try {
+                eventStore.reducers.register(activator.activate(reducer))
+                startedReducers += reducer
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                System.err.println("[ArtifactRegistrations] Reducer '${reducer.qualifiedName}' could not be started: ${e.message}")
+            }
         }
 
         // A capture appends events the moment it starts, so like seeding it goes behind every
