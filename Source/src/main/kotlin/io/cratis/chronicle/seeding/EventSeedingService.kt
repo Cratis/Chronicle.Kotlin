@@ -16,8 +16,10 @@ class EventSeedingService(
 ) : IEventSeedingService {
 
     override suspend fun seed(vararg seeders: Any) {
-        // Keyed by target namespace - entries with no explicit IEventSeedingBuilder.forNamespace()
-        // fall under this service's own namespace, matching the previous single-namespace behavior.
+        // Entries with no IEventSeedingBuilder.forNamespace() are global: the kernel applies them to
+        // every namespace of the event store, including namespaces created later. Entries scoped with
+        // forNamespace() go to that namespace only. This is the same split the .NET client makes.
+        val globalEntries = mutableListOf<Seeding.SeedingEntry>()
         val entriesByNamespace = linkedMapOf<String, MutableList<Seeding.EventSourceSeedEntries>>()
 
         for (seeder in seeders) {
@@ -35,9 +37,12 @@ class EventSeedingService(
                         .setContent(chronicleGson.toJson(event))
                         .build()
                 }
+                if (seedingEntries.isEmpty()) continue
 
-                if (seedingEntries.isNotEmpty()) {
-                    val targetNamespace = entry.namespace ?: namespace
+                val targetNamespace = entry.namespace
+                if (targetNamespace == null) {
+                    globalEntries.addAll(seedingEntries)
+                } else {
                     entriesByNamespace.getOrPut(targetNamespace) { mutableListOf() }.add(
                         Seeding.EventSourceSeedEntries.newBuilder()
                             .setEventSourceId(entry.eventSourceId)
@@ -48,9 +53,28 @@ class EventSeedingService(
             }
         }
 
-        if (entriesByNamespace.isEmpty()) return
+        if (globalEntries.isEmpty() && entriesByNamespace.isEmpty()) return
 
         val requestBuilder = Seeding.SeedEventsRequest.newBuilder().setEventStore(eventStoreName)
+
+        // Global entries are indexed both by event type and by event source, as the kernel expects.
+        globalEntries.groupBy { it.eventTypeId }.forEach { (eventTypeId, entries) ->
+            requestBuilder.addGlobalByEventType(
+                Seeding.EventTypeSeedEntries.newBuilder()
+                    .setEventTypeId(eventTypeId)
+                    .addAllEntries(entries)
+                    .build()
+            )
+        }
+        globalEntries.groupBy { it.eventSourceId }.forEach { (eventSourceId, entries) ->
+            requestBuilder.addGlobalByEventSource(
+                Seeding.EventSourceSeedEntries.newBuilder()
+                    .setEventSourceId(eventSourceId)
+                    .addAllEntries(entries)
+                    .build()
+            )
+        }
+
         entriesByNamespace.forEach { (targetNamespace, eventSourceEntries) ->
             requestBuilder.addNamespacedEntries(
                 Seeding.NamespacedSeedEntries.newBuilder()

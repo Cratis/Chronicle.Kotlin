@@ -34,7 +34,7 @@ private class MultiNamespaceSeeder : ICanSeedEvents {
 class EventSeedingServiceTests {
 
     @Test
-    fun `seed sends everything under the event store's own namespace when forNamespace is never used`() = runBlocking {
+    fun `seed sends entries without forNamespace as global seed data`() = runBlocking {
         val stub = mockk<EventSeedingGrpcKt.EventSeedingCoroutineStub>()
         val request = slot<Seeding.SeedEventsRequest>()
         coEvery { stub.seedEvents(capture(request), any()) } returns
@@ -43,14 +43,17 @@ class EventSeedingServiceTests {
         val service = EventSeedingService("my-store", "default", stub)
         service.seed(UnscopedSeeder())
 
-        val namespacedEntries = request.captured.namespacedEntriesList
-        assertEquals(1, namespacedEntries.size)
-        assertEquals("default", namespacedEntries.single().namespace)
-        assertEquals("customer-1", namespacedEntries.single().byEventSourceList.single().eventSourceId)
+        assertTrue(request.captured.namespacedEntriesList.isEmpty())
+        val byEventSource = request.captured.globalByEventSourceList.single()
+        assertEquals("customer-1", byEventSource.eventSourceId)
+        assertEquals("CustomerRegistered", byEventSource.entriesList.single().eventTypeId)
+        val byEventType = request.captured.globalByEventTypeList.single()
+        assertEquals("CustomerRegistered", byEventType.eventTypeId)
+        assertEquals("customer-1", byEventType.entriesList.single().eventSourceId)
     }
 
     @Test
-    fun `seed groups entries by namespace when forNamespace targets namespaces other than the ambient one`() = runBlocking {
+    fun `seed groups scoped entries by namespace and keeps unscoped entries global`() = runBlocking {
         val stub = mockk<EventSeedingGrpcKt.EventSeedingCoroutineStub>()
         val request = slot<Seeding.SeedEventsRequest>()
         coEvery { stub.seedEvents(capture(request), any()) } returns
@@ -60,12 +63,11 @@ class EventSeedingServiceTests {
         service.seed(MultiNamespaceSeeder())
 
         val byNamespace = request.captured.namespacedEntriesList.associateBy { it.namespace }
-        assertEquals(3, byNamespace.size)
-        assertTrue(byNamespace.containsKey("default"))
+        assertEquals(2, byNamespace.size)
         assertTrue(byNamespace.containsKey("tenant-a"))
         assertTrue(byNamespace.containsKey("tenant-b"))
 
-        assertEquals("customer-1", byNamespace.getValue("default").byEventSourceList.single().eventSourceId)
+        assertEquals("customer-1", request.captured.globalByEventSourceList.single().eventSourceId)
         assertEquals("customer-2", byNamespace.getValue("tenant-a").byEventSourceList.single().eventSourceId)
         assertEquals("customer-3", byNamespace.getValue("tenant-b").byEventSourceList.single().eventSourceId)
     }
