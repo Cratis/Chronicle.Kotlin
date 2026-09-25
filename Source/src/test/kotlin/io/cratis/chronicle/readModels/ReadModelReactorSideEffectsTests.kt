@@ -28,6 +28,9 @@ class ReadModelReactorSideEffectsTests {
 
     private fun eventLog(result: AppendResult = succeeded): IEventLog = mockk<IEventLog>().also {
         coEvery { it.append(any(), any(), any()) } returns result
+        coEvery { it.appendMany(any<List<EventForEventSourceId>>(), any(), any()) } answers {
+            firstArg<List<EventForEventSourceId>>().map { result }
+        }
     }
 
     @Test
@@ -41,13 +44,39 @@ class ReadModelReactorSideEffectsTests {
     }
 
     @Test
-    fun `every event in a returned list is appended`() = runBlocking {
+    fun `every event in a returned list is appended as one atomic batch`() = runBlocking {
         val eventLog = eventLog()
+        val welcomed = EmployeeWelcomed("Ada")
+        val announced = EmployeeAnnounced("Ada")
 
         ReadModelReactorSideEffects(eventLog)
-            .append(listOf(EmployeeWelcomed("Ada"), EmployeeAnnounced("Ada")), "employee-1")
+            .append(listOf(welcomed, EventForEventSourceId("department-1", announced)), "employee-1")
 
-        coVerify(exactly = 2) { eventLog.append("employee-1", any(), null) }
+        coVerify(exactly = 1) {
+            eventLog.appendMany(
+                match<List<EventForEventSourceId>> { batch ->
+                    batch.map { it.eventSourceId to it.event } ==
+                        listOf("employee-1" to welcomed, "department-1" to announced)
+                },
+                any(),
+                any()
+            )
+        }
+        coVerify(exactly = 0) { eventLog.append(any(), any(), any()) }
+    }
+
+    @Test
+    fun `a rejected batch is surfaced rather than swallowed`() {
+        val eventLog = eventLog(
+            AppendResult(EventSequenceNumber(0), emptyList(), listOf(AppendError("boom")), false)
+        )
+
+        assertThrows(IllegalStateException::class.java) {
+            runBlocking {
+                ReadModelReactorSideEffects(eventLog)
+                    .append(listOf(EmployeeWelcomed("Ada"), EmployeeAnnounced("Ada")), "employee-1")
+            }
+        }
     }
 
     @Test
