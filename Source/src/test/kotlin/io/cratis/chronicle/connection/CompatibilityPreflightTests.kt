@@ -52,7 +52,7 @@ class CompatibilityPreflightTests {
     }
 
     private fun createConnection() = ChronicleConnection(ChronicleConnectionString.parse(
-        "chronicle://127.0.0.1:${server.port}?disableTls=true&apiKey=test"))
+        "chronicle://127.0.0.1:${server.port}?disableTls=true"))
 
     @AfterEach
     fun destroy() {

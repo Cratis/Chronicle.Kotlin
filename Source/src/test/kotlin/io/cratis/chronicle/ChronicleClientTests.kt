@@ -15,6 +15,8 @@ import io.grpc.Server
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Test
@@ -50,8 +52,18 @@ class ChronicleClientTests {
     }
 
     private fun clientFor(port: Int): ChronicleClient {
-        val connectionString = ChronicleConnectionString.parse("chronicle://localhost:$port?disableTls=true&apiKey=test")
+        val connectionString = ChronicleConnectionString.parse("chronicle://localhost:$port?disableTls=true")
         return ChronicleClient(ChronicleOptions(connectionString)).also { client = it }
+    }
+
+    @Test
+    fun `rejects an API key at client construction instead of silently omitting credentials`() {
+        val options = ChronicleOptions(ChronicleConnectionString.parse("chronicle://localhost:1?apiKey=test"))
+
+        val error = assertThrows(IllegalArgumentException::class.java) { ChronicleClient(options) }
+
+        assertTrue(error.message!!.contains("API key authentication is not supported by the Chronicle kernel"))
+        assertTrue(error.message!!.contains("client id and secret"))
     }
 
     @Test
