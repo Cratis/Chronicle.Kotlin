@@ -1,4 +1,5 @@
 ```java title="AutoMap with explicit mappings"
+// Requires io.cratis:chronicle 6.5.0 or later.
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;

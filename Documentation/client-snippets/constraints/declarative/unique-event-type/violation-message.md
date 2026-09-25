@@ -1,4 +1,5 @@
 ```kotlin
+// Requires io.cratis:chronicle 6.5.0 or later.
 import io.cratis.chronicle.constraints.Constraint
 import io.cratis.chronicle.constraints.IConstraint
 import io.cratis.chronicle.constraints.IConstraintBuilder

@@ -1,4 +1,5 @@
 ```java
+// Requires io.cratis:chronicle 6.5.0 or later.
 import io.cratis.chronicle.events.EventContext;
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.eventSequences.EventForEventSourceId;

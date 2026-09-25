@@ -1,4 +1,5 @@
 ```java
+// Requires io.cratis:chronicle 6.5.0 or later.
 import io.cratis.chronicle.constraints.Unique;
 import io.cratis.chronicle.events.EventType;
 
