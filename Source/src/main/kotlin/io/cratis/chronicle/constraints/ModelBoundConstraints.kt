@@ -26,6 +26,19 @@ internal object ModelBoundConstraints {
         return classLevelConstraints(eventTypes, removedWith) + propertyLevelConstraints(eventTypes, removedWith)
     }
 
+    fun messagesFor(eventTypes: List<KClass<*>>): Map<String, String> = buildMap {
+        for (eventType in eventTypes) {
+            eventType.findAnnotation<Unique>()?.let { unique ->
+                if (unique.message.isNotEmpty()) putIfAbsent(unique.id.ifEmpty { eventType.simpleName!! }, unique.message)
+            }
+            for (property in eventType.memberProperties) {
+                property.findAnnotation<Unique>()?.let { unique ->
+                    if (unique.message.isNotEmpty()) putIfAbsent(unique.id.ifEmpty { property.name }, unique.message)
+                }
+            }
+        }
+    }
+
     /**
      * The event type id releasing each constraint name, keeping only the first one found.
      *

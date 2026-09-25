@@ -8,7 +8,7 @@ or a call that never returns. This page lists what the Kotlin and Java client
 does at each stage of a connection, and what you see when a stage fails. All
 of it applies equally to `ChronicleClient`, `BlockingChronicleClient` and the
 Spring Boot starter, which is built on them. It describes
-`io.cratis:chronicle` 6.4.0.
+`io.cratis:chronicle` 6.5.0.
 
 ## Creating the client
 
@@ -20,10 +20,10 @@ the kernel before they return. Dialing:
 2. Fetches an access token from the kernel's `/connect/token` endpoint with the
    connection string's user name and password (the development credentials
    when none are given). A failed token request is written to standard error
-   but does not fail the constructor; the failure shows up later. With an
-   `apiKey` option it skips this step; see
-   [Configuration](configuration.md#tls-and-authentication) for why that
-   currently means sending no credentials.
+   but does not fail the constructor; the failure shows up later. A connection
+   string with an `apiKey` option is rejected before this step with
+   `IllegalArgumentException`, because the kernel has no API key
+   authentication.
 3. Runs a compatibility check: the client sends its client type (`Kotlin`),
    its version and the contract descriptors it was built with, and the kernel
    answers whether it can serve them. The check has a 10-second deadline.
@@ -40,10 +40,10 @@ constructor throws and no operation is sent. There is no lazy connect.
   the message
   `Chronicle server <version> is incompatible: <reasons>. No operations were sent.`
 
-Credentials are not checked at this point: with wrong credentials, or when the
-token request fails for another reason, the client is created without error
-and then never manages to connect. See
-[Bound the first call](#bound-the-first-call).
+Credentials are not checked at this point. With wrong credentials the client
+is created without error; the kernel then refuses the connection, and the
+first append or `awaitRegistration()` throws `ChronicleConnectionFailed`. See
+[Rejected connections](#rejected-connections).
 
 In a Spring Boot application the client is a bean, so an unreachable kernel at
 startup fails the application context with `APPLICATION FAILED TO START`.
@@ -54,12 +54,14 @@ There is no published compatibility matrix between client and kernel versions.
 The compatibility check at connect time is what enforces it: an incompatible
 pairing fails before anything is sent.
 
-What has been checked for this page: client `io.cratis:chronicle` 6.4.0
-against kernel image `cratis/chronicle:19.4.8-development`. The client
-connects, appends, and runs reactors and reducers, and reducer read models
-can be read back after a delay.
+What has been checked for this page: client `io.cratis:chronicle` 6.5.0
+against kernel image `cratis/chronicle:19.6.1-development`. The client
+connects, appends, runs reactors and reducers, and reads projections and
+reducers, including passive ones. Kernel 19.4.8 rejects client 6.5.0 in the
+compatibility check, so upgrade the kernel before the client. Client 6.4.0
+connects to 19.4.8.
 
-Client 6.4.0 depends on `io.cratis:chronicle-contracts` 19.4.0. That is a
+Client 6.5.0 depends on `io.cratis:chronicle-contracts` 19.5.0. That is a
 build dependency, not a statement about which kernel versions work. Treat any
 pairing not listed above as unverified until the compatibility check and your
 own tests pass against it.
@@ -110,16 +112,31 @@ Neither guarantees that registration succeeded. A pass that throws still lets
 the waiting calls through, so an append fails with a clear error instead of
 hanging. The failure is written to standard error as
 `[EventStore] Automatic registration of artifacts failed: <message>`, and the
-pass is tried again on the next reconnect.
+pass is tried again on the next reconnect. A reactor or reducer that cannot be
+started is reported on its own line and retried on the next pass, without
+holding back the others; see
+[Artifact Registration](../guides/artifact-registration.md#when-registration-fails).
+
+## Rejected connections
+
+When the kernel refuses the connection, because the credentials are wrong
+(`UNAUTHENTICATED`), the client is not permitted (`PERMISSION_DENIED`), or the
+server turns out to be incompatible on a reconnect, the waiting calls do not
+hang. `awaitRegistration()` and the first append throw
+`io.cratis.chronicle.connection.ChronicleConnectionFailed`, whose message
+names the cause. From Java, the blocking calls throw the same exception.
+
+The client keeps retrying in the background. Once the kernel accepts a
+connection, for example after the credentials are corrected on the server,
+later calls go through normally.
 
 ## Bound the first call
 
-The registration wait has no time limit of its own. If the client never
-establishes a connection, because the credentials are wrong or the kernel went
-away right after the compatibility check, the first append and
-`awaitRegistration()` wait indefinitely while the client keeps retrying. Put a
-limit on that wait at startup and fail with a message that points at the
-cause:
+Transient failures are different: when the kernel is unreachable or stops
+answering after the client was created, the client keeps retrying, and the
+first append and `awaitRegistration()` wait for it. The registration wait has
+no time limit of its own. Put a limit on it at startup and fail with a message
+that points at the cause:
 
 <!-- validate: body needs=store -->
 
@@ -171,7 +188,10 @@ reducers and projections process it afterwards, and a materialized read model
 is written to its store after that. A read immediately after the append can
 therefore return `null` or the previous state. See
 [step 8 of Get started](../get-started/index.md#8-query-a-read-model-by-key)
-for a bounded wait, and the shared
+for a bounded wait. A passive read model
+([`@Passive`](annotations.md#passive), or a reducer with `isActive = false`)
+is not stored: it is computed from the events on each read, so it includes
+the event you just appended. See the shared
 [read models](/chronicle/read-models/) documentation for designing around it.
 
 ## Disposing
@@ -194,9 +214,13 @@ and check `disableTls` and `skipTlsValidation` in
 versions cannot work together. Upgrade one of them; the message lists what
 does not match.
 
-**The first append or `awaitRegistration()` never returns.** No connection is
-ever established, most often because the credentials are wrong. Look for
-`UNAUTHENTICATED` on stderr, and bound the wait as shown above.
+**The first append or `awaitRegistration()` throws `ChronicleConnectionFailed`.**
+The kernel refused the connection. The message says why: `UNAUTHENTICATED`
+means the client id or secret is wrong.
+
+**The first append or `awaitRegistration()` never returns.** The kernel is not
+reachable, and the client is still retrying. Look for `Connection lost` on
+stderr, and bound the wait as shown above.
 
 **Reactors stopped firing.** The connection was lost and is not yet back. Look
 for `Connection lost` on stderr; the client reconnects on its own once the

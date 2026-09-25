@@ -3,6 +3,8 @@
 
 package io.cratis.chronicle.projections
 
+import io.cratis.chronicle.concepts.ConceptAs
+import java.math.BigDecimal
 import java.util.function.Consumer
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -302,8 +304,14 @@ class SetBuilderFor<TReadModel : Any, TEvent : Any, TValue : Any?>(
     private val parent: IFromBuilderFor<TReadModel, TEvent>
 ) : ISetBuilderFor<TReadModel, TEvent, TValue> {
 
+    @Deprecated("Ignores the lambda and maps the same-named event property; use toProperty or toValue instead")
     override fun to(expression: (TEvent) -> TValue?): IFromBuilderFor<TReadModel, TEvent> {
         mappings[targetProperty] = targetProperty
+        return parent
+    }
+
+    override fun toValue(value: TValue?): IFromBuilderFor<TReadModel, TEvent> {
+        mappings[targetProperty] = valueExpression(value)
         return parent
     }
 
@@ -419,6 +427,11 @@ class AllSetBuilderFor<TReadModel : Any, TValue : Any?>(
     private val parent: IFromEveryBuilderFor<TReadModel>
 ) : IAllSetBuilderFor<TReadModel, TValue> {
 
+    override fun toValue(value: TValue?): IFromEveryBuilderFor<TReadModel> {
+        mappings[targetProperty] = valueExpression(value)
+        return parent
+    }
+
     override fun toProperty(eventProperty: String): IFromEveryBuilderFor<TReadModel> {
         mappings[targetProperty] = eventProperty
         return parent
@@ -530,6 +543,17 @@ class NestedBuilderFor<TNested : Any>(
     override fun <TEvent : Any> clearWith(eventClass: KClass<TEvent>): INestedBuilderFor<TNested> {
         clearWithEventClasses.add(eventClass)
         return this
+    }
+}
+
+/** Constant expressions use the invariant textual value consumed by the kernel. */
+private fun valueExpression(value: Any?): String {
+    val actual = if (value is ConceptAs<*>) value.value else value
+    return when (actual) {
+        null -> "\$null"
+        is Enum<*> -> "\$value(${actual.ordinal})"
+        is BigDecimal -> "\$value(${actual.toPlainString()})"
+        else -> "\$value($actual)"
     }
 }
 

@@ -1,4 +1,5 @@
 ```java
+// Requires io.cratis:chronicle 6.5.0 or later.
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 
@@ -9,7 +10,7 @@ class DecSetPropsAccountProjection implements IProjectionFor<DecSetPropsAccount>
             .from(DecSetPropsAccountOpened.class, fb -> {
                 fb.<String>set("accountNumber").toProperty("number");
                 fb.<String>set("customerName").toProperty("owner.name");
-                // isActive is not set: the JVM fluent builder in 6.4.0 cannot set a constant value.
+                fb.<Boolean>set("isActive").toValue(true);
                 fb.<String>set("openedAt").toProperty("timestamp");
             })
             .from(DecSetPropsMoneyDeposited.class, fb -> {

@@ -1,4 +1,5 @@
 ```kotlin
+// Requires io.cratis:chronicle 6.5.0 or later.
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel

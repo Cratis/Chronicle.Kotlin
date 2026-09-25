@@ -129,7 +129,7 @@ class VariantProjectionTests {
     fun `entering a variant keeps a From for the entering event`() {
         val definitions = register(MbVariantBacklogItem::class, MbVariantPullRequestItem::class)
         val backlog = definitions.first { it.readModel == "MbVariantBacklogItem" }
-        assertEquals("EventSourceId", backlog.fromFor(MbVariantIssueCreated::class)!!.key)
+        assertEquals("\$eventSourceId", backlog.fromFor(MbVariantIssueCreated::class)!!.key)
     }
 
     @Test

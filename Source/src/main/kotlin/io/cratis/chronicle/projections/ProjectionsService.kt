@@ -29,6 +29,9 @@ private data class BuiltDefinition(
 
 /** The literal key value meaning "correlate on the event source id", matching the kernel's key convention. */
 internal const val EVENT_SOURCE_ID_KEY = "EventSourceId"
+internal const val EVENT_SOURCE_ID_EXPRESSION = "\$eventSourceId"
+
+internal fun wireKey(key: String): String = if (key == EVENT_SOURCE_ID_KEY) EVENT_SOURCE_ID_EXPRESSION else key
 
 class ProjectionsService(
     private val eventStoreName: String,
@@ -156,6 +159,8 @@ class ProjectionsService(
             children = buildChildrenMapFromEntries(builderFor.childrenEntries),
             nested = buildNestedMapFromEntries(builderFor.nestedEntries),
             isRewindable = builderFor.isRewindable,
+            isActive = readModelClass.findAnnotation<Passive>() == null,
+            autoMapEnabled = builderFor.autoMapEnabled,
             removedWith = buildRemovedWithPairsFromEntries(builderFor.removedWithEntries),
             removedWithJoin = buildRemovedWithJoinPairsFromEntries(builderFor.removedWithJoinEntries),
             all = buildFromEveryDefinitionFromEntries(builderFor.fromEveryProperties)

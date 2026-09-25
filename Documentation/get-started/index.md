@@ -31,7 +31,7 @@ method (Java).
 ## 1. Add the dependency
 
 The client is published to Maven Central as `io.cratis:chronicle`. The examples
-on this page were checked against `6.4.0`; use the
+on this page were checked against `6.5.0`; use the
 [latest release](https://central.sonatype.com/artifact/io.cratis/chronicle) for
 a new project.
 
@@ -42,7 +42,7 @@ a new project.
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.cratis:chronicle:6.4.0")
+    implementation("io.cratis:chronicle:6.5.0")
 }
 ```
 
@@ -51,7 +51,7 @@ dependencies {
 ```groovy
 // build.gradle
 dependencies {
-    implementation 'io.cratis:chronicle:6.4.0'
+    implementation 'io.cratis:chronicle:6.5.0'
 }
 ```
 
@@ -61,15 +61,13 @@ With Maven:
 <dependency>
     <groupId>io.cratis</groupId>
     <artifactId>chronicle</artifactId>
-    <version>6.4.0</version>
+    <version>6.5.0</version>
 </dependency>
 ```
 
 The client brings the Kotlin standard library and `kotlinx-coroutines` with it,
-so a Java project needs nothing else. It requires `kotlinx-coroutines` 1.11 or
-later at runtime. If your build forces an older version (Spring Boot's
-dependency management does), see
-[Spring Boot](../guides/spring-boot.md#add-the-dependency).
+so a Java project needs nothing else. It runs on `kotlinx-coroutines` 1.10.2 or
+later, which includes the version Spring Boot 4.1 manages.
 
 ## 2. Connect to the kernel
 
@@ -579,7 +577,10 @@ to an instance that already exists, check for the value you expect instead of
 Polling after every write is a teaching device, not an application pattern.
 In an application, return the append result to the caller and let screens
 observe the read model, or design the next step so it does not depend on the
-read model having caught up. The shared
+read model having caught up. When a read must include the latest events, make
+the reducer passive with `@Reducer(isActive = false)` (see
+[`@Reducer`](../reference/annotations.md#reducer)): the read model is then
+computed from its events on every read instead of stored. The shared
 [read model consistency](/chronicle/read-models/) docs explain the trade-offs.
 
 ## Troubleshooting
@@ -589,11 +590,9 @@ The kernel is not running, not on that host and port, or the TLS settings do
 not match it. Check `curl -sk https://localhost:35000/health`. With
 `skipTlsValidation=false`, make sure the JVM trusts the kernel's certificate.
 
-**The first append never returns, and stderr repeats
-`Connection lost: UNAUTHENTICATED`.** The client id or secret is wrong. Fix
-the credentials. The client keeps retrying, so
-[bound the first call](../reference/connection-lifecycle.md#bound-the-first-call)
-with a timeout.
+**The first append or `awaitRegistration()` throws `ChronicleConnectionFailed`
+mentioning `UNAUTHENTICATED`.** The client id or secret is wrong. Fix the
+credentials; the client keeps retrying and recovers once they are accepted.
 
 **stderr shows `Automatic registration of artifacts failed`.** An artifact
 could not be registered or created, and the artifacts after it in the
@@ -602,10 +601,6 @@ registration order were not registered. See
 
 **The read model is `null` right after appending.** It has not caught up yet.
 That is expected; wait with a time limit, as in step 8.
-
-**`NoSuchMethodError` mentioning `kotlinx.coroutines`.** The build forces a
-`kotlinx-coroutines` older than 1.11. Raise it; see
-[Spring Boot](../guides/spring-boot.md#add-the-dependency).
 
 ## What's next
 

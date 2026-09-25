@@ -160,6 +160,11 @@ public final class io/cratis/chronicle/artifacts/ArtifactActivator : io/cratis/c
 	public fun activate (Lkotlin/reflect/KClass;)Ljava/lang/Object;
 }
 
+public final class io/cratis/chronicle/artifacts/ArtifactRegistrationFailed : java/lang/IllegalStateException {
+	public fun <init> (Ljava/util/List;)V
+	public final fun getFailures ()Ljava/util/List;
+}
+
 public final class io/cratis/chronicle/artifacts/ArtifactRegistrations {
 	public fun <init> (Lio/cratis/chronicle/IEventStore;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;)V
 	public synthetic fun <init> (Lio/cratis/chronicle/IEventStore;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -242,6 +247,19 @@ public final class io/cratis/chronicle/artifacts/KnownClientArtifacts : io/crati
 
 public final class io/cratis/chronicle/artifacts/KnownClientArtifacts$Companion {
 	public final fun getEmpty ()Lio/cratis/chronicle/artifacts/IClientArtifacts;
+}
+
+public final class io/cratis/chronicle/artifacts/ObserverStartFailure {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/Throwable;
+	public final fun copy (Ljava/lang/String;Ljava/lang/Throwable;)Lio/cratis/chronicle/artifacts/ObserverStartFailure;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/artifacts/ObserverStartFailure;Ljava/lang/String;Ljava/lang/Throwable;ILjava/lang/Object;)Lio/cratis/chronicle/artifacts/ObserverStartFailure;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCause ()Ljava/lang/Throwable;
+	public final fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/cratis/chronicle/auditing/Causation {
@@ -493,6 +511,10 @@ public final class io/cratis/chronicle/connection/ChronicleConnection : java/lan
 	public final fun getServices ()Lio/cratis/chronicle/connection/ChronicleServices;
 }
 
+public final class io/cratis/chronicle/connection/ChronicleConnectionFailed : java/lang/RuntimeException {
+	public fun <init> (Ljava/lang/Throwable;)V
+}
+
 public final class io/cratis/chronicle/connection/ChronicleConnectionString {
 	public static final field Companion Lio/cratis/chronicle/connection/ChronicleConnectionString$Companion;
 	public static final field DEVELOPMENT_CLIENT Ljava/lang/String;
@@ -546,6 +568,10 @@ public final class io/cratis/chronicle/connection/ChronicleServerAddress {
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/cratis/chronicle/connection/ChronicleServerIncompatible : java/lang/IllegalStateException {
+	public fun <init> (Ljava/lang/String;)V
+}
+
 public final class io/cratis/chronicle/connection/ChronicleServices {
 	public fun <init> (Lio/grpc/Channel;)V
 	public final fun getCaptures ()LCratis/Chronicle/Contracts/Captures/CapturesGrpcKt$CapturesCoroutineStub;
@@ -581,9 +607,11 @@ public final class io/cratis/chronicle/connection/ConnectionLifecycle {
 	public final fun connections ()Lkotlinx/coroutines/flow/Flow;
 	public final fun getConnectionId ()Ljava/lang/String;
 	public final fun getState ()Lkotlinx/coroutines/flow/StateFlow;
+	public final fun getTerminalFailure ()Lkotlinx/coroutines/flow/StateFlow;
 	public final fun isConnected ()Z
 	public final fun markConnected (Ljava/lang/String;)V
 	public final fun markDisconnected ()V
+	public final fun markTerminalFailure (Ljava/lang/Throwable;)V
 }
 
 public final class io/cratis/chronicle/connection/ConnectionManager {
@@ -2516,6 +2544,7 @@ public final class io/cratis/chronicle/projections/AllSetBuilderFor : io/cratis/
 	public fun toEventContextProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public fun toEventSourceId ()Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public fun toProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
+	public fun toValue (Ljava/lang/Object;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 }
 
 public final class io/cratis/chronicle/projections/ChildFromBuilderFor : io/cratis/chronicle/projections/IChildFromBuilderFor {
@@ -2705,6 +2734,7 @@ public abstract interface class io/cratis/chronicle/projections/IAllSetBuilderFo
 	public abstract fun toEventContextProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public abstract fun toEventSourceId ()Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public abstract fun toProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
+	public abstract fun toValue (Ljava/lang/Object;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 }
 
 public abstract interface class io/cratis/chronicle/projections/IChildFromBuilderFor {
@@ -2868,6 +2898,7 @@ public abstract interface class io/cratis/chronicle/projections/ISetBuilderFor {
 	public abstract fun toEventContextProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun toEventSourceId ()Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun toProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public abstract fun toValue (Ljava/lang/Object;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 }
 
 public abstract interface class io/cratis/chronicle/projections/ISubtractBuilderFor {
@@ -3144,6 +3175,7 @@ public final class io/cratis/chronicle/projections/SetBuilderFor : io/cratis/chr
 	public fun toEventContextProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public fun toEventSourceId ()Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public fun toProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public fun toValue (Ljava/lang/Object;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 }
 
 public abstract interface annotation class io/cratis/chronicle/projections/SetFrom : java/lang/annotation/Annotation {
@@ -3408,6 +3440,7 @@ public final class io/cratis/chronicle/sinks/WellKnownSinkTypes {
 	public static final field INSTANCE Lio/cratis/chronicle/sinks/WellKnownSinkTypes;
 	public static final field IN_MEMORY Ljava/lang/String;
 	public static final field MONGODB Ljava/lang/String;
+	public static final field NONE Ljava/lang/String;
 	public static final field SQL Ljava/lang/String;
 }
 

@@ -5,6 +5,7 @@ package io.cratis.chronicle.connection
 
 import Cratis.Chronicle.Contracts.Clients.Clients
 import Cratis.Chronicle.Contracts.Clients.ConnectionServiceGrpcKt
+import io.grpc.Status
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
@@ -89,9 +90,9 @@ class ConnectionManager(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                // Never let a failed attempt end the loop — the kernel being down is the
-                // normal case this exists for, and giving up here is what used to leave
-                // the client permanently disconnected.
+                // Keep retrying even after a non-transient failure; callers waiting on
+                // registration can fail promptly while a corrected server can recover.
+                if (isTerminalFailure(e)) lifecycle.markTerminalFailure(e)
                 System.err.println("[Chronicle] Connection lost: ${e.message}")
             }
 
@@ -133,6 +134,12 @@ class ConnectionManager(
 
         session.join()
         watchdog.cancel()
+    }
+
+    private fun isTerminalFailure(error: Exception): Boolean {
+        val status = Status.fromThrowable(error).code
+        return status == Status.Code.UNAUTHENTICATED || status == Status.Code.PERMISSION_DENIED ||
+            error is ChronicleServerIncompatible
     }
 
     private fun buildRequest(connectionId: String): Clients.ConnectRequest {

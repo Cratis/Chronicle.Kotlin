@@ -25,7 +25,7 @@ richer surface for reading and managing read model instances:
 
 | Member | Use it for |
 | --- | --- |
-| `getInstances` | Every instance, replaying events in-process. |
+| `getInstances` | Every instance; see the EventStore API reference. |
 | `getSnapshotsById` | Snapshots of a read model grouped by correlation id. |
 | `watch` | A `Flow` of changesets for a read model — a live view. |
 | `dehydrateSession` | Releasing session-scoped state for an instance. |
@@ -55,8 +55,7 @@ employees.forEach { employee ->
 ### Materialized (server-side) reads
 
 `store.readModels.materialized` provides paginated access to instances a
-sink has already materialized server-side, instead of replaying events
-in-process:
+sink has already materialized server-side:
 
 <!-- validate: body needs=store -->
 

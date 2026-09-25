@@ -6,6 +6,7 @@ package io.cratis.chronicle
 import Cratis.Chronicle.Contracts.EventStores.Eventstores
 import io.cratis.chronicle.artifacts.ArtifactActivator
 import io.cratis.chronicle.artifacts.ArtifactRegistrations
+import io.cratis.chronicle.artifacts.ArtifactRegistrationFailed
 import io.cratis.chronicle.artifacts.IArtifactActivator
 import io.cratis.chronicle.artifacts.IClientArtifacts
 import io.cratis.chronicle.artifacts.IRegistrationGate
@@ -55,6 +56,7 @@ import io.cratis.chronicle.observation.ReducersService
 import io.cratis.chronicle.projections.IProjectionsService
 import io.cratis.chronicle.projections.ProjectionsService
 import io.cratis.chronicle.connection.ConnectionLifecycle
+import io.cratis.chronicle.connection.ChronicleConnectionFailed
 import io.cratis.chronicle.readModels.IReadModelsService
 import io.cratis.chronicle.readModels.ReadModelsService
 import io.cratis.chronicle.seeding.EventSeedingService
@@ -64,6 +66,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.merge
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -104,7 +110,9 @@ class EventStore(
     private val registrationGate = IRegistrationGate { awaitRegistration() }
 
     override val eventLog: IEventLog by lazy {
-        EventLog(name, namespace, services.eventSequences, unitOfWorkManager, traces, registrationGate)
+        EventLog(name, namespace, services.eventSequences, unitOfWorkManager, traces, registrationGate).also {
+            it.resolveConstraintMessage = (constraints as ConstraintsService)::resolveMessageFor
+        }
     }
 
     // ReadModelsService is shared so that reducers and projections can auto-register their read
@@ -118,7 +126,7 @@ class EventStore(
             services.readModelExplorer,
             services.compliance,
             defaultSinkTypeId
-        )
+        ).also { it.resolveEventSequence = ::getEventSequence }
     }
 
     override val readModels: IReadModelsService get() = readModelsService
@@ -242,6 +250,10 @@ class EventStore(
                         registrations.registerAll()
                     } catch (e: CancellationException) {
                         throw e
+                    } catch (e: ArtifactRegistrationFailed) {
+                        e.failures.forEach { failure ->
+                            System.err.println("[EventStore] Automatic registration of '${failure.name}' failed: ${failure.cause.message}")
+                        }
                     } catch (e: Exception) {
                         System.err.println("[EventStore] Automatic registration of artifacts failed: ${e.message}")
                     }
@@ -262,7 +274,14 @@ class EventStore(
     }
 
     override suspend fun awaitRegistration() {
-        if (autoDiscoverAndRegister) registrations.completed.await()
+        if (!autoDiscoverAndRegister) return
+        // Both the first pass and a rejected connection must wake a pending append.
+        // A successful pass does not hide a later authentication failure from new callers.
+        val failure = merge(
+            flow<Throwable?> { registrations.completed.await(); emit(null) },
+            lifecycle.terminalFailure.filterNotNull()
+        ).first()
+        (failure ?: lifecycle.terminalFailure.value)?.let { throw ChronicleConnectionFailed(it) }
     }
 
     override fun getEventSequence(id: EventSequenceId): IEventSequence =
@@ -273,7 +292,9 @@ class EventStore(
             eventLog
         } else {
             eventSequences.getOrPut(id) {
-                EventSequence(id, name, namespace, services.eventSequences, traces, registrationGate)
+                EventSequence(id, name, namespace, services.eventSequences, traces, registrationGate).also {
+                    it.resolveConstraintMessage = (constraints as ConstraintsService)::resolveMessageFor
+                }
             }
         }
 }

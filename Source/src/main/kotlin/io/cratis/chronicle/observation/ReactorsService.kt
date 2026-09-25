@@ -9,6 +9,7 @@ import io.cratis.chronicle.connection.ConnectionLifecycle
 import io.cratis.chronicle.diagnostics.ChronicleTraces
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.projections.EVENT_SOURCE_ID_EXPRESSION
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -47,7 +48,7 @@ class ReactorsService(
                         .setGeneration(ann.generation)
                         .build()
                 )
-                .setKey("EventSourceId")
+                .setKey(EVENT_SOURCE_ID_EXPRESSION)
                 .build()
         }
 

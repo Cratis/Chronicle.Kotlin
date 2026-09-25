@@ -29,6 +29,7 @@ import io.cratis.chronicle.webhooks.IWebhooksService
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
@@ -194,6 +195,73 @@ class ArtifactRegistrationsTests {
 
         assertEquals(1, recorder.timesCalled(REACTORS))
         assertEquals(1, recorder.timesCalled(REDUCERS))
+    }
+
+    @Test
+    fun `a failing reactor does not block reducers or seeding and is retried only until it starts`() = runTest {
+        var attempts = 0
+        coEvery { reactors.register(any()) } answers {
+            attempts++
+            if (attempts == 1) throw IllegalStateException("cannot start reactor")
+            recorder.record(REACTORS, arrayOf(firstArg<Any>()))
+            Job()
+        }
+        val subject = registrations()
+
+        val failure = assertThrows(ArtifactRegistrationFailed::class.java) { runBlocking { subject.registerAll() } }
+        assertTrue(failure.message!!.contains(OrderReactor::class.qualifiedName!!))
+        assertEquals(1, failure.suppressed.size)
+        assertEquals(1, attempts)
+        assertEquals(1, recorder.timesCalled(REDUCERS))
+        assertEquals(1, recorder.timesCalled(SEEDERS))
+        assertTrue(subject.completed.isCompleted)
+
+        subject.registerAll()
+        subject.registerAll()
+        assertEquals(2, attempts)
+        assertEquals(1, recorder.timesCalled(REACTORS))
+        assertEquals(1, recorder.timesCalled(REDUCERS))
+        assertEquals(3, recorder.timesCalled(SEEDERS))
+    }
+
+    @Test
+    fun `observer failures are aggregated after remaining observers and seeding run`() = runTest {
+        coEvery { reactors.register(any()) } throws IllegalStateException("reactor down")
+        coEvery { reducers.register(any()) } throws IllegalStateException("reducer down")
+
+        val failure = assertThrows(ArtifactRegistrationFailed::class.java) {
+            runBlocking { registrations().registerAll() }
+        }
+
+        assertEquals(2, failure.failures.size)
+        assertTrue(failure.message!!.contains(OrderReactor::class.qualifiedName!!))
+        assertTrue(failure.message!!.contains(OrderStateReducer::class.qualifiedName!!))
+        assertEquals(2, failure.suppressed.size)
+        assertEquals(1, recorder.timesCalled(SEEDERS))
+    }
+
+    @Test
+    fun `activation failure is isolated and its artifact is retried`() = runTest {
+        var attempts = 0
+        val subject = registrations { type ->
+            if (type == OrderReactor::class && attempts++ == 0) throw IllegalStateException("cannot activate")
+            ArtifactActivator.activate(type)
+        }
+
+        assertThrows(ArtifactRegistrationFailed::class.java) { runBlocking { subject.registerAll() } }
+        subject.registerAll()
+
+        assertEquals(2, attempts)
+        assertEquals(1, recorder.timesCalled(REACTORS))
+        assertEquals(1, recorder.timesCalled(REDUCERS))
+    }
+
+    @Test
+    fun `cancellation of an observer is not swallowed`() = runTest {
+        coEvery { reactors.register(any()) } throws CancellationException("stopped")
+
+        assertThrows(CancellationException::class.java) { runBlocking { registrations().registerAll() } }
+        assertEquals(0, recorder.timesCalled(REDUCERS))
     }
 
     @Test

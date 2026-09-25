@@ -13,14 +13,19 @@ import bcl.Bcl
 import io.cratis.chronicle.Subject
 import io.cratis.chronicle.compliance.ComplianceService
 import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.chronicle.eventSequences.AppendedEvent
 import io.cratis.chronicle.eventSequences.EventSequenceId
+import io.cratis.chronicle.eventSequences.EventSequenceNumber
+import io.cratis.chronicle.eventSequences.IEventSequence
 import io.cratis.chronicle.json.chronicleGson
+import io.cratis.chronicle.observation.ReducerRegistration
 import io.cratis.chronicle.schemas.JsonSchemaGenerator
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.full.findAnnotation
@@ -44,6 +49,15 @@ class ReadModelsService(
     private val defaultSinkTypeId: String = WellKnownSinkTypes.MONGODB
 ) : IReadModelsService {
     private val compliance = ComplianceService(eventStoreName, namespace, complianceStub)
+    internal lateinit var resolveEventSequence: (EventSequenceId) -> IEventSequence
+    private val passiveReducers = ConcurrentHashMap<KClass<*>, Pair<Any, ReducerRegistration>>()
+
+    internal fun registerReducer(reducer: Any, registration: ReducerRegistration) {
+        registration.readModelClass?.let { readModelClass ->
+            if (registration.isActive) passiveReducers.remove(readModelClass)
+            else passiveReducers[readModelClass] = reducer to registration
+        }
+    }
 
     override val materialized: IMaterializedReadModels = MaterializedReadModels(eventStoreName, namespace, materializedStub)
 
@@ -62,8 +76,16 @@ class ReadModelsService(
      * @param cls Read model class to register.
      * @param observerType 0 = NotSet, 1 = Reducer, 2 = Projection.
      * @param observerIdentifier Simple name of the reducer or projection that produces this model.
+     * @param passive Whether the observer that produces this model is passive. A passive reducer has no
+     *   observer writing it to a sink, so it registers with no sink and is reduced locally on read.
+     *   A model annotated [Passive] is always registered that way.
      */
-    internal suspend fun registerWithObserver(cls: KClass<*>, observerType: Int, observerIdentifier: String) {
+    internal suspend fun registerWithObserver(
+        cls: KClass<*>,
+        observerType: Int,
+        observerIdentifier: String,
+        passive: Boolean = false
+    ) {
         val ann = cls.findAnnotation<ReadModel>()
         val identifier = cls.readModelIdentifier()
         val displayName = ann?.displayName?.ifEmpty { cls.simpleName!! } ?: cls.simpleName!!
@@ -84,7 +106,7 @@ class ReadModelsService(
                     .setConfigurationId(
                         Bcl.Guid.newBuilder().setLo(1L).setHi(0L).build()
                     )
-                    .setTypeId(defaultSinkTypeId)
+                    .setTypeId(if (passive || cls.findAnnotation<Passive>() != null) WellKnownSinkTypes.NONE else defaultSinkTypeId)
                     .build()
             )
             .setSchema(JsonSchemaGenerator.generate(cls))
@@ -103,6 +125,13 @@ class ReadModelsService(
     }
 
     override suspend fun <T : Any> getInstanceByKey(readModelClass: KClass<T>, key: String): T? {
+        passiveReducers[readModelClass]?.let { (reducer, registration) ->
+            val events = sequenceFor(registration).getForEventSourceIdAndEventTypes(key, registration.eventClasses())
+                .filter { registration.accepts(it) }
+            if (events.isEmpty()) return null
+            return fold(events, reducer, registration)?.let { release(readModelClass.java.cast(it)) }
+        }
+
         val request = Readmodels.GetInstanceByKeyRequest.newBuilder()
             .setEventStore(eventStoreName)
             .setNamespace(namespace)
@@ -121,6 +150,16 @@ class ReadModelsService(
     }
 
     override suspend fun <T : Any> getInstances(readModelClass: KClass<T>, eventCount: Long?): List<T> {
+        passiveReducers[readModelClass]?.let { (reducer, registration) ->
+            val events = sequenceFor(registration).getFromSequenceNumber(EventSequenceNumber.first, eventTypes = registration.eventClasses())
+                .filter { registration.accepts(it) }
+                .sortedBy { it.context.sequenceNumber }
+            val bounded = if (eventCount == null) events else events.take(eventCount.coerceIn(0L, events.size.toLong()).toInt())
+            return releaseMany(bounded.groupBy { it.context.eventSourceId }.values.mapNotNull { sourceEvents ->
+                fold(sourceEvents, reducer, registration)?.let { readModelClass.java.cast(it) }
+            })
+        }
+
         val builder = Readmodels.GetAllInstancesRequest.newBuilder()
             .setEventStore(eventStoreName)
             .setNamespace(namespace)
@@ -129,6 +168,26 @@ class ReadModelsService(
         if (eventCount != null) builder.setEventCount(eventCount)
 
         return stub.getAllInstances(builder.build()).instancesList.map { chronicleGson.fromJson(it, readModelClass.java) }
+    }
+
+    private fun sequenceFor(registration: ReducerRegistration): IEventSequence =
+        resolveEventSequence(EventSequenceId(registration.eventSequenceId))
+
+    private fun ReducerRegistration.accepts(event: AppendedEvent): Boolean =
+        (filters.eventSourceType.isEmpty() || event.context.eventSourceType == filters.eventSourceType) &&
+            (filters.eventStreamType == "All" || event.context.eventStreamType == filters.eventStreamType) &&
+            event.context.tags.containsAll(filters.filterTags)
+
+    private fun ReducerRegistration.eventClasses(): List<KClass<*>> = handlers.values.map { it.eventClass }.distinct()
+
+    private suspend fun fold(events: List<AppendedEvent>, reducer: Any, registration: ReducerRegistration): Any? {
+        var state: Any? = null
+        for (appendedEvent in events.sortedBy { it.context.sequenceNumber }) {
+            val handler = registration.handlers[appendedEvent.context.eventType.id.value] ?: continue
+            val event = chronicleGson.fromJson(appendedEvent.content, handler.eventClass.java)
+            state = handler.invokeReducer(reducer, event, state, appendedEvent.context)
+        }
+        return state
     }
 
     override suspend fun <T : Any> getSnapshotsById(readModelClass: KClass<T>, key: String): List<ReadModelSnapshot<T>> {

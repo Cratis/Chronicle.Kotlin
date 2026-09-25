@@ -52,7 +52,7 @@ class CompatibilityPreflightTests {
     }
 
     private fun createConnection() = ChronicleConnection(ChronicleConnectionString.parse(
-        "chronicle://127.0.0.1:${server.port}?disableTls=true&apiKey=test"))
+        "chronicle://127.0.0.1:${server.port}?disableTls=true"))
 
     @AfterEach
     fun destroy() {
@@ -63,7 +63,8 @@ class CompatibilityPreflightTests {
     @Test
     fun `direct writes cannot bypass an incompatible channel`() = runBlocking {
         compatible = false
-        assertThrows(IllegalStateException::class.java) { connection.services }
+        val failure = assertThrows(ChronicleServerIncompatible::class.java) { connection.services }
+        assertTrue(failure.message!!.contains(" is incompatible"))
         assertEquals(0, writes.get())
         assertEquals(1, checks.get())
     }
@@ -91,7 +92,7 @@ class CompatibilityPreflightTests {
     @Test
     fun `a contradictory verdict cannot permit a write`() {
         contradictory = true
-        assertThrows(IllegalStateException::class.java) { connection.services }
+        assertThrows(ChronicleServerIncompatible::class.java) { connection.services }
         assertEquals(0, writes.get())
     }
 

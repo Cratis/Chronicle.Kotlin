@@ -1,4 +1,5 @@
 ```java
+// Requires io.cratis:chronicle 6.5.0 or later.
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.seeding.ICanSeedEvents;
 import io.cratis.chronicle.seeding.IEventSeedingBuilder;
@@ -23,7 +24,8 @@ record EvtSeedingBillingSetUp(String billingEmail) {}
 class EvtSeedingTenantSeeding implements ICanSeedEvents {
     @Override
     public void seed(IEventSeedingBuilder builder) {
-        // Unscoped seed data targets the store's current namespace.
+        // Unscoped seed data is sent as global seed data and lands in the namespaces the
+        // event store has. For a namespace created later, scope the data with forNamespace.
         EventSeedingBuilderJavaBridge.forEventType(
             builder,
             EvtSeedingProductCreated.class,

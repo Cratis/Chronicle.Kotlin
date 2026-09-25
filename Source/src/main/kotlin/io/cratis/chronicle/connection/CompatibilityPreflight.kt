@@ -25,8 +25,10 @@ internal object CompatibilityPreflight {
         val response = ConnectionServiceGrpcKt.ConnectionServiceCoroutineStub(channel)
             .withDeadlineAfter(10, TimeUnit.SECONDS)
             .checkCompatibility(request)
-        check(response.isCompatible && response.incompatibilitiesCount == 0) {
-            "Chronicle server ${response.serverVersion} is incompatible: ${response.incompatibilitiesList.joinToString("; ")}. No operations were sent."
+        if (!response.isCompatible || response.incompatibilitiesCount != 0) {
+            throw ChronicleServerIncompatible(
+                "Chronicle server ${response.serverVersion} is incompatible: ${response.incompatibilitiesList.joinToString("; ")}. No operations were sent."
+            )
         }
     }
 }

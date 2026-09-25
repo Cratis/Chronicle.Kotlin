@@ -31,9 +31,7 @@ docker run --rm -p 127.0.0.1:35000:35000 cratis/chronicle:latest-development
 ```
 
 Run the Gradle command from the repository root with a JDK 17 or later on
-`JAVA_HOME`. The build sets Spring Boot's `kotlin-coroutines.version` to
-`1.11.0`, which the client needs; your own application needs the same line (see
-the [Spring Boot guide](../../../Documentation/guides/spring-boot.md#add-the-dependency)).
+`JAVA_HOME`.
 
 ## Try it
 
@@ -59,12 +57,9 @@ curl -X POST http://localhost:8081/api/employees/employee-1/promote \
   -d '{"newTitle":"Principal Engineer"}'
 ```
 
-Now try to hire someone else on the same email address. The constraint rejects
-the email and the request answers `409 Conflict`. `Chronicle.append` goes to
-the kernel straight away rather than into the request's unit of work, so
-`EmployeeHired` for `employee-2` has already been appended by then; see the
-[Spring Boot guide](../../../Documentation/guides/spring-boot.md#unit-of-work)
-for staging appends:
+Now try to hire someone else on the same email address. Both events are staged
+in the request's unit of work and committed as one batch, so the constraint
+rejects the whole hire and the request answers `409 Conflict`:
 
 ```bash
 curl -i -X POST http://localhost:8081/api/employees/employee-2/hire \

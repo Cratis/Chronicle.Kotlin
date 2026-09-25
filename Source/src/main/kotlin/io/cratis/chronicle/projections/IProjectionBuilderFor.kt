@@ -267,8 +267,11 @@ interface IFromBuilderFor<TReadModel : Any, TEvent : Any> {
     fun subtract(propertyName: String): ISubtractBuilderFor<TReadModel, TEvent>
 }
 
+/** Implemented by the client; applications should not implement this builder interface. */
 interface ISetBuilderFor<TReadModel : Any, TEvent : Any, TValue : Any?> {
+    @Deprecated("Ignores the lambda and maps the same-named event property; use toProperty or toValue instead")
     fun to(expression: (TEvent) -> TValue?): IFromBuilderFor<TReadModel, TEvent>
+    fun toValue(value: TValue?): IFromBuilderFor<TReadModel, TEvent>
     fun toEventSourceId(): IFromBuilderFor<TReadModel, TEvent>
     fun toProperty(eventProperty: String): IFromBuilderFor<TReadModel, TEvent>
 
@@ -371,7 +374,9 @@ interface IFromEveryBuilderFor<TReadModel : Any> {
     fun decrement(propertyName: String, keyFromContext: String): IFromEveryBuilderFor<TReadModel>
 }
 
+/** Implemented by the client; applications should not implement this builder interface. */
 interface IAllSetBuilderFor<TReadModel : Any, TValue : Any?> {
+    fun toValue(value: TValue?): IFromEveryBuilderFor<TReadModel>
     fun toProperty(eventProperty: String): IFromEveryBuilderFor<TReadModel>
     fun toEventSourceId(): IFromEveryBuilderFor<TReadModel>
     fun toEventContextProperty(contextProperty: String): IFromEveryBuilderFor<TReadModel>
