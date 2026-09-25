@@ -12,7 +12,7 @@ class WebhooksIndexRegistration {
     void registerOrderWebhook(EventStore store) {
         WebhooksServiceJavaBridge.register(store.getWebhooks(), "order-placed-webhook", "https://hooks.example.com/orders", builder -> {
             WebhookDefinitionBuilderJavaBridge.withEventType(builder, WebhooksIndexOrderPlaced.class)
-                .withBearerToken("webhook-token");
+                .withBearerToken(java.util.Objects.requireNonNull(System.getenv("CHRONICLE_WEBHOOK_TOKEN"), "CHRONICLE_WEBHOOK_TOKEN is required"));
         });
     }
 }

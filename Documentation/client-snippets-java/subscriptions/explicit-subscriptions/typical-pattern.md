@@ -1,5 +1,5 @@
 ```java
-import io.cratis.chronicle.ChronicleClient;
+import io.cratis.chronicle.java.BlockingChronicleClient;
 import io.cratis.chronicle.ChronicleOptions;
 import io.cratis.chronicle.EventStore;
 
@@ -29,8 +29,8 @@ class SubscriptionsExplicitTypicalPattern {
     }
 
     static void configure() {
-        ChronicleClient client = new ChronicleClient(ChronicleOptions.Companion.development());
-        EventStore eventStore = (EventStore) client.getEventStore("Quickstart", "Default");
+        BlockingChronicleClient client = BlockingChronicleClient.connect(ChronicleOptions.development());
+        EventStore eventStore = (EventStore) client.getEventStore("Quickstart", "Default").unwrap();
         registerSubscriptions(eventStore);
     }
 }

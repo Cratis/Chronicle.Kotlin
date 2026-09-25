@@ -42,7 +42,7 @@ class EmployeeProjectionWithNestedContract : IProjectionFor<EmployeeWithNestedCo
                 contract
                     .from(ContractStartedWithNestedContract::class)
                     .from(ContractExtendedWithNestedContract::class) {
-                        it.set(ContractForNestedEmployee::endDate).to { e -> e.newEndDate }
+                        it.set(ContractForNestedEmployee::endDate).toProperty("newEndDate")
                     }
                     .clearWith(ContractEndedWithNestedContract::class)
             }

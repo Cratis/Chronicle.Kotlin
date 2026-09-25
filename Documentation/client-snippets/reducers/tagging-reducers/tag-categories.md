@@ -1,4 +1,5 @@
 ```kotlin
+import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.observation.Tag
 import io.cratis.chronicle.readModels.ReadModel
@@ -16,5 +17,10 @@ data class TaggingReducersCategoryExamples(val id: UUID = UUID(0, 0))
 // By data type
 @Tag("Aggregates", "Summaries", "Metrics")
 @Reducer
-class TaggingReducersCategoryExamplesReducer
+class TaggingReducersCategoryExamplesReducer {
+    fun on(event: TaggingReducersCategoryOrderPlaced) = TaggingReducersCategoryExamples(event.id)
+}
+
+@EventType
+data class TaggingReducersCategoryOrderPlaced(val id: UUID = UUID(0, 0))
 ```

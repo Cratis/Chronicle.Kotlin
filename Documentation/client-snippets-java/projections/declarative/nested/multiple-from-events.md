@@ -31,10 +31,10 @@ class SliceProjectionForNestedUpdates implements IProjectionFor<SliceForNestedUp
                 nested
                     .from(CommandSetForNestedUpdates.class)
                     .from(CommandRenamedForNestedUpdates.class, fb -> {
-                        fb.<String>set("name").to(e -> e.newName());
+                        fb.<String>set("name").toProperty("newName");
                     })
                     .from(CommandSchemaUpdatedForNestedUpdates.class, fb -> {
-                        fb.<String>set("schema").to(e -> e.updatedSchema());
+                        fb.<String>set("schema").toProperty("updatedSchema");
                     })
                     .clearWith(CommandClearedForNestedUpdates.class);
             });

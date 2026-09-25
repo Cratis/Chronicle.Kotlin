@@ -1,7 +1,10 @@
 ```kotlin
 import io.cratis.chronicle.IEventStore
+import io.cratis.chronicle.events.EventType
 
+@EventType
 data class TransactionalOrderPlaced(val orderId: String, val totalAmount: Double)
+@EventType
 data class TransactionalInventoryReserved(val sku: String, val quantity: Int)
 
 suspend fun commitOrder(store: IEventStore) {
@@ -18,9 +21,12 @@ suspend fun commitOrder(store: IEventStore) {
             TransactionalInventoryReserved("widget", 1)
         )
 
+        // Consecutive events for the same event source and options append atomically;
+        // the unit of work is not atomic across event sources.
         unitOfWork.commit()
+        check(unitOfWork.isSuccess) { "Commit failed: ${unitOfWork.getConstraintViolations()}, ${unitOfWork.getConcurrencyViolations()}, ${unitOfWork.getAppendErrors()}" }
     } catch (exception: Exception) {
-        unitOfWork.rollback()
+        if (!unitOfWork.isCompleted) unitOfWork.rollback()
         throw exception
     }
 }

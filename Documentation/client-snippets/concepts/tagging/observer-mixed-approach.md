@@ -1,4 +1,5 @@
 ```kotlin
+import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.observation.Tag
 
@@ -6,5 +7,10 @@ import io.cratis.chronicle.observation.Tag
 @Tag("Notifications", "SMS")
 @Tag("Customer")
 @Reactor
-class TaggingSmsNotificationReactor
+class TaggingSmsNotificationReactor {
+    fun on(event: TaggingSmsRequested) { }
+}
+
+@EventType
+data class TaggingSmsRequested(val id: String = "")
 ```

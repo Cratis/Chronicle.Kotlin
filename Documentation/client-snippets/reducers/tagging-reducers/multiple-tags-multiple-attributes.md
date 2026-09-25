@@ -1,4 +1,5 @@
 ```kotlin
+import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.observation.Tag
 import io.cratis.chronicle.readModels.ReadModel
@@ -10,5 +11,10 @@ data class TaggingReducersComplianceReport(val status: String = "")
 @Tag("Analytics")
 @Tag("Compliance")
 @Tag("Auditing")
-class TaggingReducersComplianceReportReducer
+class TaggingReducersComplianceReportReducer {
+    fun on(event: TaggingReducersAuditEntryRecorded) = TaggingReducersComplianceReport(event.status)
+}
+
+@EventType
+data class TaggingReducersAuditEntryRecorded(val status: String = "")
 ```

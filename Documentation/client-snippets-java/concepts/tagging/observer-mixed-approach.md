@@ -1,4 +1,5 @@
 ```java
+import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.observation.Reactor;
 import io.cratis.chronicle.observation.Tag;
 
@@ -7,5 +8,9 @@ import io.cratis.chronicle.observation.Tag;
 @Tag("Customer")
 @Reactor
 class TaggingSmsNotificationReactor {
+    void on(TaggingSmsRequested event) { }
 }
+
+@EventType
+record TaggingSmsRequested(String id) {}
 ```

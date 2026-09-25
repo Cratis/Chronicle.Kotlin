@@ -7,7 +7,8 @@ suspend fun registerPayrollDatabase(store: EventStore) {
             host = "payroll-db.internal",
             database = "payroll",
             username = "chronicle",
-            password = "secret"
+            password = System.getenv("CHRONICLE_PAYROLL_DB_PASSWORD")
+                ?: error("CHRONICLE_PAYROLL_DB_PASSWORD is required")
         )
     }
 }

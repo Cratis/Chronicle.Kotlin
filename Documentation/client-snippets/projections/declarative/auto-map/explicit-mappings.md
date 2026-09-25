@@ -1,27 +1,6 @@
-```kotlin title="AutoMap with explicit mappings"
-import io.cratis.chronicle.events.EventType
-import io.cratis.chronicle.projections.IProjectionBuilderFor
-import io.cratis.chronicle.projections.IProjectionFor
-
-@EventType
-data class AutoMapAccountOpened(val name: String, val email: String)
-
-@EventType
-data class AutoMapAccountEmailChanged(val email: String)
-
-data class AutoMapAccount(
-    val name: String = "",
-    val email: String = "",
-    val status: String = ""
-)
-
-class AutoMapAccountProjection : IProjectionFor<AutoMapAccount> {
-    override fun define(builder: IProjectionBuilderFor<AutoMapAccount>) {
-        builder
-            .from(AutoMapAccountOpened::class) {
-                it.set(AutoMapAccount::status).to { "Active" }
-            }
-            .from(AutoMapAccountEmailChanged::class)
-    }
-}
+```text
+This Chronicle client does not support this workflow yet.
+The JVM fluent builder in io.cratis:chronicle 6.4.0 cannot set a constant
+value, so it cannot set status alongside auto-mapped properties. Mapping an
+event property explicitly works: set(...).toProperty("eventProperty").
 ```

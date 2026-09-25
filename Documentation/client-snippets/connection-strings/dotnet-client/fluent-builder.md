@@ -11,7 +11,9 @@ fun createClientWithExplicitConnectionString(): ChronicleClient {
     val connectionString = ChronicleConnectionString(
         addresses = listOf(ChronicleServerAddress("server.example.com", 35000)),
         username = "clientId",
-        password = "clientSecret"
+        password = System.getenv("CHRONICLE_CLIENT_SECRET")
+            ?: error("CHRONICLE_CLIENT_SECRET is required"),
+        skipTlsValidation = false
     )
     return ChronicleClient(ChronicleOptions(connectionString))
 }

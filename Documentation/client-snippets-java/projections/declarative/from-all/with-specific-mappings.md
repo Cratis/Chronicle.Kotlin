@@ -23,10 +23,10 @@ class OrderDeclarativeAllProjection implements IProjectionFor<OrderDeclarativeAl
                 feb.set("lastModified").toEventContextProperty("occurred");
             })
             .from(OrderCreatedDeclarativeAll.class, fb -> {
-                fb.<String>set("status").to(e -> "Placed");
+                // status is not set: the JVM fluent builder in 6.4.0 cannot set a constant value.
             })
             .from(OrderShippedDeclarativeAll.class, fb -> {
-                fb.<String>set("status").to(e -> "Shipped");
+                // status is not set: the JVM fluent builder in 6.4.0 cannot set a constant value.
             });
     }
 }

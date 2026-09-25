@@ -1,4 +1,5 @@
 ```java
+import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.observation.Reducer;
 import io.cratis.chronicle.observation.Tag;
 import io.cratis.chronicle.readModels.ReadModel;
@@ -22,5 +23,11 @@ record TaggingReducersCategoryExamples(UUID id) {
 @Tag({"Aggregates", "Summaries", "Metrics"})
 @Reducer
 class TaggingReducersCategoryExamplesReducer {
+    public TaggingReducersCategoryExamples on(TaggingReducersCategoryOrderPlaced event) {
+        return new TaggingReducersCategoryExamples(event.id());
+    }
 }
+
+@EventType
+record TaggingReducersCategoryOrderPlaced(UUID id) {}
 ```

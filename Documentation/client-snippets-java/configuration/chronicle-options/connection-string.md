@@ -4,7 +4,7 @@ import io.cratis.chronicle.connection.ChronicleConnectionString;
 
 class ConfigurationChronicleOptionsConnectionString {
     ChronicleOptions create() {
-        return new ChronicleOptions(ChronicleConnectionString.Companion.parse("chronicle://myserver:35000"));
+        return new ChronicleOptions(ChronicleConnectionString.Companion.parse("chronicle://myserver:35000?skipTlsValidation=false"));
     }
 }
 ```

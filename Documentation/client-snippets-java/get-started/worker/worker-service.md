@@ -1,4 +1,5 @@
 ```java
+import io.cratis.chronicle.IEventStore;
 import io.cratis.chronicle.java.BlockingEventStore;
 
 import java.util.UUID;
@@ -10,8 +11,8 @@ import java.util.UUID;
 class GetStartedWorker {
     private final BlockingEventStore eventStore;
 
-    GetStartedWorker(BlockingEventStore eventStore) {
-        this.eventStore = eventStore;
+    GetStartedWorker(IEventStore eventStore) {
+        this.eventStore = new BlockingEventStore(eventStore);
     }
 
     void run() {

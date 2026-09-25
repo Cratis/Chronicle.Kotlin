@@ -5,7 +5,7 @@ import io.cratis.chronicle.java.EventStoreSubscriptionsServiceJavaBridge;
 
 class SubscriptionsExplicitNoFilter {
     void subscribeToEverything(EventStore store) {
-        // No withEventType calls — every event type from the source outbox is subscribed to.
+        // No withEventType calls — subscribe to event types currently registered by this client.
         EventStoreSubscriptionsServiceJavaBridge.subscribe(store.getEventStoreSubscriptions(), "payroll-firehose", "PayrollEventStore", builder -> { });
     }
 }

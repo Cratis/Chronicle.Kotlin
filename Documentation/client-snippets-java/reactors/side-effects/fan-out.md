@@ -11,8 +11,7 @@ record FanOutStockDecreased(String isbn, int quantity) {}
 
 @Reactor
 class ReservationFanOutReactor {
-    // Fan out to several event source ids in one go - they are appended together as a single
-    // transaction.
+    // Fan-out events are appended one at a time, in order; an earlier event can be appended even if a later one is rejected.
     List<EventForEventSourceId> bookReserved(BookReserved event, EventContext context) {
         return List.of(
             new EventForEventSourceId(event.memberId(), new MemberActivityRecorded(event.isbn())),

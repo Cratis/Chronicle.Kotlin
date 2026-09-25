@@ -1,4 +1,5 @@
 ```java
+import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.observation.Reducer;
 import io.cratis.chronicle.observation.Tag;
 import io.cratis.chronicle.readModels.ReadModel;
@@ -15,5 +16,11 @@ record TaggingReducersComplianceReport(String status) {
 @Tag("Compliance")
 @Tag("Auditing")
 class TaggingReducersComplianceReportReducer {
+    public TaggingReducersComplianceReport on(TaggingReducersAuditEntryRecorded event) {
+        return new TaggingReducersComplianceReport(event.status());
+    }
 }
+
+@EventType
+record TaggingReducersAuditEntryRecorded(String status) {}
 ```
