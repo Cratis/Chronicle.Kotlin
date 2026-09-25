@@ -114,9 +114,10 @@ back to its `chronicle://`/`chronicle+srv://` textual form. The result
 isn't guaranteed to be byte-identical to whatever was originally parsed —
 for example a host without an explicit port is rendered with the resolved
 default port — but re-parsing it always yields an equal
-`ChronicleConnectionString`. This is useful for logging or persisting a
-connection string that was built up programmatically rather than typed by
-hand:
+`ChronicleConnectionString`. This is useful for storing a connection string
+that was built up programmatically rather than typed by hand. The rendered
+string includes the password, so do not write it to logs; log its `target`
+(the first host and port) instead:
 
 <!-- validate: body -->
 

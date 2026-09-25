@@ -699,8 +699,11 @@ interface IReadModelsService {
   passive read model ([`@Passive`](annotations.md#passive), or a reducer with
   `isActive = false`) is computed from its events on each read instead, so it
   is current.
-- `getInstances` replays events in-process to produce every instance of a
-  read model, optionally capped to the first `eventCount` events.
+- `getInstances` returns every instance of a read model. Without
+  `eventCount` the kernel returns the stored copies, which are eventually
+  consistent; with `eventCount` it replays that many events from the start
+  instead, which can return incomplete results. A passive reducer's model is
+  folded in the client from its events.
 - `getSnapshotsById` returns the full history of intermediate states for
   one read model key, grouped by correlation id — each `ReadModelSnapshot`
   carries the deserialized `instance`, the `events` that produced it, and

@@ -578,8 +578,9 @@ Polling after every write is a teaching device, not an application pattern.
 In an application, return the append result to the caller and let screens
 observe the read model, or design the next step so it does not depend on the
 read model having caught up. When a read must include the latest events, make
-the read model passive (see [`@Passive`](../reference/annotations.md#passive)):
-it is then computed from its events on every read instead of stored. The shared
+the reducer passive with `@Reducer(isActive = false)` (see
+[`@Reducer`](../reference/annotations.md#reducer)): the read model is then
+computed from its events on every read instead of stored. The shared
 [read model consistency](/chronicle/read-models/) docs explain the trade-offs.
 
 ## Troubleshooting

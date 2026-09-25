@@ -131,8 +131,10 @@ read model.
 | `isActive` | `Boolean` | `true` | Whether the kernel runs the reducer. |
 
 A passive reducer (`isActive = false`) stores nothing: reading its read model
-folds the event source's events in the client on each read, so the result is
-current.
+folds the event source's events from the reducer's event sequence in the
+client on each read, so the result is current. The cost is a read of those
+events on every call. A reducer whose read model carries
+[@Passive](#passive) is passive too.
 
 A handler takes the event, the state so far, and optionally an `EventContext`.
 The state is `null` until the first event for an event source has been folded in.
@@ -185,8 +187,14 @@ not actively run, and not stored. `getInstanceByKey` computes a passive read
 model from its events on every read, so the result includes an event appended
 immediately before. Use it for a read model that is read rarely or must be
 current, and keep the default for one that is read often. Placed on the read
-model class; applies to model-bound projections and to a fluent projection
-whose read model carries it.
+model class; applies to model-bound projections, to a fluent projection whose
+read model carries it, and to the reducer that produces it. Requires client
+6.5.0 or later.
+
+A passive projection is computed from the events of the key you ask for, so
+it suits projections keyed by event source id. A projection that takes its
+key from an event property or joins events from other event sources needs the
+stored, active form to be complete.
 
 No parameters.
 
