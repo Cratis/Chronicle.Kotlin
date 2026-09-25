@@ -104,13 +104,27 @@ re-establishes its own observation when the connection comes back.
 
 ## When registration fails
 
-The pass runs its steps in the order above and stops at the first step that
-throws. Everything later in the order is not registered in that pass. The
-client writes the failure to standard error:
+Reactors and reducers are started one at a time. When one cannot be started,
+the client reports it and carries on with the rest, including captures and
+seeders:
+
+```text
+[ArtifactRegistrations] Reactor 'com.acme.Notifications' could not be started: <message>
+```
+
+The failed one is tried again on the next registration pass, after a reconnect
+or when you call `registerAll()`; one that started is never started twice.
+
+The other steps (event types, read models, constraints, projections and
+webhooks) run as a whole. When one of them throws, the pass stops there,
+everything later in the order is not registered in that pass, and the client
+writes the failure to standard error:
 
 ```text
 [EventStore] Automatic registration of artifacts failed: <message>
 ```
+
+The pass runs again on the next reconnect.
 
 The waiting calls are released anyway: `awaitRegistration()` returns normally,
 and the first append goes ahead, failing if its event type was never
@@ -124,12 +138,6 @@ Common causes:
 - An artifact the default activator cannot create throws
   `ArtifactActivationFailed`; see [Artifacts with dependencies](#artifacts-with-dependencies).
 - A reactor handler asks for a parameter nothing can supply.
-
-Reactors and reducers are started once per process. If starting one of them
-throws, the ones after it in the pass are not started, and a reconnect does not
-retry them; fix the artifact and restart the application. The other steps
-(event types, read models, constraints, projections, webhooks, captures and
-seeders) run again on the next reconnect.
 
 An `IConstraint` needs `@Constraint` as well. Without the annotation it is
 skipped without a message.

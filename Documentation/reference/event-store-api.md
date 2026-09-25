@@ -695,7 +695,10 @@ interface IReadModelsService {
   to date, the kernel reads the stored copy, which is written after the
   events are appended. A call right after an append can therefore return
   `null` or an older state; see
-  [Connection lifecycle](connection-lifecycle.md#reading-after-writing).
+  [Connection lifecycle](connection-lifecycle.md#reading-after-writing). A
+  passive read model ([`@Passive`](annotations.md#passive), or a reducer with
+  `isActive = false`) is computed from its events on each read instead, so it
+  is current.
 - `getInstances` replays events in-process to produce every instance of a
   read model, optionally capped to the first `eventCount` events.
 - `getSnapshotsById` returns the full history of intermediate states for

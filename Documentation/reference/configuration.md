@@ -85,7 +85,7 @@ targets and ports.
 | --- | --- | --- |
 | `disableTls` | `false` | Connect over plaintext instead of TLS |
 | `skipTlsValidation` | `true` | Accept any server certificate |
-| `apiKey` | *(none)* | Not sent in 6.4.0; see below |
+| `apiKey` | *(none)* | Rejected at client creation; see below |
 | `loadBalancer` | `least-connections` | Policy across multiple addresses |
 | `srvNameServer` | *(none)* | DNS server for `chronicle+srv://` |
 
@@ -189,15 +189,17 @@ val options = ChronicleOptions(
 
 From Java, the constructor takes all nine properties in declaration order.
 
-:::caution[apiKey is not sent in 6.4.0]
-The client parses an `apiKey` option, but version 6.4.0 does not send it to
-the kernel. Setting it only turns off the token request, so the kernel
-receives no credentials at all. Use a client id and secret.
+:::caution[apiKey is rejected]
+The Chronicle kernel has no API key authentication. From 6.5.0, creating a
+client from a connection string with an `apiKey` option throws
+`IllegalArgumentException`; up to 6.4.0 the option was accepted and the kernel
+received no credentials at all. Use a client id and secret.
 :::
 
 A kernel that is unreachable, or that rejects the client's TLS settings,
-makes the client constructor throw. Wrong credentials do not: the client
-keeps trying to connect. See
+makes the client constructor throw. Wrong credentials are detected once the
+client tries to connect: the first append or `awaitRegistration()` throws
+`ChronicleConnectionFailed`. See
 [Connection lifecycle](connection-lifecycle.md) for how each failure shows
 up.
 

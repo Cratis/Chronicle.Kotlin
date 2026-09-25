@@ -23,7 +23,7 @@ Use the same version as the client; it is released alongside it.
 
 ```kotlin
 dependencies {
-    testImplementation("io.cratis:chronicle-testing:6.4.0")
+    testImplementation("io.cratis:chronicle-testing:6.5.0")
 }
 ```
 

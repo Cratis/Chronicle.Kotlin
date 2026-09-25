@@ -16,51 +16,42 @@ servlet stack (Spring MVC); the per-request features do not apply to WebFlux.
 
 The starter is published to Maven Central as
 `io.cratis:chronicle-spring-boot-starter`, and brings the client with it. It is
-built against Spring Boot 4.1.1. This page was checked with `6.4.0`.
-
-The client needs `kotlinx-coroutines` 1.11 or later, and Spring Boot's
-dependency management forces an older version. Left alone, the application
-fails at startup with
-`NoSuchMethodError: 'java.lang.Object kotlinx.coroutines.BuildersKt.runBlockingK(…)'`.
-Set Spring Boot's `kotlin-coroutines.version` property to the version the
-client needs:
+built against Spring Boot 4.1.1. This page was checked with `6.5.0`.
 
 <!-- validate: skip -->
 
 ```kotlin
-// build.gradle.kts, with the io.spring.dependency-management plugin
-extra["kotlin-coroutines.version"] = "1.11.0"
-
+// build.gradle.kts
 dependencies {
-    implementation("io.cratis:chronicle-spring-boot-starter:6.4.0")
+    implementation("io.cratis:chronicle-spring-boot-starter:6.5.0")
 }
 ```
 
 ```groovy
-// build.gradle, with the io.spring.dependency-management plugin
-ext['kotlin-coroutines.version'] = '1.11.0'
-
+// build.gradle
 dependencies {
-    implementation 'io.cratis:chronicle-spring-boot-starter:6.4.0'
+    implementation 'io.cratis:chronicle-spring-boot-starter:6.5.0'
 }
 ```
 
-With Maven and `spring-boot-starter-parent`, set the same property:
+With Maven:
 
 ```xml
-<properties>
-    <kotlin-coroutines.version>1.11.0</kotlin-coroutines.version>
-</properties>
-
 <dependency>
     <groupId>io.cratis</groupId>
     <artifactId>chronicle-spring-boot-starter</artifactId>
-    <version>6.4.0</version>
+    <version>6.5.0</version>
 </dependency>
 ```
 
-The Gradle form was exercised with Spring Boot 4.1.1 and starter 6.4.0; the
-Maven form uses the same Spring Boot property but was not run for this page.
+:::note[Upgrading from 6.4.0 or earlier]
+Versions up to 6.4.0 needed `kotlinx-coroutines` 1.11, above the 1.10.2 that
+Spring Boot 4.1 manages, and failed at startup with
+`NoSuchMethodError: 'java.lang.Object kotlinx.coroutines.BuildersKt.runBlockingK(…)'`
+unless the application set Spring Boot's `kotlin-coroutines.version` property
+to `1.11.0`. From 6.5.0 the starter runs on the managed version, so you can
+remove that override.
+:::
 
 ## Configure it
 
@@ -376,10 +367,12 @@ pass, for at most `cratis.chronicle.registration-timeout` (30 seconds by
 default), and logs `Chronicle artifacts registered with event store '…'`. By
 then the web server is already accepting requests. That is safe for appends:
 the first append waits for the same registration pass. If the pass has not
-finished in time, for example because the credentials are wrong, the starter
-logs a warning and carries on, and the client keeps trying to connect in the
-background. Requests that append wait until it succeeds, so treat that warning
-as an outage. See [Connection lifecycle](../reference/connection-lifecycle.md)
+finished in time, the starter logs a warning and carries on, and the client
+keeps trying to connect in the background; requests that append wait until it
+succeeds, so treat that warning as an outage. When the kernel rejects the
+connection, because the credentials are wrong or the server is incompatible,
+the wait fails with `ChronicleConnectionFailed` instead, and the application
+stops with `Application run failed`. See [Connection lifecycle](../reference/connection-lifecycle.md)
 for the underlying behavior.
 
 ## Configuration reference

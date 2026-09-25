@@ -96,7 +96,7 @@ in the repository contain this file along with PostgreSQL, SQL Server, and
 SQLite profiles.
 
 Then add the client to your Gradle build. The pages in this section were
-checked against `6.4.0`; the
+checked against `6.5.0`; the
 [latest release](https://central.sonatype.com/artifact/io.cratis/chronicle) is
 on Maven Central:
 
@@ -104,30 +104,29 @@ on Maven Central:
 
 ```kotlin
 dependencies {
-    implementation("io.cratis:chronicle:6.4.0")
+    implementation("io.cratis:chronicle:6.5.0")
 }
 ```
 
-Maven uses the same coordinates, `io.cratis:chronicle:6.4.0`. The same JVM
+Maven uses the same coordinates, `io.cratis:chronicle:6.5.0`. The same JVM
 client supports both Kotlin and Java. Shared pages include separate Kotlin
 and Java tabs when both examples exist.
 
 Spring Boot applications add the starter instead. It brings the client with
-it and wires everything up, and it needs one version adjustment described in
-the [Spring Boot guide](guides/spring-boot.md#add-the-dependency):
+it and wires everything up:
 
 <!-- validate: skip -->
 
 ```kotlin
 dependencies {
-    implementation("io.cratis:chronicle-spring-boot-starter:6.4.0")
+    implementation("io.cratis:chronicle-spring-boot-starter:6.5.0")
 }
 ```
 
 ## Requirements and compatibility
 
 - **Client**, `io.cratis:chronicle`: Java 17 or later, and
-  `kotlinx-coroutines` 1.11 or later at runtime.
+  `kotlinx-coroutines` 1.10.2 or later at runtime.
 - **Spring Boot starter**, `io.cratis:chronicle-spring-boot-starter`:
   Spring Boot 4 (built against 4.1.1); the per-request features need the
   servlet stack.
@@ -140,9 +139,9 @@ Java application needs no Kotlin setup.
 
 The client checks compatibility with the kernel every time it connects, and
 refuses to send anything to a kernel that cannot serve it. There is no
-published version matrix. Client 6.4.0 has been exercised against kernel
-19.4.8; treat other pairings as unverified until that check and your own
-tests pass. See [Connection lifecycle](reference/connection-lifecycle.md#compatibility).
+published version matrix. Client 6.5.0 has been exercised against kernel
+19.6.1. Kernel 19.4.8 rejects it at connect time. Treat other pairings as
+unverified until that check and your own tests pass. See [Connection lifecycle](reference/connection-lifecycle.md#compatibility).
 
 ## Client-specific pages
 

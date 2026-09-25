@@ -128,7 +128,7 @@ read model.
 | --- | --- | --- | --- |
 | `id` | `String` | `""` | Stable identifier. Defaults to class name. |
 | `eventSequence` | `String` | event log | The event sequence to observe. Overridden by [@EventSequence](#eventsequence). |
-| `isActive` | `Boolean` | `true` | Whether the kernel runs the reducer. |
+| `isActive` | `Boolean` | `true` | Whether the kernel runs the reducer. A passive reducer (`false`) stores nothing; reading its read model folds the event source's events in the client on each read. |
 
 A handler takes the event, the state so far, and optionally an `EventContext`.
 The state is `null` until the first event for an event source has been folded in.
@@ -176,10 +176,13 @@ data class OrderSummary(val orderId: String = "", val status: String = "pending"
 
 ## @Passive
 
-Marks a model-bound read model's projection as passive — registered with the
-kernel but not actively run. A passive projection's read model is computed on
-demand rather than kept up to date as events arrive. Placed on the read model
-class.
+Marks a read model's projection as passive: registered with the kernel but
+not actively run, and not stored. `getInstanceByKey` computes a passive read
+model from its events on every read, so the result includes an event appended
+immediately before. Use it for a read model that is read rarely or must be
+current, and keep the default for one that is read often. Placed on the read
+model class; applies to model-bound projections and to a fluent projection
+whose read model carries it.
 
 No parameters.
 

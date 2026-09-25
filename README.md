@@ -186,20 +186,20 @@ docker run --rm -p 127.0.0.1:35000:35000 cratis/chronicle:latest-development
 
 ### Plain Kotlin or Java
 
-The examples here use `6.4.0`; check [Maven Central](https://central.sonatype.com/artifact/io.cratis/chronicle)
+The examples here use `6.5.0`; check [Maven Central](https://central.sonatype.com/artifact/io.cratis/chronicle)
 for the latest release.
 
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.cratis:chronicle:6.4.0")
+    implementation("io.cratis:chronicle:6.5.0")
 }
 ```
 
 ```groovy
 // build.gradle
 dependencies {
-    implementation 'io.cratis:chronicle:6.4.0'
+    implementation 'io.cratis:chronicle:6.5.0'
 }
 ```
 
@@ -257,15 +257,12 @@ accept the kernel's self-signed certificate, so use a connection string with
 
 ### Spring Boot
 
-The starter brings the client with it and wires everything up. It targets Spring Boot 4, whose
-dependency management pins `kotlinx-coroutines` below the 1.11 the client needs, so raise it:
+The starter brings the client with it and wires everything up. It targets Spring Boot 4:
 
 ```kotlin
-// build.gradle.kts, with the io.spring.dependency-management plugin
-extra["kotlin-coroutines.version"] = "1.11.0"
-
+// build.gradle.kts
 dependencies {
-    implementation("io.cratis:chronicle-spring-boot-starter:6.4.0")
+    implementation("io.cratis:chronicle-spring-boot-starter:6.5.0")
 }
 ```
 
