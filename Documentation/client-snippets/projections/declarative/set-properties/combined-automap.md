@@ -9,7 +9,7 @@ class DecSetPropsCombinedAccountProjection : IProjectionFor<DecSetPropsAccount> 
             .from(DecSetPropsAccountOpened::class) {
                 // Map the property AutoMap cannot find: it is nested on the event.
                 it.set(DecSetPropsAccount::customerName).toProperty("owner.name")
-                // isActive is not set: the JVM fluent builder in 6.4.0 cannot set a constant value.
+                it.set(DecSetPropsAccount::isActive).toValue(true)
             }
             .from(DecSetPropsMoneyDeposited::class) // Uses AutoMap for all properties
     }

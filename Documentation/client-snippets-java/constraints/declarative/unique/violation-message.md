@@ -14,7 +14,6 @@ class ConstraintsUniqueMessageProjectName implements IConstraint {
     public void define(IConstraintBuilder builder) {
         builder.unique(unique -> {
             UniqueConstraintBuilderJavaBridge.on(unique, ConstraintsUniqueMessageProjectCreated.class, "name")
-                // Not sent to the kernel by io.cratis:chronicle 6.4.0; a violation carries the kernel's own message.
                 .withMessage("A project with this name already exists.");
         });
     }

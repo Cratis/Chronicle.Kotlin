@@ -17,8 +17,8 @@ class PassiveReducersHistoricalBalanceService {
         this.eventStore = eventStore;
     }
 
-    // Passive reducer computes state on-demand from historical events
-    PassiveReducersAccountBalance getBalanceAtDate(String accountId) {
+    // Fold the event log on read to get the current balance, not a balance at a chosen date.
+    PassiveReducersAccountBalance getCurrentBalance(String accountId) {
         return ReadModelsJavaBridge.getInstanceByKey(
             eventStore.getReadModels(), PassiveReducersAccountBalance.class, accountId);
     }

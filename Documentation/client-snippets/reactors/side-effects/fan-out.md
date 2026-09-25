@@ -9,7 +9,7 @@ data class FanOutStockDecreased(val isbn: String, val quantity: Int)
 
 @Reactor
 class ReservationFanOutReactor {
-    // Fan-out events are appended one at a time, in order; an earlier event can be appended even if a later one is rejected.
+    // The returned list is appended as one atomic batch, even across event sources.
     fun bookReserved(event: BookReserved, context: EventContext): List<EventForEventSourceId> = listOf(
         EventForEventSourceId(event.memberId, MemberActivityRecorded(event.isbn)),
         EventForEventSourceId(event.isbn, FanOutStockDecreased(event.isbn, 1))

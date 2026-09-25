@@ -16,7 +16,7 @@ data class EvtSeedingBillingSetUp(val billingEmail: String)
 @Seeder
 class EvtSeedingTenantSeeding : ICanSeedEvents {
     override fun seed(builder: IEventSeedingBuilder) {
-        // Unscoped seed data targets the store's current namespace.
+        // Unscoped seed data is global and applies to the event store's namespaces.
         builder.forEventType(
             EvtSeedingProductCreated::class,
             "product-1",

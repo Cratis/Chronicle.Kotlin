@@ -6,8 +6,8 @@ import io.cratis.chronicle.readModels.ReadModel
 data class PassiveReducersAccountBalance(val balance: Double = 0.0)
 
 class PassiveReducersHistoricalBalanceService(private val eventStore: IEventStore) {
-    // Passive reducer computes state on-demand from historical events
-    suspend fun getBalanceAtDate(accountId: String): PassiveReducersAccountBalance? =
+    // Fold the event log on read to get the current balance, not a balance at a chosen date.
+    suspend fun getCurrentBalance(accountId: String): PassiveReducersAccountBalance? =
         eventStore.readModels.getInstanceByKey(PassiveReducersAccountBalance::class, accountId)
 }
 ```

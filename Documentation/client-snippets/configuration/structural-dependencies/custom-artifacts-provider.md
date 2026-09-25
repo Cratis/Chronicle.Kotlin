@@ -18,7 +18,7 @@ data class StructuralDepsBorrowedBook(val bookId: String = "")
 class StructuralDepsBorrowedBooksProjection : IProjectionFor<StructuralDepsBorrowedBook> {
     override fun define(builder: IProjectionBuilderFor<StructuralDepsBorrowedBook>) {
         builder.from(StructuralDepsBookBorrowed::class) {
-            it.set(StructuralDepsBorrowedBook::bookId).to { e -> e.bookId }
+            it.set(StructuralDepsBorrowedBook::bookId).toProperty("bookId")
         }
     }
 }

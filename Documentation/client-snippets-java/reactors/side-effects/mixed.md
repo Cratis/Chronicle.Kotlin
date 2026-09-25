@@ -12,7 +12,7 @@ record ActivityLogged(String isbn) {}
 @Reactor
 class MixedSideEffectsReactor {
     // A bare event uses the triggering event's EventSourceId; an EventForEventSourceId keeps its
-    // own. Both are appended one at a time, in order; an earlier event can be appended even if a later one is rejected.
+    // own. The returned list is appended as one atomic batch, even across event sources.
     List<Object> bookReserved(BookReserved event, EventContext context) {
         return List.of(
             new ActivityLogged(event.isbn()),

@@ -8,7 +8,7 @@ class DecSetPropsAccountProjection : IProjectionFor<DecSetPropsAccount> {
             .from(DecSetPropsAccountOpened::class) {
                 it.set(DecSetPropsAccount::accountNumber).toProperty("number")
                 it.set(DecSetPropsAccount::customerName).toProperty("owner.name")
-                // isActive is not set: the JVM fluent builder in 6.4.0 cannot set a constant value.
+                it.set(DecSetPropsAccount::isActive).toValue(true)
                 it.set(DecSetPropsAccount::openedAt).toProperty("timestamp")
             }
             .from(DecSetPropsMoneyDeposited::class) {

@@ -19,7 +19,6 @@ class ConstraintsUniqueScopedEmail implements IConstraint {
         builder.perEventSourceType().unique(unique -> {
             UniqueConstraintBuilderJavaBridge.on(unique, ConstraintsUniqueScopedUserRegistered.class, "email")
                 .ignoreCasing()
-                // Not sent to the kernel by io.cratis:chronicle 6.4.0; a violation carries the kernel's own message.
                 .withMessage("Email must be unique per event source type.");
         });
     }

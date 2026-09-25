@@ -1,6 +1,25 @@
-```text
-This Chronicle client does not support this workflow yet.
-noAutoMap() on the fluent builder is not sent to the kernel by
-io.cratis:chronicle 6.4.0, so auto-mapping stays on. Use @NoAutoMap on a
-model-bound read model instead.
+```kotlin title="Disable AutoMap"
+import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.projections.IProjectionBuilderFor
+import io.cratis.chronicle.projections.IProjectionFor
+
+@EventType
+data class AutoMapDisabledAccountRegistered(val accountName: String, val contactEmail: String)
+
+data class AutoMapDisabledAccount(
+    val name: String = "",
+    val email: String = "",
+    val createdAt: String = ""
+)
+
+class AutoMapDisabledAccountProjection : IProjectionFor<AutoMapDisabledAccount> {
+    override fun define(builder: IProjectionBuilderFor<AutoMapDisabledAccount>) {
+        builder.noAutoMap()
+            .from(AutoMapDisabledAccountRegistered::class) {
+                it.set(AutoMapDisabledAccount::name).toProperty("accountName")
+                it.set(AutoMapDisabledAccount::email).toProperty("contactEmail")
+                it.set(AutoMapDisabledAccount::createdAt).toEventContextProperty("occurred")
+            }
+    }
+}
 ```

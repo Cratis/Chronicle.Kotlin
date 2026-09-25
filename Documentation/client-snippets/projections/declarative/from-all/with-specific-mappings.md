@@ -20,10 +20,10 @@ class OrderDeclarativeAllProjection : IProjectionFor<OrderDeclarativeAll> {
         builder
             .fromAll { it.set(OrderDeclarativeAll::lastModified).toEventContextProperty("occurred") }
             .from(OrderCreatedDeclarativeAll::class) {
-                // status is not set: the JVM fluent builder in 6.4.0 cannot set a constant value.
+                it.set(OrderDeclarativeAll::status).toValue("Placed")
             }
             .from(OrderShippedDeclarativeAll::class) {
-                // status is not set: the JVM fluent builder in 6.4.0 cannot set a constant value.
+                it.set(OrderDeclarativeAll::status).toValue("Shipped")
             }
     }
 }

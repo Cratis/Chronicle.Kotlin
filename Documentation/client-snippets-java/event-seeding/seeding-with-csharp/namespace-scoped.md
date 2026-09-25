@@ -23,7 +23,7 @@ record EvtSeedingBillingSetUp(String billingEmail) {}
 class EvtSeedingTenantSeeding implements ICanSeedEvents {
     @Override
     public void seed(IEventSeedingBuilder builder) {
-        // Unscoped seed data targets the store's current namespace.
+        // Unscoped seed data is global and applies to the event store's namespaces.
         EventSeedingBuilderJavaBridge.forEventType(
             builder,
             EvtSeedingProductCreated.class,

@@ -1,7 +1,25 @@
-```text
-This Chronicle client does not support this workflow yet.
-The JVM fluent builder in io.cratis:chronicle 6.4.0 cannot set a constant or
-computed value, so this projection cannot set isBorrowed or clear borrowedBy
-when a book is returned, and would not produce the same BookStatus documents.
-Use the reducer tab's approach for this read model.
+```kotlin
+import io.cratis.chronicle.projections.IProjectionBuilderFor
+import io.cratis.chronicle.projections.IProjectionFor
+
+class ChoosingStyleBookStatusProjection : IProjectionFor<ChoosingStyleBookStatus> {
+    override fun define(builder: IProjectionBuilderFor<ChoosingStyleBookStatus>) {
+        builder
+            .from(ChoosingStyleBookRegistered::class) {
+                it.set(ChoosingStyleBookStatus::id).toEventSourceId()
+                it.set(ChoosingStyleBookStatus::title).toProperty("title")
+                it.set(ChoosingStyleBookStatus::isbn).toProperty("isbn")
+                it.set(ChoosingStyleBookStatus::isBorrowed).toValue(false)
+                it.set(ChoosingStyleBookStatus::borrowedBy).toValue(null)
+            }
+            .from(ChoosingStyleBookBorrowed::class) {
+                it.set(ChoosingStyleBookStatus::isBorrowed).toValue(true)
+                it.set(ChoosingStyleBookStatus::borrowedBy).toProperty("memberName")
+            }
+            .from(ChoosingStyleBookReturned::class) {
+                it.set(ChoosingStyleBookStatus::isBorrowed).toValue(false)
+                it.set(ChoosingStyleBookStatus::borrowedBy).toValue(null)
+            }
+    }
+}
 ```
