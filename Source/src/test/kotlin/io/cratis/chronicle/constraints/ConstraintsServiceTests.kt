@@ -7,6 +7,7 @@ import Cratis.Chronicle.Contracts.Events.Constraints.ConstraintsGrpcKt
 import Cratis.Chronicle.Contracts.Events.Constraints.EventsConstraints
 import com.google.protobuf.Empty
 import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.eventSequences.ConstraintViolation
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -20,7 +21,28 @@ import org.junit.jupiter.api.Test
 private data class ConstraintScopeEmailSet(val email: String)
 
 @EventType
-private data class ModelBoundRegistrationUserRegistered(@Unique(id = "ModelBoundRegistrationUniqueEmail") val email: String)
+private data class ModelBoundRegistrationUserRegistered(
+    @Unique(id = "ModelBoundRegistrationUniqueEmail", message = "Email {email} is taken") val email: String
+)
+
+@EventType
+@Unique(message = "Already registered")
+private data class ModelBoundRegistrationClassUnique(val name: String)
+
+@Constraint(id = "DeclarativeEmail")
+private class DeclarativeEmail : IConstraint {
+    override fun define(builder: IConstraintBuilder) {
+        builder.unique { it.on(ConstraintScopeEmailSet::class, ConstraintScopeEmailSet::email).withMessage("Taken: {email}") }
+    }
+}
+
+@Constraint(id = "DeclarativeEventType")
+private class DeclarativeEventType : IConstraint {
+    override fun define(builder: IConstraintBuilder) {
+        builder.uniqueFor(ConstraintScopeEmailSet::class, "Already claimed")
+    }
+}
+
 
 @Constraint
 private class UnscopedUniqueEmail : IConstraint {
@@ -44,6 +66,44 @@ private class PerStreamTypeAndIdUniqueEmail : IConstraint {
 }
 
 class ConstraintsServiceTests {
+
+    @Test
+    fun `declarative messages resolve details and preserve unknown or empty messages`() = runBlocking {
+        val stub = mockk<ConstraintsGrpcKt.ConstraintsCoroutineStub>()
+        coEvery { stub.register(any(), any()) } returns Empty.getDefaultInstance()
+        val service = ConstraintsService("my-store", stub)
+
+        service.register(DeclarativeEmail(), DeclarativeEventType(), UnscopedUniqueEmail())
+
+        assertEquals("Taken: a@b.com", service.resolveMessageFor(
+            ConstraintViolation("DeclarativeEmail", "kernel message", mapOf("email" to "a@b.com"))
+        ).message)
+        assertEquals("Already claimed", service.resolveMessageFor(
+            ConstraintViolation("DeclarativeEventType", "kernel message")
+        ).message)
+        assertEquals("kernel message", service.resolveMessageFor(
+            ConstraintViolation("UnscopedUniqueEmail", "kernel message")
+        ).message)
+        assertEquals("kernel message", service.resolveMessageFor(
+            ConstraintViolation("closed-stream", "kernel message")
+        ).message)
+    }
+
+    @Test
+    fun `model-bound messages use the class and property constraint names`() = runBlocking {
+        val stub = mockk<ConstraintsGrpcKt.ConstraintsCoroutineStub>()
+        coEvery { stub.register(any(), any()) } returns Empty.getDefaultInstance()
+        val service = ConstraintsService("my-store", stub)
+
+        service.registerModelBound(listOf(ModelBoundRegistrationUserRegistered::class, ModelBoundRegistrationClassUnique::class))
+
+        assertEquals("Email a@b.com is taken", service.resolveMessageFor(
+            ConstraintViolation("ModelBoundRegistrationUniqueEmail", "kernel", mapOf("email" to "a@b.com"))
+        ).message)
+        assertEquals("Already registered", service.resolveMessageFor(
+            ConstraintViolation("ModelBoundRegistrationClassUnique", "kernel")
+        ).message)
+    }
 
     @Test
     fun `register sends an empty scope for a constraint with no scoping calls`() = runBlocking {
