@@ -18,8 +18,7 @@ class ScenariosReactWaitlistNotifierWithTitle {
         this.notifications = notifications;
     }
 
-    // Declaring the read model as a parameter resolves it for the event's event source -
-    // strongly consistent, rebuilt from the event log, includes this event
+    // Looked up by the triggering event's event source id; a materialized read model can lag this event or be null.
     void bookReturned(ScenariosReactBookReturned event, EventContext context, ScenariosReactBook book) {
         notifications.notifyNextInLine(context.getEventSourceId(), book != null ? book.title() : "");
     }

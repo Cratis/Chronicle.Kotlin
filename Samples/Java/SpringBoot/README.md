@@ -2,8 +2,7 @@
 
 The same event-sourced HTTP API as the Kotlin sample, written in Java. There is
 no Chronicle setup code anywhere: the starter connects, finds every artifact in
-this package, and registers it with the kernel before the first request is
-served.
+this package, and registers it with the kernel as the application starts.
 
 Java has no coroutines, so the controller injects `Chronicle` — the same event
 store with the everyday operations exposed as ordinary blocking methods.
@@ -27,9 +26,14 @@ Start a kernel, then the application. It serves on port 8081 so it can run
 alongside the Kotlin sample:
 
 ```bash
-docker run -p 35000:35000 cratis/chronicle:latest-development
-gradle :Samples:Java:SpringBoot:bootRun
+docker run --rm -p 127.0.0.1:35000:35000 cratis/chronicle:latest-development
+./gradlew :Samples:Java:SpringBoot:bootRun
 ```
+
+Run the Gradle command from the repository root with a JDK 17 or later on
+`JAVA_HOME`. The build sets Spring Boot's `kotlin-coroutines.version` to
+`1.11.0`, which the client needs; your own application needs the same line (see
+the [Spring Boot guide](../../../Documentation/guides/spring-boot.md#add-the-dependency)).
 
 ## Try it
 
@@ -56,8 +60,11 @@ curl -X POST http://localhost:8081/api/employees/employee-1/promote \
 ```
 
 Now try to hire someone else on the same email address. The constraint rejects
-it, and because the whole request runs inside a unit of work, neither event is
-appended:
+the email and the request answers `409 Conflict`. `Chronicle.append` goes to
+the kernel straight away rather than into the request's unit of work, so
+`EmployeeHired` for `employee-2` has already been appended by then; see the
+[Spring Boot guide](../../../Documentation/guides/spring-boot.md#unit-of-work)
+for staging appends:
 
 ```bash
 curl -i -X POST http://localhost:8081/api/employees/employee-2/hire \

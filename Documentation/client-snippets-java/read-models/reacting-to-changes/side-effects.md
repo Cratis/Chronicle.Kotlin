@@ -1,4 +1,7 @@
 ```java
+import io.cratis.chronicle.IEventStore;
+import io.cratis.chronicle.readModels.ReadModelReactors;
+import kotlinx.coroutines.Job;
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.readModels.IReadModelReactor;
 import io.cratis.chronicle.readModels.ReadModel;
@@ -23,6 +26,11 @@ class AccountReviewer implements IReadModelReactor {
     // event source id by default.
     public AccountFlagged modified(ReactingSideEffectsAccount account) {
         return new AccountFlagged(account.getId());
+    }
+
+    // JVM read model reactors are registered explicitly; cancel the job on shutdown.
+    static Job start(IEventStore store) {
+        return new ReadModelReactors(store.getReadModels(), store.getEventLog()).register(new AccountReviewer());
     }
 }
 ```

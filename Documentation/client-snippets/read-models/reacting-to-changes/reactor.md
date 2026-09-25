@@ -1,4 +1,7 @@
 ```kotlin
+import io.cratis.chronicle.IEventStore
+import io.cratis.chronicle.readModels.ReadModelReactors
+import kotlinx.coroutines.Job
 import io.cratis.chronicle.readModels.IReadModelReactor
 import io.cratis.chronicle.readModels.ReadModel
 
@@ -14,4 +17,8 @@ class AccountNotifier : IReadModelReactor {
     private fun sendUpdated(account: ReactingReactorAccount) { /* ... */ }
     private fun sendClosed(account: ReactingReactorAccount?) { /* ... */ }
 }
+
+// JVM read model reactors are registered explicitly; cancel the job on shutdown.
+fun startAccountNotifier(store: IEventStore): Job =
+    ReadModelReactors(store.readModels, store.eventLog).register(AccountNotifier())
 ```

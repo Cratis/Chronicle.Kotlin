@@ -1,4 +1,7 @@
 ```java
+import io.cratis.chronicle.IEventStore;
+import io.cratis.chronicle.readModels.ReadModelReactors;
+import kotlinx.coroutines.Job;
 import io.cratis.chronicle.readModels.IReadModelReactor;
 import io.cratis.chronicle.readModels.ReadModel;
 
@@ -22,5 +25,10 @@ class AccountNotifier implements IReadModelReactor {
     private void sendWelcome(ReactingReactorAccount account) { }
     private void sendUpdated(ReactingReactorAccount account) { }
     private void sendClosed(ReactingReactorAccount account) { }
+
+    // JVM read model reactors are registered explicitly; cancel the job on shutdown.
+    static Job start(IEventStore store) {
+        return new ReadModelReactors(store.getReadModels(), store.getEventLog()).register(new AccountNotifier());
+    }
 }
 ```

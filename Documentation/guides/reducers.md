@@ -1,8 +1,8 @@
 ---
+title: Reducers
+description: Where the shared guide to reducers lives, with Kotlin and Java tabs.
 sharedTopicBridge: true
 ---
-
-# Reducers
 
 Reducers are shared Chronicle read-model behavior. Use the shared reducer
 docs for the model, lifecycle, filtering, and client-tabbed examples.

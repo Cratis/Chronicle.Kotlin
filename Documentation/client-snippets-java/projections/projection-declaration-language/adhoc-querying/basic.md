@@ -24,7 +24,7 @@ class PdlOrderQueryService {
             // Raw JSON documents — instancesOf() takes a Kotlin KClass and has no Java-callable overload.
             return projected.getEntries();
         }
-        return List.of();
+        throw new IllegalArgumentException("Invalid projection query: " + result);
     }
 }
 ```

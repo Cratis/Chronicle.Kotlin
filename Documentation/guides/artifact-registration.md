@@ -1,4 +1,7 @@
-# Artifact Registration
+---
+title: Artifact Registration
+description: How the JVM client discovers event types, read models, observers, constraints and other artifacts, registers them in order, and how to narrow, replace or turn that off.
+---
 
 Chronicle's kernel has to know what your application is made of before it can do
 anything useful with it. Event types need schemas registered so events can be
@@ -31,21 +34,22 @@ From Java:
 <!-- validate: skip -->
 
 ```java
-var client = new ChronicleClient(ChronicleOptions.Companion.development());
-EventStore store = client.getEventStore("MyApp", "Default");
-EventStoreJavaBridge.awaitRegistration(store);
+var client = BlockingChronicleClient.connect(ChronicleOptions.development());
+var store = client.getEventStore("MyApp");
+store.awaitRegistration();
 
-EventLogJavaBridge.append(store.getEventLog(), "employee-1",
-    new EmployeeHired("Ada", "Lovelace", "Engineer"), null);
+store.getEventLog().append("employee-1",
+    new EmployeeHired("Ada", "Lovelace", "Engineer"));
 ```
 
-`awaitRegistration()` returns as soon as the first registration pass is through.
-It is not required — appending before it completes simply races the kernel — but
-calling it once at startup makes the first append deterministic.
+`awaitRegistration()` returns as soon as the first registration pass has run.
+It is not required: the first append waits for the same pass. Calling it at
+startup moves that wait out of your first request. It has no time limit of its
+own, so bound it; see
+[Connection lifecycle](../reference/connection-lifecycle.md#bound-the-first-call).
 
-In a Spring Boot application even that is unnecessary: the starter holds the
-application back until registration is done. See
-[Spring Boot](spring-boot.md).
+In a Spring Boot application the starter already waits for it at startup, for
+up to `cratis.chronicle.registration-timeout`. See [Spring Boot](spring-boot.md#startup).
 
 ## What gets discovered
 
@@ -97,6 +101,38 @@ Order matters, and the client gets it right so you do not have to think about it
 Registration runs again on every reconnect, because a kernel that restarted has
 forgotten what it was told. Reactors and reducers are started only once: each one
 re-establishes its own observation when the connection comes back.
+
+## When registration fails
+
+The pass runs its steps in the order above and stops at the first step that
+throws. Everything later in the order is not registered in that pass. The
+client writes the failure to standard error:
+
+```text
+[EventStore] Automatic registration of artifacts failed: <message>
+```
+
+The waiting calls are released anyway: `awaitRegistration()` returns normally,
+and the first append goes ahead, failing if its event type was never
+registered. So a clean return from `awaitRegistration()` does
+not prove that registration succeeded. Check standard error after startup.
+
+Common causes:
+
+- A reactor or reducer with no handler method throws `ObserverHasNoHandlers`.
+  A handler is a public method whose first parameter is an `@EventType` class.
+- An artifact the default activator cannot create throws
+  `ArtifactActivationFailed`; see [Artifacts with dependencies](#artifacts-with-dependencies).
+- A reactor handler asks for a parameter nothing can supply.
+
+Reactors and reducers are started once per process. If starting one of them
+throws, the ones after it in the pass are not started, and a reconnect does not
+retry them; fix the artifact and restart the application. The other steps
+(event types, read models, constraints, projections, webhooks, captures and
+seeders) run again on the next reconnect.
+
+An `IConstraint` needs `@Constraint` as well. Without the annotation it is
+skipped without a message.
 
 ## Narrowing the scan
 
@@ -156,13 +192,14 @@ From Java:
 <!-- validate: skip -->
 
 ```java
-var options = ChronicleOptions.Companion.development().withoutAutoRegistration();
-var client = new ChronicleClient(options);
-EventStore store = client.getEventStore("MyApp", "Default");
+var options = ChronicleOptions.development().withoutAutoRegistration();
+var client = BlockingChronicleClient.connect(options);
+var store = client.getEventStore("MyApp");
 
-EventTypesServiceJavaBridge.register(store.getEventTypes(),
+// Event types are not wrapped by the blocking store; use the static bridge.
+EventTypesServiceJavaBridge.register(store.unwrap().getEventTypes(),
     EmployeeHired.class, EmployeePromoted.class);
-ReducersServiceJavaBridge.register(store.getReducers(), new EmployeeStateReducer());
+store.getReducers().register(new EmployeeStateReducer());
 ```
 
 With auto-registration off, `awaitRegistration()` returns immediately — there is
@@ -205,21 +242,20 @@ Tracing, logging, metrics and correlation scoping want to happen around every
 reactor handler and belong to none of them. Put them in an `IReactorMiddleware`
 and every reactor stays a description of what happens when a fact arrives:
 
-<!-- validate: skip -->
+<!-- validate: declarations -->
 
 ```kotlin
 import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.observation.IReactorMiddleware
 
-class HandlerTiming : IReactorMiddleware {
-    private val started = ThreadLocal<Long>()
-
+class HandlerLogging : IReactorMiddleware {
     override suspend fun beforeInvoke(context: EventContext, event: Any) {
-        started.set(System.nanoTime())
+        val name = event::class.simpleName
+        println("Handling $name #${context.sequenceNumber} for ${context.eventSourceId}")
     }
 
     override suspend fun afterInvoke(context: EventContext, event: Any) {
-        println("${event::class.simpleName} took ${System.nanoTime() - started.get()}ns")
+        println("Handled ${event::class.simpleName} #${context.sequenceNumber}")
     }
 }
 ```
@@ -229,6 +265,10 @@ every reactor. `beforeInvoke` runs outermost-first and `afterInvoke` in reverse,
 so middlewares nest the way you would write them by hand, and `afterInvoke` runs
 whether the handler returned or threw.
 
+One middleware instance serves every reactor, and a suspending handler can
+resume on a different thread, so `afterInvoke` may run on another thread than
+`beforeInvoke`. Keep per-invocation state out of fields and `ThreadLocal`s.
+
 Java cannot implement a suspending method, so a Java middleware implements
 `BlockingReactorMiddleware` — the same two methods without `suspend` — and the
 client adapts it onto the same chain.
@@ -236,8 +276,8 @@ client adapts it onto the same chain.
 ## Handler parameters beyond the event
 
 A reactor handler takes the event, and optionally its `EventContext`. Anything
-past that is resolved per invocation, which is how a handler asks for the
-current state of a read model without reaching for the event log:
+past that is resolved per invocation, which is how a handler asks for a read
+model without reaching for the event log:
 
 <!-- validate: skip -->
 
@@ -254,8 +294,11 @@ class OverdraftAlerts(private val mail: Mailer) {
 ```
 
 The instance is fetched for the event source the event arrived under, and is
-`null` when nothing has been projected for that key yet — so declare the
-parameter nullable.
+`null` when nothing has been projected for that key yet, so declare the
+parameter nullable. It is read from the read model store, which is updated
+asynchronously: it may not include the event being handled, or events just
+before it. Do not base a decision that must be exact on it; enforce such rules
+with a [constraint](/chronicle/constraints/) when the event is appended.
 
 Implement `IReactorMethodArgumentResolver` to supply anything else, a
 container-backed service for instance. Discovered resolvers are consulted before

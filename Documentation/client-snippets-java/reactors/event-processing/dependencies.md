@@ -26,9 +26,8 @@ class EventProcessingOrderProcessor {
         this.shipping = shipping;
     }
 
-    // `order` is resolved by Chronicle itself: any parameter whose type carries @ReadModel is
-    // materialized on demand, keyed by the triggering event's EventSourceId - strongly consistent
-    // as of this handler call. It is null until something has been projected for that key.
+    // `order` is looked up by the triggering event's event source id; a materialized read model
+    // can lag this event or be null.
     void orderPlaced(EventProcessingOrderPlaced event, EventProcessingOrder order, EventContext context) {
         if (order != null) {
             shipping.schedule(order);

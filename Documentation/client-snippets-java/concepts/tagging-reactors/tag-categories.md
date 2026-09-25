@@ -1,4 +1,5 @@
 ```java
+import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.observation.Reactor;
 import io.cratis.chronicle.observation.Tag;
 
@@ -14,5 +15,9 @@ import io.cratis.chronicle.observation.Tag;
 @Tag({"Customer", "Operations", "Finance", "Support"})
 @Reactor
 class TaggingReactorsCategoryExamplesReactor {
+    void on(TaggingReactorsCategoryOrderPlaced event) { }
 }
+
+@EventType
+record TaggingReactorsCategoryOrderPlaced(String id) {}
 ```

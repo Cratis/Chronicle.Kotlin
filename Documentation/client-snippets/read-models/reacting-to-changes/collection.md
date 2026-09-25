@@ -1,4 +1,7 @@
 ```kotlin
+import io.cratis.chronicle.IEventStore
+import io.cratis.chronicle.readModels.ReadModelReactors
+import kotlinx.coroutines.Job
 import io.cratis.chronicle.readModels.IReadModelReactor
 import io.cratis.chronicle.readModels.ReadModel
 
@@ -12,4 +15,8 @@ class AccountBatchProjector : IReadModelReactor {
 
     private fun sync(account: ReactingCollectionAccount) { /* ... */ }
 }
+
+// JVM read model reactors are registered explicitly; cancel the job on shutdown.
+fun startAccountBatchProjector(store: IEventStore): Job =
+    ReadModelReactors(store.readModels, store.eventLog).register(AccountBatchProjector())
 ```

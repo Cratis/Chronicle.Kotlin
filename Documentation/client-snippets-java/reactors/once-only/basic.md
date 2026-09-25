@@ -10,7 +10,7 @@ record OnceOnlyOrderPlaced(String orderId) {}
 class OnceOnlyOrderReactor {
     @OnceOnly
     void sendNotification(OnceOnlyOrderPlaced event) {
-        // Runs once when the event is first observed, and is skipped during replay.
+        // Runs on normal delivery, skipped during replay; keep the side effect idempotent because delivery can be retried.
     }
 }
 ```

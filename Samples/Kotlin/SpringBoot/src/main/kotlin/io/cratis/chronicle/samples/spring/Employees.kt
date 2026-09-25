@@ -23,12 +23,13 @@ data class Promote(val newTitle: String)
 /**
  * Employees over HTTP.
  *
- * `IEventStore` is injected like any other bean and is already pointed at the right namespace. The
- * whole handler runs inside a unit of work, so the two events in [hire] land together or not at all —
- * and if the email is already taken, the constraint stops both.
+ * `IEventStore` is injected like any other bean and is already pointed at the right namespace. Both
+ * appends in [hire] go to the kernel straight away: the request's unit of work only stages appends made
+ * through `eventLog.transactional`. So if the email is already taken, `EmployeeHired` has been appended
+ * before `EmployeeEmailSet` is rejected.
  *
- * Spring MVC handlers are blocking, so the coroutine API is bridged with `runBlocking`. On WebFlux, or
- * anywhere else that is already suspending, drop the `runBlocking` and mark the handler `suspend`.
+ * Spring MVC handlers run on a request thread, so the coroutine API is bridged with `runBlocking`. That
+ * keeps the code on the thread the request filters set identity, causation and the unit of work on.
  */
 @RestController
 @RequestMapping("/api/employees")

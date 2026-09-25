@@ -86,7 +86,7 @@ Each `run-<database>.sh` delegates to `run-sample.sh`:
 ### Override the connection string
 
 ```bash
-CHRONICLE_CONNECTION="chronicle://myserver:35000" ./Samples/Java/Console/run.sh
+CHRONICLE_CONNECTION="chronicle://my-client:$CHRONICLE_CLIENT_SECRET@myserver:35000?skipTlsValidation=false" ./Samples/Java/Console/run.sh
 ```
 
 ### Override the sink type

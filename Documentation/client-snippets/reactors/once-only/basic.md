@@ -10,7 +10,7 @@ data class OnceOnlyOrderPlaced(val orderId: String)
 class OnceOnlyOrderReactor {
     @OnceOnly
     fun sendNotification(event: OnceOnlyOrderPlaced) {
-        // Runs once when the event is first observed, and is skipped during replay.
+        // Runs on normal delivery, skipped during replay; keep the side effect idempotent because delivery can be retried.
     }
 }
 ```

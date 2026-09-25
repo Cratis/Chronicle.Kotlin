@@ -1,4 +1,5 @@
 ```java
+import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.observation.Reactor;
 import io.cratis.chronicle.observation.Tag;
 
@@ -8,5 +9,9 @@ import io.cratis.chronicle.observation.Tag;
 @Tag("Webhook")
 @Reactor
 class TaggingByCommunicationChannelExample {
+    void on(TaggingByCommunicationChannelMessageSent event) { }
 }
+
+@EventType
+record TaggingByCommunicationChannelMessageSent(String id) {}
 ```

@@ -1,8 +1,8 @@
 ---
+title: PII Compliance
+description: Where the shared guide to PII compliance lives, with Kotlin and Java tabs.
 sharedTopicBridge: true
 ---
-
-# PII Compliance
 
 Compliance and PII handling are shared Chronicle topics. The shared docs own
 the concepts, storage behavior, and client-tabbed examples.

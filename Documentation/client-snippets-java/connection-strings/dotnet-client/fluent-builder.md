@@ -13,9 +13,9 @@ class ConnectionStringsFluentBuilder {
         ChronicleConnectionString connectionString = new ChronicleConnectionString(
             List.of(new ChronicleServerAddress("server.example.com", 35000)),
             "clientId",
-            "clientSecret",
+            java.util.Objects.requireNonNull(System.getenv("CHRONICLE_CLIENT_SECRET"), "CHRONICLE_CLIENT_SECRET is required"),
             false,
-            true,
+            false,
             null,
             io.cratis.chronicle.connection.LoadBalancer.LEAST_CONNECTIONS,
             null,

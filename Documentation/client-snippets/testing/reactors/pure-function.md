@@ -7,12 +7,13 @@ import org.junit.jupiter.api.Test
 @EventType
 data class VibeCancelled(val host: String)
 
-data class CreateNotification(val host: String)
+@EventType
+data class NotificationRequested(val host: String)
 
-/** Returns the side effect as its result, so its logic is a pure function of the event. */
+/** Returns an event that Chronicle appends; its logic is a pure function of the input event. */
 @Reactor
 class CancellationReactor {
-    fun vibeCancelled(event: VibeCancelled) = CreateNotification(event.host)
+    fun vibeCancelled(event: VibeCancelled) = NotificationRequested(event.host)
 }
 
 class CancellationReactorTests {
@@ -21,9 +22,9 @@ class CancellationReactorTests {
     fun `a cancelled vibe requests a notification for its host`() {
         val reactor = CancellationReactor()
 
-        val command = reactor.vibeCancelled(VibeCancelled("Ada"))
+        val notification = reactor.vibeCancelled(VibeCancelled("Ada"))
 
-        assertEquals("Ada", command.host)
+        assertEquals("Ada", notification.host)
     }
 }
 ```

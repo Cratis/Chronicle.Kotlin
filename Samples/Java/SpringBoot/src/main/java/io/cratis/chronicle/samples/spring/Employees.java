@@ -22,9 +22,10 @@ import java.util.Map;
  * Employees over HTTP.
  *
  * <p>{@code Chronicle} is injected like any other bean. It has no coroutines in its signature, so every
- * call is an ordinary Java method call, and it is already pointed at the right namespace. The whole
- * handler runs inside a unit of work, so the two events in {@code hire} land together or not at all —
- * and if the email is already taken, the constraint stops both.
+ * call is an ordinary Java method call, and it is already pointed at the right namespace. Both appends
+ * in {@code hire} go to the kernel straight away: {@code Chronicle.append} does not stage into the
+ * request's unit of work. So if the email is already taken, {@code EmployeeHired} has been appended
+ * before {@code EmployeeEmailSet} is rejected.
  */
 @RestController
 @RequestMapping("/api/employees")

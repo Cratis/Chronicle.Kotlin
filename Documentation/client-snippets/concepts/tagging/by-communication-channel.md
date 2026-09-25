@@ -1,4 +1,5 @@
 ```kotlin
+import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.observation.Tag
 
@@ -7,5 +8,10 @@ import io.cratis.chronicle.observation.Tag
 @Tag("Push")
 @Tag("Webhook")
 @Reactor
-class TaggingByCommunicationChannelExample
+class TaggingByCommunicationChannelExample {
+    fun on(event: TaggingByCommunicationChannelMessageSent) { }
+}
+
+@EventType
+data class TaggingByCommunicationChannelMessageSent(val id: String = "")
 ```

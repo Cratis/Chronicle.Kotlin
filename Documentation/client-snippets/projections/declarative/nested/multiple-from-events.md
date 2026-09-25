@@ -36,10 +36,10 @@ class SliceProjectionForNestedUpdates : IProjectionFor<SliceForNestedUpdates> {
                 nested
                     .from(CommandSetForNestedUpdates::class)
                     .from(CommandRenamedForNestedUpdates::class) {
-                        it.set(CommandItemForNestedUpdates::name).to { e -> e.newName }
+                        it.set(CommandItemForNestedUpdates::name).toProperty("newName")
                     }
                     .from(CommandSchemaUpdatedForNestedUpdates::class) {
-                        it.set(CommandItemForNestedUpdates::schema).to { e -> e.updatedSchema }
+                        it.set(CommandItemForNestedUpdates::schema).toProperty("updatedSchema")
                     }
                     .clearWith(CommandClearedForNestedUpdates::class)
             }

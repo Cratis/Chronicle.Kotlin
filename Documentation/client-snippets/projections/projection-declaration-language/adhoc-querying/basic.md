@@ -15,7 +15,7 @@ class PdlOrderQueryService(private val store: IEventStore) {
 
         return when (result) {
             is ProjectionQueryResult.Projected -> result.instancesOf(PdlOrderSummary::class)
-            is ProjectionQueryResult.Invalid -> emptyList()
+            is ProjectionQueryResult.Invalid -> throw IllegalArgumentException("Invalid projection query: $result")
         }
     }
 }

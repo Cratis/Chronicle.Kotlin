@@ -16,8 +16,8 @@ class MaterializedPaginationObserving(private val eventStore: IEventStore) {
                 }
         }
 
-        // Cancel when done to release the change stream
-        subscription.cancel()
+        // Collect within the caller's scope; cancel that scope when observation ends.
+        subscription.join()
     }
 }
 ```

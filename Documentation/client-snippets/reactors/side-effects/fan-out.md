@@ -9,8 +9,7 @@ data class FanOutStockDecreased(val isbn: String, val quantity: Int)
 
 @Reactor
 class ReservationFanOutReactor {
-    // Fan out to several event source ids in one go - they are appended together as a single
-    // transaction.
+    // Fan-out events are appended one at a time, in order; an earlier event can be appended even if a later one is rejected.
     fun bookReserved(event: BookReserved, context: EventContext): List<EventForEventSourceId> = listOf(
         EventForEventSourceId(event.memberId, MemberActivityRecorded(event.isbn)),
         EventForEventSourceId(event.isbn, FanOutStockDecreased(event.isbn, 1))

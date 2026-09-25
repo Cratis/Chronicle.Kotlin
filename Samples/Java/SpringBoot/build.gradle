@@ -11,6 +11,11 @@ repositories {
     mavenCentral()
 }
 
+// Spring Boot's dependency management pins kotlinx-coroutines below the 1.11 the client is built
+// against, which fails at startup with NoSuchMethodError (BuildersKt.runBlockingK). Applications using
+// the starter need the same override; see Documentation/guides/spring-boot.md.
+ext['kotlin-coroutines.version'] = '1.11.0'
+
 dependencies {
     implementation project(':Integrations:SpringBoot')
     implementation 'org.springframework.boot:spring-boot-starter-web'
