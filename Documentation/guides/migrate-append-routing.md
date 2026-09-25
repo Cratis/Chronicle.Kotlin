@@ -3,17 +3,25 @@ title: Migrate append routing
 description: Preserve explicit legacy event routes when upgrading the Kotlin and Java client.
 ---
 
-The next major client release stops choosing routing defaults on your
-behalf. Before upgrading, decide whether new events should use the
-kernel's defaults or continue the routes your application already uses.
-Existing stored events are not moved or rewritten.
+Since version 6.0.0 (released 2026-09-17), the Kotlin and Java client no
+longer chooses routing defaults on your behalf. This page is for applications
+upgrading from 5.x or earlier. Before upgrading, decide whether new events
+should use the kernel's defaults or continue the routes your application
+already uses. Existing stored events are not moved or rewritten.
+
+Before you deploy client 6.0.0 or later:
+
+1. Upgrade every kernel node. The 6.0.0 release notes require 18.4.1 or later.
+2. Pass all three route fields explicitly wherever you must keep the old
+   route.
+3. Review stream-filtered reads, observers and concurrency scopes.
+4. Recompile every JVM consumer, including Java code.
 
 ## Check the route your application needs
 
-With the matching kernel release, omitted or empty routing resolves as
-follows. Upgrade every kernel node before deploying the new client.
-The client verifies its contract descriptor before exposing each channel;
-an unsupported kernel cannot receive an append.
+From client 6.0.0 on, omitted or empty routing resolves as follows. The
+client verifies its contract descriptor when it connects, so a kernel that
+cannot serve it refuses the connection before any append is sent.
 
 | Route field | Previous single/rich-batch default | Kernel-owned default |
 | --- | --- | --- |

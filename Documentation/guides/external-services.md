@@ -1,4 +1,7 @@
-# External Services
+---
+title: External Services
+description: Register named HTTP and database external services with the Kotlin and Java client.
+---
 
 This page shows how to register external services using the Chronicle
 Kotlin client. An external service is a named endpoint — HTTP or database —
@@ -15,10 +18,13 @@ callback for configuring the endpoint:
 <!-- validate: body needs=store -->
 
 ```kotlin
+val token = System.getenv("PAYROLL_API_TOKEN")
+    ?: error("Set PAYROLL_API_TOKEN to the payroll provider's API token")
+
 store.externalServices.register("payroll-provider") { builder ->
     builder
         .http("https://payroll.example.com/api")
-        .withBearerToken("payroll-integration-token")
+        .withBearerToken(token)
 }
 ```
 
@@ -30,6 +36,7 @@ webhooks, plus arbitrary headers:
 <!-- validate: skip -->
 
 ```kotlin
+// Placeholders: supply real values from configuration or a secret store.
 builder.withBasicAuth("username", "password")
 builder.withBearerToken("token")
 builder.withOAuth("https://auth.example.com", "client-id", "client-secret")
@@ -44,12 +51,15 @@ endpoint. `port` defaults to the provider's standard port when left at `0`:
 <!-- validate: body needs=store -->
 
 ```kotlin
+val password = System.getenv("PAYROLL_DB_PASSWORD")
+    ?: error("Set PAYROLL_DB_PASSWORD to the payroll database password")
+
 store.externalServices.register("payroll-database") { builder ->
     builder.postgreSql(
         host = "payroll-db.internal",
         database = "payroll",
         username = "chronicle",
-        password = "secret"
+        password = password
     )
 }
 ```

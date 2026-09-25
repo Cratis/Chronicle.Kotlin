@@ -1,4 +1,7 @@
-# EventStore API
+---
+title: EventStore API
+description: The IChronicleClient, IEventStore and service interfaces of the JVM client, and the blocking API for Java.
+---
 
 ## IChronicleClient
 
@@ -493,6 +496,13 @@ staging events through `store.eventLog.transactional.append`/`appendMany`
 directly; the transactional event sequence resolves the right
 `EventSequenceId` for you.
 
+`commit()` appends the staged events in the order they were staged. Consecutive
+events for the same event sequence, event source and options go in one atomic
+batch; each new event source starts a new batch. The batches are sent one
+after another, so a unit of work that spans several event sources is not
+atomic across them: an earlier batch stays appended when a later one is
+rejected.
+
 After `commit()`, `isSuccess` reflects whether every staged event was
 appended without a constraint violation, concurrency violation, or append
 error; `getConstraintViolations()`/`getConcurrencyViolations()`/
@@ -680,6 +690,12 @@ interface IReadModelsService {
 }
 ```
 
+- `getInstanceByKey` returns the instance for one key, or `null` when there
+  is none. For a read model that a reducer or an active projection keeps up
+  to date, the kernel reads the stored copy, which is written after the
+  events are appended. A call right after an append can therefore return
+  `null` or an older state; see
+  [Connection lifecycle](connection-lifecycle.md#reading-after-writing).
 - `getInstances` replays events in-process to produce every instance of a
   read model, optionally capped to the first `eventCount` events.
 - `getSnapshotsById` returns the full history of intermediate states for
@@ -930,6 +946,7 @@ try (var unitOfWork = eventStore.beginUnitOfWork()) {
     transactional.append("order-123", new OrderPlaced(99.95));
     transactional.append("inventory-widget", new InventoryReserved("widget", 1));
 
+    // Two event sources, so two batches: not atomic across them.
     unitOfWork.commit();
 }
 ```
