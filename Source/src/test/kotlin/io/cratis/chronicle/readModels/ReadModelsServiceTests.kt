@@ -15,6 +15,7 @@ import com.google.protobuf.Empty
 import io.cratis.chronicle.Subject
 import io.cratis.chronicle.connection.ConnectionLifecycle
 import io.cratis.chronicle.eventSequences.AppendedEvent
+import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.eventSequences.IEventSequence
 import io.cratis.chronicle.events.EventContext
@@ -24,6 +25,10 @@ import io.cratis.chronicle.events.EventTypeGeneration
 import io.cratis.chronicle.events.EventTypeId
 import io.cratis.chronicle.identity.Identity
 import io.cratis.chronicle.observation.ReducersService
+import io.cratis.chronicle.observation.EventSequence
+import io.cratis.chronicle.observation.EventSourceType
+import io.cratis.chronicle.observation.EventStreamType
+import io.cratis.chronicle.observation.FilterEventsByTag
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -62,18 +67,43 @@ private class PassiveEmployeeReducer {
 }
 
 @io.cratis.chronicle.observation.Reducer
+private class PassiveAnnotatedReducer {
+    fun hired(event: EmployeeHired) = PassiveEmployee(event.name)
+}
+
+@EventSequence("inbox")
+@EventSourceType("Employee")
+@EventStreamType("Onboarding")
+@FilterEventsByTag("hr")
+@io.cratis.chronicle.observation.Reducer(isActive = false)
+private class FilteredInboxReducer {
+    fun hired(event: EmployeeHired) = EmployeeState(event.name, "New")
+}
+
+@io.cratis.chronicle.observation.Reducer(isActive = false)
+private class ConfidentialReducer {
+    fun hired(event: EmployeeHired) = ConfidentialProfile("employee-1", event.name)
+}
+
+@io.cratis.chronicle.observation.Reducer
 private class ActiveEmployeeReducer {
     fun hired(event: EmployeeHired) = EmployeeState(event.name, "New")
 }
 
-private fun appended(sequence: Long, source: String, type: String, content: String): AppendedEvent = AppendedEvent(
+private fun appended(
+    sequence: Long, source: String, type: String, content: String,
+    sourceType: String = "", streamType: String = "", tags: List<String> = emptyList()
+): AppendedEvent = AppendedEvent(
     EventContext(
         sequenceNumber = sequence,
         eventSourceId = source,
         eventType = EventTypeDescriptor(EventTypeId(type), EventTypeGeneration.first),
         occurred = Instant.parse("2026-01-01T00:00:00Z"),
         correlationId = UUID.randomUUID(),
-        causedBy = Identity.system
+        causedBy = Identity.system,
+        eventSourceType = sourceType,
+        eventStreamType = streamType,
+        tags = tags
     ),
     content
 )
@@ -127,7 +157,7 @@ class ReadModelsServiceTests {
             appended(0, "employee-1", "EmployeeHired", """{"name":"Grace"}"""),
             appended(1, "employee-1", "EmployeePromoted", """{"title":"Senior"}""")
         )
-        val service = service(stub).also { it.eventLog = eventLog }
+        val service = service(stub).also { it.resolveEventSequence = { eventLog } }
         val job = ReducersService("my-store", "default", ConnectionLifecycle(), mockk(), readModels = service)
             .register(PassiveEmployeeReducer())
         job.cancel()
@@ -149,7 +179,7 @@ class ReadModelsServiceTests {
         val eventLog = mockk<IEventSequence>()
         coEvery { stub.registerMany(any(), any()) } returns Empty.getDefaultInstance()
         coEvery { eventLog.getForEventSourceIdAndEventTypes(any(), any(), any(), any(), any()) } returns emptyList()
-        val service = service(stub).also { it.eventLog = eventLog }
+        val service = service(stub).also { it.resolveEventSequence = { eventLog } }
         val job = ReducersService("my-store", "default", ConnectionLifecycle(), mockk(), readModels = service)
             .register(PassiveEmployeeReducer())
         job.cancel()
@@ -168,7 +198,7 @@ class ReadModelsServiceTests {
             appended(1, "employee-2", "EmployeeHired", """{"name":"Grace"}"""),
             appended(0, "employee-1", "EmployeeHired", """{"name":"Ada"}""")
         )
-        val service = service(stub).also { it.eventLog = eventLog }
+        val service = service(stub).also { it.resolveEventSequence = { eventLog } }
         val job = ReducersService("my-store", "default", ConnectionLifecycle(), mockk(), readModels = service)
             .register(PassiveEmployeeReducer())
         job.cancel()
@@ -189,6 +219,72 @@ class ReadModelsServiceTests {
             )
         }
         coVerify(exactly = 0) { stub.getAllInstances(any(), any()) }
+    }
+
+    @Test
+    fun `a passive read model makes its otherwise active reducer passive`() = runBlocking {
+        val stub = mockk<ReadModelsGrpcKt.ReadModelsCoroutineStub>()
+        val registrations = mutableListOf<Readmodels.RegisterManyRequest>()
+        coEvery { stub.registerMany(capture(registrations), any()) } returns Empty.getDefaultInstance()
+        val sequence = mockk<IEventSequence>()
+        coEvery { sequence.getForEventSourceIdAndEventTypes(any(), any(), any(), any(), any()) } returns listOf(
+            appended(0, "employee-1", "EmployeeHired", """{"name":"Ada"}""")
+        )
+        val service = service(stub).also { it.resolveEventSequence = { sequence } }
+        ReducersService("my-store", "default", ConnectionLifecycle(), mockk(), readModels = service)
+            .register(PassiveAnnotatedReducer()).cancel()
+
+        assertEquals(WellKnownSinkTypes.NONE, registrations.single().readModelsList.single().sink.typeId)
+        assertEquals(PassiveEmployee("Ada"), service.getInstanceByKey(PassiveEmployee::class, "employee-1"))
+        coVerify(exactly = 0) { stub.getInstanceByKey(any(), any()) }
+    }
+
+    @Test
+    fun `passive reducer reads its own sequence and applies source stream and tag filters`() = runBlocking {
+        val stub = mockk<ReadModelsGrpcKt.ReadModelsCoroutineStub>()
+        coEvery { stub.registerMany(any(), any()) } returns Empty.getDefaultInstance()
+        val sequence = mockk<IEventSequence>()
+        val requested = mutableListOf<EventSequenceId>()
+        coEvery { sequence.getFromSequenceNumber(any(), any(), any()) } returns listOf(
+            appended(0, "employee-1", "EmployeeHired", """{"name":"Ignored"}""", "Other", "Onboarding", listOf("hr")),
+            appended(1, "employee-1", "EmployeeHired", """{"name":"Ada"}""", "Employee", "Onboarding", listOf("hr")),
+            appended(2, "employee-2", "EmployeeHired", """{"name":"Ignored"}""", "Employee", "Other", listOf("hr")),
+            appended(3, "employee-3", "EmployeeHired", """{"name":"Ignored"}""", "Employee", "Onboarding")
+        )
+        coEvery { sequence.getForEventSourceIdAndEventTypes(any(), any(), any(), any(), any()) } returns listOf(
+            appended(0, "employee-1", "EmployeeHired", """{"name":"Ignored"}""", "Other", "Onboarding", listOf("hr")),
+            appended(1, "employee-1", "EmployeeHired", """{"name":"Ada"}""", "Employee", "Onboarding", listOf("hr"))
+        )
+        val service = service(stub).also { it.resolveEventSequence = { id -> requested += id; sequence } }
+        ReducersService("my-store", "default", ConnectionLifecycle(), mockk(), readModels = service)
+            .register(FilteredInboxReducer()).cancel()
+
+        assertEquals(listOf(EmployeeState("Ada", "New")), service.getInstances(EmployeeState::class))
+        assertEquals(EmployeeState("Ada", "New"), service.getInstanceByKey(EmployeeState::class, "employee-1"))
+        assertEquals(listOf(EventSequenceId("inbox"), EventSequenceId("inbox")), requested)
+    }
+
+    @Test
+    fun `folded read models release protected values through compliance`() = runBlocking {
+        val stub = mockk<ReadModelsGrpcKt.ReadModelsCoroutineStub>()
+        val complianceStub = mockk<ComplianceGrpcKt.ComplianceCoroutineStub>()
+        coEvery { stub.registerMany(any(), any()) } returns Empty.getDefaultInstance()
+        coEvery { complianceStub.release(any(), any()) } answers {
+            val request = firstArg<ComplianceOuterClass.ReleaseRequest>()
+            ComplianceOuterClass.ReleaseResponse.newBuilder()
+                .setPayload(request.payload.replace("111-11-1111", "released")).build()
+        }
+        val sequence = mockk<IEventSequence>()
+        coEvery { sequence.getForEventSourceIdAndEventTypes(any(), any(), any(), any(), any()) } returns listOf(
+            appended(0, "employee-1", "EmployeeHired", """{"name":"111-11-1111"}""")
+        )
+        val service = ReadModelsService("my-store", "default", stub, mockk(), mockk(), complianceStub)
+            .also { it.resolveEventSequence = { sequence } }
+        ReducersService("my-store", "default", ConnectionLifecycle(), mockk(), readModels = service)
+            .register(ConfidentialReducer()).cancel()
+
+        assertEquals(ConfidentialProfile("employee-1", "released"), service.getInstanceByKey(ConfidentialProfile::class, "employee-1"))
+        coVerify(exactly = 1) { complianceStub.release(any(), any()) }
     }
 
     @Test

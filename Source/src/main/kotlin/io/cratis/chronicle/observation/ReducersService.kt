@@ -9,6 +9,7 @@ import io.cratis.chronicle.connection.ConnectionLifecycle
 import io.cratis.chronicle.diagnostics.ChronicleTraces
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.json.chronicleGson
+import io.cratis.chronicle.projections.EVENT_SOURCE_ID_EXPRESSION
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import io.opentelemetry.api.common.Attributes
 import kotlinx.coroutines.CancellationException
@@ -50,7 +51,7 @@ class ReducersService(
                         .setGeneration(ann.generation)
                         .build()
                 )
-                .setKey("EventSourceId")
+                .setKey(EVENT_SOURCE_ID_EXPRESSION)
                 .build()
         }
 

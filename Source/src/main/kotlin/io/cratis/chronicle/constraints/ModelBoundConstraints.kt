@@ -29,11 +29,11 @@ internal object ModelBoundConstraints {
     fun messagesFor(eventTypes: List<KClass<*>>): Map<String, String> = buildMap {
         for (eventType in eventTypes) {
             eventType.findAnnotation<Unique>()?.let { unique ->
-                putIfAbsent(unique.id.ifEmpty { eventType.simpleName!! }, unique.message)
+                if (unique.message.isNotEmpty()) putIfAbsent(unique.id.ifEmpty { eventType.simpleName!! }, unique.message)
             }
             for (property in eventType.memberProperties) {
                 property.findAnnotation<Unique>()?.let { unique ->
-                    putIfAbsent(unique.id.ifEmpty { property.name }, unique.message)
+                    if (unique.message.isNotEmpty()) putIfAbsent(unique.id.ifEmpty { property.name }, unique.message)
                 }
             }
         }

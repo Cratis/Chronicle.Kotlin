@@ -139,7 +139,7 @@ class ConnectionManager(
     private fun isTerminalFailure(error: Exception): Boolean {
         val status = Status.fromThrowable(error).code
         return status == Status.Code.UNAUTHENTICATED || status == Status.Code.PERMISSION_DENIED ||
-            error is IllegalStateException && error.message?.contains(" is incompatible") == true
+            error is ChronicleServerIncompatible
     }
 
     private fun buildRequest(connectionId: String): Clients.ConnectRequest {

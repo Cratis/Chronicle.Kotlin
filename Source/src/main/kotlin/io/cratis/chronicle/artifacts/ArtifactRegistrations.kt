@@ -27,8 +27,9 @@ import kotlin.reflect.full.memberFunctions
  * reconnect, since a kernel that restarted has forgotten the declarations made to it. Reactors and
  * reducers that started successfully already re-establish their own observations; those that failed
  * are retried on the next pass. An observer failure does not block the remaining observers, captures,
- * or seeding. The initial gate completes even when a pass has observer failures, so appends never
- * wait indefinitely on a broken artifact; each failure is reported with its artifact name.
+ * or seeding. After the remaining work completes, [registerAll] throws [ArtifactRegistrationFailed]
+ * naming every observer that failed. The initial gate still completes, so appends never wait
+ * indefinitely on a broken artifact; failed observers are retried on the next pass.
  *
  * @param eventStore The event store to register into.
  * @param artifacts The artifacts to register.
@@ -79,6 +80,7 @@ class ArtifactRegistrations(
         eventStore.projections.register(*projections.toTypedArray())
         eventStore.webhooks.register(*instancesOf(artifacts.webhooks).toTypedArray())
 
+        val failures = mutableListOf<ObserverStartFailure>()
         for (reactor in artifacts.reactors) {
             if (reactor in startedReactors) continue
             try {
@@ -87,7 +89,7 @@ class ArtifactRegistrations(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                System.err.println("[ArtifactRegistrations] Reactor '${reactor.qualifiedName}' could not be started: ${e.message}")
+                failures += ObserverStartFailure(reactor.qualifiedName ?: reactor.toString(), e)
             }
         }
         for (reducer in artifacts.reducers) {
@@ -98,7 +100,7 @@ class ArtifactRegistrations(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                System.err.println("[ArtifactRegistrations] Reducer '${reducer.qualifiedName}' could not be started: ${e.message}")
+                failures += ObserverStartFailure(reducer.qualifiedName ?: reducer.toString(), e)
             }
         }
 
@@ -109,6 +111,7 @@ class ArtifactRegistrations(
         // Seeded events are appended by the kernel the moment the seed lands, so every observer that
         // should see them has to be registered by now.
         eventStore.seeding.seed(*instancesOf(artifacts.eventSeeders).toTypedArray())
+        if (failures.isNotEmpty()) throw ArtifactRegistrationFailed(failures)
     }
 
     /**

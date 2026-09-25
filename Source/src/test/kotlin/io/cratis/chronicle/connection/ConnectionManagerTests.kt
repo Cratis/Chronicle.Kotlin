@@ -88,6 +88,29 @@ class ConnectionManagerTests {
     }
 
     @Test
+    fun `only the dedicated incompatible exception is terminal not a matching message`() = runTest {
+        for (failure in listOf(
+            IllegalStateException("server is incompatible"),
+            ChronicleServerIncompatible("server is incompatible")
+        )) {
+            val connections = object : IKeepAliveConnections {
+                override fun connect(request: Clients.ConnectRequest): Flow<Clients.ConnectionKeepAlive> = flow {
+                    throw failure
+                }
+                override suspend fun answer(connectionId: String) = Unit
+            }
+            val manager = managerFor(connections)
+            try {
+                manager.connect()
+                runCurrent()
+                assertEquals(failure is ChronicleServerIncompatible, manager.lifecycle.terminalFailure.value != null)
+            } finally {
+                manager.close()
+            }
+        }
+    }
+
+    @Test
     fun `permission denied is terminal but unavailable stays transient`() = runTest {
         for (status in listOf(Status.PERMISSION_DENIED, Status.UNAVAILABLE)) {
             val connections = object : IKeepAliveConnections {
@@ -241,7 +264,7 @@ class ConnectionManagerTests {
         val manager = managerFor(connections) {
             refreshes++
             // CompatibilityPreflight rejects an incompatible server with this exception type.
-            throw IllegalStateException("Chronicle server is incompatible. No operations were sent.")
+            throw ChronicleServerIncompatible("Chronicle server is incompatible. No operations were sent.")
         }
 
         try {

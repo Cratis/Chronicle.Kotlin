@@ -49,7 +49,7 @@ class ReadModelsService(
     private val defaultSinkTypeId: String = WellKnownSinkTypes.MONGODB
 ) : IReadModelsService {
     private val compliance = ComplianceService(eventStoreName, namespace, complianceStub)
-    internal lateinit var eventLog: IEventSequence
+    internal lateinit var resolveEventSequence: (EventSequenceId) -> IEventSequence
     private val passiveReducers = ConcurrentHashMap<KClass<*>, Pair<Any, ReducerRegistration>>()
 
     internal fun registerReducer(reducer: Any, registration: ReducerRegistration) {
@@ -126,9 +126,10 @@ class ReadModelsService(
 
     override suspend fun <T : Any> getInstanceByKey(readModelClass: KClass<T>, key: String): T? {
         passiveReducers[readModelClass]?.let { (reducer, registration) ->
-            val events = eventLog.getForEventSourceIdAndEventTypes(key, registration.eventClasses())
+            val events = sequenceFor(registration).getForEventSourceIdAndEventTypes(key, registration.eventClasses())
+                .filter { registration.accepts(it) }
             if (events.isEmpty()) return null
-            return readModelClass.java.cast(fold(events, reducer, registration))
+            return fold(events, reducer, registration)?.let { release(readModelClass.java.cast(it)) }
         }
 
         val request = Readmodels.GetInstanceByKeyRequest.newBuilder()
@@ -150,12 +151,13 @@ class ReadModelsService(
 
     override suspend fun <T : Any> getInstances(readModelClass: KClass<T>, eventCount: Long?): List<T> {
         passiveReducers[readModelClass]?.let { (reducer, registration) ->
-            val events = eventLog.getFromSequenceNumber(EventSequenceNumber.first, eventTypes = registration.eventClasses())
+            val events = sequenceFor(registration).getFromSequenceNumber(EventSequenceNumber.first, eventTypes = registration.eventClasses())
+                .filter { registration.accepts(it) }
                 .sortedBy { it.context.sequenceNumber }
             val bounded = if (eventCount == null) events else events.take(eventCount.coerceIn(0L, events.size.toLong()).toInt())
-            return bounded.groupBy { it.context.eventSourceId }.values.mapNotNull { sourceEvents ->
-                readModelClass.java.cast(fold(sourceEvents, reducer, registration))
-            }
+            return releaseMany(bounded.groupBy { it.context.eventSourceId }.values.mapNotNull { sourceEvents ->
+                fold(sourceEvents, reducer, registration)?.let { readModelClass.java.cast(it) }
+            })
         }
 
         val builder = Readmodels.GetAllInstancesRequest.newBuilder()
@@ -167,6 +169,14 @@ class ReadModelsService(
 
         return stub.getAllInstances(builder.build()).instancesList.map { chronicleGson.fromJson(it, readModelClass.java) }
     }
+
+    private fun sequenceFor(registration: ReducerRegistration): IEventSequence =
+        resolveEventSequence(EventSequenceId(registration.eventSequenceId))
+
+    private fun ReducerRegistration.accepts(event: AppendedEvent): Boolean =
+        (filters.eventSourceType.isEmpty() || event.context.eventSourceType == filters.eventSourceType) &&
+            (filters.eventStreamType == "All" || event.context.eventStreamType == filters.eventStreamType) &&
+            event.context.tags.containsAll(filters.filterTags)
 
     private fun ReducerRegistration.eventClasses(): List<KClass<*>> = handlers.values.map { it.eventClass }.distinct()
 

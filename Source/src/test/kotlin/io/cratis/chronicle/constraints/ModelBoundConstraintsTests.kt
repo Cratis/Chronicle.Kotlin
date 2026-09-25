@@ -48,9 +48,23 @@ private data class ModelBoundFirstReleaser(val id: String)
 private data class ModelBoundSecondReleaser(val id: String)
 
 @EventType
+private data class EmptyGroupMessage(@Unique(id = "shared") val value: String)
+
+@EventType
+private data class NamedGroupMessage(@Unique(id = "shared", message = "Already used") val value: String)
+
+@EventType
 private data class ModelBoundProjectCreated(@Unique val name: String, val description: String)
 
 class ModelBoundConstraintsTests {
+
+    @Test
+    fun `empty group message does not mask a later non-empty message`() {
+        assertEquals(
+            mapOf("shared" to "Already used"),
+            ModelBoundConstraints.messagesFor(listOf(EmptyGroupMessage::class, NamedGroupMessage::class))
+        )
+    }
 
     @Test
     fun `buildFor produces no constraints for event types with no Unique or RemoveConstraint`() {

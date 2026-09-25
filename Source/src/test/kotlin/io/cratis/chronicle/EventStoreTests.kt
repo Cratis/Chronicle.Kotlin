@@ -3,20 +3,33 @@
 
 package io.cratis.chronicle
 
+import io.cratis.chronicle.artifacts.ArtifactActivator
+import io.cratis.chronicle.artifacts.KnownClientArtifacts
 import io.cratis.chronicle.connection.ChronicleConnectionFailed
 import io.cratis.chronicle.connection.ChronicleServices
 import io.cratis.chronicle.connection.ConnectionLifecycle
 import io.cratis.chronicle.eventSequences.EventSequenceId
+import io.cratis.chronicle.observation.Reactor
+import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.java.BlockingEventStore
 import io.cratis.chronicle.java.EventStoreJavaBridge
 import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.grpc.Status
+import io.mockk.coEvery
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.emptyFlow
+import java.io.ByteArrayOutputStream
+import java.io.PrintStream
+import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertInstanceOf
@@ -24,6 +37,14 @@ import org.junit.jupiter.api.Assertions.assertNotSame
 import org.junit.jupiter.api.Assertions.assertSame
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
+
+@EventType
+private data class AutoRegistrationEvent(val value: String)
+
+@Reactor
+private class AutoRegistrationReactor {
+    fun on(event: AutoRegistrationEvent) = Unit
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class EventStoreTests {
@@ -124,6 +145,43 @@ class EventStoreTests {
             }.cause)
         } finally {
             channel.shutdownNow()
+        }
+    }
+
+    @Test
+    fun `automatic registration logs failed observer once and retries on reconnect`() = runBlocking {
+        val services = mockk<ChronicleServices>(relaxed = true)
+        coEvery { services.eventStores.ensureEventStore(any(), any()) } returns mockk(relaxed = true)
+        every { services.reactors.observe(any(), any()) } returns emptyFlow()
+        val lifecycle = ConnectionLifecycle()
+        val attempts = AtomicInteger()
+        val output = ByteArrayOutputStream()
+        val original = System.err
+        try {
+            System.setErr(PrintStream(output, true))
+            val store = EventStore(
+                "my-store", "default", services, lifecycle,
+                artifacts = KnownClientArtifacts(AutoRegistrationReactor::class),
+                artifactActivator = { type ->
+                    if (attempts.getAndIncrement() == 0) throw IllegalStateException("cannot start")
+                    ArtifactActivator.activate(type)
+                },
+                autoDiscoverAndRegister = true
+            )
+            lifecycle.markConnected(lifecycle.connectionId)
+            withTimeout(2_000) {
+                store.awaitRegistration()
+                while (!output.toString().contains("AutoRegistrationReactor")) delay(10)
+            }
+            assertEquals(1, attempts.get())
+            assertEquals(1, "AutoRegistrationReactor".toRegex().findAll(output.toString()).count())
+            lifecycle.markDisconnected()
+            lifecycle.markConnected(lifecycle.connectionId)
+            withTimeout(2_000) { while (attempts.get() < 2) delay(10) }
+            assertEquals(1, "AutoRegistrationReactor".toRegex().findAll(output.toString()).count())
+        } finally {
+            lifecycle.markDisconnected()
+            System.setErr(original)
         }
     }
 

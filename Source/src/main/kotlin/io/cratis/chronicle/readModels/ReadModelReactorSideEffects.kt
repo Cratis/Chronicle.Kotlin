@@ -36,7 +36,11 @@ internal class ReadModelReactorSideEffects(private val eventLog: IEventLog) {
 
         val results = when (sideEffects.size) {
             0 -> return
-            1 -> listOf(eventLog.append(sideEffects.single().eventSourceId, sideEffects.single().event))
+            1 -> sideEffects.single().let {
+                listOf(eventLog.append(it.eventSourceId, it.event, if (result is EventForEventSourceId || result is List<*> && result.singleOrNull() is EventForEventSourceId) {
+                    it.toAppendOptions()
+                } else null))
+            }
             else -> eventLog.appendMany(sideEffects)
         }
         if (results.all { it.isSuccess }) return

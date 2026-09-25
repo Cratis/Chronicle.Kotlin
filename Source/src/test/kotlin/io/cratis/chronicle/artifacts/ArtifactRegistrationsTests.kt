@@ -208,7 +208,9 @@ class ArtifactRegistrationsTests {
         }
         val subject = registrations()
 
-        subject.registerAll()
+        val failure = assertThrows(ArtifactRegistrationFailed::class.java) { runBlocking { subject.registerAll() } }
+        assertTrue(failure.message!!.contains(OrderReactor::class.qualifiedName!!))
+        assertEquals(1, failure.suppressed.size)
         assertEquals(1, attempts)
         assertEquals(1, recorder.timesCalled(REDUCERS))
         assertEquals(1, recorder.timesCalled(SEEDERS))
@@ -223,6 +225,22 @@ class ArtifactRegistrationsTests {
     }
 
     @Test
+    fun `observer failures are aggregated after remaining observers and seeding run`() = runTest {
+        coEvery { reactors.register(any()) } throws IllegalStateException("reactor down")
+        coEvery { reducers.register(any()) } throws IllegalStateException("reducer down")
+
+        val failure = assertThrows(ArtifactRegistrationFailed::class.java) {
+            runBlocking { registrations().registerAll() }
+        }
+
+        assertEquals(2, failure.failures.size)
+        assertTrue(failure.message!!.contains(OrderReactor::class.qualifiedName!!))
+        assertTrue(failure.message!!.contains(OrderStateReducer::class.qualifiedName!!))
+        assertEquals(2, failure.suppressed.size)
+        assertEquals(1, recorder.timesCalled(SEEDERS))
+    }
+
+    @Test
     fun `activation failure is isolated and its artifact is retried`() = runTest {
         var attempts = 0
         val subject = registrations { type ->
@@ -230,7 +248,7 @@ class ArtifactRegistrationsTests {
             ArtifactActivator.activate(type)
         }
 
-        subject.registerAll()
+        assertThrows(ArtifactRegistrationFailed::class.java) { runBlocking { subject.registerAll() } }
         subject.registerAll()
 
         assertEquals(2, attempts)

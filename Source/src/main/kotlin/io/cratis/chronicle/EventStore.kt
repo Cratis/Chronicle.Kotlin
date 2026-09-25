@@ -6,6 +6,7 @@ package io.cratis.chronicle
 import Cratis.Chronicle.Contracts.EventStores.Eventstores
 import io.cratis.chronicle.artifacts.ArtifactActivator
 import io.cratis.chronicle.artifacts.ArtifactRegistrations
+import io.cratis.chronicle.artifacts.ArtifactRegistrationFailed
 import io.cratis.chronicle.artifacts.IArtifactActivator
 import io.cratis.chronicle.artifacts.IClientArtifacts
 import io.cratis.chronicle.artifacts.IRegistrationGate
@@ -125,7 +126,7 @@ class EventStore(
             services.readModelExplorer,
             services.compliance,
             defaultSinkTypeId
-        ).also { it.eventLog = eventLog }
+        ).also { it.resolveEventSequence = ::getEventSequence }
     }
 
     override val readModels: IReadModelsService get() = readModelsService
@@ -249,6 +250,10 @@ class EventStore(
                         registrations.registerAll()
                     } catch (e: CancellationException) {
                         throw e
+                    } catch (e: ArtifactRegistrationFailed) {
+                        e.failures.forEach { failure ->
+                            System.err.println("[EventStore] Automatic registration of '${failure.name}' failed: ${failure.cause.message}")
+                        }
                     } catch (e: Exception) {
                         System.err.println("[EventStore] Automatic registration of artifacts failed: ${e.message}")
                     }

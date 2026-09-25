@@ -160,6 +160,11 @@ public final class io/cratis/chronicle/artifacts/ArtifactActivator : io/cratis/c
 	public fun activate (Lkotlin/reflect/KClass;)Ljava/lang/Object;
 }
 
+public final class io/cratis/chronicle/artifacts/ArtifactRegistrationFailed : java/lang/IllegalStateException {
+	public fun <init> (Ljava/util/List;)V
+	public final fun getFailures ()Ljava/util/List;
+}
+
 public final class io/cratis/chronicle/artifacts/ArtifactRegistrations {
 	public fun <init> (Lio/cratis/chronicle/IEventStore;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;)V
 	public synthetic fun <init> (Lio/cratis/chronicle/IEventStore;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -242,6 +247,19 @@ public final class io/cratis/chronicle/artifacts/KnownClientArtifacts : io/crati
 
 public final class io/cratis/chronicle/artifacts/KnownClientArtifacts$Companion {
 	public final fun getEmpty ()Lio/cratis/chronicle/artifacts/IClientArtifacts;
+}
+
+public final class io/cratis/chronicle/artifacts/ObserverStartFailure {
+	public fun <init> (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/Throwable;
+	public final fun copy (Ljava/lang/String;Ljava/lang/Throwable;)Lio/cratis/chronicle/artifacts/ObserverStartFailure;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/artifacts/ObserverStartFailure;Ljava/lang/String;Ljava/lang/Throwable;ILjava/lang/Object;)Lio/cratis/chronicle/artifacts/ObserverStartFailure;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCause ()Ljava/lang/Throwable;
+	public final fun getName ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/cratis/chronicle/auditing/Causation {
@@ -548,6 +566,10 @@ public final class io/cratis/chronicle/connection/ChronicleServerAddress {
 	public final fun getPort ()I
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/connection/ChronicleServerIncompatible : java/lang/IllegalStateException {
+	public fun <init> (Ljava/lang/String;)V
 }
 
 public final class io/cratis/chronicle/connection/ChronicleServices {
