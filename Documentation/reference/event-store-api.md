@@ -66,6 +66,7 @@ interface IEventStore {
     val webhooks: IWebhooksService
     val identities: IIdentityManagerService
     val failedPartitions: IFailedPartitions
+    val observers: IObservers
 
     fun getEventSequence(id: EventSequenceId): IEventSequence
 }
@@ -627,6 +628,63 @@ can be asked about by type rather than by remembering what its id came out as.
 `attempts` is the history of the problem, oldest first: `lastAttempt` is the one
 still standing in the way. Retrying an observer whose cause has not been fixed
 simply adds another attempt, so fix first and retry after.
+
+---
+
+## IObservers
+
+`store.observers` lists what the event store knows about its observers, and
+removes one whose declaring code is gone — a deleted read model and its
+projection, a removed reactor. The observer it registered stays behind,
+settles into `ObserverRunningState.Disconnected`, and keeps its records in
+the event store forever until something removes them.
+
+<!-- validate: skip -->
+
+```kotlin
+interface IObservers {
+    suspend fun getAll(): List<ObserverInformation>
+    suspend fun remove(observerId: String): ObserverRemovalResult
+}
+
+data class ObserverInformation(
+    val id: String,
+    val eventSequenceId: EventSequenceId,
+    val type: ObserverType,
+    val runningState: ObserverRunningState,
+    val lastHandledEventSequenceNumber: EventSequenceNumber,
+    val nextEventSequenceNumber: EventSequenceNumber,
+    val handledEventCount: Long
+)
+
+enum class ObserverType {
+    Unknown, Reactor, Projection, Reducer, External
+}
+
+enum class ObserverRunningState {
+    Unknown, Active, Suspended, Replaying, Disconnected, Quarantined
+}
+
+data class ObserverRemovalResult(
+    val outcome: ObserverRemovalOutcome,
+    val blockingNamespace: String
+) {
+    val isRemoved: Boolean
+}
+
+enum class ObserverRemovalOutcome {
+    Removed, ObserverNotFound, ObserverActive, ObserverSubscribed
+}
+```
+
+Removal covers the whole event store, not just the current namespace — an
+observer's definition, and its projection definition where it has one, are
+store-level records shared by every namespace. `remove` refuses while the
+observer is running or still has a subscribed client in *any* namespace, and
+`blockingNamespace` names the one that blocked it, since the guard runs
+across all of them. Stop the declaring application first if the intent is to
+remove a live observer — there is no override. Read model data and sink
+containers are left untouched; only the observer's own bookkeeping goes.
 
 ---
 
