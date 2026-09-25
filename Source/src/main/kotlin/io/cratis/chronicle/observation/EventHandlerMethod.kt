@@ -49,6 +49,14 @@ internal data class EventHandlerMethod(
     suspend fun invoke(observer: Any, vararg arguments: Any?): Any? =
         function.callSuspend(observer, *arguments)
 
+    /** Invokes a reducer using its registered event, state, and optional context signature. */
+    suspend fun invokeReducer(reducer: Any, event: Any, state: Any?, context: EventContext): Any? =
+        when (parameterCount) {
+            2 -> invoke(reducer, event)
+            4 -> invoke(reducer, event, state, context)
+            else -> invoke(reducer, event, state)
+        }
+
     /** Throws [InvalidHandlerSignature] with [reason] for this handler. */
     fun reject(observerClass: KClass<*>, reason: String): Nothing =
         throw InvalidHandlerSignature(observerClass, function.name, reason)

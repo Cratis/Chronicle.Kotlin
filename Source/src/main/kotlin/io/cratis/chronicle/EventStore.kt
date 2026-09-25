@@ -125,7 +125,7 @@ class EventStore(
             services.readModelExplorer,
             services.compliance,
             defaultSinkTypeId
-        )
+        ).also { it.eventLog = eventLog }
     }
 
     override val readModels: IReadModelsService get() = readModelsService

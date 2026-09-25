@@ -13,6 +13,17 @@ import Cratis.Chronicle.Contracts.ReadModels.Readmodels
 import bcl.Bcl
 import com.google.protobuf.Empty
 import io.cratis.chronicle.Subject
+import io.cratis.chronicle.connection.ConnectionLifecycle
+import io.cratis.chronicle.eventSequences.AppendedEvent
+import io.cratis.chronicle.eventSequences.EventSequenceNumber
+import io.cratis.chronicle.eventSequences.IEventSequence
+import io.cratis.chronicle.events.EventContext
+import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.events.EventTypeDescriptor
+import io.cratis.chronicle.events.EventTypeGeneration
+import io.cratis.chronicle.events.EventTypeId
+import io.cratis.chronicle.identity.Identity
+import io.cratis.chronicle.observation.ReducersService
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -32,6 +43,40 @@ private data class EmployeeState(val name: String, val title: String)
 
 @Passive
 private data class PassiveEmployee(val name: String = "")
+
+@EventType
+private data class EmployeeHired(val name: String)
+
+@EventType
+private data class EmployeePromoted(val title: String)
+
+@EventType
+private data class EmployeeRenamed(val name: String)
+
+@io.cratis.chronicle.observation.Reducer(isActive = false)
+private class PassiveEmployeeReducer {
+    fun hired(event: EmployeeHired) = EmployeeState(event.name, "New")
+    fun promoted(event: EmployeePromoted, state: EmployeeState?) = EmployeeState(state!!.name, event.title)
+    suspend fun renamed(event: EmployeeRenamed, state: EmployeeState?, context: EventContext) =
+        EmployeeState(event.name, "${state!!.title} @${context.eventSourceId}")
+}
+
+@io.cratis.chronicle.observation.Reducer
+private class ActiveEmployeeReducer {
+    fun hired(event: EmployeeHired) = EmployeeState(event.name, "New")
+}
+
+private fun appended(sequence: Long, source: String, type: String, content: String): AppendedEvent = AppendedEvent(
+    EventContext(
+        sequenceNumber = sequence,
+        eventSourceId = source,
+        eventType = EventTypeDescriptor(EventTypeId(type), EventTypeGeneration.first),
+        occurred = Instant.parse("2026-01-01T00:00:00Z"),
+        correlationId = UUID.randomUUID(),
+        causedBy = Identity.system
+    ),
+    content
+)
 
 // Not file-private: ReadModelsService.resolveSubject() invokes the `id` property reflectively via
 // KProperty1.call(), which requires the declaring class itself to be JVM-accessible (public).
@@ -69,6 +114,99 @@ class ReadModelsServiceTests {
 
         assertEquals(WellKnownSinkTypes.NONE, registrations[0].readModelsList.single().sink.typeId)
         assertEquals(WellKnownSinkTypes.MONGODB, registrations[1].readModelsList.single().sink.typeId)
+    }
+
+    @Test
+    fun `passive reducer registers without a sink and folds its event types with context`() = runBlocking {
+        val stub = mockk<ReadModelsGrpcKt.ReadModelsCoroutineStub>()
+        val eventLog = mockk<IEventSequence>()
+        val registrations = mutableListOf<Readmodels.RegisterManyRequest>()
+        coEvery { stub.registerMany(capture(registrations), any()) } returns Empty.getDefaultInstance()
+        coEvery { eventLog.getForEventSourceIdAndEventTypes(any(), any(), any(), any(), any()) } returns listOf(
+            appended(2, "employee-1", "EmployeeRenamed", """{"name":"Ada"}"""),
+            appended(0, "employee-1", "EmployeeHired", """{"name":"Grace"}"""),
+            appended(1, "employee-1", "EmployeePromoted", """{"title":"Senior"}""")
+        )
+        val service = service(stub).also { it.eventLog = eventLog }
+        val job = ReducersService("my-store", "default", ConnectionLifecycle(), mockk(), readModels = service)
+            .register(PassiveEmployeeReducer())
+        job.cancel()
+
+        assertEquals(EmployeeState("Ada", "Senior @employee-1"), service.getInstanceByKey(EmployeeState::class, "employee-1"))
+        coVerify(exactly = 1) {
+            eventLog.getForEventSourceIdAndEventTypes(
+                "employee-1", listOf(EmployeeHired::class, EmployeePromoted::class, EmployeeRenamed::class),
+                null, null, null
+            )
+        }
+        coVerify(exactly = 0) { stub.getInstanceByKey(any(), any()) }
+        assertEquals(WellKnownSinkTypes.NONE, registrations.single().readModelsList.single().sink.typeId)
+    }
+
+    @Test
+    fun `passive reducer returns null for an event source without matching events`() = runBlocking {
+        val stub = mockk<ReadModelsGrpcKt.ReadModelsCoroutineStub>()
+        val eventLog = mockk<IEventSequence>()
+        coEvery { stub.registerMany(any(), any()) } returns Empty.getDefaultInstance()
+        coEvery { eventLog.getForEventSourceIdAndEventTypes(any(), any(), any(), any(), any()) } returns emptyList()
+        val service = service(stub).also { it.eventLog = eventLog }
+        val job = ReducersService("my-store", "default", ConnectionLifecycle(), mockk(), readModels = service)
+            .register(PassiveEmployeeReducer())
+        job.cancel()
+
+        assertNull(service.getInstanceByKey(EmployeeState::class, "missing"))
+        coVerify(exactly = 0) { stub.getInstanceByKey(any(), any()) }
+    }
+
+    @Test
+    fun `passive reducer folds all event sources up to the event count`() = runBlocking {
+        val stub = mockk<ReadModelsGrpcKt.ReadModelsCoroutineStub>()
+        val eventLog = mockk<IEventSequence>()
+        coEvery { stub.registerMany(any(), any()) } returns Empty.getDefaultInstance()
+        coEvery { eventLog.getFromSequenceNumber(any(), any(), any()) } returns listOf(
+            appended(2, "employee-1", "EmployeePromoted", """{"title":"Senior"}"""),
+            appended(1, "employee-2", "EmployeeHired", """{"name":"Grace"}"""),
+            appended(0, "employee-1", "EmployeeHired", """{"name":"Ada"}""")
+        )
+        val service = service(stub).also { it.eventLog = eventLog }
+        val job = ReducersService("my-store", "default", ConnectionLifecycle(), mockk(), readModels = service)
+            .register(PassiveEmployeeReducer())
+        job.cancel()
+
+        assertEquals(
+            listOf(EmployeeState("Ada", "New"), EmployeeState("Grace", "New")),
+            service.getInstances(EmployeeState::class, 2)
+        )
+        assertEquals(
+            listOf(EmployeeState("Ada", "Senior"), EmployeeState("Grace", "New")),
+            service.getInstances(EmployeeState::class, null)
+        )
+        assertTrue(service.getInstances(EmployeeState::class, 0).isEmpty())
+        coVerify(exactly = 3) {
+            eventLog.getFromSequenceNumber(
+                EventSequenceNumber.first, null,
+                listOf(EmployeeHired::class, EmployeePromoted::class, EmployeeRenamed::class)
+            )
+        }
+        coVerify(exactly = 0) { stub.getAllInstances(any(), any()) }
+    }
+
+    @Test
+    fun `active reducer retains the configured sink and uses the kernel for reads`() = runBlocking {
+        val stub = mockk<ReadModelsGrpcKt.ReadModelsCoroutineStub>()
+        val registrations = mutableListOf<Readmodels.RegisterManyRequest>()
+        coEvery { stub.registerMany(capture(registrations), any()) } returns Empty.getDefaultInstance()
+        coEvery { stub.getInstanceByKey(any(), any()) } returns Readmodels.GetInstanceByKeyResponse.newBuilder()
+            .setReadModel("""{"name":"Ada","title":"New"}""")
+            .build()
+        val service = service(stub)
+        val job = ReducersService("my-store", "default", ConnectionLifecycle(), mockk(), readModels = service)
+            .register(ActiveEmployeeReducer())
+        job.cancel()
+
+        assertEquals(EmployeeState("Ada", "New"), service.getInstanceByKey(EmployeeState::class, "employee-1"))
+        coVerify(exactly = 1) { stub.getInstanceByKey(any(), any()) }
+        assertEquals(WellKnownSinkTypes.MONGODB, registrations.single().readModelsList.single().sink.typeId)
     }
 
     @Test

@@ -38,7 +38,8 @@ class ReducersService(
 
         // Auto-register the read model so the observer type (Reducer) and identifier are derived
         // from this reducer rather than from the @ReadModel annotation.
-        registration.readModelClass?.let { readModels?.registerWithObserver(it, 1, registration.id) }
+        registration.readModelClass?.let { readModels?.registerWithObserver(it, 1, registration.id, passive = !registration.isActive) }
+        readModels?.registerReducer(reducer, registration)
 
         val eventTypes = registration.handlers.map { (id, handler) ->
             val ann = handler.eventClass.findAnnotation<EventType>()!!
@@ -148,13 +149,7 @@ class ReducersService(
                             reduceAttributes(registration, context)
                         ) {
                             val event = chronicleGson.fromJson(appendedEvent.content, handler.eventClass.java)
-                            // Index 0 is the instance receiver: (event), (event, state), or
-                            // (event, state, context) - the same shapes the C# client accepts.
-                            when (handler.parameterCount) {
-                                2 -> handler.invoke(reducer, event)
-                                4 -> handler.invoke(reducer, event, currentState, context)
-                                else -> handler.invoke(reducer, event, currentState)
-                            }
+                            handler.invokeReducer(reducer, event, currentState, context)
                         }
                         lastSuccessfulSequenceNumber = appendedEvent.context.sequenceNumber
                     } catch (e: Exception) {
