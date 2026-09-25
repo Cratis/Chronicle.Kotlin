@@ -55,6 +55,7 @@ import io.cratis.chronicle.observation.ReducersService
 import io.cratis.chronicle.projections.IProjectionsService
 import io.cratis.chronicle.projections.ProjectionsService
 import io.cratis.chronicle.connection.ConnectionLifecycle
+import io.cratis.chronicle.connection.ChronicleConnectionFailed
 import io.cratis.chronicle.readModels.IReadModelsService
 import io.cratis.chronicle.readModels.ReadModelsService
 import io.cratis.chronicle.seeding.EventSeedingService
@@ -64,6 +65,10 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.merge
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -262,7 +267,14 @@ class EventStore(
     }
 
     override suspend fun awaitRegistration() {
-        if (autoDiscoverAndRegister) registrations.completed.await()
+        if (!autoDiscoverAndRegister) return
+        // Both the first pass and a rejected connection must wake a pending append.
+        // A successful pass does not hide a later authentication failure from new callers.
+        val failure = merge(
+            flow<Throwable?> { registrations.completed.await(); emit(null) },
+            lifecycle.terminalFailure.filterNotNull()
+        ).first()
+        (failure ?: lifecycle.terminalFailure.value)?.let { throw ChronicleConnectionFailed(it) }
     }
 
     override fun getEventSequence(id: EventSequenceId): IEventSequence =
