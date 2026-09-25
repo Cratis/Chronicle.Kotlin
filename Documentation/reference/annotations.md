@@ -1,4 +1,7 @@
-# Annotations
+---
+title: Annotations
+description: Every annotation in the Chronicle JVM client, with its parameters, defaults and where it applies.
+---
 
 ## @EventType
 

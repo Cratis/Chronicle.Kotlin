@@ -1,4 +1,7 @@
-# Strongly-typed identifiers
+---
+title: Strongly-typed identifiers
+description: Declare strongly-typed identifiers and values in Kotlin and Java, and use them as event source ids and event properties.
+---
 
 A `String` is a `String` is a `String`. Nothing stops a book's identifier being
 passed where a member's was expected — both compile, and the bug surfaces in

@@ -1,4 +1,7 @@
-# Captures
+---
+title: Captures
+description: Declare a capture in Kotlin or Java so the kernel pulls facts from an external source and appends them as events.
+---
 
 Not everything that matters happens inside your application. An exchange rate
 moves, a partner posts a webhook, a supplier's API changes a price. Those are

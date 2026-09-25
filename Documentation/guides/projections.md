@@ -1,8 +1,8 @@
 ---
+title: Projections
+description: Where the shared guide to projections lives, with Kotlin and Java tabs.
 sharedTopicBridge: true
 ---
-
-# Projections
 
 Projections are shared Chronicle read-model behavior. Use the shared docs
 for projection styles, model-bound projections, declarative projections,

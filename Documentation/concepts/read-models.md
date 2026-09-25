@@ -1,8 +1,8 @@
 ---
+title: Read Models
+description: Where the shared Chronicle explanation of read models lives, for Kotlin and Java readers.
 sharedTopicBridge: true
 ---
-
-# Read Models
 
 Read models are documented in the shared Chronicle docs so the model stays
 consistent across clients.
