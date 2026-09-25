@@ -3,8 +3,9 @@
 
 package io.cratis.chronicle.samples.spring;
 
-import io.cratis.chronicle.eventSequences.AppendResult;
 import io.cratis.chronicle.eventSequences.ConstraintViolation;
+import io.cratis.chronicle.java.BlockingEventStore;
+import io.cratis.chronicle.java.BlockingUnitOfWork;
 import io.cratis.chronicle.spring.Chronicle;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +23,10 @@ import java.util.Map;
  * Employees over HTTP.
  *
  * <p>{@code Chronicle} is injected like any other bean. It has no coroutines in its signature, so every
- * call is an ordinary Java method call, and it is already pointed at the right namespace. Both appends
- * in {@code hire} go to the kernel straight away: {@code Chronicle.append} does not stage into the
- * request's unit of work. So if the email is already taken, {@code EmployeeHired} has been appended
- * before {@code EmployeeEmailSet} is rejected.
+ * call is an ordinary Java method call, and it is already pointed at the right namespace. The two events
+ * in {@code hire} are staged in the request's unit of work through the transactional event log and
+ * committed as one batch, so if the email is already taken the constraint stops both. The handler
+ * commits itself so it can answer with the outcome; the request filter then leaves the unit of work alone.
  */
 @RestController
 @RequestMapping("/api/employees")
@@ -44,14 +45,18 @@ public class Employees {
 
     @PostMapping("/{id}/hire")
     public ResponseEntity<Object> hire(@PathVariable String id, @RequestBody Hire hire) {
-        chronicle.append(id, new EmployeeHired(hire.firstName(), hire.lastName(), hire.title()));
-        AppendResult result = chronicle.append(id, new EmployeeEmailSet(hire.email()));
+        var eventStore = new BlockingEventStore(chronicle.getEventStore());
+        eventStore.getTransactional().append(id, new EmployeeHired(hire.firstName(), hire.lastName(), hire.title()));
+        eventStore.getTransactional().append(id, new EmployeeEmailSet(hire.email()));
 
-        if (result.isSuccess()) {
+        var unitOfWork = new BlockingUnitOfWork(chronicle.getEventStore().getUnitOfWorkManager().getCurrent());
+        unitOfWork.commit();
+
+        if (unitOfWork.isSuccess()) {
             return ResponseEntity.accepted().build();
         }
 
-        List<String> violations = result.getConstraintViolations().stream()
+        List<String> violations = unitOfWork.unwrap().getConstraintViolations().stream()
             .map(ConstraintViolation::getMessage)
             .toList();
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("violations", violations));

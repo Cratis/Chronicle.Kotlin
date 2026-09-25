@@ -23,10 +23,10 @@ data class Promote(val newTitle: String)
 /**
  * Employees over HTTP.
  *
- * `IEventStore` is injected like any other bean and is already pointed at the right namespace. Both
- * appends in [hire] go to the kernel straight away: the request's unit of work only stages appends made
- * through `eventLog.transactional`. So if the email is already taken, `EmployeeHired` has been appended
- * before `EmployeeEmailSet` is rejected.
+ * `IEventStore` is injected like any other bean and is already pointed at the right namespace. The two
+ * events in [hire] are staged in the request's unit of work through `eventLog.transactional` and
+ * committed as one batch, so if the email is already taken the constraint stops both. The handler
+ * commits itself so it can answer with the outcome; the request filter then leaves the unit of work alone.
  *
  * Spring MVC handlers run on a request thread, so the coroutine API is bridged with `runBlocking`. That
  * keeps the code on the thread the request filters set identity, causation and the unit of work on.
@@ -36,14 +36,17 @@ data class Promote(val newTitle: String)
 class Employees(private val eventStore: IEventStore) {
     @PostMapping("/{id}/hire")
     fun hire(@PathVariable id: String, @RequestBody hire: Hire): ResponseEntity<Any> = runBlocking {
-        eventStore.eventLog.append(id, EmployeeHired(hire.firstName, hire.lastName, hire.title))
-        val result = eventStore.eventLog.append(id, EmployeeEmailSet(hire.email))
+        eventStore.eventLog.transactional.append(id, EmployeeHired(hire.firstName, hire.lastName, hire.title))
+        eventStore.eventLog.transactional.append(id, EmployeeEmailSet(hire.email))
 
-        if (result.isSuccess) {
+        val unitOfWork = eventStore.unitOfWorkManager.current
+        unitOfWork.commit()
+
+        if (unitOfWork.isSuccess) {
             ResponseEntity.accepted().build()
         } else {
             ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(mapOf("violations" to result.constraintViolations.map { it.message }))
+                .body(mapOf("violations" to unitOfWork.getConstraintViolations().map { it.message }))
         }
     }
 
