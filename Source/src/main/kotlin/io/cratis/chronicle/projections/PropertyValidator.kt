@@ -38,10 +38,11 @@ internal object PropertyValidator {
      * property name - the [EVENT_SOURCE_ID_KEY] sentinel, or a `$`-prefixed expression such as a
      * constant or composite key.
      *
-     * @return [key], unchanged, so a call can be chained inline where the key is resolved.
+     * @return The kernel expression for the event source id sentinel, otherwise [key] unchanged.
      */
     fun validateKeyIfExplicit(type: KClass<*>, key: String): String {
-        if (key == EVENT_SOURCE_ID_KEY || key.startsWith('$')) return key
+        if (key == EVENT_SOURCE_ID_KEY) return EVENT_SOURCE_ID_EXPRESSION
+        if (key.startsWith('$')) return key
         return validatePropertyExists(type, key)
     }
 }

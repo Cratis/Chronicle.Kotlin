@@ -31,7 +31,7 @@ internal fun collectChildrenMap(readModelClass: KClass<*>): Map<String, Projecti
         val autoMapEnabled = childClass.findAnnotation<NoAutoMap>() == null && readModelClass.findAnnotation<NoAutoMap>() == null
 
         result[prop.name] = ProjectionsOuterClass.ChildrenDefinition.newBuilder()
-            .setIdentifiedBy(identifiedBy)
+            .setIdentifiedBy(wireKey(identifiedBy))
             .addAllFrom(fromPairs)
             .addAllRemovedWith(removedWith)
             .addAllRemovedWithJoin(removedWithJoin)
@@ -47,7 +47,7 @@ internal fun buildChildrenMapFromEntries(entries: List<ChildrenEntry>): Map<Stri
     entries.associate { entry ->
         val fromPairs = entry.fromEntries.mapNotNull { fe -> buildFromPair(fe.eventClass, fe.key, fe.properties, fe.parentKey) }
         entry.propertyName to ProjectionsOuterClass.ChildrenDefinition.newBuilder()
-            .setIdentifiedBy(entry.identifiedBy)
+            .setIdentifiedBy(wireKey(entry.identifiedBy))
             .addAllFrom(fromPairs)
             .setAutoMap(ProjectionsOuterClass.AutoMap.Enabled)
             .build()

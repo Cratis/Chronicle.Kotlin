@@ -84,7 +84,7 @@ class ReadModelsService(
                     .setConfigurationId(
                         Bcl.Guid.newBuilder().setLo(1L).setHi(0L).build()
                     )
-                    .setTypeId(defaultSinkTypeId)
+                    .setTypeId(if (cls.findAnnotation<Passive>() != null) WellKnownSinkTypes.NONE else defaultSinkTypeId)
                     .build()
             )
             .setSchema(JsonSchemaGenerator.generate(cls))
