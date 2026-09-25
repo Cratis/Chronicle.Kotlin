@@ -128,7 +128,11 @@ read model.
 | --- | --- | --- | --- |
 | `id` | `String` | `""` | Stable identifier. Defaults to class name. |
 | `eventSequence` | `String` | event log | The event sequence to observe. Overridden by [@EventSequence](#eventsequence). |
-| `isActive` | `Boolean` | `true` | Whether the kernel runs the reducer. A passive reducer (`false`) stores nothing; reading its read model folds the event source's events in the client on each read. |
+| `isActive` | `Boolean` | `true` | Whether the kernel runs the reducer. |
+
+A passive reducer (`isActive = false`) stores nothing: reading its read model
+folds the event source's events in the client on each read, so the result is
+current.
 
 A handler takes the event, the state so far, and optionally an `EventContext`.
 The state is `null` until the first event for an event source has been folded in.
