@@ -8,3 +8,5 @@
   href: geospatial.md
 - name: Configuration
   href: configuration.md
+- name: Connection Lifecycle
+  href: connection-lifecycle.md
