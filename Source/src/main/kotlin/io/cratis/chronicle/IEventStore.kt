@@ -16,6 +16,7 @@ import io.cratis.chronicle.jobs.IJobsService
 import io.cratis.chronicle.namespaces.INamespacesService
 import io.cratis.chronicle.captures.ICapturesService
 import io.cratis.chronicle.observation.IFailedPartitions
+import io.cratis.chronicle.observation.IObservers
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
 import io.cratis.chronicle.projections.IProjectionsService
@@ -51,6 +52,12 @@ interface IEventStore {
      * so a stuck partition is easy to miss. This is how an application finds out.
      */
     val failedPartitions: IFailedPartitions
+
+    /**
+     * The observers registered in the event store, for operating on them - listing what is registered, and
+     * removing one whose declaring code is gone.
+     */
+    val observers: IObservers
 
     /**
      * Sources outside Chronicle, pulled in and appended as events.

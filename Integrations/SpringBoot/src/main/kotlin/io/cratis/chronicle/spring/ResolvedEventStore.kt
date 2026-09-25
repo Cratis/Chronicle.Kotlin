@@ -19,6 +19,7 @@ import io.cratis.chronicle.jobs.IJobsService
 import io.cratis.chronicle.namespaces.IEventStoreNamespaceResolver
 import io.cratis.chronicle.namespaces.INamespacesService
 import io.cratis.chronicle.observation.IFailedPartitions
+import io.cratis.chronicle.observation.IObservers
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
 import io.cratis.chronicle.projections.IProjectionsService
@@ -69,6 +70,7 @@ class ResolvedEventStore(
     override val webhooks: IWebhooksService get() = current.webhooks
     override val identities: IIdentityManagerService get() = current.identities
     override val failedPartitions: IFailedPartitions get() = current.failedPartitions
+    override val observers: IObservers get() = current.observers
     override val captures: ICapturesService get() = current.captures
 
     override fun getEventSequence(id: EventSequenceId): IEventSequence = current.getEventSequence(id)
