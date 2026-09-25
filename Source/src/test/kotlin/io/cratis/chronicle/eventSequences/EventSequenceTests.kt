@@ -6,10 +6,19 @@ package io.cratis.chronicle.eventSequences
 import Cratis.Chronicle.Contracts.Sequences.Sequences
 import Cratis.Chronicle.Contracts.Sequences.EventSequencesGrpcKt
 import bcl.Bcl
+import io.cratis.chronicle.IEventStore
+import io.cratis.chronicle.constraints.Constraint
+import io.cratis.chronicle.constraints.ConstraintsService
+import io.cratis.chronicle.constraints.IConstraint
+import io.cratis.chronicle.constraints.IConstraintBuilder
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
+import io.cratis.chronicle.transactions.UnitOfWork
+import Cratis.Chronicle.Contracts.Events.Constraints.ConstraintsGrpcKt
+import com.google.protobuf.Empty
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScopeBuilder
 import io.cratis.chronicle.events.EventType
 import io.mockk.coEvery
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
 import java.util.UUID
@@ -44,7 +53,32 @@ private fun sampleEventContext(sequenceNumber: Long): Sequences.EventContext =
         )
         .build()
 
+@EventType
 private data class SomethingHappened(val value: String)
+
+@Constraint(id = "NamedEvent")
+private class NamedEventConstraint : IConstraint {
+    override fun define(builder: IConstraintBuilder) {
+        builder.uniqueFor(SomethingHappened::class, "Already used: {value}")
+    }
+}
+
+private fun wireViolation(name: String = "NamedEvent"): Sequences.ConstraintViolation =
+    Sequences.ConstraintViolation.newBuilder()
+        .setConstraintName(name)
+        .setMessage("kernel message")
+        .putDetails("value", "hello")
+        .build()
+
+private suspend fun sequenceWithMessages(stub: EventSequencesGrpcKt.EventSequencesCoroutineStub): EventSequence {
+    val constraintsStub = mockk<ConstraintsGrpcKt.ConstraintsCoroutineStub>()
+    coEvery { constraintsStub.register(any(), any()) } returns Empty.getDefaultInstance()
+    val constraints = ConstraintsService("my-store", constraintsStub)
+    constraints.register(NamedEventConstraint())
+    return EventSequence(EventSequenceId.eventLog, "my-store", "default", stub).also {
+        it.resolveConstraintMessage = constraints::resolveMessageFor
+    }
+}
 
 @EventType
 private data class ObservedEvent(val value: String)
@@ -55,6 +89,59 @@ private class ObserverWithHandler {
 }
 
 class EventSequenceTests {
+
+    @Test
+    fun `append resolves named violations but preserves unknown constraint messages`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        coEvery { stub.append(any(), any()) } returns Sequences.CommandResult_AppendResponse.newBuilder()
+            .setIsAuthorized(true)
+            .setResponse(Sequences.AppendResponse.newBuilder()
+                .addConstraintViolations(wireViolation())
+                .addConstraintViolations(wireViolation("closed-stream")))
+            .build()
+        val sequence = sequenceWithMessages(stub)
+
+        val result = sequence.append("source-1", SomethingHappened("hello"))
+
+        assertFalse(result.isSuccess)
+        assertEquals(listOf("Already used: hello", "kernel message"), result.constraintViolations.map { it.message })
+    }
+
+    @Test
+    fun `both batch append endpoints resolve violations`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val response = Sequences.AppendManyResponse.newBuilder().addConstraintViolations(wireViolation()).build()
+        coEvery { stub.appendMany(any(), any()) } returns Sequences.CommandResult_AppendManyResponse.newBuilder()
+            .setIsAuthorized(true).setResponse(response).build()
+        coEvery { stub.appendManyForEventSources(any(), any()) } returns Sequences.CommandResult_AppendManyResponse.newBuilder()
+            .setIsAuthorized(true).setResponse(response).build()
+        val sequence = sequenceWithMessages(stub)
+
+        val singleSource = sequence.appendMany("source-1", listOf(SomethingHappened("hello")))
+        val multipleSources = sequence.appendMany(listOf(EventForEventSourceId("source-1", SomethingHappened("hello"))))
+
+        assertEquals("Already used: hello", singleSource.single().constraintViolations.single().message)
+        assertEquals("Already used: hello", multipleSources.single().constraintViolations.single().message)
+    }
+
+    @Test
+    fun `unit of work collects resolved violations from batch append`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        coEvery { stub.appendMany(any(), any()) } returns Sequences.CommandResult_AppendManyResponse.newBuilder()
+            .setIsAuthorized(true)
+            .setResponse(Sequences.AppendManyResponse.newBuilder().addConstraintViolations(wireViolation()))
+            .build()
+        val sequence = sequenceWithMessages(stub)
+        val eventStore = mockk<IEventStore>()
+        every { eventStore.getEventSequence(any()) } returns sequence
+        val unitOfWork = UnitOfWork(eventStore = eventStore)
+
+        unitOfWork.addEvent(EventSequenceId.eventLog, "source-1", SomethingHappened("hello"))
+        unitOfWork.commit()
+
+        assertFalse(unitOfWork.isSuccess)
+        assertEquals("Already used: hello", unitOfWork.getConstraintViolations().single().message)
+    }
 
     @Test
     fun `append sends the supplied concurrency scope on the wire instead of a hardcoded disabled scope`() = runBlocking {

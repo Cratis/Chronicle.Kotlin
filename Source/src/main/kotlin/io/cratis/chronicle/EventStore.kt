@@ -104,7 +104,9 @@ class EventStore(
     private val registrationGate = IRegistrationGate { awaitRegistration() }
 
     override val eventLog: IEventLog by lazy {
-        EventLog(name, namespace, services.eventSequences, unitOfWorkManager, traces, registrationGate)
+        EventLog(name, namespace, services.eventSequences, unitOfWorkManager, traces, registrationGate).also {
+            it.resolveConstraintMessage = (constraints as ConstraintsService)::resolveMessageFor
+        }
     }
 
     // ReadModelsService is shared so that reducers and projections can auto-register their read
@@ -273,7 +275,9 @@ class EventStore(
             eventLog
         } else {
             eventSequences.getOrPut(id) {
-                EventSequence(id, name, namespace, services.eventSequences, traces, registrationGate)
+                EventSequence(id, name, namespace, services.eventSequences, traces, registrationGate).also {
+                    it.resolveConstraintMessage = (constraints as ConstraintsService)::resolveMessageFor
+                }
             }
         }
 }

@@ -6,6 +6,8 @@ package io.cratis.chronicle.constraints
 import Cratis.Chronicle.Contracts.Events.Constraints.ConstraintsGrpcKt
 import Cratis.Chronicle.Contracts.Events.Constraints.EventsConstraints
 import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.eventSequences.ConstraintViolation
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 
@@ -28,7 +30,18 @@ class ConstraintsService(
     private val stub: ConstraintsGrpcKt.ConstraintsCoroutineStub
 ) : IConstraintsService {
 
+    private val messages = ConcurrentHashMap<String, (ConstraintViolation) -> String>()
+
+    internal fun resolveMessageFor(violation: ConstraintViolation): ConstraintViolation {
+        var message = messages[violation.constraintId]?.invoke(violation) ?: return violation
+        for ((key, value) in violation.details) {
+            message = message.replace("{$key}", value)
+        }
+        return if (message.isEmpty()) violation else violation.copy(message = message)
+    }
+
     override suspend fun register(vararg constraints: Any) {
+        val registeredMessages = mutableMapOf<String, (ConstraintViolation) -> String>()
         val protoConstraints = constraints.mapNotNull { constraint ->
             if (constraint !is IConstraint) return@mapNotNull null
             val ann = constraint::class.findAnnotation<Constraint>() ?: return@mapNotNull null
@@ -57,6 +70,7 @@ class ConstraintsService(
                             )
                             .setScope(entry.scope.toContractScope())
                             .build()
+                            .also { registeredMessages[constraintName] = { entry.message } }
                     }
                     is ConstraintBuilderEntry.UniqueEntry -> {
                         val eventAnn = entry.eventClass.findAnnotation<EventType>() ?: return@map null
@@ -80,18 +94,27 @@ class ConstraintsService(
                             )
                             .setScope(entry.scope.toContractScope())
                             .build()
+                            .also { registeredMessages[constraintName] = { entry.message } }
                     }
                 }
             }.filterNotNull()
         }.flatten()
 
-        sendToKernel(protoConstraints)
+        sendToKernel(protoConstraints, registeredMessages)
     }
 
-    override suspend fun registerModelBound(eventTypes: List<KClass<*>>) =
-        sendToKernel(ModelBoundConstraints.buildFor(eventTypes))
+    override suspend fun registerModelBound(eventTypes: List<KClass<*>>) {
+        val constraints = ModelBoundConstraints.buildFor(eventTypes)
+        val registeredMessages = ModelBoundConstraints.messagesFor(eventTypes)
+            .filterKeys { name -> constraints.any { it.name == name } }
+            .mapValues { (_, message) -> { _: ConstraintViolation -> message } }
+        sendToKernel(constraints, registeredMessages)
+    }
 
-    private suspend fun sendToKernel(constraints: List<EventsConstraints.Constraint>) {
+    private suspend fun sendToKernel(
+        constraints: List<EventsConstraints.Constraint>,
+        registeredMessages: Map<String, (ConstraintViolation) -> String>
+    ) {
         if (constraints.isEmpty()) return
 
         val request = EventsConstraints.RegisterConstraintsRequest.newBuilder()
@@ -100,5 +123,6 @@ class ConstraintsService(
             .build()
 
         stub.register(request)
+        messages.putAll(registeredMessages)
     }
 }

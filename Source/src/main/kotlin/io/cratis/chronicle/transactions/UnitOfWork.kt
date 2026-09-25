@@ -53,11 +53,11 @@ class UnitOfWork(
 
     override fun getEvents(): List<Any> = _stagedEvents.map { it.event }
 
-    override fun getConstraintViolations(): List<ConstraintViolation> = _appendResults.flatMap { it.constraintViolations }
+    override fun getConstraintViolations(): List<ConstraintViolation> = _appendResults.flatMap { it.constraintViolations }.distinct()
 
-    override fun getConcurrencyViolations(): List<ConcurrencyViolation> = _appendResults.mapNotNull { it.concurrencyViolation }
+    override fun getConcurrencyViolations(): List<ConcurrencyViolation> = _appendResults.mapNotNull { it.concurrencyViolation }.distinct()
 
-    override fun getAppendErrors(): List<AppendError> = _appendResults.flatMap { it.errors }
+    override fun getAppendErrors(): List<AppendError> = _appendResults.flatMap { it.errors }.distinct()
 
     override suspend fun commit() {
         try {

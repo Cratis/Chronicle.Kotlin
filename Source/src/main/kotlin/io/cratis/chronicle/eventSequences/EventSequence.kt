@@ -48,6 +48,8 @@ open class EventSequence(
 
     override val appendOperations: SharedFlow<List<AppendedEventWithResult>> = _appendOperations.asSharedFlow()
 
+    internal var resolveConstraintMessage: (ConstraintViolation) -> ConstraintViolation = { it }
+
     override suspend fun append(eventSourceId: String, event: Any, options: AppendOptions?): AppendResult {
         // The kernel rejects an event whose type it has never been told about, and registration
         // happens on connect in the background - so without this the first append after
@@ -561,7 +563,7 @@ open class EventSequence(
         errors: List<String>,
         concurrencyViolation: Sequences.ConcurrencyViolation?
     ): AppendResult {
-        val mappedViolations = constraintViolations.map { it.toClient() }
+        val mappedViolations = constraintViolations.map { resolveConstraintMessage(it.toClient()) }
         val mappedErrors = errors.map { AppendError(it) }
         val mappedConcurrencyViolation = concurrencyViolation?.toClient()
 
@@ -575,7 +577,7 @@ open class EventSequence(
     }
 
     private fun mapAppendManyResponse(eventCount: Int, response: Sequences.AppendManyResponse): List<AppendResult> {
-        val mappedViolations = response.constraintViolationsList.map { it.toClient() }
+        val mappedViolations = response.constraintViolationsList.map { resolveConstraintMessage(it.toClient()) }
         val mappedErrors = response.errorsList.map { AppendError(it) }
         val mappedConcurrencyViolation = response.concurrencyViolationsList.firstOrNull()?.toClient()
         val isSuccess = mappedViolations.isEmpty() && mappedErrors.isEmpty() && mappedConcurrencyViolation == null
