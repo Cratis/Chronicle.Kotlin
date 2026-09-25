@@ -31,7 +31,12 @@ fun isNonStable(version: String): Boolean {
 allprojects {
     tasks.withType<com.github.benmanes.gradle.versions.updates.DependencyUpdatesTask>().configureEach {
         rejectVersionIf {
-            isNonStable(candidate.version) && !isNonStable(currentVersion)
+            // Compile against the lowest supported coroutines runtime: Spring Boot 4.1.x manages
+            // 1.10.2. Updating these library declarations to 1.11+ breaks Boot applications.
+            val pinnedCoroutines = candidate.group == "org.jetbrains.kotlinx" &&
+                candidate.module.startsWith("kotlinx-coroutines-") && currentVersion == "1.10.2"
+            (pinnedCoroutines && candidate.version != "1.10.2") ||
+                (isNonStable(candidate.version) && !isNonStable(currentVersion))
         }
     }
 }
