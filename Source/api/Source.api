@@ -2516,6 +2516,7 @@ public final class io/cratis/chronicle/projections/AllSetBuilderFor : io/cratis/
 	public fun toEventContextProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public fun toEventSourceId ()Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public fun toProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
+	public fun toValue (Ljava/lang/Object;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 }
 
 public final class io/cratis/chronicle/projections/ChildFromBuilderFor : io/cratis/chronicle/projections/IChildFromBuilderFor {
@@ -2705,6 +2706,7 @@ public abstract interface class io/cratis/chronicle/projections/IAllSetBuilderFo
 	public abstract fun toEventContextProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public abstract fun toEventSourceId ()Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public abstract fun toProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
+	public abstract fun toValue (Ljava/lang/Object;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 }
 
 public abstract interface class io/cratis/chronicle/projections/IChildFromBuilderFor {
@@ -2868,6 +2870,7 @@ public abstract interface class io/cratis/chronicle/projections/ISetBuilderFor {
 	public abstract fun toEventContextProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun toEventSourceId ()Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun toProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public abstract fun toValue (Ljava/lang/Object;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 }
 
 public abstract interface class io/cratis/chronicle/projections/ISubtractBuilderFor {
@@ -3144,6 +3147,7 @@ public final class io/cratis/chronicle/projections/SetBuilderFor : io/cratis/chr
 	public fun toEventContextProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public fun toEventSourceId ()Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public fun toProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public fun toValue (Ljava/lang/Object;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 }
 
 public abstract interface annotation class io/cratis/chronicle/projections/SetFrom : java/lang/annotation/Annotation {
@@ -3408,6 +3412,7 @@ public final class io/cratis/chronicle/sinks/WellKnownSinkTypes {
 	public static final field INSTANCE Lio/cratis/chronicle/sinks/WellKnownSinkTypes;
 	public static final field IN_MEMORY Ljava/lang/String;
 	public static final field MONGODB Ljava/lang/String;
+	public static final field NONE Ljava/lang/String;
 	public static final field SQL Ljava/lang/String;
 }
 
