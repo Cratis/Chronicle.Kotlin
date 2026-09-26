@@ -44,10 +44,12 @@ import io.cratis.chronicle.java.asArgumentResolver
 import io.cratis.chronicle.java.asReactorMiddleware
 import io.cratis.chronicle.observation.FailedPartitions
 import io.cratis.chronicle.observation.IFailedPartitions
+import io.cratis.chronicle.observation.IObservers
 import io.cratis.chronicle.observation.IReactorMethodArgumentResolver
 import io.cratis.chronicle.observation.IReactorMiddleware
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
+import io.cratis.chronicle.observation.Observers
 import io.cratis.chronicle.observation.ReactorMethodArguments
 import io.cratis.chronicle.observation.ReactorMiddlewares
 import io.cratis.chronicle.observation.ReactorsService
@@ -187,6 +189,10 @@ class EventStore(
 
     override val failedPartitions: IFailedPartitions by lazy {
         FailedPartitions(name, namespace, services.failedPartitions, services.observers)
+    }
+
+    override val observers: IObservers by lazy {
+        Observers(name, namespace, services.observers)
     }
 
     override val reducers: IReducersService by lazy {

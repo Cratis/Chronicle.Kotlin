@@ -65,6 +65,7 @@ public final class io/cratis/chronicle/EventStore : io/cratis/chronicle/IEventSt
 	public fun getName ()Ljava/lang/String;
 	public fun getNamespace ()Ljava/lang/String;
 	public fun getNamespaces ()Lio/cratis/chronicle/namespaces/INamespacesService;
+	public fun getObservers ()Lio/cratis/chronicle/observation/IObservers;
 	public fun getProjections ()Lio/cratis/chronicle/projections/IProjectionsService;
 	public fun getReactors ()Lio/cratis/chronicle/observation/IReactorsService;
 	public fun getReadModels ()Lio/cratis/chronicle/readModels/IReadModelsService;
@@ -138,6 +139,7 @@ public abstract interface class io/cratis/chronicle/IEventStore {
 	public abstract fun getName ()Ljava/lang/String;
 	public abstract fun getNamespace ()Ljava/lang/String;
 	public abstract fun getNamespaces ()Lio/cratis/chronicle/namespaces/INamespacesService;
+	public abstract fun getObservers ()Lio/cratis/chronicle/observation/IObservers;
 	public abstract fun getProjections ()Lio/cratis/chronicle/projections/IProjectionsService;
 	public abstract fun getReactors ()Lio/cratis/chronicle/observation/IReactorsService;
 	public abstract fun getReadModels ()Lio/cratis/chronicle/readModels/IReadModelsService;
@@ -2378,6 +2380,11 @@ public final class io/cratis/chronicle/observation/IFailedPartitions$DefaultImpl
 	public static synthetic fun retry-uzUZsrw$default (Lio/cratis/chronicle/observation/IFailedPartitions;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
+public abstract interface class io/cratis/chronicle/observation/IObservers {
+	public abstract fun getAll (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun remove (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
 public abstract interface class io/cratis/chronicle/observation/IReactorMethodArgumentResolver {
 	public abstract fun canResolve (Lkotlin/reflect/KParameter;)Z
 	public abstract fun resolve (Lkotlin/reflect/KParameter;Lio/cratis/chronicle/events/EventContext;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -2416,6 +2423,82 @@ public final class io/cratis/chronicle/observation/ObservationState : java/lang/
 
 public final class io/cratis/chronicle/observation/ObserverHasNoHandlers : java/lang/IllegalArgumentException {
 	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;)V
+}
+
+public final class io/cratis/chronicle/observation/ObserverInformation {
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/observation/ObserverType;Lio/cratis/chronicle/observation/ObserverRunningState;JJJLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2-h1zpJ0k ()Ljava/lang/String;
+	public final fun component3 ()Lio/cratis/chronicle/observation/ObserverType;
+	public final fun component4 ()Lio/cratis/chronicle/observation/ObserverRunningState;
+	public final fun component5-hvNBoNI ()J
+	public final fun component6-hvNBoNI ()J
+	public final fun component7 ()J
+	public final fun copy-UxwxAG8 (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/observation/ObserverType;Lio/cratis/chronicle/observation/ObserverRunningState;JJJ)Lio/cratis/chronicle/observation/ObserverInformation;
+	public static synthetic fun copy-UxwxAG8$default (Lio/cratis/chronicle/observation/ObserverInformation;Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/observation/ObserverType;Lio/cratis/chronicle/observation/ObserverRunningState;JJJILjava/lang/Object;)Lio/cratis/chronicle/observation/ObserverInformation;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEventSequenceId-h1zpJ0k ()Ljava/lang/String;
+	public final fun getHandledEventCount ()J
+	public final fun getId ()Ljava/lang/String;
+	public final fun getLastHandledEventSequenceNumber-hvNBoNI ()J
+	public final fun getNextEventSequenceNumber-hvNBoNI ()J
+	public final fun getRunningState ()Lio/cratis/chronicle/observation/ObserverRunningState;
+	public final fun getType ()Lio/cratis/chronicle/observation/ObserverType;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/observation/ObserverRemovalOutcome : java/lang/Enum {
+	public static final field ObserverActive Lio/cratis/chronicle/observation/ObserverRemovalOutcome;
+	public static final field ObserverNotFound Lio/cratis/chronicle/observation/ObserverRemovalOutcome;
+	public static final field ObserverSubscribed Lio/cratis/chronicle/observation/ObserverRemovalOutcome;
+	public static final field Removed Lio/cratis/chronicle/observation/ObserverRemovalOutcome;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/cratis/chronicle/observation/ObserverRemovalOutcome;
+	public static fun values ()[Lio/cratis/chronicle/observation/ObserverRemovalOutcome;
+}
+
+public final class io/cratis/chronicle/observation/ObserverRemovalResult {
+	public fun <init> (Lio/cratis/chronicle/observation/ObserverRemovalOutcome;Ljava/lang/String;)V
+	public final fun component1 ()Lio/cratis/chronicle/observation/ObserverRemovalOutcome;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun copy (Lio/cratis/chronicle/observation/ObserverRemovalOutcome;Ljava/lang/String;)Lio/cratis/chronicle/observation/ObserverRemovalResult;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/observation/ObserverRemovalResult;Lio/cratis/chronicle/observation/ObserverRemovalOutcome;Ljava/lang/String;ILjava/lang/Object;)Lio/cratis/chronicle/observation/ObserverRemovalResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getBlockingNamespace ()Ljava/lang/String;
+	public final fun getOutcome ()Lio/cratis/chronicle/observation/ObserverRemovalOutcome;
+	public fun hashCode ()I
+	public final fun isRemoved ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/observation/ObserverRunningState : java/lang/Enum {
+	public static final field Active Lio/cratis/chronicle/observation/ObserverRunningState;
+	public static final field Disconnected Lio/cratis/chronicle/observation/ObserverRunningState;
+	public static final field Quarantined Lio/cratis/chronicle/observation/ObserverRunningState;
+	public static final field Replaying Lio/cratis/chronicle/observation/ObserverRunningState;
+	public static final field Suspended Lio/cratis/chronicle/observation/ObserverRunningState;
+	public static final field Unknown Lio/cratis/chronicle/observation/ObserverRunningState;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/cratis/chronicle/observation/ObserverRunningState;
+	public static fun values ()[Lio/cratis/chronicle/observation/ObserverRunningState;
+}
+
+public final class io/cratis/chronicle/observation/ObserverType : java/lang/Enum {
+	public static final field External Lio/cratis/chronicle/observation/ObserverType;
+	public static final field Projection Lio/cratis/chronicle/observation/ObserverType;
+	public static final field Reactor Lio/cratis/chronicle/observation/ObserverType;
+	public static final field Reducer Lio/cratis/chronicle/observation/ObserverType;
+	public static final field Unknown Lio/cratis/chronicle/observation/ObserverType;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/cratis/chronicle/observation/ObserverType;
+	public static fun values ()[Lio/cratis/chronicle/observation/ObserverType;
+}
+
+public final class io/cratis/chronicle/observation/Observers : io/cratis/chronicle/observation/IObservers {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/Observation/ObserversGrpcKt$ObserversCoroutineStub;)V
+	public fun getAll (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun remove (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
 public abstract interface annotation class io/cratis/chronicle/observation/OnceOnly : java/lang/annotation/Annotation {
