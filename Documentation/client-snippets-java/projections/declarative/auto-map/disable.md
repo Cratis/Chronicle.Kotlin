@@ -1,4 +1,5 @@
 ```java title="Disable AutoMap"
+// Requires io.cratis:chronicle 6.5.0 or later.
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
@@ -15,12 +16,11 @@ class AutoMapDisabledAccount {
 class AutoMapDisabledAccountProjection implements IProjectionFor<AutoMapDisabledAccount> {
     @Override
     public void define(IProjectionBuilderFor<AutoMapDisabledAccount> builder) {
-        builder
-            .noAutoMap()
+        builder.noAutoMap()
             .from(AutoMapDisabledAccountRegistered.class, fb -> {
-                fb.set("name").toProperty("accountName");
-                fb.set("email").toProperty("contactEmail");
-                fb.set("createdAt").toEventContextProperty("occurred");
+                fb.<String>set("name").toProperty("accountName");
+                fb.<String>set("email").toProperty("contactEmail");
+                fb.<String>set("createdAt").toEventContextProperty("occurred");
             });
     }
 }

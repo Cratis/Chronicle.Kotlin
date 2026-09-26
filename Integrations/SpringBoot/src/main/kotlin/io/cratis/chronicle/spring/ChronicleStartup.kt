@@ -20,6 +20,9 @@ import java.time.Duration
  *
  * The wait is bounded: if the kernel cannot be reached in time the application still starts, logs why,
  * and keeps trying in the background, so a temporarily unavailable kernel degrades rather than blocks.
+ * A kernel that rejects the connection - wrong credentials, or an incompatible server - is not a
+ * temporary condition: [io.cratis.chronicle.connection.ChronicleConnectionFailed] propagates and the
+ * application fails to start, rather than accepting requests whose appends could never succeed.
  *
  * @param eventStore The event store to register into.
  * @param timeout How long to wait for registration before starting anyway.

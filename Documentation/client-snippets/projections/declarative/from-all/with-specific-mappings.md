@@ -1,4 +1,5 @@
 ```kotlin title="Combine FromAll with event-specific mappings"
+// Requires io.cratis:chronicle 6.5.0 or later.
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
@@ -20,10 +21,10 @@ class OrderDeclarativeAllProjection : IProjectionFor<OrderDeclarativeAll> {
         builder
             .fromAll { it.set(OrderDeclarativeAll::lastModified).toEventContextProperty("occurred") }
             .from(OrderCreatedDeclarativeAll::class) {
-                it.set(OrderDeclarativeAll::status).to { "Placed" }
+                it.set(OrderDeclarativeAll::status).toValue("Placed")
             }
             .from(OrderShippedDeclarativeAll::class) {
-                it.set(OrderDeclarativeAll::status).to { "Shipped" }
+                it.set(OrderDeclarativeAll::status).toValue("Shipped")
             }
     }
 }

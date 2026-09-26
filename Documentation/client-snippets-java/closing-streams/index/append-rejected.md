@@ -13,11 +13,11 @@ record ClosingStreamsInvoiceLineAdded(String description, double amount) {}
 
 class ClosingStreamsIndexAppendRejected {
     // Appends a line item to an invoice stream. Once the stream has been closed, the append is
-    // rejected with a "StreamClosed" constraint violation and no further lines can be added.
-    boolean tryAppendLine(EventStore store, String invoiceId) {
+    // rejected with a "closed-stream" constraint violation and no further lines can be added.
+    boolean tryAppendLine(EventStore store, String invoiceId, String eventStreamId) {
         AppendOptions options = new AppendOptionsBuilder()
             .eventStreamType("invoices")
-            .eventStreamId("invoice-42")
+            .eventStreamId(eventStreamId)
             .build();
 
         AppendResult result = EventLogJavaBridge.append(
@@ -25,10 +25,11 @@ class ClosingStreamsIndexAppendRejected {
 
         if (!result.isSuccess()) {
             for (ConstraintViolation violation : result.getConstraintViolations()) {
-                if (violation.getConstraintId().equals("StreamClosed")) {
+                if (violation.getConstraintId().equals("closed-stream")) {
                     return false;
                 }
             }
+            throw new IllegalStateException("Append failed: " + result);
         }
 
         return true;

@@ -13,7 +13,7 @@ data class MbEventSeqFluentOrderSummary(val totalAmount: Double = 0.0)
 class MbEventSeqFluentOrderProjection : IProjectionFor<MbEventSeqFluentOrderSummary> {
     override fun define(builder: IProjectionBuilderFor<MbEventSeqFluentOrderSummary>) {
         builder.from(MbEventSeqFluentOrderPlaced::class) {
-            it.set(MbEventSeqFluentOrderSummary::totalAmount).to { e -> e.amount }
+            it.set(MbEventSeqFluentOrderSummary::totalAmount).toProperty("amount")
         }
     }
 }

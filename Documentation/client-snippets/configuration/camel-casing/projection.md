@@ -8,10 +8,10 @@ import io.cratis.chronicle.projections.IProjectionBuilderFor
 class CamelCasingUserProjection : IProjectionFor<CamelCasingUserReadModel> {
     override fun define(builder: IProjectionBuilderFor<CamelCasingUserReadModel>) {
         builder.from(CamelCasingUserRegistered::class) {
-            it.set(CamelCasingUserReadModel::firstName).to { e -> e.firstName }
-            it.set(CamelCasingUserReadModel::lastName).to { e -> e.lastName }
-            it.set(CamelCasingUserReadModel::emailAddress).to { e -> e.emailAddress }
-            it.set(CamelCasingUserReadModel::registrationDate).to { e -> e.registrationDate }
+            it.set(CamelCasingUserReadModel::firstName).toProperty("firstName")
+            it.set(CamelCasingUserReadModel::lastName).toProperty("lastName")
+            it.set(CamelCasingUserReadModel::emailAddress).toProperty("emailAddress")
+            it.set(CamelCasingUserReadModel::registrationDate).toProperty("registrationDate")
         }
     }
 }

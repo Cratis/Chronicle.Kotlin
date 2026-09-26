@@ -100,12 +100,11 @@ public record EmployeeHired(
 public record EmployeePromoted(String newTitle) {}
 
 @ReadModel
-public class EmployeeState {
-    private String id = "";
-    private String firstName = "";
-    private String title = "";
-    // getters and setters
-}
+public record EmployeeState(
+    String id,
+    String firstName,
+    String title
+) {}
 
 @Reducer
 public class EmployeeStateReducer {
@@ -118,10 +117,10 @@ public class EmployeeStateReducer {
     public EmployeeState employeePromoted(
             EmployeePromoted event,
             EmployeeState state) {
-        var current = state != null
-            ? state : new EmployeeState();
-        current.setTitle(event.newTitle());
-        return current;
+        var current = state != null ? state
+            : new EmployeeState("", "", "");
+        return new EmployeeState(current.id(),
+            current.firstName(), event.newTitle());
     }
 }
 ```
@@ -129,13 +128,19 @@ public class EmployeeStateReducer {
 </td></tr>
 </table>
 
-No registration code appears anywhere above, and none is needed. Append an event and the read model
-is there:
+No registration code appears anywhere above, and none is needed. Append an event, and the reducer
+folds it into the read model a moment later:
 
 ```kotlin
 store.eventLog.append("employee-1", EmployeeHired("Ada", "Lovelace", "Engineer"))
+// Shortly after: the reducer has run and the read model has been stored.
 val ada = store.readModels.getInstanceByKey(EmployeeState::class, "employee-1")
 ```
+
+That "shortly after" is real. A successful append means the fact is stored; read models catch up
+asynchronously, so a read on the very next line can still come back `null`. The
+[Get Started](Documentation/get-started/index.md#8-query-a-read-model-by-key) guide shows how to wait
+for it with a time limit.
 
 ## 🧩 The cast
 
@@ -172,29 +177,33 @@ every connect, so a kernel that restarts is told everything again without you no
 
 ## 🚀 Quick start
 
-You need a kernel. The development image is a single command:
+You need Java 17 or later and a kernel. The development image is a single command, bound to
+loopback so it is only reachable from your machine:
 
 ```shell
-docker run -p 35000:35000 cratis/chronicle:latest-development
+docker run --rm -p 127.0.0.1:35000:35000 cratis/chronicle:latest-development
 ```
 
 ### Plain Kotlin or Java
 
+The examples here use `6.5.0`; check [Maven Central](https://central.sonatype.com/artifact/io.cratis/chronicle)
+for the latest release.
+
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.cratis:chronicle:2.1.1")
+    implementation("io.cratis:chronicle:6.5.0")
 }
 ```
 
 ```groovy
 // build.gradle
 dependencies {
-    implementation 'io.cratis:chronicle:2.1.1'
+    implementation 'io.cratis:chronicle:6.5.0'
 }
 ```
 
-Connect, wait for the first registration pass, and go:
+Connect, append, and check the outcome:
 
 <table>
 <tr><th width="50%">Kotlin</th><th width="50%">Java</th></tr>
@@ -205,16 +214,11 @@ fun main() = runBlocking {
     val client = ChronicleClient(
         ChronicleOptions.development())
     val store = client.getEventStore("MyApp")
-    store.awaitRegistration()
 
-    store.eventLog.append(
+    val result = store.eventLog.append(
         "employee-1",
         EmployeeHired("Ada", "Lovelace", "Engineer"))
-
-    val ada = store.readModels
-        .getInstanceByKey(
-            EmployeeState::class, "employee-1")
-    println(ada)
+    println("Stored: ${result.isSuccess}")
 
     client.dispose()
 }
@@ -224,40 +228,41 @@ fun main() = runBlocking {
 
 ```java
 public static void main(String[] args) {
-    var client = new ChronicleClient(
-        ChronicleOptions.Companion.development());
-    var store = client.getEventStore(
-        "MyApp", "Default");
-    EventStoreJavaBridge.awaitRegistration(store);
+    try (var client = BlockingChronicleClient
+            .connect(ChronicleOptions.development())) {
+        var store = client.getEventStore("MyApp");
 
-    EventLogJavaBridge.append(
-        store.getEventLog(), "employee-1",
-        new EmployeeHired(
-            "Ada", "Lovelace", "Engineer"), null);
-
-    var ada = ReadModelsJavaBridge
-        .getInstanceByKey(store.getReadModels(),
-            EmployeeState.class, "employee-1");
-    System.out.println(ada);
-
-    client.dispose();
+        var result = store.getEventLog().append(
+            "employee-1",
+            new EmployeeHired(
+                "Ada", "Lovelace", "Engineer"));
+        System.out.println(
+            "Stored: " + result.isSuccess());
+    }
 }
 ```
 
 </td></tr>
 </table>
 
-Java cannot call Kotlin `suspend` functions, so the client ships a blocking bridge per service in
-`io.cratis.chronicle.java` — same surface, no coroutines required.
+Java cannot call Kotlin `suspend` functions, so Java goes through `BlockingChronicleClient` in
+`io.cratis.chronicle.java`: the same surface, with each call blocking until the kernel answers.
+
+The first append waits until the client has told the kernel about your event types, and creating
+the client throws if the kernel cannot be reached. `development()` skips certificate validation to
+accept the kernel's self-signed certificate, so use a connection string with
+`?skipTlsValidation=false` for anything but a local kernel. See
+[Configuration](Documentation/reference/configuration.md) and
+[Connection lifecycle](Documentation/reference/connection-lifecycle.md).
 
 ### Spring Boot
 
-The starter brings the client with it and wires everything up:
+The starter brings the client with it and wires everything up. It targets Spring Boot 4:
 
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.cratis:chronicle-spring-boot-starter:2.1.1")
+    implementation("io.cratis:chronicle-spring-boot-starter:6.5.0")
 }
 ```
 
@@ -268,7 +273,7 @@ cratis:
 ```
 
 That is the whole setup. Your artifacts are discovered in your application's packages and registered
-before the first request is served, and an `IEventStore` is ready to inject:
+as the application starts, and an `IEventStore` is ready to inject:
 
 <table>
 <tr><th width="50%">Kotlin</th><th width="50%">Java</th></tr>
@@ -356,6 +361,7 @@ public record WarehouseInspected(
     Point inspectedAt
 ) {}
 
+// store is a BlockingEventStore
 store.getEventLog().append(
     "warehouse-1",
     new WarehouseInspected(
@@ -402,28 +408,32 @@ polygons with holes.
 
 ## ▶️ Running the samples
 
-```shell
-docker run -p 35000:35000 cratis/chronicle:latest-development
+From the repository root, with a JDK 17 or later on `JAVA_HOME`:
 
-gradle :Samples:Kotlin:Console:run          # interactive tour, Kotlin
-gradle :Samples:Java:Console:run            # interactive tour, Java
-gradle :Samples:Kotlin:SpringBoot:bootRun   # HTTP API on :8080
-gradle :Samples:Java:SpringBoot:bootRun     # HTTP API on :8081
+```shell
+docker run --rm -p 127.0.0.1:35000:35000 cratis/chronicle:latest-development
+
+./gradlew :Samples:Kotlin:Console:run          # interactive tour, Kotlin
+./gradlew :Samples:Java:Console:run            # interactive tour, Java
+./gradlew :Samples:Kotlin:SpringBoot:bootRun   # HTTP API on :8080
+./gradlew :Samples:Java:SpringBoot:bootRun     # HTTP API on :8081
 ```
 
 ## ✅ Quality gates
 
 ```shell
-gradle build                                # every module builds clean
-gradle test                                 # all specs pass
+./gradlew build                                      # every module builds clean
+./gradlew test                                       # all specs pass
 
-cd Documentation && ./verify-markdown.sh    # docs lint + every link resolves
-python3 Documentation/validate-client-snippets.py   # every doc snippet compiles
+./Documentation/verify-markdown.sh                   # docs lint + every link resolves
+python3 Documentation/validate-client-snippets.py    # documentation snippets compile
 ```
 
-Documentation snippets are not decorative — every Kotlin and Java fence in `Documentation/` is
-compiled against the real client on every build, so an example that references an API that no longer
-exists fails CI rather than a reader.
+Documentation snippets are not decorative. The Kotlin and Java client snippets, and every Kotlin
+and Java fence on the pages in `Documentation/` that is not marked `<!-- validate: skip -->`, are
+compiled against the real client in CI, so an example that references an API that no longer exists
+fails the build rather than a reader. Compiling proves the API shapes, not the behavior: fences
+marked `skip` (such as the Spring Boot examples) are checked by review only.
 
 ## 🧩 The Cratis ecosystem
 

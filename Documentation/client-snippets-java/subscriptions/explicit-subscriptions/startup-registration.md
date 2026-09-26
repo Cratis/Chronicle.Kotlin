@@ -1,5 +1,5 @@
 ```java
-import io.cratis.chronicle.ChronicleClient;
+import io.cratis.chronicle.java.BlockingChronicleClient;
 import io.cratis.chronicle.ChronicleOptions;
 import io.cratis.chronicle.EventStore;
 
@@ -8,8 +8,8 @@ import io.cratis.chronicle.java.EventStoreSubscriptionsServiceJavaBridge;
 
 class SubscriptionsExplicitStartupRegistration {
     static void configure() {
-        ChronicleClient client = new ChronicleClient(ChronicleOptions.Companion.development());
-        EventStore eventStore = (EventStore) client.getEventStore("Quickstart", "Default");
+        BlockingChronicleClient client = BlockingChronicleClient.connect(ChronicleOptions.development());
+        EventStore eventStore = (EventStore) client.getEventStore("Quickstart", "Default").unwrap();
 
         // Safe to call on every application startup - subscribe is idempotent by subscription id
         EventStoreSubscriptionsServiceJavaBridge.subscribe(eventStore.getEventStoreSubscriptions(), "orders-from-fulfillment", "fulfillment-service", builder -> {

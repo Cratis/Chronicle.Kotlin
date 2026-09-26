@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.observation
 
+import io.cratis.chronicle.readModels.Passive
 import io.cratis.chronicle.readModels.ReadModel
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
@@ -70,7 +71,7 @@ internal data class ReducerRegistration(
             return ReducerRegistration(
                 id = id,
                 eventSequenceId = eventSequenceId,
-                isActive = annotation?.isActive ?: true,
+                isActive = (annotation?.isActive ?: true) && readModelClass?.findAnnotation<Passive>() == null,
                 readModelName = readModelName,
                 readModelClass = readModelClass,
                 tags = ObserverFilters.tagsOf(reducerClass),

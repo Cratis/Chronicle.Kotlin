@@ -1,19 +1,33 @@
 ```java
-import io.cratis.chronicle.IEventStore;
-import io.cratis.chronicle.java.BlockingEventStore;
+// Requires io.cratis:chronicle 6.5.0 or later.
+import io.cratis.chronicle.EventStore;
+import io.cratis.chronicle.events.EventType;
+import io.cratis.chronicle.java.ReadModelsJavaBridge;
+import io.cratis.chronicle.projections.FromEvent;
+import io.cratis.chronicle.readModels.Passive;
+import io.cratis.chronicle.readModels.ReadModel;
 
-record DesigningReadModelsCustomerDetail(String id, String name) {}
+@EventType
+record DesigningReadModelsCustomerNamed(String name) {}
+
+// Nothing materializes this read model: every read computes it from the event log.
+@Passive
+@ReadModel
+@FromEvent(eventType = DesigningReadModelsCustomerNamed.class)
+class DesigningReadModelsCustomerDetail {
+    public String name = "";
+}
 
 class DesigningReadModelsCustomerDetailService {
-    private final BlockingEventStore store;
+    private final EventStore eventStore;
 
-    DesigningReadModelsCustomerDetailService(IEventStore store) {
-        this.store = new BlockingEventStore(store);
+    DesigningReadModelsCustomerDetailService(EventStore eventStore) {
+        this.eventStore = eventStore;
     }
 
     DesigningReadModelsCustomerDetail getDetail(String customerId) {
-        return store.getReadModels()
-            .getInstanceByKey(DesigningReadModelsCustomerDetail.class, customerId);
+        return ReadModelsJavaBridge.getInstanceByKey(
+            eventStore.getReadModels(), DesigningReadModelsCustomerDetail.class, customerId);
     }
 }
 ```

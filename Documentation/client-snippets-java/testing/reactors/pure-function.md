@@ -12,14 +12,15 @@ class TestingReactorsPureFunction {
     record VibeCancelled(String host) {
     }
 
-    record CreateNotification(String host) {
+    @EventType
+    record NotificationRequested(String host) {
     }
 
-    /** Returns the side effect as its result, so its logic is a pure function of the event. */
+    /** Returns an event that Chronicle appends; its logic is a pure function of the input event. */
     @Reactor
     static class CancellationReactor {
-        CreateNotification vibeCancelled(VibeCancelled event) {
-            return new CreateNotification(event.host());
+        NotificationRequested vibeCancelled(VibeCancelled event) {
+            return new NotificationRequested(event.host());
         }
     }
 
@@ -27,9 +28,9 @@ class TestingReactorsPureFunction {
     void aCancelledVibeRequestsANotificationForItsHost() {
         var reactor = new CancellationReactor();
 
-        var command = reactor.vibeCancelled(new VibeCancelled("Ada"));
+        var notification = reactor.vibeCancelled(new VibeCancelled("Ada"));
 
-        assertEquals("Ada", command.host());
+        assertEquals("Ada", notification.host());
     }
 }
 ```

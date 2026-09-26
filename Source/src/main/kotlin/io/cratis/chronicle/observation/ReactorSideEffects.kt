@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.observation
 
+import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.events.EventType
@@ -14,9 +15,10 @@ import kotlin.reflect.full.findAnnotation
  *
  * A single event object or an [EventForEventSourceId] appends directly, and a `List` may freely mix
  * bare events - appended against the event source that triggered the reactor - with
- * [EventForEventSourceId] wrappers naming their own. Anything else (`Unit`, `null`, a value whose
- * class carries no `@EventType`) is ignored, which is what makes a handler that simply does its work
- * and returns nothing valid.
+ * [EventForEventSourceId] wrappers naming their own. The events of a list are appended as one atomic
+ * batch, even across event sources: either all of them land or none do. Anything else (`Unit`,
+ * `null`, a value whose class carries no `@EventType`) is ignored, which is what makes a handler that
+ * simply does its work and returns nothing valid.
  */
 internal class ReactorSideEffects(private val eventLog: IEventLog) {
     /**
@@ -24,37 +26,40 @@ internal class ReactorSideEffects(private val eventLog: IEventLog) {
      * name its own.
      */
     suspend fun append(result: Any?, triggeringEventSourceId: String) {
-        when (result) {
+        val sideEffects = when (result) {
             null, Unit -> return
-            is EventForEventSourceId -> appendIfEventType(result)
-            is List<*> -> result.filterNotNull().forEach { item ->
-                if (item is EventForEventSourceId) {
-                    appendIfEventType(item)
-                } else {
-                    appendIfEventType(EventForEventSourceId(triggeringEventSourceId, item))
-                }
+            is EventForEventSourceId -> listOf(result)
+            is List<*> -> result.filterNotNull().map { item ->
+                item as? EventForEventSourceId ?: EventForEventSourceId(triggeringEventSourceId, item)
             }
-            else -> appendIfEventType(EventForEventSourceId(triggeringEventSourceId, result))
+            else -> listOf(EventForEventSourceId(triggeringEventSourceId, result))
+        }.filter { it.event::class.findAnnotation<EventType>() != null }
+
+        when (sideEffects.size) {
+            0 -> return
+            1 -> {
+                // The shaping the caller put on EventForEventSourceId is carried through, so a side
+                // effect can target a stream, carry tags, name a subject or declare its own causation
+                // exactly as a direct append can.
+                val sideEffect = sideEffects.single()
+                val result = eventLog.append(sideEffect.eventSourceId, sideEffect.event, sideEffect.toAppendOptions())
+                ensureSucceeded(listOf(result), sideEffects)
+            }
+            // One atomic batch, which carries each event's own shaping, so a returned list either lands
+            // as a whole or not at all - the same guarantee the .NET client gives.
+            else -> ensureSucceeded(eventLog.appendMany(sideEffects), sideEffects)
         }
     }
 
-    /**
-     * Appends the event when its class carries `@EventType`; silently ignores anything else.
-     *
-     * The shaping the caller put on [EventForEventSourceId] is carried through, so a side effect can
-     * target a stream, carry tags, name a subject or declare its own causation exactly as a direct
-     * append can. Dropping it here would make those fields silently do nothing on this path.
-     */
-    private suspend fun appendIfEventType(sideEffect: EventForEventSourceId) {
-        val event = sideEffect.event
-        if (event::class.findAnnotation<EventType>() == null) return
+    private fun ensureSucceeded(results: List<AppendResult>, sideEffects: List<EventForEventSourceId>) {
+        if (results.all { it.isSuccess }) return
 
-        val result = eventLog.append(sideEffect.eventSourceId, event, sideEffect.toAppendOptions())
-        if (!result.isSuccess) {
-            val messages = result.errors.joinToString { it.message }.ifEmpty { "constraint violation" }
-            throw IllegalStateException(
-                "Failed to append reactor side-effect event '${event::class.simpleName}': $messages"
-            )
-        }
+        val messages = results
+            .flatMap { result -> result.errors.map { it.message } + result.constraintViolations.map { it.message } }
+            .distinct()
+            .joinToString()
+            .ifEmpty { "constraint violation" }
+        val names = sideEffects.joinToString { it.event::class.simpleName ?: "event" }
+        throw IllegalStateException("Failed to append reactor side-effect event(s) '$names': $messages")
     }
 }

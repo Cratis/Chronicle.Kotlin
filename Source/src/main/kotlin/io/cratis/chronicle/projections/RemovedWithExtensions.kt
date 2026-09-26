@@ -48,7 +48,7 @@ internal fun buildRemovedWithPairsFromEntries(
     val eventTypeId = eventAnnotation.id.ifEmpty { entry.eventClass.simpleName!! }
     ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithDefinition.newBuilder()
         .setKey(toWireEventType(eventTypeId, eventAnnotation.generation))
-        .setValue(ProjectionsOuterClass.RemovedWithDefinition.newBuilder().setKey(entry.key).setParentKey(entry.parentKey).build())
+        .setValue(ProjectionsOuterClass.RemovedWithDefinition.newBuilder().setKey(wireKey(entry.key)).setParentKey(wireKey(entry.parentKey)).build())
         .build()
 }
 
@@ -60,6 +60,6 @@ internal fun buildRemovedWithJoinPairsFromEntries(
     val eventTypeId = eventAnnotation.id.ifEmpty { entry.eventClass.simpleName!! }
     ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithJoinDefinition.newBuilder()
         .setKey(toWireEventType(eventTypeId, eventAnnotation.generation))
-        .setValue(ProjectionsOuterClass.RemovedWithJoinDefinition.newBuilder().setKey(entry.key).build())
+        .setValue(ProjectionsOuterClass.RemovedWithJoinDefinition.newBuilder().setKey(wireKey(entry.key)).build())
         .build()
 }

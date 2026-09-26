@@ -1,4 +1,7 @@
-# Configuration
+---
+title: Configuration
+description: Every ChronicleOptions property, the chronicle:// connection string format and its options, TLS and authentication, and namespaces for the JVM client.
+---
 
 ## ChronicleOptions
 
@@ -47,17 +50,20 @@ There are two factories on the companion object:
 <!-- validate: body -->
 
 ```kotlin
-ChronicleOptions.fromConnectionString("chronicle://chronicle.internal:35000")
+ChronicleOptions.fromConnectionString(
+    "chronicle://chronicle.internal:35000?skipTlsValidation=false"
+)
 ChronicleOptions.development()
 ```
 
-From Java, reach them through `Companion`:
+Both are `@JvmStatic`, so Java calls them as ordinary static methods:
 
 <!-- validate: body -->
 
 ```java
-ChronicleOptions.Companion.fromConnectionString("chronicle://chronicle.internal:35000");
-ChronicleOptions.Companion.development();
+ChronicleOptions.fromConnectionString(
+    "chronicle://chronicle.internal:35000?skipTlsValidation=false");
+ChronicleOptions.development();
 ```
 
 ## Connection string format
@@ -79,9 +85,16 @@ targets and ports.
 | --- | --- | --- |
 | `disableTls` | `false` | Connect over plaintext instead of TLS |
 | `skipTlsValidation` | `true` | Accept any server certificate |
-| `apiKey` | *(none)* | API key to authenticate with |
-| `loadBalancer` | `leastConnections` | Policy across multiple addresses |
+| `apiKey` | *(none)* | Rejected at client creation; see below |
+| `loadBalancer` | `least-connections` | Policy across multiple addresses |
 | `srvNameServer` | *(none)* | DNS server for `chronicle+srv://` |
+
+`loadBalancer` accepts `least-connections`, `round-robin` or `random`.
+Option names are matched without regard to case. An option name the client
+does not recognize is ignored without an error, so check the spelling of
+`skipTlsValidation` in particular: a misspelled one leaves certificate
+validation off. An unknown `loadBalancer` value throws
+`IllegalArgumentException`.
 
 `skipTlsValidation` accepts self-signed certificates. Set it to `false` to
 require full certificate chain validation.
@@ -101,9 +114,10 @@ back to its `chronicle://`/`chronicle+srv://` textual form. The result
 isn't guaranteed to be byte-identical to whatever was originally parsed —
 for example a host without an explicit port is rendered with the resolved
 default port — but re-parsing it always yields an equal
-`ChronicleConnectionString`. This is useful for logging or persisting a
-connection string that was built up programmatically rather than typed by
-hand:
+`ChronicleConnectionString`. This is useful for storing a connection string
+that was built up programmatically rather than typed by hand. The rendered
+string includes the password, so do not write it to logs; log its `target`
+(the first host and port) instead:
 
 <!-- validate: body -->
 
@@ -136,12 +150,59 @@ configuration.
 
 The client connects over TLS by default. Certificate validation is
 skipped unless you set `skipTlsValidation=false`, which makes the client
-validate the certificate chain against the platform trust manager — do
-that whenever the server's certificate is verifiable. Set
+validate the certificate chain against the JVM's default trust store. Set
 `disableTls=true` only for plaintext environments.
 
-Credentials are supplied either as a username and password in the
-connection string's user info section, or as an `apiKey` query option.
+:::danger[Every connection string skips certificate validation by default]
+`skipTlsValidation` defaults to `true` for every connection string, not only
+for `development()`. Against anything other than a kernel on your own
+machine, add `?skipTlsValidation=false`. Otherwise the client accepts any
+certificate and sends its client secret to whoever answers.
+:::
+
+The client authenticates with a client id and secret: the user name and
+password in the connection string's user info section. It exchanges them for
+an access token at the kernel's `/connect/token` endpoint. Without user info
+it uses the development credentials, `chronicle-dev-client` and
+`chronicle-dev-secret`. Read the secret from the environment or a secret
+store rather than writing it into source code.
+
+The connection string is parsed as text: everything after the first `?` is
+read as options, and nothing is URL-decoded. A secret that contains `?` cannot
+be written into it. Construct the connection string from its parts instead:
+
+<!-- validate: body -->
+
+```kotlin
+import io.cratis.chronicle.connection.ChronicleConnectionString
+import io.cratis.chronicle.connection.ChronicleServerAddress
+
+val options = ChronicleOptions(
+    ChronicleConnectionString(
+        addresses = listOf(ChronicleServerAddress("chronicle.internal", 35000)),
+        username = "my-client",
+        password = System.getenv("CHRONICLE_CLIENT_SECRET")
+            ?: error("Set CHRONICLE_CLIENT_SECRET"),
+        skipTlsValidation = false
+    )
+)
+```
+
+From Java, the constructor takes all nine properties in declaration order.
+
+:::caution[apiKey is rejected]
+The Chronicle kernel has no API key authentication. From 6.5.0, creating a
+client from a connection string with an `apiKey` option throws
+`IllegalArgumentException`; up to 6.4.0 the option was accepted and the kernel
+received no credentials at all. Use a client id and secret.
+:::
+
+A kernel that is unreachable, or that rejects the client's TLS settings,
+makes the client constructor throw. Wrong credentials are detected once the
+client tries to connect: the first append or `awaitRegistration()` throws
+`ChronicleConnectionFailed`. See
+[Connection lifecycle](connection-lifecycle.md) for how each failure shows
+up.
 
 ## Namespace
 
@@ -155,17 +216,20 @@ The default namespace is `"Default"`. Override it when calling
 val store = client.getEventStore("MyApp", namespace = "production")
 ```
 
-The `namespace` default applies to Kotlin callers only — from Java, pass
-both arguments:
+From Java, `BlockingChronicleClient` has both forms, so you can name the
+namespace or leave it at the default:
 
-<!-- validate: body needs=client -->
+<!-- validate: body -->
 
 ```java
-import io.cratis.chronicle.EventStore;
+import io.cratis.chronicle.ChronicleOptions;
+import io.cratis.chronicle.java.BlockingChronicleClient;
+import io.cratis.chronicle.java.BlockingEventStore;
 
-EventStore store = client.getEventStore("MyApp", "production");
+var client = BlockingChronicleClient.connect(ChronicleOptions.development());
+BlockingEventStore store = client.getEventStore("MyApp", "production");
 ```
 
-`BlockingChronicleClient` has both forms, so a Java application using it can
-name the namespace or leave it at the default — see
-[Java interop](event-store-api.md#java-interop).
+`ChronicleClient.getEventStore` declares the namespace as a Kotlin default
+parameter without `@JvmOverloads`, so Java callers of that method must pass
+both arguments. See [Java interop](event-store-api.md#java-interop).

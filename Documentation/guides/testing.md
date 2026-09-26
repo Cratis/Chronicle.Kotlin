@@ -1,4 +1,7 @@
-# Testing
+---
+title: Testing
+description: Specify what a Kotlin slice appends and what a reducer folds, in-process with io.cratis:chronicle-testing and no kernel.
+---
 
 Specifying a Chronicle-backed slice used to mean driving the real client against
 a running event store: a kernel, a sink, Docker, and a test that takes seconds
@@ -8,15 +11,25 @@ this".
 
 `io.cratis:chronicle-testing` runs the same code with nothing behind it.
 
+The scenario API is Kotlin: `given` and `fold` are
+`suspend` functions, so a Java test cannot call them directly. The examples on
+this page are Kotlin.
+
 ## Adding it
+
+Use the same version as the client; it is released alongside it.
 
 <!-- validate: skip -->
 
 ```kotlin
 dependencies {
-    testImplementation("io.cratis:chronicle-testing:<version>")
+    testImplementation("io.cratis:chronicle-testing:6.5.0")
 }
 ```
+
+The assertions throw `AssertionError`, so they work with JUnit or any other
+test runner. The examples below use JUnit 5 and `runBlocking`, because the
+scenario methods suspend.
 
 ## Specifying what gets appended
 

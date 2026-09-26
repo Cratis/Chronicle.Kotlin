@@ -14,6 +14,12 @@ import java.util.concurrent.TimeUnit
  */
 class ChronicleConnection(private val connectionString: ChronicleConnectionString) : AutoCloseable {
 
+    init {
+        require(connectionString.apiKey == null) {
+            "API key authentication is not supported by the Chronicle kernel; use a client id and secret in the connection string."
+        }
+    }
+
     private val srvResolver = SrvResolver()
     private val loadBalancerStrategy = LoadBalancerStrategy.forConnectionString(connectionString)
 
@@ -96,9 +102,6 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
     }
 
     private fun createTokenProvider(address: ChronicleServerAddress): ITokenProvider {
-        val hasApiKey = connectionString.apiKey != null
-        if (hasApiKey) return NoOpTokenProvider
-
         val username = connectionString.username
             ?: ChronicleConnectionString.DEVELOPMENT_CLIENT
         val password = connectionString.password

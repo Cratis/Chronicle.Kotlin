@@ -1,33 +1,26 @@
 ```java
+// Requires io.cratis:chronicle 6.5.0 or later.
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 
-class ChoosingStyleBookStatusFluent {
-    public String id = "";
-    public String title = "";
-    public String isbn = "";
-    public boolean isBorrowed = false;
-    public String borrowedBy = null;
-}
-
-class ChoosingStyleBookStatusProjection implements IProjectionFor<ChoosingStyleBookStatusFluent> {
+class ChoosingStyleBookStatusProjection implements IProjectionFor<ChoosingStyleBookStatus> {
     @Override
-    public void define(IProjectionBuilderFor<ChoosingStyleBookStatusFluent> builder) {
+    public void define(IProjectionBuilderFor<ChoosingStyleBookStatus> builder) {
         builder
             .from(ChoosingStyleBookRegistered.class, fb -> {
-                fb.set("id").toEventSourceId();
-                fb.<String>set("title").to(e -> e.title());
-                fb.<String>set("isbn").to(e -> e.isbn());
-                fb.<Boolean>set("isBorrowed").to(e -> false);
-                fb.<String>set("borrowedBy").to(e -> null);
+                fb.<String>set("id").toEventSourceId();
+                fb.<String>set("title").toProperty("title");
+                fb.<String>set("isbn").toProperty("isbn");
+                fb.<Boolean>set("isBorrowed").toValue(false);
+                fb.<String>set("borrowedBy").toValue(null);
             })
             .from(ChoosingStyleBookBorrowed.class, fb -> {
-                fb.<Boolean>set("isBorrowed").to(e -> true);
-                fb.<String>set("borrowedBy").to(e -> e.memberName());
+                fb.<Boolean>set("isBorrowed").toValue(true);
+                fb.<String>set("borrowedBy").toProperty("memberName");
             })
             .from(ChoosingStyleBookReturned.class, fb -> {
-                fb.<Boolean>set("isBorrowed").to(e -> false);
-                fb.<String>set("borrowedBy").to(e -> null);
+                fb.<Boolean>set("isBorrowed").toValue(false);
+                fb.<String>set("borrowedBy").toValue(null);
             });
     }
 }

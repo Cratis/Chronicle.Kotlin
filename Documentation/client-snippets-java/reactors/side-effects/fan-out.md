@@ -1,4 +1,5 @@
 ```java
+// Requires io.cratis:chronicle 6.5.0 or later.
 import io.cratis.chronicle.events.EventContext;
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.eventSequences.EventForEventSourceId;
@@ -11,8 +12,7 @@ record FanOutStockDecreased(String isbn, int quantity) {}
 
 @Reactor
 class ReservationFanOutReactor {
-    // Fan out to several event source ids in one go - they are appended together as a single
-    // transaction.
+    // The returned list is appended as one atomic batch, even across event sources.
     List<EventForEventSourceId> bookReserved(BookReserved event, EventContext context) {
         return List.of(
             new EventForEventSourceId(event.memberId(), new MemberActivityRecorded(event.isbn())),

@@ -1,8 +1,8 @@
 ---
+title: Concepts
+description: Where the shared Chronicle concept pages live, and which JVM pages cover syntax.
 sharedTopicBridge: true
 ---
-
-# Concepts
 
 Chronicle concepts are documented once in the shared Chronicle docs. The
 Kotlin client pages only cover Kotlin and Java setup, annotations, and API

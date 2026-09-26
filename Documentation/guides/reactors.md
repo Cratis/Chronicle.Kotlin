@@ -1,8 +1,8 @@
 ---
+title: Reactors
+description: Where the shared guide to reactors lives, with Kotlin and Java tabs.
 sharedTopicBridge: true
 ---
-
-# Reactors
 
 Reactors are documented in the shared Chronicle docs with synchronized
 examples for C#, Kotlin, Java, Elixir, and TypeScript.

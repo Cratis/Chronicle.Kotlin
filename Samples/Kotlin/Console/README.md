@@ -49,7 +49,7 @@ Two families of run scripts are provided:
 ### Quick start (MongoDB — fully automatic)
 
 ```bash
-./Samples/Console/run.sh
+./Samples/Kotlin/Console/run.sh
 ```
 
 This starts Chronicle + MongoDB via docker compose, waits for it to be ready, runs the sample, and stops everything on exit.
@@ -57,9 +57,9 @@ This starts Chronicle + MongoDB via docker compose, waits for it to be ready, ru
 ### Select a different database
 
 ```bash
-./Samples/Console/run.sh --database postgresql
-./Samples/Console/run.sh --database mssql
-./Samples/Console/run.sh --database sqlite
+./Samples/Kotlin/Console/run.sh --database postgresql
+./Samples/Kotlin/Console/run.sh --database mssql
+./Samples/Kotlin/Console/run.sh --database sqlite
 ```
 
 ### Database-specific shortcut scripts
@@ -75,30 +75,30 @@ Each `run-<database>.sh` delegates to `run-sample.sh`:
 
 ```bash
 # Start docker + run sample (batteries included)
-./Samples/Console/run-mongodb.sh --docker
-./Samples/Console/run-postgresql.sh --docker
+./Samples/Kotlin/Console/run-mongodb.sh --docker
+./Samples/Kotlin/Console/run-postgresql.sh --docker
 
 # Chronicle already running — skip docker
-./Samples/Console/run-mongodb.sh
-./Samples/Console/run-sample.sh --database postgresql
+./Samples/Kotlin/Console/run-mongodb.sh
+./Samples/Kotlin/Console/run-sample.sh --database postgresql
 ```
 
 ### Override the connection string
 
 ```bash
-CHRONICLE_CONNECTION="chronicle://myserver:35000" ./Samples/Console/run.sh
+CHRONICLE_CONNECTION="chronicle://my-client:$CHRONICLE_CLIENT_SECRET@myserver:35000?skipTlsValidation=false" ./Samples/Kotlin/Console/run.sh
 ```
 
 ### Override the sink type
 
 ```bash
-CHRONICLE_SINK_TYPE=SQL ./Samples/Console/run.sh --database mongodb
+CHRONICLE_SINK_TYPE=SQL ./Samples/Kotlin/Console/run.sh --database mongodb
 ```
 
 ## Project structure
 
 ```text
-Samples/Console/src/main/kotlin/io/cratis/chronicle/samples/console/
+Samples/Kotlin/Console/src/main/kotlin/io/cratis/chronicle/samples/console/
   Main.kt                   # Interactive console entry point
   Employees.kt              # Shared employee data and helpers
   Events.kt                 # Event type declarations

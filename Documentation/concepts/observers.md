@@ -1,8 +1,8 @@
 ---
+title: Observers
+description: Where the shared Chronicle explanation of observers lives, for Kotlin and Java readers.
 sharedTopicBridge: true
 ---
-
-# Observers
 
 Observers are documented in the shared Chronicle docs. Use those pages for
 the conceptual model and examples that apply across clients.

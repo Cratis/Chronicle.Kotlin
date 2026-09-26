@@ -1,4 +1,5 @@
 ```kotlin
+import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.observation.Tag
 
@@ -9,5 +10,10 @@ import io.cratis.chronicle.observation.Tag
 @Tag("Monitoring")
 @Tag("Automation")
 @Reactor
-class TaggingByPurposeExample
+class TaggingByPurposeExample {
+    fun on(event: TaggingByPurposeCustomerRegistered) { }
+}
+
+@EventType
+data class TaggingByPurposeCustomerRegistered(val id: String = "")
 ```

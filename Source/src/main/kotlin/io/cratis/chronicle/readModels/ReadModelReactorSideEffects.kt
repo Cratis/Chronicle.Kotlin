@@ -14,7 +14,8 @@ import kotlin.reflect.full.findAnnotation
  *
  * The conventions match reactor side effects: a single event object or an [EventForEventSourceId]
  * appends directly, and a `List` may mix bare events (appended to the changed instance's key) with
- * [EventForEventSourceId] wrappers carrying their own event source id. Anything else - `Unit`, a
+ * [EventForEventSourceId] wrappers carrying their own event source id. The events of a list are
+ * appended as one atomic batch, even across event sources. Anything else - `Unit`, a
  * `null`, a value whose class carries no `@EventType` - is ignored, which is what makes handlers
  * that simply do their work and return nothing valid.
  */
@@ -24,30 +25,32 @@ internal class ReadModelReactorSideEffects(private val eventLog: IEventLog) {
      * does not name its own.
      */
     suspend fun append(result: Any?, modelKey: String) {
-        when (result) {
+        val sideEffects = when (result) {
             null, Unit -> return
-            is EventForEventSourceId -> appendIfEventType(result.eventSourceId, result.event)
-            is List<*> -> result.filterNotNull().forEach { item ->
-                if (item is EventForEventSourceId) {
-                    appendIfEventType(item.eventSourceId, item.event)
-                } else {
-                    appendIfEventType(modelKey, item)
-                }
+            is EventForEventSourceId -> listOf(result)
+            is List<*> -> result.filterNotNull().map { item ->
+                item as? EventForEventSourceId ?: EventForEventSourceId(modelKey, item)
             }
-            else -> appendIfEventType(modelKey, result)
-        }
-    }
+            else -> listOf(EventForEventSourceId(modelKey, result))
+        }.filter { it.event::class.findAnnotation<EventType>() != null }
 
-    /** Appends [event] to [eventSourceId] when its class carries `@EventType`; ignores anything else. */
-    private suspend fun appendIfEventType(eventSourceId: String, event: Any) {
-        if (event::class.findAnnotation<EventType>() == null) return
-
-        val result = eventLog.append(eventSourceId, event)
-        if (!result.isSuccess) {
-            val messages = result.errors.joinToString { it.message }.ifEmpty { "constraint violation" }
-            throw IllegalStateException(
-                "Failed to append read model reactor side-effect event '${event::class.simpleName}': $messages"
-            )
+        val results = when (sideEffects.size) {
+            0 -> return
+            1 -> sideEffects.single().let {
+                listOf(eventLog.append(it.eventSourceId, it.event, if (result is EventForEventSourceId || result is List<*> && result.singleOrNull() is EventForEventSourceId) {
+                    it.toAppendOptions()
+                } else null))
+            }
+            else -> eventLog.appendMany(sideEffects)
         }
+        if (results.all { it.isSuccess }) return
+
+        val messages = results
+            .flatMap { r -> r.errors.map { it.message } + r.constraintViolations.map { it.message } }
+            .distinct()
+            .joinToString()
+            .ifEmpty { "constraint violation" }
+        val names = sideEffects.joinToString { it.event::class.simpleName ?: "event" }
+        throw IllegalStateException("Failed to append read model reactor side-effect event(s) '$names': $messages")
     }
 }

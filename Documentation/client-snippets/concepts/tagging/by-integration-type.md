@@ -1,4 +1,5 @@
 ```kotlin
+import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.observation.Tag
 
@@ -7,5 +8,10 @@ import io.cratis.chronicle.observation.Tag
 @Tag("MessageQueue")
 @Tag("FileSystem")
 @Reactor
-class TaggingByIntegrationTypeExample
+class TaggingByIntegrationTypeExample {
+    fun on(event: TaggingByIntegrationTypeRecordSynced) { }
+}
+
+@EventType
+data class TaggingByIntegrationTypeRecordSynced(val id: String = "")
 ```

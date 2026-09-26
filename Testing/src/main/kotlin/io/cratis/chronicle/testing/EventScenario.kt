@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.testing
 
+import io.cratis.chronicle.eventSequences.AppendedEvent
 import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.IEventSequence
@@ -45,8 +46,16 @@ class EventScenario(
     /** The same, as the interface the code under test should be taking. */
     val eventSequence: IEventSequence get() = eventLog
 
+    private var baseline = 0
+
+    /** Events appended after the last [given] call; [eventLog] still retains the full history. */
+    internal val actionEvents: List<AppendedEvent> get() = eventLog.events.drop(baseline)
+
     /** Forgets everything, so one scenario can serve several specs. */
-    fun reset() = eventLog.clear()
+    fun reset() {
+        eventLog.clear()
+        baseline = 0
+    }
 
     /**
      * Appends [events] as preconditions - what was already true before the code under test ran.
@@ -58,27 +67,27 @@ class EventScenario(
      * @param events The events to append.
      */
     suspend fun given(eventSourceId: String, vararg events: Any): List<AppendResult> =
-        events.map { eventLog.append(eventSourceId, it) }
+        events.map { eventLog.append(eventSourceId, it) }.also { baseline = eventLog.count }
 
     /**
      * Appends one event with explicit options, for preconditions that need shaping - a stream, a
      * tag, a time it actually occurred.
      */
     suspend fun given(eventSourceId: String, event: Any, options: AppendOptions): AppendResult =
-        eventLog.append(eventSourceId, event, options)
+        eventLog.append(eventSourceId, event, options).also { baseline = eventLog.count }
 
-    /** Every appended event of [eventClass], deserialized. */
+    /** Every event of [eventClass] appended after the last [given] call, deserialized. */
     fun <T : Any> eventsOf(eventClass: KClass<T>): List<T> {
         val id = eventClass.eventTypeId()
-        return eventLog.events
+        return actionEvents
             .filter { it.context.eventType.id.value == id }
             .map { chronicleGson.fromJson(it.content, eventClass.java) }
     }
 
-    /** Every appended event of [eventClass] for [eventSourceId], deserialized. */
+    /** Every event of [eventClass] for [eventSourceId] appended after the last [given] call, deserialized. */
     fun <T : Any> eventsOf(eventClass: KClass<T>, eventSourceId: String): List<T> {
         val id = eventClass.eventTypeId()
-        return eventLog.events
+        return actionEvents
             .filter { it.context.eventType.id.value == id && it.context.eventSourceId == eventSourceId }
             .map { chronicleGson.fromJson(it.content, eventClass.java) }
     }

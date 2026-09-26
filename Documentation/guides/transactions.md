@@ -1,8 +1,8 @@
 ---
+title: Transactions
+description: Where the shared guide to transactions and units of work lives, with Kotlin and Java tabs.
 sharedTopicBridge: true
 ---
-
-# Transactions
 
 Unit-of-work transactions are now documented as a shared Chronicle workflow
 with synchronized Kotlin and Java examples.

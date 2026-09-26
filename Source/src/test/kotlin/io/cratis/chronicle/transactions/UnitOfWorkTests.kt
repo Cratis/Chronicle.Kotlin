@@ -143,6 +143,51 @@ class UnitOfWorkTests {
     }
 
     @Test
+    fun `commit reports each batch-level failure only once in first-seen order`() = runBlocking {
+        val first = ConstraintViolation("unique-email", "email taken")
+        val second = ConstraintViolation("unique-name", "name taken")
+        val concurrency = ConcurrencyViolation("source-1", EventSequenceNumber(1), EventSequenceNumber(2))
+        val error = io.cratis.chronicle.eventSequences.AppendError("batch rejected")
+        val batchResult = AppendResult(
+            EventSequenceNumber.unavailable,
+            listOf(first, second),
+            listOf(error),
+            false,
+            concurrency
+        )
+        val sequence = mockk<IEventSequence>()
+        coEvery { sequence.appendMany(any<String>(), any(), any()) } returns listOf(batchResult, batchResult)
+        val unitOfWork = UnitOfWork(eventStore = eventStoreReturning(sequence))
+
+        unitOfWork.addEvent(EventSequenceId.eventLog, "source-1", SomethingHappened("a"))
+        unitOfWork.addEvent(EventSequenceId.eventLog, "source-1", SomethingHappened("b"))
+        unitOfWork.commit()
+
+        assertEquals(listOf(first, second), unitOfWork.getConstraintViolations())
+        assertEquals(listOf(concurrency), unitOfWork.getConcurrencyViolations())
+        assertEquals(listOf(error), unitOfWork.getAppendErrors())
+    }
+
+    @Test
+    fun `identical failures from separate batches remain separate`() = runBlocking {
+        val violation = ConstraintViolation("unique-email", "email taken")
+        val concurrency = ConcurrencyViolation("source-1", EventSequenceNumber(1), EventSequenceNumber(2))
+        val error = io.cratis.chronicle.eventSequences.AppendError("batch rejected")
+        val batchResult = AppendResult(EventSequenceNumber.unavailable, listOf(violation), listOf(error), false, concurrency)
+        val sequence = mockk<IEventSequence>()
+        coEvery { sequence.appendMany(any<String>(), any(), any()) } returns listOf(batchResult, batchResult)
+        val unitOfWork = UnitOfWork(eventStore = eventStoreReturning(sequence))
+        unitOfWork.addEvent(EventSequenceId.eventLog, "source-1", SomethingHappened("a"))
+        unitOfWork.addEvent(EventSequenceId.eventLog, "source-2", SomethingHappened("b"))
+
+        unitOfWork.commit()
+
+        assertEquals(listOf(violation, violation), unitOfWork.getConstraintViolations())
+        assertEquals(listOf(concurrency, concurrency), unitOfWork.getConcurrencyViolations())
+        assertEquals(listOf(error, error), unitOfWork.getAppendErrors())
+    }
+
+    @Test
     fun `rollback clears staged events and never touches the event store`() = runBlocking {
         val eventStore = mockk<IEventStore>()
         val unitOfWork = UnitOfWork(eventStore = eventStore)

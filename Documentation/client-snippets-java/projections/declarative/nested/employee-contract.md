@@ -17,7 +17,7 @@ class EmployeeProjectionWithNestedContract implements IProjectionFor<EmployeeWit
                 contract
                     .from(ContractStartedForNestedContractEvents.class)
                     .from(ContractExtendedForNestedContractEvents.class, fb -> {
-                        fb.<LocalDate>set("endDate").to(e -> e.newEndDate());
+                        fb.<LocalDate>set("endDate").toProperty("newEndDate");
                     })
                     .clearWith(ContractEndedForNestedContractEvents.class);
             });

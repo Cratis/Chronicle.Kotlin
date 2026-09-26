@@ -1,8 +1,8 @@
 ---
+title: Appending Events
+description: Where the shared guide to appending events lives, with Kotlin and Java tabs.
 sharedTopicBridge: true
 ---
-
-# Appending Events
 
 Appending events is documented in the shared Chronicle docs with
 synchronized examples for C#, Kotlin, Java, Elixir, and TypeScript.

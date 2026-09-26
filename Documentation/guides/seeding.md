@@ -1,4 +1,7 @@
-# Seeding
+---
+title: Seeding
+description: Seed events from Kotlin and Java so an event store starts with the facts it needs, per namespace.
+---
 
 This page shows how to seed events using the Chronicle Kotlin client.
 Seeding is sent to the Chronicle Server when the event store connects, and

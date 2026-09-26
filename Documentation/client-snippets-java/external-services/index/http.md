@@ -8,7 +8,7 @@ class ExternalServicesIndexHttp {
         ExternalServicesServiceJavaBridge.register(store.getExternalServices(), "payroll-provider", builder -> {
             builder
                 .http("https://payroll.example.com/api")
-                .withBearerToken("payroll-integration-token");
+                .withBearerToken(java.util.Objects.requireNonNull(System.getenv("CHRONICLE_PAYROLL_TOKEN"), "CHRONICLE_PAYROLL_TOKEN is required"));
         });
     }
 }

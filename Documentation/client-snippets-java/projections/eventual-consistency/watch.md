@@ -3,6 +3,7 @@ import io.cratis.chronicle.EventStore;
 import io.cratis.chronicle.readModels.ReadModel;
 
 import io.cratis.chronicle.java.ReadModelsJavaBridge;
+import kotlinx.coroutines.Job;
 
 @ReadModel
 class WatchAccountInfo {
@@ -19,14 +20,15 @@ class WatchAccountInfo {
 }
 
 class ProjectionsEventualConsistencyWatch {
-    void watchAccountChanges(EventStore store) {
-        ReadModelsJavaBridge.watch(store.getReadModels(), WatchAccountInfo.class, changeset -> {
+    // Cancel the returned job when observation ends.
+    Job watchAccountChanges(EventStore store) {
+        return ReadModelsJavaBridge.watch(store.getReadModels(), WatchAccountInfo.class, changeset -> {
             WatchAccountInfo model = changeset.getReadModel();
             String label = changeset.getRemoved() || model == null
                 ? "removed"
                 : model.getName() + ": " + model.getBalance();
             System.out.println(changeset.getModelKey() + " " + changeset.getChangeType() + ": " + label);
-        });
+        }, error -> System.err.println("Watch failed: " + error));
     }
 }
 ```

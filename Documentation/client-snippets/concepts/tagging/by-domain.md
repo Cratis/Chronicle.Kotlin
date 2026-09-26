@@ -1,4 +1,5 @@
 ```kotlin
+import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.observation.Tag
 
@@ -7,5 +8,10 @@ import io.cratis.chronicle.observation.Tag
 @Tag("Customer")
 @Tag("Shipping")
 @Reactor
-class TaggingByDomainExample
+class TaggingByDomainExample {
+    fun on(event: TaggingByDomainOrderPlaced) { }
+}
+
+@EventType
+data class TaggingByDomainOrderPlaced(val id: String = "")
 ```

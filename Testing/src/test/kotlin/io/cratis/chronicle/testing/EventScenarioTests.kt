@@ -91,7 +91,10 @@ class EventScenarioTests {
 
         Registrations(scenario.eventLog).promote("employee-1", "Principal")
 
-        scenario.shouldHaveAppendedExactly(2)
+        scenario.shouldHaveAppendedExactly(1)
+        scenario.shouldNotHaveAppended<EmployeeHired>()
+        assertTrue(scenario.eventsOf<EmployeeHired>().isEmpty())
+        assertEquals(2, scenario.eventLog.count)
         scenario.shouldHaveAppended<EmployeePromoted>("employee-1") { it.newTitle == "Principal" }
     }
 
@@ -100,8 +103,9 @@ class EventScenarioTests {
         val scenario = EventScenario()
         scenario.given("employee-1", EmployeeHired(), EmployeePromoted(), EmployeePromoted())
 
-        scenario.shouldHaveAppendedExactly(3)
-        scenario.shouldHaveAppendedExactly<EmployeePromoted>(2)
+        scenario.shouldHaveAppendedNothing()
+        scenario.shouldHaveAppendedExactly(0)
+        scenario.shouldHaveAppendedExactly<EmployeePromoted>(0)
         scenario.shouldNotHaveAppended<EmployeeLeft>()
     }
 
@@ -116,7 +120,9 @@ class EventScenarioTests {
         scenario.given("employee-1", EmployeeLeft("moved on"))
 
         assertEquals("employee-left", scenario.eventLog.events.single().context.eventType.id.value)
-        assertEquals("moved on", scenario.eventsOf<EmployeeLeft>().single().reason)
+        assertTrue(scenario.eventsOf<EmployeeLeft>().isEmpty())
+        scenario.eventLog.append("employee-1", EmployeeLeft("returned"))
+        assertEquals("returned", scenario.eventsOf<EmployeeLeft>().single().reason)
     }
 
     @Test
@@ -171,6 +177,17 @@ class EventScenarioTests {
         assertFalse(scenario.eventLog.hasEventsFor("employee-3"))
         assertEquals(1, scenario.eventLog.getForEventSourceIdAndEventTypes("employee-2", listOf(EmployeeHired::class)).size)
         assertEquals(listOf("employee-1", "employee-2"), scenario.eventSourceIds())
+    }
+
+    @Test
+    fun `the last given call resets the assertion baseline`() = runBlocking {
+        val scenario = EventScenario()
+        scenario.given("employee-1", EmployeeHired())
+        scenario.eventLog.append("employee-1", EmployeePromoted())
+        scenario.given("employee-1", EmployeeHired())
+        scenario.shouldHaveAppendedNothing()
+        scenario.eventLog.append("employee-1", EmployeePromoted())
+        scenario.shouldHaveAppendedExactly(1)
     }
 
     @Test

@@ -1,4 +1,5 @@
 ```java title="AutoMap with explicit mappings"
+// Requires io.cratis:chronicle 6.5.0 or later.
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
@@ -13,6 +14,7 @@ class AutoMapAccount {
     public String name = "";
     public String email = "";
     public String status = "";
+    public String createdAt = "";
 }
 
 class AutoMapAccountProjection implements IProjectionFor<AutoMapAccount> {
@@ -20,7 +22,8 @@ class AutoMapAccountProjection implements IProjectionFor<AutoMapAccount> {
     public void define(IProjectionBuilderFor<AutoMapAccount> builder) {
         builder
             .from(AutoMapAccountOpened.class, fb -> {
-                fb.<String>set("status").to(e -> "Active");
+                fb.<String>set("status").toValue("Active");
+                fb.<String>set("createdAt").toEventContextProperty("occurred");
             })
             .from(AutoMapAccountEmailChanged.class);
     }

@@ -8,7 +8,7 @@ package io.cratis.chronicle.testing
 import kotlin.reflect.KClass
 
 /**
- * Assertions over what an [EventScenario] was given.
+ * Assertions over what an [EventScenario] appended after its last `given` call.
  *
  * They exist for the failure message rather than for the check: "expected one EmployeeHired for
  * 'employee-1', found none - 2 events were appended: EmployeePromoted for 'employee-2',
@@ -18,15 +18,15 @@ import kotlin.reflect.KClass
 
 /** Fails unless exactly [count] events were appended in total. */
 fun EventScenario.shouldHaveAppendedExactly(count: Int) {
-    if (eventLog.count != count) {
-        throw AssertionError("Expected exactly $count event(s) to be appended, but ${eventLog.count} were.${appendedSummary()}")
+    if (actionEvents.size != count) {
+        throw AssertionError("Expected exactly $count event(s) to be appended, but ${actionEvents.size} were.${appendedSummary()}")
     }
 }
 
 /** Fails unless nothing at all was appended. */
 fun EventScenario.shouldHaveAppendedNothing() {
-    if (eventLog.count != 0) {
-        throw AssertionError("Expected nothing to be appended, but ${eventLog.count} event(s) were.${appendedSummary()}")
+    if (actionEvents.isNotEmpty()) {
+        throw AssertionError("Expected nothing to be appended, but ${actionEvents.size} event(s) were.${appendedSummary()}")
     }
 }
 
@@ -100,9 +100,9 @@ inline fun <reified T : Any> EventScenario.shouldNotHaveAppended() = shouldNotHa
  * earns them.
  */
 internal fun EventScenario.appendedSummary(): String {
-    if (eventLog.count == 0) return " Nothing was appended."
+    if (actionEvents.isEmpty()) return " Nothing was appended."
 
-    val lines = eventLog.events.joinToString("\n") { event ->
+    val lines = actionEvents.joinToString("\n") { event ->
         "  ${event.context.sequenceNumber}: ${event.context.eventType.id.value} " +
             "for '${event.context.eventSourceId}' ${event.content}"
     }

@@ -1,8 +1,8 @@
 ---
+title: Events
+description: Where the shared Chronicle explanation of events lives, for Kotlin and Java readers.
 sharedTopicBridge: true
 ---
-
-# Events
 
 Events are documented in the shared Chronicle docs so the concepts stay the
 same across C#, Kotlin, Java, Elixir, and TypeScript.

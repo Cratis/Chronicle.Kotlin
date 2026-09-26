@@ -14,7 +14,7 @@ class MaterializedPaginationObserving {
         this.eventStore = eventStore;
     }
 
-    void run() {
+    Job run() {
         Job subscription = ReadModelsJavaBridge.observeMaterializedInstances(
             eventStore.getReadModels(),
             MaterializedPaginationProduct.class,
@@ -25,8 +25,8 @@ class MaterializedPaginationObserving {
                 System.out.println("Products updated: " + products.size() + " in view");
             });
 
-        // Cancel when done to release the change stream
-        subscription.cancel(null);
+        // The owner cancels this job when it closes.
+        return subscription;
     }
 }
 ```

@@ -4,6 +4,9 @@
 package io.cratis.chronicle.projections
 
 import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.concepts.ConceptAs
+import java.math.BigDecimal
+import java.time.Instant
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -35,6 +38,15 @@ private data class Order(
 )
 
 private data class OrderSummary(val note: String)
+private data class LabelConcept(override val value: String) : ConceptAs<String>
+private enum class OrderPhase { NEW, SENT }
+private data class ConstantState(
+    val at: Instant = Instant.EPOCH,
+    val phase: OrderPhase = OrderPhase.NEW,
+    val label: LabelConcept = LabelConcept(""),
+    val amount: BigDecimal = BigDecimal.ZERO,
+    val enabled: Boolean = false
+)
 
 class ProjectionBuilderForTests {
 
@@ -234,6 +246,45 @@ class ProjectionBuilderForTests {
         val builder = ProjectionBuilderFor(Order::class)
         builder.from(OrderPlaced::class) { it.set(Order::customerName).toEventContextProperty("CausedBy") }
         assertEquals(mapOf("customerName" to "\$eventContext(CausedBy)"), builder.fromEntries.single().properties)
+    }
+
+    @Test
+    fun `toValue emits constants and nulls for from join child and fromEvery`() {
+        val builder = ProjectionBuilderFor(Order::class)
+        builder.from(OrderPlaced::class) { from ->
+            from.set(Order::customerName).toValue("active")
+            from.set(Order::summary).toValue(null)
+            from.set(Order::version).toValue(42)
+        }
+        builder.join(OrderCancelled::class) { it.set(Order::id).toValue("closed") }
+        builder.children(Order::lines, OrderLine::class) { child ->
+            child.from(OrderLineAdded::class) { it.set(OrderLine::product).toValue("item") }
+        }
+        builder.fromEvery { it.set(Order::id).toValue("every") }
+
+        assertEquals(mapOf("customerName" to "\$value(active)", "summary" to "\$null", "version" to "\$value(42)"),
+            builder.fromEntries.single().properties)
+        assertEquals("\$value(closed)", builder.joinEntries.single().properties["id"])
+        assertEquals("\$value(item)", builder.childrenEntries.single().fromEntries.single().properties["product"])
+        assertEquals("\$value(every)", builder.fromEveryProperties["id"])
+    }
+
+    @Test
+    fun `toValue formats temporal enum numeric and concept constants invariantly`() {
+        val builder = ProjectionBuilderFor(ConstantState::class)
+        builder.from(OrderPlaced::class) { from ->
+            from.set(ConstantState::at).toValue(Instant.parse("2026-01-02T03:04:05Z"))
+            from.set(ConstantState::phase).toValue(OrderPhase.SENT)
+            from.set(ConstantState::label).toValue(LabelConcept("paid"))
+            from.set(ConstantState::amount).toValue(BigDecimal("12.50"))
+            from.set(ConstantState::enabled).toValue(true)
+        }
+        val properties = builder.fromEntries.single().properties
+        assertEquals("\$value(2026-01-02T03:04:05Z)", properties["at"])
+        assertEquals("\$value(1)", properties["phase"])
+        assertEquals("\$value(paid)", properties["label"])
+        assertEquals("\$value(12.50)", properties["amount"])
+        assertEquals("\$value(true)", properties["enabled"])
     }
 
     @Test

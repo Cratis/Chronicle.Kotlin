@@ -1,8 +1,8 @@
 ---
+title: Constraints
+description: Where the shared guide to constraints lives, with Kotlin and Java tabs.
 sharedTopicBridge: true
 ---
-
-# Constraints
 
 Constraints are shared Chronicle behavior. The shared docs cover constraint
 concepts, model-bound constraints, declarative constraints, and

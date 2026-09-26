@@ -1,4 +1,7 @@
-# Tracing
+---
+title: Tracing
+description: Trace Chronicle appends and observer handling from the JVM client with OpenTelemetry, and the span names and attributes it reports.
+---
 
 A request comes in, a command appends an event, a reactor picks it up and calls
 something else. When that takes eight seconds, the question is which part of it

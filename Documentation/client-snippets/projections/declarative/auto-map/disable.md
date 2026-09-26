@@ -1,4 +1,5 @@
 ```kotlin title="Disable AutoMap"
+// Requires io.cratis:chronicle 6.5.0 or later.
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionBuilderFor
 import io.cratis.chronicle.projections.IProjectionFor
@@ -14,8 +15,7 @@ data class AutoMapDisabledAccount(
 
 class AutoMapDisabledAccountProjection : IProjectionFor<AutoMapDisabledAccount> {
     override fun define(builder: IProjectionBuilderFor<AutoMapDisabledAccount>) {
-        builder
-            .noAutoMap()
+        builder.noAutoMap()
             .from(AutoMapDisabledAccountRegistered::class) {
                 it.set(AutoMapDisabledAccount::name).toProperty("accountName")
                 it.set(AutoMapDisabledAccount::email).toProperty("contactEmail")

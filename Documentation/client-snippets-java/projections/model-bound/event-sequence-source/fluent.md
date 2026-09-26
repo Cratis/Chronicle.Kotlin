@@ -17,7 +17,7 @@ class MbEventSeqFluentOrderProjection implements IProjectionFor<MbEventSeqFluent
     @Override
     public void define(IProjectionBuilderFor<MbEventSeqFluentOrderSummary> builder) {
         builder.from(MbEventSeqFluentOrderPlaced.class,
-            from -> from.<Double>set("totalAmount").to(MbEventSeqFluentOrderPlaced::amount));
+            from -> from.<Double>set("totalAmount").toProperty("amount"));
     }
 }
 ```

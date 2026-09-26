@@ -2,7 +2,7 @@
 
 An event-sourced HTTP API in about a hundred lines, with no Chronicle setup code
 anywhere. The starter connects, finds every artifact in this package, and
-registers it with the kernel before the first request is served.
+registers it with the kernel as the application starts.
 
 ## What is in here
 
@@ -22,9 +22,12 @@ registers it with the kernel before the first request is served.
 Start a kernel, then the application:
 
 ```bash
-docker run -p 35000:35000 cratis/chronicle:latest-development
-gradle :Samples:Kotlin:SpringBoot:bootRun
+docker run --rm -p 127.0.0.1:35000:35000 cratis/chronicle:latest-development
+./gradlew :Samples:Kotlin:SpringBoot:bootRun
 ```
+
+Run the Gradle command from the repository root with a JDK 17 or later on
+`JAVA_HOME`.
 
 ## Try it
 
@@ -42,6 +45,9 @@ Read the projected state back:
 curl http://localhost:8080/api/employees/employee-1
 ```
 
+The reducer runs after the append, so a `404` straight after hiring means the
+read model has not caught up yet. Ask again a moment later.
+
 Promote them, and read it back again:
 
 ```bash
@@ -50,9 +56,9 @@ curl -X POST http://localhost:8080/api/employees/employee-1/promote \
   -d '{"newTitle":"Principal Engineer"}'
 ```
 
-Now try to hire someone else on the same email address. The constraint rejects
-it, and because the whole request runs inside a unit of work, neither event is
-appended:
+Now try to hire someone else on the same email address. Both events are staged
+in the request's unit of work and committed as one batch, so the constraint
+rejects the whole hire and the request answers `409 Conflict`:
 
 ```bash
 curl -i -X POST http://localhost:8080/api/employees/employee-2/hire \
@@ -74,7 +80,8 @@ cratis:
 ```
 
 Then pass `-H 'x-cratis-tenant-id: acme'` on any of the calls above and the
-events land in the `acme` namespace instead.
+events land in the `acme` namespace instead. The caller chooses that header, so
+this is a demonstration of routing, not of tenant isolation.
 
 ## See also
 

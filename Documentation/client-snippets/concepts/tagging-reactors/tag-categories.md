@@ -1,4 +1,5 @@
 ```kotlin
+import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.observation.Tag
 
@@ -13,5 +14,10 @@ import io.cratis.chronicle.observation.Tag
 // By stakeholder
 @Tag("Customer", "Operations", "Finance", "Support")
 @Reactor
-class TaggingReactorsCategoryExamplesReactor
+class TaggingReactorsCategoryExamplesReactor {
+    fun on(event: TaggingReactorsCategoryOrderPlaced) { }
+}
+
+@EventType
+data class TaggingReactorsCategoryOrderPlaced(val id: String = "")
 ```

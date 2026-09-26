@@ -36,6 +36,9 @@ class UnitOfWork(
     private val _stagedEvents = mutableListOf<StagedEvent>()
     private val _onCompleted = mutableListOf(onCompleted)
     private var _appendResults: List<AppendResult> = emptyList()
+    private val constraintViolations = mutableListOf<ConstraintViolation>()
+    private val concurrencyViolations = mutableListOf<ConcurrencyViolation>()
+    private val appendErrors = mutableListOf<AppendError>()
     private var _lastCommittedEventSequenceNumber: EventSequenceNumber? = null
 
     var isCommitted: Boolean = false
@@ -53,11 +56,11 @@ class UnitOfWork(
 
     override fun getEvents(): List<Any> = _stagedEvents.map { it.event }
 
-    override fun getConstraintViolations(): List<ConstraintViolation> = _appendResults.flatMap { it.constraintViolations }
+    override fun getConstraintViolations(): List<ConstraintViolation> = constraintViolations.toList()
 
-    override fun getConcurrencyViolations(): List<ConcurrencyViolation> = _appendResults.mapNotNull { it.concurrencyViolation }
+    override fun getConcurrencyViolations(): List<ConcurrencyViolation> = concurrencyViolations.toList()
 
-    override fun getAppendErrors(): List<AppendError> = _appendResults.flatMap { it.errors }
+    override fun getAppendErrors(): List<AppendError> = appendErrors.toList()
 
     override suspend fun commit() {
         try {
@@ -78,6 +81,9 @@ class UnitOfWork(
         isRolledBack = true
         _stagedEvents.clear()
         _appendResults = emptyList()
+        constraintViolations.clear()
+        concurrencyViolations.clear()
+        appendErrors.clear()
         _onCompleted.forEach { it(this) }
     }
 
@@ -107,7 +113,11 @@ class UnitOfWork(
                 index++
             }
             val sequence = eventStore.getEventSequence(group.eventSequenceId)
-            results.addAll(sequence.appendMany(group.eventSourceId, batch, group.options))
+            val batchResults = sequence.appendMany(group.eventSourceId, batch, group.options)
+            constraintViolations += batchResults.flatMap { it.constraintViolations }.distinct()
+            concurrencyViolations += batchResults.mapNotNull { it.concurrencyViolation }.distinct()
+            appendErrors += batchResults.flatMap { it.errors }.distinct()
+            results.addAll(batchResults)
         }
         return results
     }

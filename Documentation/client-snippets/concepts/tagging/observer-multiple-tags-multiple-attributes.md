@@ -1,4 +1,5 @@
 ```kotlin
+import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.observation.Tag
 
@@ -6,5 +7,10 @@ import io.cratis.chronicle.observation.Tag
 @Tag("ExternalAPI")
 @Tag("Inventory")
 @Reactor
-class TaggingInventorySyncReactor
+class TaggingInventorySyncReactor {
+    fun on(event: TaggingInventoryAdjusted) { }
+}
+
+@EventType
+data class TaggingInventoryAdjusted(val id: String = "")
 ```
