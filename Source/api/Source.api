@@ -2110,6 +2110,7 @@ public final class io/cratis/chronicle/java/ReadModelsJavaBridge {
 	public static final fun getSnapshotsById (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/lang/Class;Ljava/lang/String;)Ljava/util/List;
 	public static final fun observeMaterializedInstances (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/lang/Class;IILjava/util/function/Consumer;)Lkotlinx/coroutines/Job;
 	public static final fun observeMaterializedInstances (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/lang/Class;IILjava/util/function/Consumer;Ljava/util/function/Consumer;)Lkotlinx/coroutines/Job;
+	public static final fun observeMaterializedInstancesPublisher (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/lang/Class;II)Ljava/util/concurrent/Flow$Publisher;
 	public static final fun register (Lio/cratis/chronicle/readModels/IReadModelsService;[Ljava/lang/Class;)V
 	public static final fun release (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/lang/Object;)Ljava/lang/Object;
 	public static final fun releaseMany (Lio/cratis/chronicle/readModels/IReadModelsService;Ljava/util/List;)Ljava/util/List;

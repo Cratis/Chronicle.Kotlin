@@ -25,6 +25,9 @@ dependencies {
     // stays the application's choice - one that does not is unaffected beyond a small jar.
     api("io.opentelemetry:opentelemetry-api:$openTelemetryVersion")
 
+    // Bridges Kotlin Flow to Java's demand-aware JDK Flow.Publisher.
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk9:$coroutinesVersion")
+
     // Classpath scanning behind automatic artifact discovery.
     implementation("io.github.classgraph:classgraph:$classGraphVersion")
 

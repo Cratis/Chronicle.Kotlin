@@ -178,6 +178,12 @@ def generate_source() -> str:
 
 
 def java_snippet_file_name(path: Path) -> str:
+    code = extract_snippet(path, "java")
+    public_types = PUBLIC_TYPE_RE.findall(code or "")
+    if len(public_types) > 1:
+        raise ValueError(f"{path.relative_to(REPO_ROOT)} may declare at most one public Java type")
+    if public_types:
+        return public_types[0] + ".java"
     return "Snippet_" + re.sub(r"[^A-Za-z0-9_]", "_", snippet_key(path, JAVA_SNIPPET_ROOT)) + ".java"
 
 
@@ -186,25 +192,34 @@ def write_java_sources() -> list[Path]:
     if not files:
         return []
 
-    GENERATED_JAVA_SOURCE_ROOT.mkdir(parents=True, exist_ok=True)
-    generated_files: list[Path] = []
+    generated_names: dict[str, Path] = {}
+    sources: list[tuple[Path, str]] = []
 
     for path in files:
         code = extract_snippet(path, "java")
         if code is None:
             continue
 
+        name = java_snippet_file_name(path)
+        if name in generated_names:
+            raise ValueError(
+                f"Java snippets {generated_names[name].relative_to(REPO_ROOT)} and "
+                f"{path.relative_to(REPO_ROOT)} both generate {name}"
+            )
+        generated_names[name] = path
         source = "\n".join([
             "package io.cratis.chronicle.documentation;",
             "",
             code,
             "",
         ])
-        generated_path = GENERATED_JAVA_SOURCE_ROOT / java_snippet_file_name(path)
-        generated_path.write_text(source, encoding="utf-8")
-        generated_files.append(generated_path)
+        sources.append((GENERATED_JAVA_SOURCE_ROOT / name, source))
 
-    return generated_files
+    GENERATED_JAVA_SOURCE_ROOT.mkdir(parents=True, exist_ok=True)
+    for generated_path, source in sources:
+        generated_path.write_text(source, encoding="utf-8")
+
+    return [generated_path for generated_path, _ in sources]
 
 
 def page_files() -> list[Path]:
