@@ -52,10 +52,12 @@ import io.cratis.chronicle.seeding.IEventSeedingService
 import io.cratis.chronicle.transactions.UnitOfWork
 import io.cratis.chronicle.webhooks.IWebhookDefinitionBuilder
 import io.cratis.chronicle.webhooks.IWebhooksService
+import java.util.concurrent.Flow as JdkFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.jdk9.flowPublish
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -273,6 +275,27 @@ object ReadModelsJavaBridge {
         callback: java.util.function.Consumer<List<T>>
     ): Job = CoroutineScope(Dispatchers.Default).launch {
         service.materialized.observeInstances(readModelClass.kotlin, skip, take).collect { callback.accept(it) }
+    }
+
+    /**
+     * Returns a cold Java publisher of the stored page of [readModelClass]. Each subscriber starts
+     * its own observation; pages are emitted only on demand. Cancelling a subscription releases its
+     * observation, and failures are delivered to the subscriber's `onError`.
+     *
+     * @param service The read model service.
+     * @param readModelClass The type of read model to observe.
+     * @param skip Number of instances to skip.
+     * @param take Maximum number of instances per page.
+     * @return A publisher of page snapshots as the materialized state changes.
+     */
+    @JvmStatic
+    fun <T : Any> observeMaterializedInstancesPublisher(
+        service: IReadModelsService,
+        readModelClass: Class<T>,
+        skip: Int,
+        take: Int
+    ): JdkFlow.Publisher<List<T>> = flowPublish {
+        service.materialized.observeInstances(readModelClass.kotlin, skip, take).collect { send(it) }
     }
 
     /** The same, handing a failed stream to [onError] - see [watch]. */

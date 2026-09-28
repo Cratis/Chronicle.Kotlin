@@ -178,6 +178,12 @@ def generate_source() -> str:
 
 
 def java_snippet_file_name(path: Path) -> str:
+    code = extract_snippet(path, "java")
+    public_types = PUBLIC_TYPE_RE.findall(code or "")
+    if len(public_types) > 1:
+        raise ValueError(f"{path.relative_to(REPO_ROOT)} may declare at most one public Java type")
+    if public_types:
+        return public_types[0] + ".java"
     return "Snippet_" + re.sub(r"[^A-Za-z0-9_]", "_", snippet_key(path, JAVA_SNIPPET_ROOT)) + ".java"
 
 

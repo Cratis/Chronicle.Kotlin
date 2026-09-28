@@ -13,6 +13,12 @@ dependencies {
     api(project(":Source"))
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
 
+    // Compile the shared Chronicle Java snippet's Arc query annotations against their real API.
+    // Keep Arc out of the published Chronicle artifact and avoid pulling in its runtime dependencies.
+    testCompileOnly("io.cratis:arc:7.6.0") {
+        isTransitive = false
+    }
+
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
