@@ -107,6 +107,18 @@ def extract_snippet(path: Path, expected_language: str) -> str | None:
     return code.strip()
 
 
+def validate_schema_validation_examples() -> None:
+    for root, language, violation_access, error_access in [
+        (SNIPPET_ROOT, "kotlin", "result.constraintViolations", "result.errors"),
+        (JAVA_SNIPPET_ROOT, "java", "result.getConstraintViolations()", "result.getErrors()"),
+    ]:
+        path = root / "events" / "appending" / "schema-validation.md"
+        snippet = extract_snippet(path, language)
+        if (snippet is None or violation_access not in snippet or "SchemaValidation" not in snippet
+                or '"path"' not in snippet or error_access in snippet):
+            raise ValueError(f"{path.relative_to(REPO_ROOT)} must show schema constraint violations and their path")
+
+
 def split_imports(code: str) -> tuple[list[str], str]:
     imports: list[str] = []
     body: list[str] = []
@@ -358,6 +370,7 @@ def main() -> int:
     # Parse everything before writing anything, so a malformed directive fails
     # without leaving generated sources behind in the tree.
     snippets = page_snippets()
+    validate_schema_validation_examples()
     checked = sum(1 for snippet in snippets if snippet["mode"] != "skip")
     print(f"Compiling {checked} documentation page snippets ({len(snippets) - checked} skipped).")
 

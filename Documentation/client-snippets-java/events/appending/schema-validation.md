@@ -13,8 +13,11 @@ class SchemaValidationExample {
             new SchemaValidatedOrderPlaced(customerId, total));
 
         if (!result.isSuccess()) {
-            result.getErrors().forEach(error ->
-                System.out.println("Schema error: " + error));
+            result.getConstraintViolations().stream()
+                .filter(violation -> "SchemaValidation".equals(violation.getConstraintId()))
+                .forEach(violation ->
+                    System.out.println("Schema error at " + violation.getDetails().get("path") +
+                        ": " + violation.getMessage()));
         }
     }
 }
