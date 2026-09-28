@@ -277,6 +277,24 @@ object ReadModelsJavaBridge {
         service.materialized.observeInstances(readModelClass.kotlin, skip, take).collect { callback.accept(it) }
     }
 
+    /** The same, handing a failed stream to [onError] - see [watch]. */
+    @JvmStatic
+    fun <T : Any> observeMaterializedInstances(
+        service: IReadModelsService,
+        readModelClass: Class<T>,
+        skip: Int,
+        take: Int,
+        callback: java.util.function.Consumer<List<T>>,
+        onError: java.util.function.Consumer<Throwable>
+    ): Job = CoroutineScope(Dispatchers.Default).launch {
+        try {
+            service.materialized.observeInstances(readModelClass.kotlin, skip, take).collect { callback.accept(it) }
+        } catch (cause: Throwable) {
+            if (cause is kotlinx.coroutines.CancellationException) throw cause
+            onError.accept(cause)
+        }
+    }
+
     /**
      * Returns a cold Java publisher of the stored page of [readModelClass]. Each subscriber starts
      * its own observation; pages are emitted only on demand. Cancelling a subscription releases its
@@ -296,24 +314,6 @@ object ReadModelsJavaBridge {
         take: Int
     ): JdkFlow.Publisher<List<T>> = flowPublish {
         service.materialized.observeInstances(readModelClass.kotlin, skip, take).collect { send(it) }
-    }
-
-    /** The same, handing a failed stream to [onError] - see [watch]. */
-    @JvmStatic
-    fun <T : Any> observeMaterializedInstances(
-        service: IReadModelsService,
-        readModelClass: Class<T>,
-        skip: Int,
-        take: Int,
-        callback: java.util.function.Consumer<List<T>>,
-        onError: java.util.function.Consumer<Throwable>
-    ): Job = CoroutineScope(Dispatchers.Default).launch {
-        try {
-            service.materialized.observeInstances(readModelClass.kotlin, skip, take).collect { callback.accept(it) }
-        } catch (cause: Throwable) {
-            if (cause is kotlinx.coroutines.CancellationException) throw cause
-            onError.accept(cause)
-        }
     }
 }
 
