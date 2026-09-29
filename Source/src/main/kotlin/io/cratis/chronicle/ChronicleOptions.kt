@@ -8,6 +8,8 @@ import io.cratis.chronicle.artifacts.ClientArtifacts
 import io.cratis.chronicle.artifacts.IArtifactActivator
 import io.cratis.chronicle.artifacts.IClientArtifacts
 import io.cratis.chronicle.connection.ChronicleConnectionString
+import io.cratis.chronicle.readModels.DefaultReadModelNamingPolicy
+import io.cratis.chronicle.readModels.ReadModelNamingPolicy
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import io.opentelemetry.api.OpenTelemetry
 
@@ -31,6 +33,11 @@ import io.opentelemetry.api.OpenTelemetry
  *   application registered globally — which is a no-op until an application installs an SDK, so a
  *   client that is never instrumented produces nothing. Set this when the application holds its own
  *   [OpenTelemetry] rather than registering it globally.
+ * @property readModelNamingPolicy Names the container - collection or table - each read model is stored
+ *   in. Defaults to [DefaultReadModelNamingPolicy], which uses the read model identifier. Set it with
+ *   [withReadModelNamingPolicy]; it is deliberately not a constructor parameter, so the constructors,
+ *   `copy` and `componentN` keep their published shape. Because of that a call to `copy` does not carry
+ *   the policy over - set it again afterwards. It takes part in [equals] and [hashCode].
  */
 data class ChronicleOptions @JvmOverloads constructor(
     val connectionString: ChronicleConnectionString,
@@ -42,10 +49,29 @@ data class ChronicleOptions @JvmOverloads constructor(
     val openTelemetry: OpenTelemetry? = null
 ) {
     /**
+     * Names the container each read model is stored in. See [ReadModelNamingPolicy].
+     */
+    var readModelNamingPolicy: ReadModelNamingPolicy = DefaultReadModelNamingPolicy
+        private set
+
+    /**
      * The same options with automatic discovery and registration turned off, leaving every artifact to
      * be registered by hand through the services on [IEventStore].
      */
-    fun withoutAutoRegistration(): ChronicleOptions = copy(autoDiscoverAndRegister = false)
+    fun withoutAutoRegistration(): ChronicleOptions =
+        copy(autoDiscoverAndRegister = false).withReadModelNamingPolicy(readModelNamingPolicy)
+
+    /**
+     * The same options with [policy] naming the container each read model is stored in.
+     *
+     * Use it when something else reads the read model containers by name - an ORM or a query layer with
+     * its own naming convention - so the client writes to the container that reader expects. Only the
+     * container name changes; the read model identifier is untouched.
+     *
+     * @param policy The policy to apply.
+     */
+    fun withReadModelNamingPolicy(policy: ReadModelNamingPolicy): ChronicleOptions =
+        copy().also { it.readModelNamingPolicy = policy }
 
     /**
      * The same options with artifact discovery narrowed to [packages] and everything beneath them.
@@ -56,7 +82,29 @@ data class ChronicleOptions @JvmOverloads constructor(
      * @param packages The packages to scan.
      */
     fun withArtifactsFrom(vararg packages: String): ChronicleOptions =
-        copy(artifacts = ClientArtifacts(packages.toList()))
+        copy(artifacts = ClientArtifacts(packages.toList())).withReadModelNamingPolicy(readModelNamingPolicy)
+
+    override fun equals(other: Any?): Boolean =
+        other is ChronicleOptions &&
+            connectionString == other.connectionString &&
+            programIdentifier == other.programIdentifier &&
+            defaultSinkTypeId == other.defaultSinkTypeId &&
+            autoDiscoverAndRegister == other.autoDiscoverAndRegister &&
+            artifacts == other.artifacts &&
+            artifactActivator == other.artifactActivator &&
+            openTelemetry == other.openTelemetry &&
+            readModelNamingPolicy == other.readModelNamingPolicy
+
+    override fun hashCode(): Int = listOf(
+        connectionString,
+        programIdentifier,
+        defaultSinkTypeId,
+        autoDiscoverAndRegister,
+        artifacts,
+        artifactActivator,
+        openTelemetry,
+        readModelNamingPolicy
+    ).hashCode()
 
     companion object {
         /**

@@ -28,7 +28,8 @@ class ChronicleClient(private val options: ChronicleOptions) : IChronicleClient 
                 options.artifacts,
                 options.artifactActivator,
                 options.autoDiscoverAndRegister,
-                traces
+                traces,
+                options.readModelNamingPolicy
             )
         }
     }

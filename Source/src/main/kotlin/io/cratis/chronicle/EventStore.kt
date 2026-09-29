@@ -59,7 +59,9 @@ import io.cratis.chronicle.projections.IProjectionsService
 import io.cratis.chronicle.projections.ProjectionsService
 import io.cratis.chronicle.connection.ConnectionLifecycle
 import io.cratis.chronicle.connection.ChronicleConnectionFailed
+import io.cratis.chronicle.readModels.DefaultReadModelNamingPolicy
 import io.cratis.chronicle.readModels.IReadModelsService
+import io.cratis.chronicle.readModels.ReadModelNamingPolicy
 import io.cratis.chronicle.readModels.ReadModelsService
 import io.cratis.chronicle.seeding.EventSeedingService
 import io.cratis.chronicle.seeding.IEventSeedingService
@@ -88,18 +90,44 @@ import java.util.concurrent.ConcurrentHashMap
  * @param autoDiscoverAndRegister Whether to register every artifact automatically on connect. Off by
  *   default here so that constructing an event store directly never reaches out to the kernel on its
  *   own; [ChronicleClient] turns it on from [ChronicleOptions.autoDiscoverAndRegister].
+ * @param readModelNamingPolicy Names the container each read model is stored in, from
+ *   [ChronicleOptions.readModelNamingPolicy].
  */
 class EventStore(
     override val name: String,
     override val namespace: String,
     private val services: ChronicleServices,
     private val lifecycle: ConnectionLifecycle,
-    private val defaultSinkTypeId: String = io.cratis.chronicle.sinks.WellKnownSinkTypes.MONGODB,
-    private val artifacts: IClientArtifacts = KnownClientArtifacts.empty,
-    private val artifactActivator: IArtifactActivator = ArtifactActivator,
-    private val autoDiscoverAndRegister: Boolean = false,
-    private val traces: ChronicleTraces = ChronicleTraces.default
+    private val defaultSinkTypeId: String,
+    private val artifacts: IClientArtifacts,
+    private val artifactActivator: IArtifactActivator,
+    private val autoDiscoverAndRegister: Boolean,
+    private val traces: ChronicleTraces,
+    private val readModelNamingPolicy: ReadModelNamingPolicy
 ) : IEventStore {
+    /** Creates an event store that names read model containers after the read model identifier. */
+    constructor(
+        name: String,
+        namespace: String,
+        services: ChronicleServices,
+        lifecycle: ConnectionLifecycle,
+        defaultSinkTypeId: String = io.cratis.chronicle.sinks.WellKnownSinkTypes.MONGODB,
+        artifacts: IClientArtifacts = KnownClientArtifacts.empty,
+        artifactActivator: IArtifactActivator = ArtifactActivator,
+        autoDiscoverAndRegister: Boolean = false,
+        traces: ChronicleTraces = ChronicleTraces.default
+    ) : this(
+        name,
+        namespace,
+        services,
+        lifecycle,
+        defaultSinkTypeId,
+        artifacts,
+        artifactActivator,
+        autoDiscoverAndRegister,
+        traces,
+        DefaultReadModelNamingPolicy
+    )
 
     private val registrations = ArtifactRegistrations(this, artifacts, artifactActivator)
 
@@ -127,7 +155,8 @@ class EventStore(
             services.materializedReadModels,
             services.readModelExplorer,
             services.compliance,
-            defaultSinkTypeId
+            defaultSinkTypeId,
+            readModelNamingPolicy
         ).also { it.resolveEventSequence = ::getEventSequence }
     }
 
