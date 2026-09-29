@@ -4,11 +4,13 @@
 package io.cratis.chronicle.events.migrations
 
 import io.cratis.chronicle.events.EventType
+import java.time.Instant
+import java.time.LocalDate
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 @EventType(generation = 2)
-private data class PersonV2(val fullName: String, val country: String)
+private data class PersonV2(val fullName: String, val country: String, val registeredAt: Instant? = null, val born: LocalDate? = null)
 
 @EventType(generation = 1)
 private data class PersonV1(val name: String)
@@ -33,6 +35,17 @@ class EventTypeMigrationBuilderTests {
         val builder = EventTypeMigrationBuilder<PersonV2, PersonV1>()
         builder.defaultValue(PersonV2::country, "unknown")
         assertEquals("""{"country":{"${'$'}defaultValue":"unknown"}}""", builder.toJson())
+    }
+
+    @Test
+    fun `defaultValue writes java time values as ISO-8601 strings`() {
+        val builder = EventTypeMigrationBuilder<PersonV2, PersonV1>()
+        builder.defaultValue(PersonV2::registeredAt, Instant.parse("2024-05-01T10:15:30Z"))
+            .defaultValue(PersonV2::born, LocalDate.parse("1990-02-03"))
+        assertEquals(
+            """{"registeredAt":{"${'$'}defaultValue":"2024-05-01T10:15:30Z"},"born":{"${'$'}defaultValue":"1990-02-03"}}""",
+            builder.toJson()
+        )
     }
 
     @Test
