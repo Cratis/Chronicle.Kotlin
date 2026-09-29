@@ -19,6 +19,41 @@ the shared examples.
 For the breaking change to omitted routing defaults and explicit legacy
 routes, see [Migrate append routing](migrate-append-routing.md).
 
+## Date and time properties
+
+Event and read model properties can use `java.time` types. The client writes
+each as an ISO-8601 string, which is what the schema it registers describes:
+
+| Type | Schema `format` | Written as |
+| --- | --- | --- |
+| `Instant` | `date-time-offset` | `2024-05-01T10:15:30Z` |
+| `OffsetDateTime` | `date-time-offset` | `2024-05-01T10:15:30+02:00` |
+| `ZonedDateTime` | `date-time-offset` | `2024-05-01T10:15:30+02:00` |
+| `LocalDateTime` | `date-time` | `2024-05-01T10:15:30` |
+| `LocalDate` | `date` | `2024-05-01` |
+| `LocalTime` | `time` | `10:15:30` |
+
+A `ZonedDateTime` is written as an offset date-time, so it keeps the instant
+and the offset but not the zone id. Read back, its zone is the offset
+(`+02:00`), not `Europe/Oslo`. Use `Instant` or `OffsetDateTime` when the zone
+does not matter, or store the zone id in a separate string property when it
+does.
+
+Values written by the .NET client read back correctly, including a UTC
+`DateTimeOffset` written as `+00:00`. `Duration` and `ByteArray` are not covered
+by these adapters yet and have not been verified against the .NET wire format.
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.events.EventType
+import java.time.Instant
+import java.time.LocalDate
+
+@EventType
+data class ShipmentDispatched(val dispatchedAt: Instant, val deliveryDate: LocalDate)
+```
+
 ## Kotlin client: `IEventSequence` and `IEventLog`
 
 Beyond `append`/`appendMany`, the Kotlin client's `store.eventLog` (and any
