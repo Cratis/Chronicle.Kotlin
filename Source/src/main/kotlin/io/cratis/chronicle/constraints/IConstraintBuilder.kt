@@ -68,8 +68,22 @@ interface IUniqueConstraintBuilder {
      * [property] must be an actual property reference (e.g. `SomeEvent::email`), not an arbitrary
      * lambda — a lambda cannot be reflected back to the property it reads, so passing one would
      * silently produce a constraint keyed on the wrong property.
+     *
+     * Each event type can be added to a constraint once; to make several properties unique together
+     * use the overload taking more than one property. Adding the same event type twice throws
+     * [EventTypeAlreadyAddedToUniqueConstraint]. Call it again with a different event type to make one
+     * constraint span several event types.
      */
     fun <TEvent : Any, TValue : Any> on(eventClass: KClass<TEvent>, property: KProperty1<TEvent, TValue>): IUniqueConstraintBuilder
+
+    /**
+     * Specifies the event type and several properties that together must be unique - for example
+     * `on(PersonRegistered::class, PersonRegistered::firstName, PersonRegistered::lastName)` rejects
+     * a second person with the same first *and* last name, not a second person sharing either one.
+     *
+     * The same rules as the single-property overload apply, and at least one property is required.
+     */
+    fun <TEvent : Any> on(eventClass: KClass<TEvent>, vararg properties: KProperty1<TEvent, *>): IUniqueConstraintBuilder
 
     /**
      * Java-friendly alternative to [on] — Java has no equivalent of a Kotlin property reference,
@@ -77,6 +91,11 @@ interface IUniqueConstraintBuilder {
      * the property by name instead.
      */
     fun <TEvent : Any> onWithPropertyName(eventClass: KClass<TEvent>, propertyName: String): IUniqueConstraintBuilder
+
+    /**
+     * The same as [onWithPropertyName] for several properties that together must be unique.
+     */
+    fun <TEvent : Any> onWithPropertyNames(eventClass: KClass<TEvent>, vararg propertyNames: String): IUniqueConstraintBuilder
     fun ignoreCasing(): IUniqueConstraintBuilder
     fun withMessage(message: String): IUniqueConstraintBuilder
 }

@@ -7,11 +7,14 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 private data class EmployeeEmailSet(val email: String, val name: String)
 private data class EmployeeMoved(val address: String)
+private data class PersonRegistered(val firstName: String, val lastName: String)
+private data class PersonRenamed(val firstName: String, val lastName: String)
 
 class ConstraintBuilderTests {
 
@@ -20,7 +23,7 @@ class ConstraintBuilderTests {
         val builder = UniqueConstraintBuilder()
         builder.on(EmployeeEmailSet::class, EmployeeEmailSet::email)
 
-        assertEquals("email", builder.build().propertyName)
+        assertEquals(listOf("email"), builder.build().eventDefinitions.single().properties)
     }
 
     @Test
@@ -34,9 +37,9 @@ class ConstraintBuilderTests {
         val emailEntry = emailBuilder.build()
         val nameEntry = nameBuilder.build()
 
-        assertEquals("email", emailEntry.propertyName)
-        assertEquals("name", nameEntry.propertyName)
-        assertNotEquals(emailEntry.propertyName, nameEntry.propertyName)
+        assertEquals(listOf("email"), emailEntry.eventDefinitions.single().properties)
+        assertEquals(listOf("name"), nameEntry.eventDefinitions.single().properties)
+        assertNotEquals(emailEntry.eventDefinitions, nameEntry.eventDefinitions)
     }
 
     @Test
@@ -46,8 +49,7 @@ class ConstraintBuilderTests {
 
         val entry = builder.build().single() as ConstraintBuilderEntry.UniqueEntry
 
-        assertEquals("name", entry.propertyName)
-        assertEquals(EmployeeEmailSet::class, entry.eventClass)
+        assertEquals(UniqueEventDefinition(EmployeeEmailSet::class, listOf("name")), entry.eventDefinitions.single())
         assertTrue(entry.ignoreCasing)
     }
 
@@ -56,7 +58,7 @@ class ConstraintBuilderTests {
         val builder = UniqueConstraintBuilder()
         builder.onWithPropertyName(EmployeeEmailSet::class, "name")
 
-        assertEquals("name", builder.build().propertyName)
+        assertEquals(listOf("name"), builder.build().eventDefinitions.single().properties)
     }
 
     @Test
@@ -112,5 +114,127 @@ class ConstraintBuilderTests {
 
         assertNull(unscoped.scope)
         assertTrue(scoped.scope!!.perEventSourceType)
+    }
+
+    @Test
+    fun `on with several properties keeps all of them, in order, on one event definition`() {
+        val builder = UniqueConstraintBuilder()
+        builder.on(PersonRegistered::class, PersonRegistered::firstName, PersonRegistered::lastName).ignoreCasing()
+
+        val entry = builder.build()
+
+        assertEquals(
+            listOf(UniqueEventDefinition(PersonRegistered::class, listOf("firstName", "lastName"))),
+            entry.eventDefinitions
+        )
+        assertTrue(entry.ignoreCasing)
+    }
+
+    @Test
+    fun `onWithPropertyNames keeps all the names, for Java callers`() {
+        val builder = UniqueConstraintBuilder()
+        builder.onWithPropertyNames(PersonRegistered::class, "firstName", "lastName")
+
+        assertEquals(listOf("firstName", "lastName"), builder.build().eventDefinitions.single().properties)
+    }
+
+    @Test
+    fun `on for different event types adds one definition per event type`() {
+        val builder = UniqueConstraintBuilder()
+        builder
+            .on(PersonRegistered::class, PersonRegistered::firstName, PersonRegistered::lastName)
+            .on(PersonRenamed::class, PersonRenamed::firstName, PersonRenamed::lastName)
+
+        assertEquals(
+            listOf(
+                UniqueEventDefinition(PersonRegistered::class, listOf("firstName", "lastName")),
+                UniqueEventDefinition(PersonRenamed::class, listOf("firstName", "lastName"))
+            ),
+            builder.build().eventDefinitions
+        )
+    }
+
+    @Test
+    fun `on for the same event type twice throws instead of the second call replacing the first`() {
+        val builder = UniqueConstraintBuilder()
+        builder.on(PersonRegistered::class, PersonRegistered::firstName)
+
+        val error = assertThrows(EventTypeAlreadyAddedToUniqueConstraint::class.java) {
+            builder.on(PersonRegistered::class, PersonRegistered::lastName)
+        }
+
+        assertEquals(PersonRegistered::class, error.eventClass)
+        assertEquals(listOf("lastName"), error.properties)
+    }
+
+    @Test
+    fun `mixing the property reference and property name overloads for one event type also throws`() {
+        val builder = UniqueConstraintBuilder()
+        builder.on(PersonRegistered::class, PersonRegistered::firstName)
+
+        assertThrows(EventTypeAlreadyAddedToUniqueConstraint::class.java) {
+            builder.onWithPropertyNames(PersonRegistered::class, "lastName")
+        }
+    }
+
+    @Test
+    fun `building with no event types added throws`() {
+        assertThrows(NoEventTypesAddedToUniqueConstraint::class.java) { UniqueConstraintBuilder().build() }
+    }
+
+    @Test
+    fun `unique with nothing configured throws through the constraint builder`() {
+        assertThrows(NoEventTypesAddedToUniqueConstraint::class.java) { ConstraintBuilder().unique { } }
+    }
+
+    @Test
+    fun `an event definition with no properties is rejected`() {
+        assertThrows(IllegalArgumentException::class.java) { UniqueConstraintBuilder().on(PersonRegistered::class) }
+    }
+
+    @Test
+    fun `scope applies to a multi event definition constraint and keeps every definition`() {
+        val builder = ConstraintBuilder()
+        builder.perEventSourceType().unique {
+            it.on(PersonRegistered::class, PersonRegistered::firstName, PersonRegistered::lastName)
+                .on(PersonRenamed::class, PersonRenamed::firstName, PersonRenamed::lastName)
+        }
+
+        val entry = builder.build().single() as ConstraintBuilderEntry.UniqueEntry
+
+        assertEquals(2, entry.eventDefinitions.size)
+        assertTrue(entry.scope!!.perEventSourceType)
+    }
+
+    @Suppress("DEPRECATION")
+    @Test
+    fun `the single property shape of a unique entry still constructs and reads back`() {
+        val entry = ConstraintBuilderEntry.UniqueEntry(EmployeeEmailSet::class, "email", true, "Taken")
+
+        assertEquals(EmployeeEmailSet::class, entry.eventClass)
+        assertEquals("email", entry.propertyName)
+        assertEquals(listOf(UniqueEventDefinition(EmployeeEmailSet::class, listOf("email"))), entry.eventDefinitions)
+        assertTrue(entry.ignoreCasing)
+        assertEquals("Taken", entry.message)
+        assertNull(entry.scope)
+    }
+
+    @Suppress("DEPRECATION")
+    @Test
+    fun `the legacy copy keeps every event definition unless it is given a different event type or property`() {
+        val entry = ConstraintBuilderEntry.UniqueEntry(
+            listOf(
+                UniqueEventDefinition(PersonRegistered::class, listOf("firstName", "lastName")),
+                UniqueEventDefinition(PersonRenamed::class, listOf("firstName"))
+            ),
+            false,
+            ""
+        )
+
+        assertEquals(entry.eventDefinitions, entry.copy(ignoreCasing = true).eventDefinitions)
+        assertEquals(
+            listOf(UniqueEventDefinition(EmployeeMoved::class, listOf("address"))),
+            entry.copy(eventClass = EmployeeMoved::class, propertyName = "address").eventDefinitions
+        )
     }
 }

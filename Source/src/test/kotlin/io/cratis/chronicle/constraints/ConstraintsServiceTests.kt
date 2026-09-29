@@ -44,6 +44,44 @@ private class DeclarativeEventType : IConstraint {
 }
 
 
+@EventType
+private data class RegisteredPerson(val firstName: String, val lastName: String)
+
+@EventType(id = "PersonRenamedEvent")
+private data class RenamedPerson(val firstName: String, val lastName: String)
+
+private data class NotAnEventType(val name: String)
+
+@Constraint
+private class UniqueFullName : IConstraint {
+    override fun define(builder: IConstraintBuilder) {
+        builder.unique {
+            it.on(RegisteredPerson::class, RegisteredPerson::firstName, RegisteredPerson::lastName).ignoreCasing()
+        }
+    }
+}
+
+@Constraint
+private class UniqueFullNameAcrossEvents : IConstraint {
+    override fun define(builder: IConstraintBuilder) {
+        builder.unique {
+            it.on(RegisteredPerson::class, RegisteredPerson::firstName, RegisteredPerson::lastName)
+                .on(RenamedPerson::class, RenamedPerson::firstName, RenamedPerson::lastName)
+                .withMessage("Name taken")
+        }
+    }
+}
+
+@Constraint
+private class UniqueOverAnUnregisteredEvent : IConstraint {
+    override fun define(builder: IConstraintBuilder) {
+        builder.unique {
+            it.on(RegisteredPerson::class, RegisteredPerson::firstName)
+                .on(NotAnEventType::class, NotAnEventType::name)
+        }
+    }
+}
+
 @Constraint
 private class UnscopedUniqueEmail : IConstraint {
     override fun define(builder: IConstraintBuilder) {
@@ -171,5 +209,63 @@ class ConstraintsServiceTests {
         service.registerModelBound(listOf(ConstraintScopeEmailSet::class))
 
         coVerify(exactly = 0) { stub.register(any(), any()) }
+    }
+
+    @Test
+    fun `register sends every property of a multi property constraint, with ignore casing`() = runBlocking {
+        val stub = mockk<ConstraintsGrpcKt.ConstraintsCoroutineStub>()
+        val request = slot<EventsConstraints.RegisterConstraintsRequest>()
+        coEvery { stub.register(capture(request), any()) } returns Empty.getDefaultInstance()
+
+        ConstraintsService("my-store", stub).register(UniqueFullName())
+
+        val definition = request.captured.constraintsList.single().definition.value0
+        assertEquals(listOf("firstName", "lastName"), definition.eventDefinitionsList.single().propertiesList)
+        assertEquals("RegisteredPerson", definition.eventDefinitionsList.single().eventTypeId)
+        assertTrue(definition.ignoreCasing)
+    }
+
+    @Test
+    fun `register sends one event definition per event type of a constraint spanning several`() = runBlocking {
+        val stub = mockk<ConstraintsGrpcKt.ConstraintsCoroutineStub>()
+        val request = slot<EventsConstraints.RegisterConstraintsRequest>()
+        coEvery { stub.register(capture(request), any()) } returns Empty.getDefaultInstance()
+        val service = ConstraintsService("my-store", stub)
+
+        service.register(UniqueFullNameAcrossEvents())
+
+        val definition = request.captured.constraintsList.single().definition.value0
+        assertEquals(listOf("RegisteredPerson", "PersonRenamedEvent"), definition.eventDefinitionsList.map { it.eventTypeId })
+        definition.eventDefinitionsList.forEach { assertEquals(listOf("firstName", "lastName"), it.propertiesList) }
+        assertEquals("Name taken", service.resolveMessageFor(ConstraintViolation("UniqueFullNameAcrossEvents", "kernel")).message)
+    }
+
+    @Test
+    fun `register skips a unique constraint that names an event type which is not annotated`() = runBlocking {
+        val stub = mockk<ConstraintsGrpcKt.ConstraintsCoroutineStub>()
+        val request = slot<EventsConstraints.RegisterConstraintsRequest>()
+        coEvery { stub.register(capture(request), any()) } returns Empty.getDefaultInstance()
+
+        ConstraintsService("my-store", stub).register(UniqueOverAnUnregisteredEvent(), UnscopedUniqueEmail())
+
+        assertEquals(listOf("UnscopedUniqueEmail"), request.captured.constraintsList.map { it.name })
+    }
+
+    @Test
+    fun `register sends a single property constraint exactly as before`() = runBlocking {
+        val stub = mockk<ConstraintsGrpcKt.ConstraintsCoroutineStub>()
+        val request = slot<EventsConstraints.RegisterConstraintsRequest>()
+        coEvery { stub.register(capture(request), any()) } returns Empty.getDefaultInstance()
+
+        ConstraintsService("my-store", stub).register(UnscopedUniqueEmail())
+
+        val constraint = request.captured.constraintsList.single()
+        val definition = constraint.definition.value0
+        assertEquals(1, constraint.typeValue)
+        assertEquals("UnscopedUniqueEmail", constraint.name)
+        assertEquals(1, definition.eventDefinitionsCount)
+        assertEquals("ConstraintScopeEmailSet", definition.eventDefinitionsList.single().eventTypeId)
+        assertEquals(listOf("email"), definition.eventDefinitionsList.single().propertiesList)
+        assertEquals(false, definition.ignoreCasing)
     }
 }

@@ -73,12 +73,17 @@ class ConstraintsService(
                             .also { registeredMessages[constraintName] = { entry.message } }
                     }
                     is ConstraintBuilderEntry.UniqueEntry -> {
-                        val eventAnn = entry.eventClass.findAnnotation<EventType>() ?: return@map null
-                        val eventTypeId = eventAnn.id.ifEmpty { entry.eventClass.simpleName!! }
-                        val eventDef = EventsConstraints.UniqueConstraintEventDefinition.newBuilder()
-                            .setEventTypeId(eventTypeId)
-                            .addProperties(entry.propertyName)
-                            .build()
+                        val eventDefinitions = entry.eventDefinitions.map { definition ->
+                            val eventAnn = definition.eventClass.findAnnotation<EventType>() ?: return@map null
+                            val eventTypeId = eventAnn.id.ifEmpty { definition.eventClass.simpleName!! }
+                            EventsConstraints.UniqueConstraintEventDefinition.newBuilder()
+                                .setEventTypeId(eventTypeId)
+                                .addAllProperties(definition.properties)
+                                .build()
+                        }
+                        // A constraint over an event type that is not an event type is skipped whole, as it always
+                        // was, rather than registered with fewer event types than it was declared with.
+                        if (eventDefinitions.any { it == null }) return@map null
                         EventsConstraints.Constraint.newBuilder()
                             .setName(constraintName)
                             .setTypeValue(1) // Unique = 1
@@ -86,7 +91,7 @@ class ConstraintsService(
                                 EventsConstraints.OneOf_UniqueConstraintDefinition_UniqueEventTypeConstraintDefinition.newBuilder()
                                     .setValue0(
                                         EventsConstraints.UniqueConstraintDefinition.newBuilder()
-                                            .addEventDefinitions(eventDef)
+                                            .addAllEventDefinitions(eventDefinitions.filterNotNull())
                                             .setIgnoreCasing(entry.ignoreCasing)
                                             .build()
                                     )
