@@ -12,12 +12,14 @@ import io.cratis.chronicle.artifacts.IArtifactActivator
 import io.cratis.chronicle.artifacts.IClientArtifacts
 import io.cratis.chronicle.connection.ChronicleConnectionString
 import io.cratis.chronicle.namespaces.IEventStoreNamespaceResolver
+import io.cratis.chronicle.readModels.ReadModelNamingPolicy
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import io.cratis.chronicle.spring.ChronicleProperties.NamespaceResolution.Strategy
 import io.cratis.chronicle.spring.namespaces.AuthenticationNamespaceResolver
 import io.cratis.chronicle.spring.namespaces.FixedNamespaceResolver
 import io.cratis.chronicle.spring.namespaces.HttpHeaderNamespaceResolver
 import io.cratis.chronicle.spring.namespaces.SubdomainNamespaceResolver
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.AutoConfiguration
 import org.springframework.boot.autoconfigure.AutoConfigurationPackages
@@ -48,6 +50,9 @@ class ChronicleAutoConfiguration {
      * already scans for components — the package of the `@SpringBootApplication` class and everything
      * beneath it. That is where an application's artifacts live, and scanning only there keeps startup
      * fast and third-party classes out of the picture.
+     *
+     * A [ReadModelNamingPolicy] bean, when the application or a library such as Arc declares one, decides
+     * the container each read model is stored in; without one the read model identifier is used.
      */
     @Bean
     @ConditionalOnMissingBean
@@ -55,7 +60,8 @@ class ChronicleAutoConfiguration {
         properties: ChronicleProperties,
         applicationContext: ApplicationContext,
         artifactActivator: IArtifactActivator,
-        @Value("\${spring.application.name:Unknown}") applicationName: String
+        @Value("\${spring.application.name:Unknown}") applicationName: String,
+        readModelNamingPolicy: ObjectProvider<ReadModelNamingPolicy>
     ): ChronicleOptions = ChronicleOptions(
         connectionString = ChronicleConnectionString.parse(properties.connectionString),
         programIdentifier = properties.programIdentifier ?: applicationName,
@@ -65,7 +71,7 @@ class ChronicleAutoConfiguration {
         autoDiscoverAndRegister = properties.autoDiscoverAndRegister,
         artifacts = clientArtifacts(properties, applicationContext),
         artifactActivator = artifactActivator
-    )
+    ).let { options -> readModelNamingPolicy.ifAvailable?.let(options::withReadModelNamingPolicy) ?: options }
 
     /** Lets artifacts be ordinary Spring components, with ordinary constructor injection. */
     @Bean
