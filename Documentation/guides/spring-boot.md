@@ -401,6 +401,21 @@ its own, so nothing has to be turned off before it can be replaced — declare a
 `ChronicleOptions`, `IChronicleClient`, `IEventStore`, `IArtifactActivator` or
 `IEventStoreNamespaceResolver` bean and yours wins.
 
+The starter also picks up a `ReadModelNamingPolicy` bean when one exists, and
+gives it to the `ChronicleOptions` it builds. The policy decides the name of the
+collection or table each read model is stored in, so a layer that reads by its
+own naming convention — Arc, for one, which supplies its own policy — finds what
+the client wrote. Without a bean the read model identifier is used. See
+[Read model container names](../reference/configuration.md#read-model-container-names).
+
+<!-- validate: skip -->
+
+```kotlin
+@Bean
+fun readModelNamingPolicy(): ReadModelNamingPolicy =
+    ReadModelNamingPolicy { readModelClass -> "${readModelClass.simpleName}s" }
+```
+
 ## Samples
 
 - `Samples/Kotlin/SpringBoot` — the Kotlin version of everything above
