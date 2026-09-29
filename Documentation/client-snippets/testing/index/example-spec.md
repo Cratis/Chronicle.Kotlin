@@ -8,14 +8,14 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 @EventType
-data class TestingIndexAuthorRegistered(val name: String)
+data class AuthorRegistered(val name: String)
 
 @ReadModel
 data class Author(val name: String = "")
 
 @Reducer
 class AuthorReducer {
-    fun registered(event: TestingIndexAuthorRegistered) = Author(event.name)
+    fun registered(event: AuthorRegistered) = Author(event.name)
 }
 
 class WhenProjectingARegisteredAuthorTests {
@@ -24,7 +24,7 @@ class WhenProjectingARegisteredAuthorTests {
     fun `the author read model carries the registered name`() = runBlocking {
         val scenario = ReadModelScenario<Author>(AuthorReducer())
 
-        val author = scenario.fold("author-1", TestingIndexAuthorRegistered("Jane Austen"))
+        val author = scenario.fold("author-1", AuthorRegistered("Jane Austen"))
 
         assertEquals("Jane Austen", author!!.name)
     }
