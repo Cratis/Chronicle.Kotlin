@@ -37,7 +37,7 @@ class ConstraintBuilder : IConstraintBuilder {
     override fun unique(configure: (IUniqueConstraintBuilder) -> Unit): IConstraintBuilder {
         val builder = UniqueConstraintBuilder()
         configure(builder)
-        entries.add(builder.build().copy(scope = currentScope()))
+        entries.add(builder.build().withScope(currentScope()))
         return this
     }
 
@@ -55,25 +55,27 @@ class ConstraintBuilder : IConstraintBuilder {
 }
 
 class UniqueConstraintBuilder : IUniqueConstraintBuilder {
-    private var eventClass: KClass<*>? = null
-    private var propertyName: String = ""
+    private val eventDefinitions = mutableListOf<UniqueEventDefinition>()
     private var ignoreCasing: Boolean = false
     private var message: String = ""
 
     override fun <TEvent : Any, TValue : Any> on(
         eventClass: KClass<TEvent>,
         property: KProperty1<TEvent, TValue>
-    ): IUniqueConstraintBuilder {
-        this.eventClass = eventClass
-        this.propertyName = property.name
-        return this
-    }
+    ): IUniqueConstraintBuilder = add(eventClass, listOf(property.name))
 
-    override fun <TEvent : Any> onWithPropertyName(eventClass: KClass<TEvent>, propertyName: String): IUniqueConstraintBuilder {
-        this.eventClass = eventClass
-        this.propertyName = propertyName
-        return this
-    }
+    override fun <TEvent : Any> on(
+        eventClass: KClass<TEvent>,
+        vararg properties: KProperty1<TEvent, *>
+    ): IUniqueConstraintBuilder = add(eventClass, properties.map { it.name })
+
+    override fun <TEvent : Any> onWithPropertyName(eventClass: KClass<TEvent>, propertyName: String): IUniqueConstraintBuilder =
+        add(eventClass, listOf(propertyName))
+
+    override fun <TEvent : Any> onWithPropertyNames(
+        eventClass: KClass<TEvent>,
+        vararg propertyNames: String
+    ): IUniqueConstraintBuilder = add(eventClass, propertyNames.toList())
 
     override fun ignoreCasing(): IUniqueConstraintBuilder {
         this.ignoreCasing = true
@@ -85,11 +87,25 @@ class UniqueConstraintBuilder : IUniqueConstraintBuilder {
         return this
     }
 
-    fun build(): ConstraintBuilderEntry.UniqueEntry =
-        ConstraintBuilderEntry.UniqueEntry(
-            eventClass ?: error("on() must be called first"),
-            propertyName,
-            ignoreCasing,
-            message
-        )
+    /**
+     * Builds the constraint entry from everything added so far.
+     *
+     * @throws NoEventTypesAddedToUniqueConstraint if `on(...)` was never called.
+     */
+    fun build(): ConstraintBuilderEntry.UniqueEntry {
+        if (eventDefinitions.isEmpty()) {
+            throw NoEventTypesAddedToUniqueConstraint()
+        }
+
+        return ConstraintBuilderEntry.UniqueEntry(eventDefinitions.toList(), ignoreCasing, message)
+    }
+
+    private fun add(eventClass: KClass<*>, properties: List<String>): IUniqueConstraintBuilder {
+        if (eventDefinitions.any { it.eventClass == eventClass }) {
+            throw EventTypeAlreadyAddedToUniqueConstraint(eventClass, properties)
+        }
+
+        eventDefinitions.add(UniqueEventDefinition(eventClass, properties))
+        return this
+    }
 }

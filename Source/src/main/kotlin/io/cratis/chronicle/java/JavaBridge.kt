@@ -340,6 +340,21 @@ object UniqueConstraintBuilderJavaBridge {
         eventClass: Class<TEvent>,
         propertyName: String
     ): IUniqueConstraintBuilder = builder.onWithPropertyName(eventClass.kotlin, propertyName)
+
+    /**
+     * Makes several properties of the event type unique together, by name.
+     *
+     * @param builder The unique constraint builder.
+     * @param eventClass The event type the properties belong to.
+     * @param propertyNames The property names that together must be unique.
+     * @return The builder, for chaining.
+     */
+    @JvmStatic
+    fun <TEvent : Any> on(
+        builder: IUniqueConstraintBuilder,
+        eventClass: Class<TEvent>,
+        vararg propertyNames: String
+    ): IUniqueConstraintBuilder = builder.onWithPropertyNames(eventClass.kotlin, *propertyNames)
 }
 
 /**

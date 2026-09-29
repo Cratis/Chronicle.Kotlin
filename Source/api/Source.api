@@ -771,6 +771,8 @@ public abstract class io/cratis/chronicle/constraints/ConstraintBuilderEntry {
 }
 
 public final class io/cratis/chronicle/constraints/ConstraintBuilderEntry$UniqueEntry : io/cratis/chronicle/constraints/ConstraintBuilderEntry {
+	public fun <init> (Ljava/util/List;ZLjava/lang/String;Lio/cratis/chronicle/constraints/ConstraintScope;)V
+	public synthetic fun <init> (Ljava/util/List;ZLjava/lang/String;Lio/cratis/chronicle/constraints/ConstraintScope;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;ZLjava/lang/String;Lio/cratis/chronicle/constraints/ConstraintScope;)V
 	public synthetic fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;ZLjava/lang/String;Lio/cratis/chronicle/constraints/ConstraintScope;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lkotlin/reflect/KClass;
@@ -782,6 +784,7 @@ public final class io/cratis/chronicle/constraints/ConstraintBuilderEntry$Unique
 	public static synthetic fun copy$default (Lio/cratis/chronicle/constraints/ConstraintBuilderEntry$UniqueEntry;Lkotlin/reflect/KClass;Ljava/lang/String;ZLjava/lang/String;Lio/cratis/chronicle/constraints/ConstraintScope;ILjava/lang/Object;)Lio/cratis/chronicle/constraints/ConstraintBuilderEntry$UniqueEntry;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getEventClass ()Lkotlin/reflect/KClass;
+	public final fun getEventDefinitions ()Ljava/util/List;
 	public final fun getIgnoreCasing ()Z
 	public final fun getMessage ()Ljava/lang/String;
 	public final fun getPropertyName ()Ljava/lang/String;
@@ -849,6 +852,12 @@ public final class io/cratis/chronicle/constraints/ConstraintsService : io/crati
 	public fun registerModelBound (Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
+public final class io/cratis/chronicle/constraints/EventTypeAlreadyAddedToUniqueConstraint : java/lang/IllegalStateException {
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/util/List;)V
+	public final fun getEventClass ()Lkotlin/reflect/KClass;
+	public final fun getProperties ()Ljava/util/List;
+}
+
 public abstract interface class io/cratis/chronicle/constraints/IConstraint {
 	public abstract fun define (Lio/cratis/chronicle/constraints/IConstraintBuilder;)V
 }
@@ -880,8 +889,19 @@ public abstract interface class io/cratis/chronicle/constraints/IConstraintsServ
 public abstract interface class io/cratis/chronicle/constraints/IUniqueConstraintBuilder {
 	public abstract fun ignoreCasing ()Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
 	public abstract fun on (Lkotlin/reflect/KClass;Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
+	public fun on (Lkotlin/reflect/KClass;[Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
 	public abstract fun onWithPropertyName (Lkotlin/reflect/KClass;Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
+	public fun onWithPropertyNames (Lkotlin/reflect/KClass;[Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
 	public abstract fun withMessage (Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
+}
+
+public final class io/cratis/chronicle/constraints/IUniqueConstraintBuilder$DefaultImpls {
+	public static fun on (Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;Lkotlin/reflect/KClass;[Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
+	public static fun onWithPropertyNames (Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;Lkotlin/reflect/KClass;[Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
+}
+
+public final class io/cratis/chronicle/constraints/NoEventTypesAddedToUniqueConstraint : java/lang/IllegalStateException {
+	public fun <init> ()V
 }
 
 public abstract interface annotation class io/cratis/chronicle/constraints/RemoveConstraint : java/lang/annotation/Annotation {
@@ -902,8 +922,19 @@ public final class io/cratis/chronicle/constraints/UniqueConstraintBuilder : io/
 	public final fun build ()Lio/cratis/chronicle/constraints/ConstraintBuilderEntry$UniqueEntry;
 	public fun ignoreCasing ()Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
 	public fun on (Lkotlin/reflect/KClass;Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
+	public fun on (Lkotlin/reflect/KClass;[Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
 	public fun onWithPropertyName (Lkotlin/reflect/KClass;Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
+	public fun onWithPropertyNames (Lkotlin/reflect/KClass;[Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
 	public fun withMessage (Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
+}
+
+public final class io/cratis/chronicle/constraints/UniqueEventDefinition {
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/util/List;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEventClass ()Lkotlin/reflect/KClass;
+	public final fun getProperties ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/cratis/chronicle/correlation/CorrelationId {
@@ -2132,6 +2163,7 @@ public final class io/cratis/chronicle/java/TransactionalEventSequenceJavaBridge
 public final class io/cratis/chronicle/java/UniqueConstraintBuilderJavaBridge {
 	public static final field INSTANCE Lio/cratis/chronicle/java/UniqueConstraintBuilderJavaBridge;
 	public static final fun on (Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;Ljava/lang/Class;Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
+	public static final fun on (Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;Ljava/lang/Class;[Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
 }
 
 public final class io/cratis/chronicle/java/UnitOfWorkJavaBridge {
