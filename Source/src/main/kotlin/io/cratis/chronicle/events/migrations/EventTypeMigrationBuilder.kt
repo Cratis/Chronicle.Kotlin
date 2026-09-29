@@ -3,7 +3,7 @@
 
 package io.cratis.chronicle.events.migrations
 
-import com.google.gson.Gson
+import io.cratis.chronicle.json.chronicleGson
 import kotlin.reflect.KProperty1
 
 /**
@@ -157,5 +157,5 @@ class EventTypeMigrationBuilder<TTarget : Any, TSource : Any> {
      *
      * @return The JSON representation, or `"{}"` when no operations were recorded.
      */
-    fun toJson(): String = if (properties.isEmpty()) "{}" else Gson().toJson(properties)
+    fun toJson(): String = if (properties.isEmpty()) "{}" else chronicleGson.toJson(properties)
 }
