@@ -56,6 +56,9 @@ private fun sampleEventContext(sequenceNumber: Long): Sequences.EventContext =
 @EventType
 private data class SomethingHappened(val value: String)
 
+@EventType
+private data class SomethingHappenedAt(val at: java.time.Instant, val on: java.time.LocalDate, val note: java.time.Instant? = null)
+
 @Constraint(id = "NamedEvent")
 private class NamedEventConstraint : IConstraint {
     override fun define(builder: IConstraintBuilder) {
@@ -162,6 +165,25 @@ class EventSequenceTests {
         assertEquals(7L, sentScope.sequenceNumber)
         assertTrue(sentScope.eventSourceId)
         assertEquals("Onboarding", sentScope.eventStreamType)
+    }
+
+    @Test
+    fun `append sends java time properties of the event content as ISO strings`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val request = slot<Sequences.AppendRequest>()
+        coEvery { stub.append(capture(request), any()) } returns
+            Sequences.CommandResult_AppendResponse.newBuilder()
+                .setIsAuthorized(true)
+                .setResponse(Sequences.AppendResponse.newBuilder().setSequenceNumber(0).build())
+                .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        sequence.append(
+            "source-1",
+            SomethingHappenedAt(java.time.Instant.parse("2024-05-01T10:15:30Z"), java.time.LocalDate.of(2024, 5, 1))
+        )
+
+        assertEquals("""{"at":"2024-05-01T10:15:30Z","on":"2024-05-01"}""", request.captured.content)
     }
 
     @Test

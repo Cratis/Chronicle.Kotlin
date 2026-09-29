@@ -18,7 +18,11 @@ import io.cratis.chronicle.geospatial.Polygon
  * that a type serializes identically no matter which path it takes — appending an event, seeding,
  * a reactor receiving it back, or a read model being materialized. The geospatial adapters are the
  * reason it exists: the kernel identifies geospatial values by their GeoJSON shape, which plain
- * reflection over [Point], [LineString], and [Polygon] would not produce.
+ * reflection over [Point], [LineString], and [Polygon] would not produce. The `java.time` adapters
+ * are the other: [java.time.Instant], [java.time.OffsetDateTime], [java.time.ZonedDateTime],
+ * [java.time.LocalDateTime], [java.time.LocalDate], and [java.time.LocalTime] are written as
+ * ISO-8601 strings, which is what their schema formats promise. A [java.time.ZonedDateTime] is
+ * written as an offset date-time, so its zone id does not survive the round trip.
  *
  * It is public so that callers who serialize event content themselves produce the same JSON the
  * client would. Java reaches it as `ChronicleGson.chronicleGson`.
@@ -31,4 +35,9 @@ val chronicleGson: Gson = GsonBuilder()
     // A concept serializes as the value it wraps, so introducing one into an event that is already
     // in production changes neither the JSON nor the schema the kernel validates against.
     .registerTypeAdapterFactory(ConceptTypeAdapterFactory())
+    .apply {
+        // Gson has no java.time support, and the schemas describe these as strings (date-time,
+        // date-time-offset, date, time), so they must go over the wire as ISO-8601 strings.
+        JavaTimeTypeAdapters.all.forEach { (type, adapter) -> registerTypeAdapter(type, adapter) }
+    }
     .create()
