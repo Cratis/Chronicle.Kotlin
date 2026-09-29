@@ -51,8 +51,9 @@ class ChronicleAutoConfiguration {
      * beneath it. That is where an application's artifacts live, and scanning only there keeps startup
      * fast and third-party classes out of the picture.
      *
-     * A [ReadModelNamingPolicy] bean, when the application or a library such as Arc declares one, decides
-     * the container each read model is stored in; without one the read model identifier is used.
+     * A single [ReadModelNamingPolicy] bean, declared by the application or by an integration that adapts
+     * another layer's naming (such as Arc's), decides the container each read model is stored in; without
+     * one, or when more than one is declared and none is primary, the read model identifier is used.
      */
     @Bean
     @ConditionalOnMissingBean
@@ -71,7 +72,7 @@ class ChronicleAutoConfiguration {
         autoDiscoverAndRegister = properties.autoDiscoverAndRegister,
         artifacts = clientArtifacts(properties, applicationContext),
         artifactActivator = artifactActivator
-    ).let { options -> readModelNamingPolicy.ifAvailable?.let(options::withReadModelNamingPolicy) ?: options }
+    ).let { options -> readModelNamingPolicy.getIfUnique()?.let(options::withReadModelNamingPolicy) ?: options }
 
     /** Lets artifacts be ordinary Spring components, with ordinary constructor injection. */
     @Bean

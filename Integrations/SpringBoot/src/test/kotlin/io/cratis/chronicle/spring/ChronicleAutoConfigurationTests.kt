@@ -72,6 +72,24 @@ class ChronicleAutoConfigurationTests {
         }
     }
 
+    @Configuration(proxyBeanMethods = false)
+    class WithTwoReadModelNamingPolicies {
+        @Bean
+        fun pluralizingPolicy(): ReadModelNamingPolicy = ReadModelNamingPolicy { "${it.simpleName}s" }
+
+        @Bean
+        fun lowercasingPolicy(): ReadModelNamingPolicy = ReadModelNamingPolicy { it.simpleName.lowercase() }
+    }
+
+    @Test
+    fun `falls back to the identifier when more than one read model naming policy bean is declared`() {
+        runner.withUserConfiguration(WithTwoReadModelNamingPolicies::class.java).run { context ->
+            assertThat(context).hasNotFailed()
+            assertThat(context.getBean(ChronicleOptions::class.java).readModelNamingPolicy)
+                .isSameAs(DefaultReadModelNamingPolicy)
+        }
+    }
+
     @Test
     fun `discovers and registers artifacts automatically by default`() {
         runner.run { context ->
