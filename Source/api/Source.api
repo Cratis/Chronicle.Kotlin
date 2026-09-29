@@ -889,10 +889,15 @@ public abstract interface class io/cratis/chronicle/constraints/IConstraintsServ
 public abstract interface class io/cratis/chronicle/constraints/IUniqueConstraintBuilder {
 	public abstract fun ignoreCasing ()Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
 	public abstract fun on (Lkotlin/reflect/KClass;Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
-	public abstract fun on (Lkotlin/reflect/KClass;[Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
+	public fun on (Lkotlin/reflect/KClass;[Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
 	public abstract fun onWithPropertyName (Lkotlin/reflect/KClass;Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
-	public abstract fun onWithPropertyNames (Lkotlin/reflect/KClass;[Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
+	public fun onWithPropertyNames (Lkotlin/reflect/KClass;[Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
 	public abstract fun withMessage (Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
+}
+
+public final class io/cratis/chronicle/constraints/IUniqueConstraintBuilder$DefaultImpls {
+	public static fun on (Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;Lkotlin/reflect/KClass;[Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
+	public static fun onWithPropertyNames (Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;Lkotlin/reflect/KClass;[Ljava/lang/String;)Lio/cratis/chronicle/constraints/IUniqueConstraintBuilder;
 }
 
 public final class io/cratis/chronicle/constraints/NoEventTypesAddedToUniqueConstraint : java/lang/IllegalStateException {
@@ -925,10 +930,6 @@ public final class io/cratis/chronicle/constraints/UniqueConstraintBuilder : io/
 
 public final class io/cratis/chronicle/constraints/UniqueEventDefinition {
 	public fun <init> (Lkotlin/reflect/KClass;Ljava/util/List;)V
-	public final fun component1 ()Lkotlin/reflect/KClass;
-	public final fun component2 ()Ljava/util/List;
-	public final fun copy (Lkotlin/reflect/KClass;Ljava/util/List;)Lio/cratis/chronicle/constraints/UniqueEventDefinition;
-	public static synthetic fun copy$default (Lio/cratis/chronicle/constraints/UniqueEventDefinition;Lkotlin/reflect/KClass;Ljava/util/List;ILjava/lang/Object;)Lio/cratis/chronicle/constraints/UniqueEventDefinition;
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getEventClass ()Lkotlin/reflect/KClass;
 	public final fun getProperties ()Ljava/util/List;

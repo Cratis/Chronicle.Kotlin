@@ -82,8 +82,14 @@ interface IUniqueConstraintBuilder {
      * a second person with the same first *and* last name, not a second person sharing either one.
      *
      * The same rules as the single-property overload apply, and at least one property is required.
+     *
+     * The default implementation exists so implementations written before this overload was added keep
+     * compiling and linking. It delegates to [onWithPropertyNames], whose default handles exactly one
+     * property and throws [UnsupportedOperationException] for any other count, because an implementation
+     * that has not been updated has no way to represent a multi-property constraint. Override to support several.
      */
-    fun <TEvent : Any> on(eventClass: KClass<TEvent>, vararg properties: KProperty1<TEvent, *>): IUniqueConstraintBuilder
+    fun <TEvent : Any> on(eventClass: KClass<TEvent>, vararg properties: KProperty1<TEvent, *>): IUniqueConstraintBuilder =
+        onWithPropertyNames(eventClass, *properties.map { it.name }.toTypedArray())
 
     /**
      * Java-friendly alternative to [on] — Java has no equivalent of a Kotlin property reference,
@@ -94,8 +100,22 @@ interface IUniqueConstraintBuilder {
 
     /**
      * The same as [onWithPropertyName] for several properties that together must be unique.
+     *
+     * The default implementation exists so implementations written before this overload was added keep
+     * compiling and linking. It handles exactly one name by delegating to [onWithPropertyName] and throws
+     * [UnsupportedOperationException] for any other count, because an implementation that has not been
+     * updated has no way to represent a multi-property constraint. Override it to support several.
      */
-    fun <TEvent : Any> onWithPropertyNames(eventClass: KClass<TEvent>, vararg propertyNames: String): IUniqueConstraintBuilder
+    fun <TEvent : Any> onWithPropertyNames(eventClass: KClass<TEvent>, vararg propertyNames: String): IUniqueConstraintBuilder {
+        if (propertyNames.size != 1) {
+            throw UnsupportedOperationException(
+                "This IUniqueConstraintBuilder does not support unique constraints over ${propertyNames.size} properties on " +
+                    "'${eventClass.simpleName}'; override onWithPropertyNames to support several."
+            )
+        }
+
+        return onWithPropertyName(eventClass, propertyNames[0])
+    }
     fun ignoreCasing(): IUniqueConstraintBuilder
     fun withMessage(message: String): IUniqueConstraintBuilder
 }

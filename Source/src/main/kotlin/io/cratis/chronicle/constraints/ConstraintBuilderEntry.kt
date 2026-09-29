@@ -19,19 +19,22 @@ sealed class ConstraintBuilderEntry {
      * a data class cannot keep its old `copy` and `componentN` members once its shape changes. They
      * are kept, deprecated, so code compiled against the single-property shape keeps linking.
      *
-     * @param eventDefinitions The event types and properties the constraint covers - at least one.
+     * @param eventDefinitions The event types and properties the constraint covers - at least one. Copied.
      * @param ignoreCasing Whether values are compared without regard to casing.
      * @param message What to tell the caller when the constraint is violated.
      * @param scope The scope the uniqueness is checked within, or `null` for global.
      */
     class UniqueEntry(
-        val eventDefinitions: List<UniqueEventDefinition>,
+        eventDefinitions: List<UniqueEventDefinition>,
         val ignoreCasing: Boolean,
         val message: String,
         val scope: ConstraintScope? = null
     ) : ConstraintBuilderEntry() {
+        /** The event types and properties the constraint covers. Copied on construction, so it cannot change afterwards. */
+        val eventDefinitions: List<UniqueEventDefinition> = eventDefinitions.toList()
+
         init {
-            require(eventDefinitions.isNotEmpty()) { "A unique constraint needs at least one event type." }
+            require(this.eventDefinitions.isNotEmpty()) { "A unique constraint needs at least one event type." }
         }
 
         /** The single-event, single-property form this type had before multi-property constraints. */

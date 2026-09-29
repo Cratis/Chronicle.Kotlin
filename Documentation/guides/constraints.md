@@ -101,6 +101,10 @@ event type throws `EventTypeAlreadyAddedToUniqueConstraint` - list every
 property in one call - and a `unique { }` block that never calls `on` throws
 `NoEventTypesAddedToUniqueConstraint`.
 
+When a constraint spans several event types that each have several properties,
+every type must list the same number of properties in the same order, because
+the kernel combines the values in declaration order.
+
 :::caution[Earlier versions kept only the last `on` call]
 Before this was supported, calling `on` more than once in a `unique { }` block
 silently replaced the earlier call, so only the last event type and property

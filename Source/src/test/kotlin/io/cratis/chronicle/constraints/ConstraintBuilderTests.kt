@@ -10,6 +10,8 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import kotlin.reflect.KClass
+import kotlin.reflect.KProperty1
 
 private data class EmployeeEmailSet(val email: String, val name: String)
 private data class EmployeeMoved(val address: String)
@@ -190,6 +192,47 @@ class ConstraintBuilderTests {
     @Test
     fun `an event definition with no properties is rejected`() {
         assertThrows(IllegalArgumentException::class.java) { UniqueConstraintBuilder().on(PersonRegistered::class) }
+    }
+
+    @Test
+    fun `a repeated property in one on call is rejected by the builder`() {
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            UniqueConstraintBuilder().on(PersonRegistered::class, PersonRegistered::firstName, PersonRegistered::firstName)
+        }
+
+        assertTrue(error.message!!.contains("firstName"))
+    }
+
+    @Test
+    fun `a repeated property name in one onWithPropertyNames call is rejected by the builder`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            UniqueConstraintBuilder().onWithPropertyNames(PersonRegistered::class, "lastName", "lastName")
+        }
+    }
+
+    @Test
+    fun `an implementer written before the multi property overloads accepts one property and rejects several`() {
+        val recorded = mutableListOf<String>()
+        val legacy = object : IUniqueConstraintBuilder {
+            override fun <TEvent : Any, TValue : Any> on(eventClass: KClass<TEvent>, property: KProperty1<TEvent, TValue>) = this
+            override fun <TEvent : Any> onWithPropertyName(eventClass: KClass<TEvent>, propertyName: String): IUniqueConstraintBuilder {
+                recorded.add(propertyName)
+                return this
+            }
+            override fun ignoreCasing() = this
+            override fun withMessage(message: String) = this
+        }
+
+        legacy.on(PersonRegistered::class, *arrayOf(PersonRegistered::firstName))
+        legacy.onWithPropertyNames(PersonRegistered::class, "lastName")
+
+        assertEquals(listOf("firstName", "lastName"), recorded)
+        assertThrows(UnsupportedOperationException::class.java) {
+            legacy.on(PersonRegistered::class, PersonRegistered::firstName, PersonRegistered::lastName)
+        }
+        assertThrows(UnsupportedOperationException::class.java) {
+            legacy.onWithPropertyNames(PersonRegistered::class, "firstName", "lastName")
+        }
     }
 
     @Test
