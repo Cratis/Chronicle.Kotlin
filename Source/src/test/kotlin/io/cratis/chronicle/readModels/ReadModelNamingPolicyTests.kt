@@ -5,6 +5,7 @@ package io.cratis.chronicle.readModels
 
 import Cratis.Chronicle.Contracts.Compliance.ComplianceGrpcKt
 import Cratis.Chronicle.Contracts.Projections.ProjectionsGrpcKt
+import Cratis.Chronicle.Contracts.Projections.ProjectionsOuterClass
 import Cratis.Chronicle.Contracts.ReadModelExplorer.ReadModelExplorerGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
@@ -19,6 +20,7 @@ import io.cratis.chronicle.projections.ProjectionsService
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import io.mockk.coEvery
 import io.mockk.mockk
+import io.mockk.slot
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
@@ -36,6 +38,10 @@ private data class NamingPolicyExplicitPerson(val name: String = "")
 @ReadModel(id = "explicit-projected-person")
 @FromEvent(NamingPolicyPersonRegistered::class)
 private data class NamingPolicyProjectedPerson(val name: String = "")
+
+@ReadModel
+@FromEvent(NamingPolicyPersonRegistered::class)
+private data class NamingPolicyPlainProjectedPerson(val name: String = "")
 
 @io.cratis.chronicle.observation.Reducer(isActive = false)
 private class NamingPolicyPersonReducer {
@@ -115,6 +121,21 @@ class ReadModelNamingPolicyTests {
         assertEquals("explicit-projected-person", definition.type.identifier)
         assertEquals("NamingPolicyProjectedPersons", definition.containerName)
         assertEquals(2, definition.observerTypeValue)
+    }
+
+    @Test
+    fun `a projection refers to its read model by identifier whatever the policy`() = runBlocking {
+        val projections = mockk<ProjectionsGrpcKt.ProjectionsCoroutineStub>()
+        val request = slot<ProjectionsOuterClass.RegisterRequest>()
+        coEvery { projections.register(capture(request), any()) } returns Empty.getDefaultInstance()
+
+        ProjectionsService("my-store", projections, service(pluralize), "default")
+            .register(NamingPolicyProjectedPerson::class, NamingPolicyPlainProjectedPerson::class)
+
+        assertEquals(
+            listOf("explicit-projected-person", "NamingPolicyPlainProjectedPerson"),
+            request.captured.projectionsList.map { it.readModel }
+        )
     }
 
     @Test
