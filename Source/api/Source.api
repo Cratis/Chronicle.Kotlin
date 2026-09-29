@@ -36,9 +36,11 @@ public final class io/cratis/chronicle/ChronicleOptions {
 	public final fun getDefaultSinkTypeId ()Ljava/lang/String;
 	public final fun getOpenTelemetry ()Lio/opentelemetry/api/OpenTelemetry;
 	public final fun getProgramIdentifier ()Ljava/lang/String;
+	public final fun getReadModelNamingPolicy ()Lio/cratis/chronicle/readModels/ReadModelNamingPolicy;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 	public final fun withArtifactsFrom ([Ljava/lang/String;)Lio/cratis/chronicle/ChronicleOptions;
+	public final fun withReadModelNamingPolicy (Lio/cratis/chronicle/readModels/ReadModelNamingPolicy;)Lio/cratis/chronicle/ChronicleOptions;
 	public final fun withoutAutoRegistration ()Lio/cratis/chronicle/ChronicleOptions;
 }
 
@@ -50,6 +52,7 @@ public final class io/cratis/chronicle/ChronicleOptions$Companion {
 public final class io/cratis/chronicle/EventStore : io/cratis/chronicle/IEventStore {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ChronicleServices;Lio/cratis/chronicle/connection/ConnectionLifecycle;Ljava/lang/String;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ZLio/cratis/chronicle/diagnostics/ChronicleTraces;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ChronicleServices;Lio/cratis/chronicle/connection/ConnectionLifecycle;Ljava/lang/String;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ZLio/cratis/chronicle/diagnostics/ChronicleTraces;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ChronicleServices;Lio/cratis/chronicle/connection/ConnectionLifecycle;Ljava/lang/String;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ZLio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/readModels/ReadModelNamingPolicy;)V
 	public fun awaitRegistration (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getCaptures ()Lio/cratis/chronicle/captures/ICapturesService;
 	public fun getCompliance ()Lio/cratis/chronicle/compliance/IComplianceService;
@@ -3349,6 +3352,11 @@ public abstract interface annotation class io/cratis/chronicle/projections/Varia
 	public abstract fun key ()Ljava/lang/String;
 }
 
+public final class io/cratis/chronicle/readModels/DefaultReadModelNamingPolicy : io/cratis/chronicle/readModels/ReadModelNamingPolicy {
+	public static final field INSTANCE Lio/cratis/chronicle/readModels/DefaultReadModelNamingPolicy;
+	public fun getReadModelName (Ljava/lang/Class;)Ljava/lang/String;
+}
+
 public abstract interface class io/cratis/chronicle/readModels/IMaterializedReadModels {
 	public abstract fun getInstances (Lkotlin/reflect/KClass;IILkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun getInstances$default (Lio/cratis/chronicle/readModels/IMaterializedReadModels;Lkotlin/reflect/KClass;IILkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
@@ -3450,6 +3458,10 @@ public final class io/cratis/chronicle/readModels/ReadModelId {
 	public final synthetic fun unbox-impl ()Ljava/lang/String;
 }
 
+public abstract interface class io/cratis/chronicle/readModels/ReadModelNamingPolicy {
+	public abstract fun getReadModelName (Ljava/lang/Class;)Ljava/lang/String;
+}
+
 public final class io/cratis/chronicle/readModels/ReadModelReactors : io/cratis/chronicle/readModels/IReadModelReactors {
 	public static final field REWATCH_DELAY_MS J
 	public fun <init> (Lio/cratis/chronicle/readModels/IReadModelsService;Lio/cratis/chronicle/eventSequences/IEventLog;)V
@@ -3477,6 +3489,7 @@ public final class io/cratis/chronicle/readModels/ReadModelSnapshot {
 public final class io/cratis/chronicle/readModels/ReadModelsService : io/cratis/chronicle/readModels/IReadModelsService {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/ReadModels/ReadModelsGrpcKt$ReadModelsCoroutineStub;LCratis/Chronicle/Contracts/ReadModels/MaterializedReadModelsGrpcKt$MaterializedReadModelsCoroutineStub;LCratis/Chronicle/Contracts/ReadModelExplorer/ReadModelExplorerGrpcKt$ReadModelExplorerCoroutineStub;LCratis/Chronicle/Contracts/Compliance/ComplianceGrpcKt$ComplianceCoroutineStub;Ljava/lang/String;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/ReadModels/ReadModelsGrpcKt$ReadModelsCoroutineStub;LCratis/Chronicle/Contracts/ReadModels/MaterializedReadModelsGrpcKt$MaterializedReadModelsCoroutineStub;LCratis/Chronicle/Contracts/ReadModelExplorer/ReadModelExplorerGrpcKt$ReadModelExplorerCoroutineStub;LCratis/Chronicle/Contracts/Compliance/ComplianceGrpcKt$ComplianceCoroutineStub;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/ReadModels/ReadModelsGrpcKt$ReadModelsCoroutineStub;LCratis/Chronicle/Contracts/ReadModels/MaterializedReadModelsGrpcKt$MaterializedReadModelsCoroutineStub;LCratis/Chronicle/Contracts/ReadModelExplorer/ReadModelExplorerGrpcKt$ReadModelExplorerCoroutineStub;LCratis/Chronicle/Contracts/Compliance/ComplianceGrpcKt$ComplianceCoroutineStub;Ljava/lang/String;Lio/cratis/chronicle/readModels/ReadModelNamingPolicy;)V
 	public fun dehydrateSession (Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getInstanceByKey (Lkotlin/reflect/KClass;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getInstances (Lkotlin/reflect/KClass;Ljava/lang/Long;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;

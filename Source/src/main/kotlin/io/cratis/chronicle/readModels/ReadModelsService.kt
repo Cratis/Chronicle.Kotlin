@@ -39,6 +39,12 @@ internal fun KClass<*>.readModelIdentifier(): String {
     return ann?.id?.ifEmpty { simpleName!! } ?: simpleName!!
 }
 
+/**
+ * Registers read models with the kernel and reads them back.
+ *
+ * @param readModelNamingPolicy Names the container each read model is stored in. Only the container
+ *   name comes from it; the read model identifier is unaffected.
+ */
 class ReadModelsService(
     private val eventStoreName: String,
     private val namespace: String,
@@ -46,8 +52,29 @@ class ReadModelsService(
     materializedStub: MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub,
     private val readModelExplorerStub: ReadModelExplorerGrpcKt.ReadModelExplorerCoroutineStub,
     complianceStub: ComplianceGrpcKt.ComplianceCoroutineStub,
-    private val defaultSinkTypeId: String = WellKnownSinkTypes.MONGODB
+    private val defaultSinkTypeId: String,
+    private val readModelNamingPolicy: ReadModelNamingPolicy
 ) : IReadModelsService {
+    /** Creates a service that names containers after the read model identifier. */
+    constructor(
+        eventStoreName: String,
+        namespace: String,
+        stub: ReadModelsGrpcKt.ReadModelsCoroutineStub,
+        materializedStub: MaterializedReadModelsGrpcKt.MaterializedReadModelsCoroutineStub,
+        readModelExplorerStub: ReadModelExplorerGrpcKt.ReadModelExplorerCoroutineStub,
+        complianceStub: ComplianceGrpcKt.ComplianceCoroutineStub,
+        defaultSinkTypeId: String = WellKnownSinkTypes.MONGODB
+    ) : this(
+        eventStoreName,
+        namespace,
+        stub,
+        materializedStub,
+        readModelExplorerStub,
+        complianceStub,
+        defaultSinkTypeId,
+        DefaultReadModelNamingPolicy
+    )
+
     private val compliance = ComplianceService(eventStoreName, namespace, complianceStub)
     internal lateinit var resolveEventSequence: (EventSequenceId) -> IEventSequence
     private val passiveReducers = ConcurrentHashMap<KClass<*>, Pair<Any, ReducerRegistration>>()
@@ -96,7 +123,7 @@ class ReadModelsService(
                     .setIdentifier(identifier)
                     .build()
             )
-            .setContainerName(identifier)
+            .setContainerName(readModelNamingPolicy.getReadModelName(cls.java))
             .setDisplayName(displayName)
             .setSink(
                 Readmodels.SinkDefinition.newBuilder()

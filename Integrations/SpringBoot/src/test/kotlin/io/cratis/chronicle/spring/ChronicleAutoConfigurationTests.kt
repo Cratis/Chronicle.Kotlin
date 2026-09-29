@@ -8,6 +8,8 @@ import io.cratis.chronicle.IChronicleClient
 import io.cratis.chronicle.IEventStore
 import io.cratis.chronicle.artifacts.IArtifactActivator
 import io.cratis.chronicle.namespaces.IEventStoreNamespaceResolver
+import io.cratis.chronicle.readModels.DefaultReadModelNamingPolicy
+import io.cratis.chronicle.readModels.ReadModelNamingPolicy
 import io.cratis.chronicle.spring.namespaces.AuthenticationNamespaceResolver
 import io.cratis.chronicle.spring.namespaces.FixedNamespaceResolver
 import io.cratis.chronicle.spring.namespaces.HttpHeaderNamespaceResolver
@@ -42,6 +44,49 @@ class ChronicleAutoConfigurationTests {
             assertThat(context).hasSingleBean(Chronicle::class.java)
             assertThat(context).hasSingleBean(IArtifactActivator::class.java)
             assertThat(context).hasSingleBean(IEventStoreNamespaceResolver::class.java)
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    class WithAReadModelNamingPolicy {
+        @Bean
+        fun readModelNamingPolicy(): ReadModelNamingPolicy = ReadModelNamingPolicy { "${it.simpleName}s" }
+    }
+
+    class Order
+
+    @Test
+    fun `names read model containers after their identifier without a naming policy bean`() {
+        runner.run { context ->
+            assertThat(context.getBean(ChronicleOptions::class.java).readModelNamingPolicy)
+                .isSameAs(DefaultReadModelNamingPolicy)
+        }
+    }
+
+    @Test
+    fun `uses a read model naming policy bean when the application declares one`() {
+        runner.withUserConfiguration(WithAReadModelNamingPolicy::class.java).run { context ->
+            val policy = context.getBean(ChronicleOptions::class.java).readModelNamingPolicy
+            assertThat(policy).isSameAs(context.getBean(ReadModelNamingPolicy::class.java))
+            assertThat(policy.getReadModelName(Order::class.java)).isEqualTo("Orders")
+        }
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    class WithTwoReadModelNamingPolicies {
+        @Bean
+        fun pluralizingPolicy(): ReadModelNamingPolicy = ReadModelNamingPolicy { "${it.simpleName}s" }
+
+        @Bean
+        fun lowercasingPolicy(): ReadModelNamingPolicy = ReadModelNamingPolicy { it.simpleName.lowercase() }
+    }
+
+    @Test
+    fun `falls back to the identifier when more than one read model naming policy bean is declared`() {
+        runner.withUserConfiguration(WithTwoReadModelNamingPolicies::class.java).run { context ->
+            assertThat(context).hasNotFailed()
+            assertThat(context.getBean(ChronicleOptions::class.java).readModelNamingPolicy)
+                .isSameAs(DefaultReadModelNamingPolicy)
         }
     }
 

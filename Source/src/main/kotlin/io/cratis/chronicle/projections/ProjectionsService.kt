@@ -11,6 +11,7 @@ import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.readModels.Passive
 import io.cratis.chronicle.readModels.ReadModelsService
+import io.cratis.chronicle.readModels.readModelIdentifier
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.findAnnotations
@@ -265,7 +266,7 @@ class ProjectionsService(
         removedWithJoin: List<ProjectionsOuterClass.KeyValuePair_EventType_RemovedWithJoinDefinition> = emptyList(),
         all: ProjectionsOuterClass.FromEveryDefinition? = null
     ): ProjectionsOuterClass.ProjectionDefinition {
-        val readModelName = readModelClass.simpleName ?: ""
+        val readModelName = readModelClass.readModelIdentifier()
         val initialModelStateJson = try {
             val ctor = readModelClass.primaryConstructor
             if (ctor != null && ctor.parameters.all { it.isOptional }) {

@@ -28,6 +28,7 @@ data class ChronicleOptions(
 | `artifacts` | `ClientArtifacts.default` | What the application is made of |
 | `artifactActivator` | `ArtifactActivator` | How artifacts are created |
 | `openTelemetry` | `null` | Where spans go — see [Tracing](../guides/tracing.md) |
+| `readModelNamingPolicy` | `DefaultReadModelNamingPolicy` | Names each read model's container — see [Read model container names](#read-model-container-names) |
 
 `programIdentifier` is a human-readable label that shows up in diagnostics.
 `defaultSinkTypeId` defaults to `WellKnownSinkTypes.MONGODB`, and can be
@@ -44,6 +45,10 @@ the common adjustments — see
 ChronicleOptions.development().withoutAutoRegistration()
 ChronicleOptions.development().withArtifactsFrom("com.acme.ordering")
 ```
+
+`readModelNamingPolicy` is not a constructor parameter. Set it with
+`withReadModelNamingPolicy`, described below. `copy` does not carry it over,
+so set it again after copying.
 
 There are two factories on the companion object:
 
@@ -65,6 +70,55 @@ ChronicleOptions.fromConnectionString(
     "chronicle://chronicle.internal:35000?skipTlsValidation=false");
 ChronicleOptions.development();
 ```
+
+## Read model container names
+
+Every read model is stored in a container: a MongoDB collection or a SQL
+table. By default the client names it after the read model's identifier — the
+`@ReadModel(id = ...)` value, or the class simple name. A `Customer` read model
+is stored in a container called `Customer`.
+
+That is not always the name another layer expects. Arc's MongoDB naming policy,
+for example, pluralizes, so it reads `Customers` while the client writes
+`Customer`. A `ReadModelNamingPolicy` decides the container name instead:
+
+<!-- validate: skip -->
+
+```kotlin
+fun interface ReadModelNamingPolicy {
+    fun getReadModelName(readModelClass: Class<*>): String
+}
+```
+
+Set one on the options. The policy names only the container. The read model
+identifier, and everything keyed on it — projections, reducers, observers, and
+the queries that read a model back — stays as it was.
+
+<!-- validate: body -->
+
+```kotlin
+import io.cratis.chronicle.readModels.ReadModelNamingPolicy
+
+val options = ChronicleOptions.development()
+    .withReadModelNamingPolicy(
+        ReadModelNamingPolicy { "${it.simpleName}s" }
+    )
+```
+
+<!-- validate: body -->
+
+```java
+import io.cratis.chronicle.ChronicleOptions;
+
+var options = ChronicleOptions.development()
+    .withReadModelNamingPolicy(
+        readModelClass -> readModelClass.getSimpleName() + "s");
+```
+
+A policy that already exists as an object, such as Arc's, plugs in by
+delegating to it from the lambda. In a Spring Boot application, declare a
+`ReadModelNamingPolicy` bean and the starter uses it — see
+[Spring Boot](../guides/spring-boot.md#replacing-what-the-starter-provides).
 
 ## Connection string format
 
