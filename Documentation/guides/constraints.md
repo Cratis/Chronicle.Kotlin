@@ -136,7 +136,8 @@ class ConstraintsBridgeUniqueFullName implements IConstraint {
     public void define(IConstraintBuilder builder) {
         builder.unique(unique -> {
             UniqueConstraintBuilderJavaBridge
-                .on(unique, ConstraintsBridgePersonRegistered.class, "firstName", "lastName")
+                .on(unique, ConstraintsBridgePersonRegistered.class,
+                    "firstName", "lastName")
                 .ignoreCasing();
         });
     }
