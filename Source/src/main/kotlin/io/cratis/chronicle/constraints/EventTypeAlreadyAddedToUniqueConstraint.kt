@@ -52,7 +52,7 @@ class EventTypeAlreadyAddedToUniqueConstraint private constructor(
         properties,
         constraintName,
         "The event type '${eventClass.simpleName}' with properties '${properties.joinToString(", ")}' has already " +
-            "been added to the unique constraint with name '$constraintName'. Give each [Unique] property of an " +
+            "been added to the unique constraint with name '$constraintName'. Give each @Unique property of an " +
             "event type its own id."
     )
 }
