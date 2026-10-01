@@ -103,6 +103,7 @@ internal object ModelBoundConstraints {
         return marked
             .groupBy { (_, propertyName, unique) -> unique.id.ifEmpty { propertyName } }
             .map { (name, group) ->
+                throwIfEventTypeSharesName(name, group)
                 val eventDefinitions = group.map { (eventType, propertyName, _) ->
                     EventsConstraints.UniqueConstraintEventDefinition.newBuilder()
                         .setEventTypeId(eventTypeIdOf(eventType))
@@ -124,6 +125,20 @@ internal object ModelBoundConstraints {
                     )
                     .build()
             }
+    }
+
+    /**
+     * Rejects a constraint name shared by more than one property of the same event type.
+     *
+     * Each annotated property becomes its own definition for its event type, and the kernel resolves
+     * exactly one definition per event type, so such a model would break every append of that event
+     * type. This mirrors the .NET client, which rejects the same model at registration.
+     */
+    private fun throwIfEventTypeSharesName(name: String, group: List<Triple<KClass<*>, String, Unique>>) {
+        val duplicate = group.groupBy { (eventType, _, _) -> eventType }.entries.firstOrNull { it.value.size > 1 }
+            ?: return
+
+        throw EventTypeAlreadyAddedToUniqueConstraint(name, duplicate.key, duplicate.value.map { (_, propertyName, _) -> propertyName })
     }
 
     private fun constraintBuilder(name: String, removedWith: Map<String, String>): EventsConstraints.Constraint.Builder {
