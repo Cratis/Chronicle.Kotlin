@@ -5,18 +5,17 @@ package io.cratis.chronicle.eventSequences
 
 import Cratis.Chronicle.Contracts.Sequences.EventSequencesGrpcKt
 import Cratis.Chronicle.Contracts.Sequences.Sequences
-import bcl.Bcl
 import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.auditing.causationManager
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.identity.Identity
 import io.cratis.chronicle.identity.identityProvider
+import io.cratis.chronicle.toBclGuid
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.slot
-import java.lang.Long.reverseBytes
 import java.time.Instant
 import java.util.UUID
 import kotlinx.coroutines.runBlocking
@@ -58,9 +57,7 @@ class RoutedBatchMetadataTests {
                 assertEquals("store", sent.eventStore)
                 assertEquals("tenant", sent.namespace)
                 assertEquals(EventSequenceId.eventLog.value, sent.eventSequenceId)
-                assertEquals(Bcl.Guid.newBuilder()
-                    .setLo(reverseBytes(correlationId.mostSignificantBits))
-                    .setHi(reverseBytes(correlationId.leastSignificantBits)).build(), sent.correlationId)
+                assertEquals(correlationId.toBclGuid(), sent.correlationId)
                 assertEquals("operator", sent.causedBy.subject)
                 assertEquals("Operator", sent.causedBy.name)
                 assertEquals("operator-name", sent.causedBy.userName)

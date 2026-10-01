@@ -6,6 +6,7 @@ package io.cratis.chronicle.captures
 import Cratis.Chronicle.Contracts.Captures.CapturesGrpcKt
 import Cratis.Chronicle.Contracts.Captures.CapturesOuterClass
 import bcl.Bcl
+import io.cratis.chronicle.toBclGuid
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -106,15 +107,7 @@ class CapturesService(
         CaptureValidationMessage(message, line, column)
 }
 
-private fun String.toContractsGuid(): Bcl.Guid {
-    // bcl.Guid: lo = first 8 bytes, hi = second 8 bytes, little-endian.
-    // Java UUID.mostSignificantBits and leastSignificantBits are big-endian, so reverse each half.
-    val uuid = UUID.fromString(this)
-    return Bcl.Guid.newBuilder()
-        .setLo(java.lang.Long.reverseBytes(uuid.mostSignificantBits))
-        .setHi(java.lang.Long.reverseBytes(uuid.leastSignificantBits))
-        .build()
-}
+private fun String.toContractsGuid(): Bcl.Guid = UUID.fromString(this).toBclGuid()
 
 private fun ensureSuccessMessage(operation: String, isAuthorized: Boolean, exceptionMessages: List<String>) {
     if (!isAuthorized) throw io.cratis.chronicle.eventSequences.ChronicleCommandRejected(operation, "not authorized")

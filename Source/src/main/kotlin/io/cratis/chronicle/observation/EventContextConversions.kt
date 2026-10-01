@@ -5,7 +5,6 @@ package io.cratis.chronicle.observation
 
 import Cratis.Chronicle.Contracts.Observation.Reactors.ObservationReactors
 import Cratis.Chronicle.Contracts.Observation.Reducers.ObservationReducers
-import bcl.Bcl
 import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.events.EventContext
@@ -14,6 +13,7 @@ import io.cratis.chronicle.events.EventTypeDescriptor
 import io.cratis.chronicle.events.EventTypeGeneration
 import io.cratis.chronicle.events.EventTypeId
 import io.cratis.chronicle.identity.Identity
+import io.cratis.chronicle.toUuid
 import java.time.Instant
 import java.util.UUID
 
@@ -96,15 +96,6 @@ private fun ObservationReducers.Causation.toCausation(): Causation = Causation(
     type = CausationType(type),
     properties = propertiesMap.toMap()
 )
-
-/**
- * Reads a `bcl.Guid` as a [UUID].
- *
- * `bcl.Guid` stores `lo` as the first 8 bytes and `hi` as the second 8, little-endian, whereas
- * [UUID] is big-endian in both halves - so each half is byte-reversed on the way across.
- */
-private fun Bcl.Guid.toUuid(): UUID =
-    UUID(java.lang.Long.reverseBytes(lo), java.lang.Long.reverseBytes(hi))
 
 /**
  * Parses an ISO-8601 timestamp, falling back to now when the kernel sent something unparseable.

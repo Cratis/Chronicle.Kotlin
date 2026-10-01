@@ -6,8 +6,8 @@ package io.cratis.chronicle.observation
 import Cratis.Chronicle.Contracts.Observation.FailedPartitionsGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Observation
 import Cratis.Chronicle.Contracts.Observation.ObserversGrpcKt
-import bcl.Bcl
 import io.cratis.chronicle.eventSequences.EventSequenceId
+import io.cratis.chronicle.toBclGuid
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
 import io.mockk.mockk
@@ -39,15 +39,10 @@ class FailedPartitionsTests {
 
     private val partitionId = UUID.fromString("6f1a9b6a-0f6d-4f3f-9b8e-9a2f0d5e1c77")
 
-    private fun UUID.toContract(): Bcl.Guid = Bcl.Guid.newBuilder()
-        .setLo(java.lang.Long.reverseBytes(mostSignificantBits))
-        .setHi(java.lang.Long.reverseBytes(leastSignificantBits))
-        .build()
-
     private fun onePartition() = Observation.IEnumerable_FailedPartition.newBuilder()
         .addItems(
             Observation.FailedPartition.newBuilder()
-                .setId(partitionId.toContract())
+                .setId(partitionId.toBclGuid())
                 .setObserverId("employee-alerts")
                 .setPartition("employee-1")
                 .addAttempts(
@@ -118,7 +113,7 @@ class FailedPartitionsTests {
         val response = Observation.IEnumerable_FailedPartition.newBuilder()
             .addItems(
                 Observation.FailedPartition.newBuilder()
-                    .setId(partitionId.toContract())
+                    .setId(partitionId.toBclGuid())
                     .setObserverId("employee-alerts")
                     .setPartition("employee-1")
             )

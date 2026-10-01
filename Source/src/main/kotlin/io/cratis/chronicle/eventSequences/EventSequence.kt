@@ -5,7 +5,6 @@ package io.cratis.chronicle.eventSequences
 
 import Cratis.Chronicle.Contracts.Sequences.Sequences
 import Cratis.Chronicle.Contracts.Sequences.EventSequencesGrpcKt
-import bcl.Bcl
 import io.cratis.chronicle.artifacts.IRegistrationGate
 import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.auditing.CausationType
@@ -18,6 +17,7 @@ import io.cratis.chronicle.events.EventTypeDescriptor
 import io.cratis.chronicle.identity.Identity as ChronicleIdentity
 import io.cratis.chronicle.identity.identityProvider
 import io.cratis.chronicle.json.chronicleGson
+import io.cratis.chronicle.toBclGuid
 import io.opentelemetry.api.common.Attributes
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -89,7 +89,7 @@ open class EventSequence(
             this.eventStore = esName
             this.namespace = ns
             this.eventSequenceId = id.value
-            this.correlationId = correlationId.toContractsGuid()
+            this.correlationId = correlationId.toBclGuid()
             options?.eventSourceType?.let { this.eventSourceType = it }
             this.eventSourceId = eventSourceId
             options?.eventStreamType?.let { this.eventStreamType = it }
@@ -180,7 +180,7 @@ open class EventSequence(
             this.eventSequenceId = id.value
             this.eventSourceId = eventSourceId
             addAllEvents(eventsForEventSourceId.map { it.toContract() })
-            this.correlationId = correlationId.toContractsGuid()
+            this.correlationId = correlationId.toBclGuid()
             addAllTags(options?.tags ?: emptyList())
             addAllCausation(causationChain.map { c -> c.toContractsCausation() })
             this.causedBy = identity.withoutDuplicates().toContractsIdentity()
@@ -232,7 +232,7 @@ open class EventSequence(
             this.namespace = ns
             this.eventSequenceId = id.value
             addAllEvents(events.map { it.toContractForEventSource() })
-            this.correlationId = effectiveCorrelationId.toContractsGuid()
+            this.correlationId = effectiveCorrelationId.toBclGuid()
             addAllCausation(causationChain.map { c -> c.toContractsCausation() })
             this.causedBy = identity.withoutDuplicates().toContractsIdentity()
             addAllConcurrencyScopes(
@@ -621,15 +621,6 @@ private fun Instant.toContractsDateTimeOffset(): Sequences.SerializableDateTimeO
     Sequences.SerializableDateTimeOffset.newBuilder()
         .setValue(DateTimeFormatter.ISO_INSTANT.format(this))
         .build()
-
-private fun UUID.toContractsGuid(): Bcl.Guid {
-    // bcl.Guid: lo = first 8 bytes, hi = second 8 bytes, little-endian.
-    // Java UUID.mostSignificantBits and leastSignificantBits are big-endian, so reverse each half.
-    return Bcl.Guid.newBuilder()
-        .setLo(java.lang.Long.reverseBytes(mostSignificantBits))
-        .setHi(java.lang.Long.reverseBytes(leastSignificantBits))
-        .build()
-}
 
 private fun EventTypeDescriptor.toContractsEventType(): Sequences.EventType =
     Sequences.EventType.newBuilder()

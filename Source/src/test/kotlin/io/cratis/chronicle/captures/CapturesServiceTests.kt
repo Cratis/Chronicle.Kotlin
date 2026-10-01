@@ -6,6 +6,7 @@ package io.cratis.chronicle.captures
 import Cratis.Chronicle.Contracts.Captures.CapturesGrpcKt
 import Cratis.Chronicle.Contracts.Captures.CapturesOuterClass
 import bcl.Bcl
+import io.cratis.chronicle.toBclGuid
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -33,13 +34,7 @@ class CapturesServiceTests {
     // "exchange-rates" string below is only ever the display id the kernel hands back in a response.
     private val captureId = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 
-    private fun String.toContractGuid(): Bcl.Guid {
-        val uuid = UUID.fromString(this)
-        return Bcl.Guid.newBuilder()
-            .setLo(java.lang.Long.reverseBytes(uuid.mostSignificantBits))
-            .setHi(java.lang.Long.reverseBytes(uuid.leastSignificantBits))
-            .build()
-    }
+    private fun String.toContractGuid(): Bcl.Guid = UUID.fromString(this).toBclGuid()
 
     private fun capture(status: CapturesOuterClass.CaptureStatus) =
         CapturesOuterClass.CaptureDetailsResponse.newBuilder()
