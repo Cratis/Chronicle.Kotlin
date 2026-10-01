@@ -16,6 +16,14 @@ import kotlinx.coroutines.flow.Flow
  * it on connect. Reach for this when the declaration is not known at build time - one being written
  * in an editor and validated as it is typed, or read from configuration - or to inspect and control
  * what is running.
+ *
+ * Client versions before the .NET GUID fix sent capture ids with the first three groups byte-reversed,
+ * so the kernel holds a capture they saved under that transposed id. [save], [start], [stop] and
+ * [delete] keep addressing such a capture by the id the kernel holds rather than moving it: they use
+ * the given id when the kernel holds a capture under it, otherwise its transposed form when the kernel
+ * holds that, and otherwise the given id, so a new capture is created under it. The capture keeps its
+ * record of what it has already seen, so nothing is appended twice. [getAll] and [observeAll] list it
+ * under the transposed id. To decide, each of these calls first lists the event store's captures.
  */
 interface ICapturesService {
     /**
@@ -39,9 +47,7 @@ interface ICapturesService {
      *
      * Saving does not start the capture. A rejected declaration changes nothing.
      *
-     * A capture an earlier client version saved under this id's transposed form (the first three groups
-     * byte-reversed) is stopped and deleted first, so an upgrade does not leave the old one running next
-     * to the new.
+     * See [ICapturesService] for how a capture an earlier client version saved is addressed.
      *
      * @param id The identifier to hold the capture under.
      * @param declaration The Capture Declaration Language document.
