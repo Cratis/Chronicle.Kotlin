@@ -39,6 +39,10 @@ interface ICapturesService {
      *
      * Saving does not start the capture. A rejected declaration changes nothing.
      *
+     * A capture an earlier client version saved under this id's transposed form (the first three groups
+     * byte-reversed) is stopped and deleted first, so an upgrade does not leave the old one running next
+     * to the new.
+     *
      * @param id The identifier to hold the capture under.
      * @param declaration The Capture Declaration Language document.
      * @return The capture as saved, or what is wrong with the declaration.

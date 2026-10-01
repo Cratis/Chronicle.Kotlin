@@ -47,6 +47,21 @@ internal fun UUID.toBclGuid(): Bcl.Guid {
         .build()
 }
 
+/**
+ * The UUID the kernel holds a value under when a client that predates the mixed-endian conversion sent it.
+ *
+ * Those clients wrote `lo` and `hi` as the byte-reversed big-endian halves of the UUID, so the kernel read
+ * the 16 bytes of the UUID as they stood and showed Data1, Data2 and Data3 byte-reversed: sending
+ * `01020304-0506-0708-090a-0b0c0d0e0f10` stored `04030201-0605-0807-090a-0b0c0d0e0f10`. The result is its
+ * own inverse, and equals this UUID when the first three groups are palindromic.
+ */
+internal fun UUID.toTransposedUuid(): UUID =
+    Bcl.Guid.newBuilder()
+        .setLo(java.lang.Long.reverseBytes(mostSignificantBits))
+        .setHi(java.lang.Long.reverseBytes(leastSignificantBits))
+        .build()
+        .toUuid()
+
 private const val GUID_SIZE = 16
 
 /**

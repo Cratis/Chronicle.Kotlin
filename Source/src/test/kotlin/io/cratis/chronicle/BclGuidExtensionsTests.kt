@@ -72,4 +72,21 @@ class BclGuidExtensionsTests {
             assertEquals(uuid, uuid.toBclGuid().toUuid())
         }
     }
+
+    @Test
+    fun `an id sent by an earlier client is held by the kernel with the first three groups byte reversed`() {
+        // The expected value is the Guid string the .NET kernel showed for what the earlier client sent.
+        val sent = UUID.fromString("01020304-0506-0708-090a-0b0c0d0e0f10")
+
+        assertEquals(UUID.fromString("04030201-0605-0807-090a-0b0c0d0e0f10"), sent.toTransposedUuid())
+    }
+
+    @Test
+    fun `transposing twice gives the id back`() {
+        repeat(1000) {
+            val uuid = UUID.randomUUID()
+
+            assertEquals(uuid, uuid.toTransposedUuid().toTransposedUuid())
+        }
+    }
 }

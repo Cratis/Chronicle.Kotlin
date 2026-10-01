@@ -8,6 +8,7 @@ import Cratis.Chronicle.Contracts.Captures.CapturesOuterClass
 import bcl.Bcl
 import io.cratis.chronicle.toBclGuid
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
@@ -18,6 +19,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -43,6 +45,25 @@ class CapturesServiceTests {
             .setDeclaration(declaration)
             .setStatus(status)
             .build()
+
+    // What the kernel lists when asked what it holds: one capture per id, shown as the .NET Guid string.
+    private fun holding(stub: CapturesGrpcKt.CapturesCoroutineStub, vararg ids: String) {
+        val response = CapturesOuterClass.QueryResult_IEnumerable_CaptureDetailsResponse.newBuilder()
+        ids.forEach { response.addData(capture(CapturesOuterClass.CaptureStatus.Started).toBuilder().setId(it).build()) }
+        coEvery { stub.getCaptures(any(), any()) } returns response.build()
+    }
+
+    private fun accepting(stub: CapturesGrpcKt.CapturesCoroutineStub) {
+        coEvery { stub.saveCapture(any(), any()) } returns
+            CapturesOuterClass.CommandResult_SaveCaptureResponse.newBuilder()
+                .setIsAuthorized(true)
+                .setResponse(
+                    CapturesOuterClass.SaveCaptureResponse.newBuilder()
+                        .setCapture(capture(CapturesOuterClass.CaptureStatus.Stopped))
+                        .build()
+                )
+                .build()
+    }
 
     private fun message(text: String, line: Int, column: Int) =
         CapturesOuterClass.CaptureValidationMessage.newBuilder()
@@ -101,6 +122,7 @@ class CapturesServiceTests {
     @Test
     fun `saving a declaration the kernel accepts returns the capture it now holds`() = runBlocking {
         val stub = mockk<CapturesGrpcKt.CapturesCoroutineStub>()
+        holding(stub)
         coEvery { stub.saveCapture(any(), any()) } returns
             CapturesOuterClass.CommandResult_SaveCaptureResponse.newBuilder()
                 .setIsAuthorized(true)
@@ -122,6 +144,7 @@ class CapturesServiceTests {
     @Test
     fun `a declaration the kernel rejects comes back as messages rather than throwing`() = runBlocking {
         val stub = mockk<CapturesGrpcKt.CapturesCoroutineStub>()
+        holding(stub)
         coEvery { stub.saveCapture(any(), any()) } returns
             CapturesOuterClass.CommandResult_SaveCaptureResponse.newBuilder()
                 .setIsAuthorized(true)
@@ -143,6 +166,7 @@ class CapturesServiceTests {
     fun `a declaration accepted with something worth saying keeps both`() = runBlocking {
         // Messages alone do not mean rejection - the capture coming back is what says it took.
         val stub = mockk<CapturesGrpcKt.CapturesCoroutineStub>()
+        holding(stub)
         coEvery { stub.saveCapture(any(), any()) } returns
             CapturesOuterClass.CommandResult_SaveCaptureResponse.newBuilder()
                 .setIsAuthorized(true)
@@ -224,5 +248,94 @@ class CapturesServiceTests {
 
         assertEquals(captureId.toContractGuid(), stopped.captured.captureId)
         assertEquals(captureId.toContractGuid(), deleted.captured.captureId)
+    }
+
+    // 3fa85f64-5717-4562-b3fc-2c963f66afa6 with Data1, Data2 and Data3 byte-reversed: what a kernel
+    // holds for a capture an earlier client saved under captureId.
+    private val transposedCaptureId = "645fa83f-1757-6245-b3fc-2c963f66afa6"
+
+    @Test
+    fun `a capture an earlier client saved under the transposed id is stopped and deleted before saving`() = runBlocking {
+        val stub = mockk<CapturesGrpcKt.CapturesCoroutineStub>()
+        val calls = mutableListOf<String>()
+        val stopped = slot<CapturesOuterClass.StopCaptureRequest>()
+        val deleted = slot<CapturesOuterClass.DeleteCaptureRequest>()
+        val saved = slot<CapturesOuterClass.SaveCaptureRequest>()
+        holding(stub, transposedCaptureId)
+        coEvery { stub.stopCapture(capture(stopped), any()) } answers {
+            calls += "stop"
+            CapturesOuterClass.CommandResult.newBuilder().setIsAuthorized(true).build()
+        }
+        coEvery { stub.deleteCapture(capture(deleted), any()) } answers {
+            calls += "delete"
+            CapturesOuterClass.CommandResult.newBuilder().setIsAuthorized(true).build()
+        }
+        coEvery { stub.saveCapture(capture(saved), any()) } answers {
+            calls += "save"
+            CapturesOuterClass.CommandResult_SaveCaptureResponse.newBuilder().setIsAuthorized(true).build()
+        }
+
+        serviceFor(stub).save(captureId, declaration)
+
+        assertEquals(listOf("stop", "delete", "save"), calls)
+        // The old capture is addressed by the Guid the earlier client put on the wire, which is the
+        // byte-reversed halves of the UUID - not by what the current client sends for the same id.
+        val earlierWire = Bcl.Guid.newBuilder()
+            .setLo(java.lang.Long.reverseBytes(UUID.fromString(captureId).mostSignificantBits))
+            .setHi(java.lang.Long.reverseBytes(UUID.fromString(captureId).leastSignificantBits))
+            .build()
+        assertEquals(earlierWire, stopped.captured.captureId)
+        assertEquals(earlierWire, deleted.captured.captureId)
+        assertEquals(captureId.toContractGuid(), saved.captured.id)
+    }
+
+    @Test
+    fun `a capture already held under the correct id is left alone`() = runBlocking {
+        val stub = mockk<CapturesGrpcKt.CapturesCoroutineStub>()
+        holding(stub, transposedCaptureId, captureId)
+        accepting(stub)
+
+        serviceFor(stub).save(captureId, declaration)
+
+        coVerify(exactly = 0) { stub.stopCapture(any(), any()) }
+        coVerify(exactly = 0) { stub.deleteCapture(any(), any()) }
+        coVerify(exactly = 1) { stub.saveCapture(any(), any()) }
+    }
+
+    @Test
+    fun `saving again after the migration removes nothing`() = runBlocking {
+        val stub = mockk<CapturesGrpcKt.CapturesCoroutineStub>()
+        holding(stub, captureId)
+        accepting(stub)
+
+        serviceFor(stub).save(captureId, declaration)
+
+        coVerify(exactly = 0) { stub.stopCapture(any(), any()) }
+        coVerify(exactly = 0) { stub.deleteCapture(any(), any()) }
+    }
+
+    @Test
+    fun `an id that reads the same transposed is saved without asking the kernel what it holds`() = runBlocking {
+        val palindromic = "01010101-0101-0101-0101-010101010101"
+        val stub = mockk<CapturesGrpcKt.CapturesCoroutineStub>()
+        accepting(stub)
+
+        serviceFor(stub).save(palindromic, declaration)
+
+        coVerify(exactly = 0) { stub.getCaptures(any(), any()) }
+        coVerify(exactly = 0) { stub.stopCapture(any(), any()) }
+    }
+
+    @Test
+    fun `a capture that cannot be removed stops the save`() = runBlocking {
+        val stub = mockk<CapturesGrpcKt.CapturesCoroutineStub>()
+        holding(stub, transposedCaptureId)
+        coEvery { stub.stopCapture(any(), any()) } returns
+            CapturesOuterClass.CommandResult.newBuilder().setIsAuthorized(false).build()
+
+        assertThrows(io.cratis.chronicle.eventSequences.ChronicleCommandRejected::class.java) {
+            runBlocking { serviceFor(stub).save(captureId, declaration) }
+        }
+        coVerify(exactly = 0) { stub.saveCapture(any(), any()) }
     }
 }

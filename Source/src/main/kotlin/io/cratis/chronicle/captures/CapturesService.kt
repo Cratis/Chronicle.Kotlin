@@ -7,6 +7,7 @@ import Cratis.Chronicle.Contracts.Captures.CapturesGrpcKt
 import Cratis.Chronicle.Contracts.Captures.CapturesOuterClass
 import bcl.Bcl
 import io.cratis.chronicle.toBclGuid
+import io.cratis.chronicle.toTransposedUuid
 import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -38,6 +39,8 @@ class CapturesService(
             .setId(id.toContractsGuid())
             .setDeclaration(declaration)
             .build()
+
+        removeCaptureHeldUnderTransposedId(id)
 
         val response = stub.saveCapture(request).ensureSuccess("save capture")
         val messages = response.messagesList.map { it.toClient() }
@@ -86,6 +89,26 @@ class CapturesService(
             .build()
 
         stub.deleteCapture(request).ensureSuccess("delete capture")
+    }
+
+    /**
+     * Removes a capture an earlier client saved under this id's transposed form.
+     *
+     * Earlier clients sent capture ids with the first three groups byte-reversed, so after an upgrade the
+     * same capture sits in the kernel under a different id and saving would create a second, running
+     * alongside the first. When the transposed id is held and the correct id is not, the old capture is
+     * stopped and deleted before the new one is saved. Once it is gone, or when both ids are held, there
+     * is nothing to do - so this is safe to run on every save.
+     */
+    private suspend fun removeCaptureHeldUnderTransposedId(id: String) {
+        val transposed = UUID.fromString(id).toTransposedUuid().toString()
+        if (transposed.equals(id, ignoreCase = true)) return
+
+        val held = getAll().map { it.id.lowercase() }.toSet()
+        if (transposed in held && id.lowercase() !in held) {
+            stop(transposed)
+            delete(transposed)
+        }
     }
 
     private fun getRequest(): CapturesOuterClass.GetCapturesRequest =
