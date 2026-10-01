@@ -856,7 +856,9 @@ public final class io/cratis/chronicle/constraints/ConstraintsService : io/crati
 }
 
 public final class io/cratis/chronicle/constraints/EventTypeAlreadyAddedToUniqueConstraint : java/lang/IllegalStateException {
+	public fun <init> (Ljava/lang/String;Lkotlin/reflect/KClass;Ljava/util/List;)V
 	public fun <init> (Lkotlin/reflect/KClass;Ljava/util/List;)V
+	public final fun getConstraintName ()Ljava/lang/String;
 	public final fun getEventClass ()Lkotlin/reflect/KClass;
 	public final fun getProperties ()Ljava/util/List;
 }

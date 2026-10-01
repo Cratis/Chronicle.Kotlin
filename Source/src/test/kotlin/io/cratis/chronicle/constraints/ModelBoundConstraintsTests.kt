@@ -5,6 +5,7 @@ package io.cratis.chronicle.constraints
 
 import io.cratis.chronicle.events.EventType
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
@@ -55,6 +56,15 @@ private data class NamedGroupMessage(@Unique(id = "shared", message = "Already u
 
 @EventType
 private data class ModelBoundProjectCreated(@Unique val name: String, val description: String)
+
+@EventType
+private data class ModelBoundContactChanged(
+    @Unique(id = "ModelBoundSharedContact") val email: String,
+    @Unique(id = "ModelBoundSharedContact") val phone: String
+)
+
+@EventType
+private data class ModelBoundContactAdded(@Unique(id = "ModelBoundSharedContact") val email: String)
 
 class ModelBoundConstraintsTests {
 
@@ -143,5 +153,30 @@ class ModelBoundConstraintsTests {
 
         val constraint = constraints.single { it.name == "ModelBoundSharedName" }
         assertEquals(listOf("ModelBoundFirstReleaser"), constraint.removedWithList)
+    }
+
+    @Test
+    fun `buildFor rejects two properties of one event type sharing a constraint name`() {
+        val error = assertThrows(EventTypeAlreadyAddedToUniqueConstraint::class.java) {
+            ModelBoundConstraints.buildFor(listOf(ModelBoundContactChanged::class))
+        }
+
+        assertEquals("ModelBoundSharedContact", error.constraintName)
+        assertEquals(ModelBoundContactChanged::class, error.eventClass)
+        assertEquals(setOf("email", "phone"), error.properties.toSet())
+        val message = error.message!!
+        assertTrue(message.contains("ModelBoundSharedContact"))
+        assertTrue(message.contains("ModelBoundContactChanged"))
+        assertTrue(message.contains("email"))
+        assertTrue(message.contains("phone"))
+    }
+
+    @Test
+    fun `buildFor rejects the shared name even when another event type also uses it`() {
+        val error = assertThrows(EventTypeAlreadyAddedToUniqueConstraint::class.java) {
+            ModelBoundConstraints.buildFor(listOf(ModelBoundContactAdded::class, ModelBoundContactChanged::class))
+        }
+
+        assertEquals(ModelBoundContactChanged::class, error.eventClass)
     }
 }

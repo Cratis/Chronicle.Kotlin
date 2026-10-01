@@ -10,7 +10,9 @@ package io.cratis.chronicle.constraints
  * type may carry the same value for it. Applying [Unique] with the same [id] to a property on more
  * than one event type groups them under one constraint - the value has to be unique across all of
  * them combined, not just within each event type separately (see the class documentation for
- * [IConstraint] and the `unique` fluent builder for the equivalent hand-written form).
+ * [IConstraint] and the `unique` fluent builder for the equivalent hand-written form). Two properties
+ * of one event type cannot share an [id]: registration throws [EventTypeAlreadyAddedToUniqueConstraint],
+ * as the .NET client does.
  *
  * On an event type, uniqueness means at most one instance of that event type may exist per event
  * source - the model-bound equivalent of a fluent constraint's `uniqueFor`.
