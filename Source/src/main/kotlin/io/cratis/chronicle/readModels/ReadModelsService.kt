@@ -21,10 +21,10 @@ import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.observation.ReducerRegistration
 import io.cratis.chronicle.schemas.JsonSchemaGenerator
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
+import io.cratis.chronicle.toUuid
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.Instant
-import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
@@ -310,7 +310,7 @@ class ReadModelsService(
             instance = chronicleGson.fromJson(instance, readModelClass.java),
             events = eventsList,
             occurred = if (hasOccurred()) occurred.value.toInstantOrNull() else null,
-            correlationId = if (hasCorrelationId()) correlationId.toUUID() else null
+            correlationId = if (hasCorrelationId()) correlationId.toUuid() else null
         )
 
     private fun <T : Any> Readmodels.ReadModelChangeset.toTyped(readModelClass: KClass<T>): ReadModelChangeset<T> =
@@ -326,7 +326,7 @@ class ReadModelsService(
             changeType = changeType.toClient(),
             eventSequenceNumber = eventSequenceNumber,
             occurred = if (hasOccurred()) occurred.value.toInstantOrNull() else null,
-            correlationId = if (hasCorrelationId()) correlationId.toUUID() else null
+            correlationId = if (hasCorrelationId()) correlationId.toUuid() else null
         )
 }
 
@@ -340,14 +340,4 @@ private fun Readmodels.ReadModelChangeType.toClient(): ReadModelChangeType = whe
     Readmodels.ReadModelChangeType.Added -> ReadModelChangeType.Added
     Readmodels.ReadModelChangeType.Removed -> ReadModelChangeType.Removed
     else -> ReadModelChangeType.Modified
-}
-
-/**
- * Converts a wire [Bcl.Guid] (lo/hi, little-endian halves) back to a Java [UUID] (big-endian halves) -
- * the inverse of the `UUID.toContractsGuid()` conversion used when appending events.
- */
-private fun Bcl.Guid.toUUID(): UUID {
-    val mostSignificantBits = java.lang.Long.reverseBytes(lo)
-    val leastSignificantBits = java.lang.Long.reverseBytes(hi)
-    return UUID(mostSignificantBits, leastSignificantBits)
 }

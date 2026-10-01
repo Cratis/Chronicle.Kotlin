@@ -6,7 +6,10 @@ package io.cratis.chronicle.captures
 import Cratis.Chronicle.Contracts.Captures.CapturesGrpcKt
 import Cratis.Chronicle.Contracts.Captures.CapturesOuterClass
 import bcl.Bcl
+import io.cratis.chronicle.toBclGuid
+import io.cratis.chronicle.toTransposedUuid
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -21,6 +24,9 @@ class CapturesService(
     private val stub: CapturesGrpcKt.CapturesCoroutineStub
 ) : ICapturesService {
 
+    private val logger = System.getLogger(CapturesService::class.java.name)
+    private val reportedLegacyIds = ConcurrentHashMap.newKeySet<UUID>()
+
     override suspend fun getAll(): List<Capture> =
         stub.getCaptures(getRequest()).dataList.map { it.toClient() }
 
@@ -34,7 +40,7 @@ class CapturesService(
     override suspend fun save(id: String, declaration: String): CaptureDeclarationResult {
         val request = CapturesOuterClass.SaveCaptureRequest.newBuilder()
             .setEventStore(eventStoreName)
-            .setId(id.toContractsGuid())
+            .setId(resolve(id))
             .setDeclaration(declaration)
             .build()
 
@@ -63,7 +69,7 @@ class CapturesService(
     override suspend fun start(id: String): List<CaptureValidationMessage> {
         val request = CapturesOuterClass.StartCaptureRequest.newBuilder()
             .setEventStore(eventStoreName)
-            .setCaptureId(id.toContractsGuid())
+            .setCaptureId(resolve(id))
             .build()
 
         return stub.startCapture(request).ensureSuccess("start capture").messagesList.map { it.toClient() }
@@ -72,7 +78,7 @@ class CapturesService(
     override suspend fun stop(id: String) {
         val request = CapturesOuterClass.StopCaptureRequest.newBuilder()
             .setEventStore(eventStoreName)
-            .setCaptureId(id.toContractsGuid())
+            .setCaptureId(resolve(id))
             .build()
 
         stub.stopCapture(request).ensureSuccess("stop capture")
@@ -81,10 +87,37 @@ class CapturesService(
     override suspend fun delete(id: String) {
         val request = CapturesOuterClass.DeleteCaptureRequest.newBuilder()
             .setEventStore(eventStoreName)
-            .setCaptureId(id.toContractsGuid())
+            .setCaptureId(resolve(id))
             .build()
 
         stub.deleteCapture(request).ensureSuccess("delete capture")
+    }
+
+    /**
+     * The wire id to address the capture held for [id] by.
+     *
+     * Earlier clients sent capture ids with the first three groups byte-reversed, so the kernel holds a
+     * capture they saved under the transposed form of the id the application supplied. Changing that
+     * identity would mean a new capture with no record of what it has already seen, so the capture is
+     * kept where it is and addressed there: the correct id when the kernel holds it, otherwise the
+     * transposed id when the kernel holds that, otherwise the correct id, which is what a new capture is
+     * created under. The kernel has no lookup by id, so this lists the event store's captures.
+     */
+    private suspend fun resolve(id: String): Bcl.Guid {
+        val correct = UUID.fromString(id)
+        val legacy = correct.toTransposedUuid()
+        if (legacy == correct) return correct.toBclGuid()
+
+        val held = stub.getCaptures(getRequest()).dataList.mapNotNull { runCatching { UUID.fromString(it.id) }.getOrNull() }.toSet()
+        if (correct in held || legacy !in held) return correct.toBclGuid()
+
+        if (reportedLegacyIds.add(correct)) {
+            logger.log(
+                System.Logger.Level.INFO,
+                "Capture $correct is held under its legacy id $legacy, written by an earlier client version; it is addressed by that id."
+            )
+        }
+        return legacy.toBclGuid()
     }
 
     private fun getRequest(): CapturesOuterClass.GetCapturesRequest =
@@ -104,16 +137,6 @@ class CapturesService(
 
     private fun CapturesOuterClass.CaptureValidationMessage.toClient() =
         CaptureValidationMessage(message, line, column)
-}
-
-private fun String.toContractsGuid(): Bcl.Guid {
-    // bcl.Guid: lo = first 8 bytes, hi = second 8 bytes, little-endian.
-    // Java UUID.mostSignificantBits and leastSignificantBits are big-endian, so reverse each half.
-    val uuid = UUID.fromString(this)
-    return Bcl.Guid.newBuilder()
-        .setLo(java.lang.Long.reverseBytes(uuid.mostSignificantBits))
-        .setHi(java.lang.Long.reverseBytes(uuid.leastSignificantBits))
-        .build()
 }
 
 private fun ensureSuccessMessage(operation: String, isAuthorized: Boolean, exceptionMessages: List<String>) {

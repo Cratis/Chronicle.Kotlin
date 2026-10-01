@@ -8,6 +8,7 @@ import Cratis.Chronicle.Contracts.Observation.Reducers.ObservationReducers
 import bcl.Bcl
 import io.cratis.chronicle.events.EventObservationState
 import io.cratis.chronicle.identity.Identity
+import io.cratis.chronicle.toBclGuid
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -17,13 +18,7 @@ import java.util.UUID
 
 class EventContextConversionsTests {
 
-    private val correlationId: UUID = UUID.fromString("6f9619ff-8b86-d011-b42d-00cf4fc964ff")
-
-    /** Mirrors how the client writes a UUID onto the wire, so the read path can be checked against it. */
-    private fun UUID.toContractsGuid(): Bcl.Guid = Bcl.Guid.newBuilder()
-        .setLo(java.lang.Long.reverseBytes(mostSignificantBits))
-        .setHi(java.lang.Long.reverseBytes(leastSignificantBits))
-        .build()
+    private val correlationId: UUID = UUID.fromString("ff19966f-868b-11d0-b42d-00c04fc964ff")
 
     private fun reactorContext(): ObservationReactors.EventContext =
         ObservationReactors.EventContext.newBuilder()
@@ -36,7 +31,7 @@ class EventContextConversionsTests {
                 ObservationReactors.SerializableDateTimeOffset.newBuilder()
                     .setValue("2026-08-05T10:15:30Z").build()
             )
-            .setCorrelationId(correlationId.toContractsGuid())
+            .setCorrelationId(correlationId.toBclGuid())
             .setCausedBy(
                 ObservationReactors.Identity.newBuilder()
                     .setSubject("subject-1")
@@ -77,6 +72,16 @@ class EventContextConversionsTests {
     @Test
     fun `correlation id is read from the wire rather than generated`() {
         assertEquals(correlationId, reactorContext().toEventContext().correlationId)
+    }
+
+    @Test
+    fun `correlation id is read the way the dotnet client writes it`() {
+        // Captured from .NET: new Guid("01020304-0506-0708-090a-0b0c0d0e0f10") serialized as bcl.Guid.
+        val wire = Bcl.Guid.newBuilder().setLo(0x0708050601020304L).setHi(0x100f0e0d0c0b0a09L).build()
+
+        val context = reactorContext().toBuilder().setCorrelationId(wire).build().toEventContext()
+
+        assertEquals(UUID.fromString("01020304-0506-0708-090a-0b0c0d0e0f10"), context.correlationId)
     }
 
     @Test
@@ -178,7 +183,7 @@ class EventContextConversionsTests {
             )
             .setEventSourceId("book-2")
             .setSequenceNumber(7L)
-            .setCorrelationId(correlationId.toContractsGuid())
+            .setCorrelationId(correlationId.toBclGuid())
             .setCausedBy(
                 ObservationReducers.Identity.newBuilder().setSubject("subject-1").setName("Jane").build()
             )

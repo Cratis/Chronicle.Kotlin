@@ -5,11 +5,11 @@ package io.cratis.chronicle.eventSequences
 
 import Cratis.Chronicle.Contracts.Sequences.EventSequencesGrpcKt
 import Cratis.Chronicle.Contracts.Sequences.Sequences
-import bcl.Bcl
 import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.events.EventObservationState
 import io.cratis.chronicle.identity.Identity
+import io.cratis.chronicle.toBclGuid
 import io.mockk.coEvery
 import io.mockk.mockk
 import java.time.Instant
@@ -81,9 +81,7 @@ class PersistedEventContextTests {
                 .setEventSourceType(sourceType).setEventStreamType(streamType).setEventStreamId(streamId)
                 .setEventType(Sequences.EventType.newBuilder().setId("PersistedEvent").setGeneration(3).setTombstone(true))
                 .setOccurred(Sequences.SerializableDateTimeOffset.newBuilder().setValue(occurred.toString()))
-                .setCorrelationId(Bcl.Guid.newBuilder()
-                    .setLo(java.lang.Long.reverseBytes(correlationId.mostSignificantBits))
-                    .setHi(java.lang.Long.reverseBytes(correlationId.leastSignificantBits)))
+                .setCorrelationId(correlationId.toBclGuid())
                 .setCausedBy(Sequences.Identity.newBuilder().setSubject("writer").setName("Writer").setUserName("writer-name")
                     .setOnBehalfOf(Sequences.Identity.newBuilder().setSubject("person").setName("Person").setUserName("person-name")))
                 .addCausation(Sequences.Causation.newBuilder().setType("Import")

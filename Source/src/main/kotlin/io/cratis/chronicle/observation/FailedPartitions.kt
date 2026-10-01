@@ -6,11 +6,10 @@ package io.cratis.chronicle.observation
 import Cratis.Chronicle.Contracts.Observation.FailedPartitionsGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Observation
 import Cratis.Chronicle.Contracts.Observation.ObserversGrpcKt
-import bcl.Bcl
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
+import io.cratis.chronicle.toUuid
 import java.time.Instant
-import java.util.UUID
 import kotlin.reflect.KClass
 
 /**
@@ -60,7 +59,7 @@ class FailedPartitions(
     )
 
     private fun Observation.FailedPartition.toClient() = FailedPartition(
-        id = id.toUUID(),
+        id = id.toUuid(),
         observerId = observerId,
         partition = partition,
         attempts = attemptsList.map { it.toClient() }
@@ -76,8 +75,3 @@ class FailedPartitions(
     )
 }
 
-/**
- * Converts a wire [Bcl.Guid] (lo/hi, little-endian halves) back to a Java [UUID] (big-endian halves).
- */
-private fun Bcl.Guid.toUUID(): UUID =
-    UUID(java.lang.Long.reverseBytes(lo), java.lang.Long.reverseBytes(hi))

@@ -4,7 +4,6 @@
 package io.cratis.chronicle.eventSequences
 
 import Cratis.Chronicle.Contracts.Sequences.Sequences
-import bcl.Bcl
 import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.auditing.CausationType
 import io.cratis.chronicle.events.EventContext
@@ -13,8 +12,8 @@ import io.cratis.chronicle.events.EventTypeDescriptor
 import io.cratis.chronicle.events.EventTypeGeneration
 import io.cratis.chronicle.events.EventTypeId
 import io.cratis.chronicle.identity.Identity
+import io.cratis.chronicle.toUuid
 import java.time.Instant
-import java.util.UUID
 
 /** Maps persisted metadata; the read request supplies the store and namespace absent from the wire context. */
 internal fun Sequences.AppendedEventResponse.toClient(eventStore: String, namespace: String): AppendedEvent =
@@ -28,7 +27,7 @@ internal fun Sequences.AppendedEventResponse.toClient(eventStore: String, namesp
                 tombstone = context.eventType.tombstone
             ),
             occurred = context.occurred.value.toInstantOrNow(),
-            correlationId = context.correlationId.toUUID(),
+            correlationId = context.correlationId.toUuid(),
             causedBy = context.causedBy.toClient(),
             eventSourceType = context.eventSourceType,
             eventStreamType = context.eventStreamType,
@@ -56,9 +55,6 @@ private fun Sequences.Identity.toClient(): Identity = Identity(
     userName = userName,
     onBehalfOf = if (hasOnBehalfOf()) onBehalfOf.toClient() else null
 )
-
-private fun Bcl.Guid.toUUID(): UUID =
-    UUID(java.lang.Long.reverseBytes(lo), java.lang.Long.reverseBytes(hi))
 
 /** Retains the existing read/observation fallback for an unparseable timestamp. */
 private fun String.toInstantOrNow(): Instant = try {

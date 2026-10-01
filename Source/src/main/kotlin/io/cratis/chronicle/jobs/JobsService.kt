@@ -6,6 +6,7 @@ package io.cratis.chronicle.jobs
 import Cratis.Chronicle.Contracts.Jobs.JobsGrpcKt
 import Cratis.Chronicle.Contracts.Jobs.JobsOuterClass
 import bcl.Bcl
+import io.cratis.chronicle.toBclGuid
 import java.util.UUID
 
 class JobsService(
@@ -79,12 +80,4 @@ class JobsService(
     }
 }
 
-private fun String.toContractsGuid(): Bcl.Guid {
-    // bcl.Guid: lo = first 8 bytes, hi = second 8 bytes, little-endian.
-    // Java UUID.mostSignificantBits and leastSignificantBits are big-endian, so reverse each half.
-    val uuid = UUID.fromString(this)
-    return Bcl.Guid.newBuilder()
-        .setLo(java.lang.Long.reverseBytes(uuid.mostSignificantBits))
-        .setHi(java.lang.Long.reverseBytes(uuid.leastSignificantBits))
-        .build()
-}
+private fun String.toContractsGuid(): Bcl.Guid = UUID.fromString(this).toBclGuid()

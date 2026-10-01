@@ -10,7 +10,6 @@ import Cratis.Chronicle.Contracts.ReadModelExplorer.Readmodelexplorer
 import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.Readmodels
-import bcl.Bcl
 import com.google.protobuf.Empty
 import io.cratis.chronicle.Subject
 import io.cratis.chronicle.connection.ConnectionLifecycle
@@ -30,6 +29,7 @@ import io.cratis.chronicle.observation.EventSourceType
 import io.cratis.chronicle.observation.EventStreamType
 import io.cratis.chronicle.observation.FilterEventsByTag
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
+import io.cratis.chronicle.toBclGuid
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -114,11 +114,6 @@ data class ConfidentialProfile(val id: String, val ssn: String)
 
 // Same visibility requirement as ConfidentialProfile above - its subject property is not `id`.
 data class CustomerOrderSummary(val id: String, @Subject val customerId: String, val total: Double)
-
-private fun UUID.toContractGuid(): Bcl.Guid = Bcl.Guid.newBuilder()
-    .setLo(java.lang.Long.reverseBytes(mostSignificantBits))
-    .setHi(java.lang.Long.reverseBytes(leastSignificantBits))
-    .build()
 
 class ReadModelsServiceTests {
 
@@ -315,7 +310,7 @@ class ReadModelsServiceTests {
         val snapshot = Readmodelexplorer.ReadModelSnapshotResponse.newBuilder()
             .setInstance("""{"name":"Ada","title":"Engineer"}""")
             .setOccurred(Readmodelexplorer.SerializableDateTimeOffset.newBuilder().setValue(occurred.toString()))
-            .setCorrelationId(correlationId.toContractGuid())
+            .setCorrelationId(correlationId.toBclGuid())
             .build()
         coEvery { readModelExplorerStub.allSnapshotsForReadModel(any(), any()) } returns
             Readmodelexplorer.QueryResult_IEnumerable_ReadModelSnapshotResponse.newBuilder()

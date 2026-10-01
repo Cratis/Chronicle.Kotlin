@@ -5,13 +5,13 @@ package io.cratis.chronicle.eventSequences
 
 import Cratis.Chronicle.Contracts.Sequences.Sequences
 import Cratis.Chronicle.Contracts.Sequences.EventSequencesGrpcKt
-import bcl.Bcl
 import io.cratis.chronicle.IEventStore
 import io.cratis.chronicle.constraints.Constraint
 import io.cratis.chronicle.constraints.ConstraintsService
 import io.cratis.chronicle.constraints.IConstraint
 import io.cratis.chronicle.constraints.IConstraintBuilder
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
+import io.cratis.chronicle.toBclGuid
 import io.cratis.chronicle.transactions.UnitOfWork
 import Cratis.Chronicle.Contracts.Events.Constraints.ConstraintsGrpcKt
 import com.google.protobuf.Empty
@@ -33,18 +33,13 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
-private fun UUID.toContractGuid(): Bcl.Guid = Bcl.Guid.newBuilder()
-    .setLo(java.lang.Long.reverseBytes(mostSignificantBits))
-    .setHi(java.lang.Long.reverseBytes(leastSignificantBits))
-    .build()
-
 private fun sampleEventContext(sequenceNumber: Long): Sequences.EventContext =
     Sequences.EventContext.newBuilder()
         .setSequenceNumber(sequenceNumber)
         .setEventSourceId("source-1")
         .setEventType(Sequences.EventType.newBuilder().setId("ObservedEvent").setGeneration(1))
         .setOccurred(Sequences.SerializableDateTimeOffset.newBuilder().setValue(java.time.Instant.now().toString()))
-        .setCorrelationId(UUID.randomUUID().toContractGuid())
+        .setCorrelationId(UUID.randomUUID().toBclGuid())
         .setCausedBy(
             Sequences.Identity.newBuilder()
                 .setSubject("system")

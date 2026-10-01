@@ -9,6 +9,7 @@ import io.cratis.chronicle.eventSequences.EventSequence
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
+import io.cratis.chronicle.toUuid
 import io.mockk.CapturingSlot
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -25,7 +26,7 @@ private data class OrderPlaced(val id: String)
 private data class OrderShipped(val id: String)
 
 private fun Sequences.AppendManyForEventSourcesRequest.correlationUuid(): UUID =
-    UUID(java.lang.Long.reverseBytes(correlationId.lo), java.lang.Long.reverseBytes(correlationId.hi))
+    correlationId.toUuid()
 
 /**
  * A composed operation always spans potentially many event sources, so it is only observable
@@ -140,6 +141,20 @@ class EventSequenceOperationsTests {
             .perform()
 
         assertEquals(correlationId, request.captured.correlationUuid())
+    }
+
+    @Test
+    fun `perform sends the correlation id the way the dotnet client would read it`() = runBlocking {
+        val request = slot<Sequences.AppendManyForEventSourcesRequest>()
+
+        sequenceFor(stubCapturing(request))
+            .forEventSourceId("order-1") { append(OrderPlaced("order-1")) }
+            .withCorrelationId(UUID.fromString("01020304-0506-0708-090a-0b0c0d0e0f10"))
+            .perform()
+
+        // Captured from .NET: new Guid("01020304-0506-0708-090a-0b0c0d0e0f10") serialized as bcl.Guid.
+        assertEquals(0x0708050601020304L, request.captured.correlationId.lo)
+        assertEquals(0x100f0e0d0c0b0a09L, request.captured.correlationId.hi)
     }
 
     @Test
