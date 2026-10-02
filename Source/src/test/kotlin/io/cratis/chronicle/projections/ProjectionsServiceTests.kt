@@ -355,6 +355,17 @@ private class FluentPassiveProjection : IProjectionFor<FluentPassiveState> {
 }
 private data class FluentChild(val name: String = "")
 
+private class FluentWeeklyProjection : IProjectionFor<FluentState> {
+    override fun define(builder: IProjectionBuilderFor<FluentState>) {
+        builder.from(TicketOpened::class) { from ->
+            from.usingCompositeKey { key ->
+                key.toEventContextProperty("Year", "Occurred.Year")
+                    .toEventContextProperty("Week", "Occurred.Week")
+            }
+        }
+    }
+}
+
 private class FluentDefaults : IProjectionFor<FluentState> {
     override fun define(builder: IProjectionBuilderFor<FluentState>) {
         builder.noAutoMap()
@@ -384,6 +395,17 @@ class ProjectionsServiceTests {
         fromList.first { it.key.id == eventType.simpleName }.value
 
     // --- @FromEvent key resolution ---
+
+    @Test
+    fun `registered and serialized weekly projection preserves the dotnet composite key expression`() {
+        val registered = registerOne(FluentWeeklyProjection())
+        val deserialized = ProjectionsOuterClass.ProjectionDefinition.parseFrom(registered.toByteArray())
+        // Exact output of the .NET composite-key spec in Chronicle #4087.
+        assertEquals(
+            "\$composite(Year=\$eventContext(Occurred.Year),Week=\$eventContext(Occurred.Week))",
+            deserialized.fromFor(TicketOpened::class).key,
+        )
+    }
 
     @Test
     fun `fluent projection of a passive read model is inactive`() {

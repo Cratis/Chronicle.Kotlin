@@ -446,7 +446,29 @@ interface INestedBuilderFor<TNested : Any> {
     fun <TEvent : Any> clearWith(eventClass: Class<TEvent>): INestedBuilderFor<TNested> = clearWith(eventClass.kotlin)
 }
 
-/** Builds up a composite key expression from multiple event properties. */
+/** Builds up a composite key expression from event properties and event-context properties. */
 interface ICompositeKeyBuilderFor {
     fun property(targetPropertyName: String, eventPropertyName: String): ICompositeKeyBuilderFor
+
+    /**
+     * Maps a key part to an event-context property path, just like [ISetBuilderFor.toEventContextProperty].
+     * Date parts use the kernel's paths: `Occurred.Year`, `Occurred.Month`, `Occurred.Day`, and
+     * `Occurred.Week`. Week is the ISO 8601 week number (1–53): weeks start on Monday and week 1
+     * contains the first Thursday. The kernel evaluates the path; the client does not calculate it.
+     *
+     * For example, `key.toEventContextProperty("Year", "Occurred.Year")
+     *     .toEventContextProperty("Week", "Occurred.Week")` matches the .NET client.
+     * `Year` is the calendar year, not the ISO week-based year, so this pairing can split a week
+     * around New Year. A week-based-year accessor is tracked in
+     * https://github.com/Cratis/Chronicle/issues/4505.
+     *
+     * The default implementation delegates to [property] so implementations written before this
+     * method was added keep compiling and linking.
+     *
+     * @param targetPropertyName The property of the composite key to set.
+     * @param contextProperty The event-context path, without the `$eventContext` wrapper or method parentheses.
+     * @return This builder, for chaining.
+     */
+    fun toEventContextProperty(targetPropertyName: String, contextProperty: String): ICompositeKeyBuilderFor =
+        property(targetPropertyName, "\$eventContext($contextProperty)")
 }
