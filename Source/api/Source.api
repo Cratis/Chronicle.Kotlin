@@ -2726,6 +2726,7 @@ public final class io/cratis/chronicle/projections/CompositeKeyBuilderFor : io/c
 	public fun <init> ()V
 	public final fun build ()Ljava/lang/String;
 	public fun property (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/ICompositeKeyBuilderFor;
+	public fun toEventContextProperty (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/ICompositeKeyBuilderFor;
 }
 
 public abstract interface annotation class io/cratis/chronicle/projections/Count : java/lang/annotation/Annotation {
@@ -2877,6 +2878,7 @@ public final class io/cratis/chronicle/projections/IChildrenBuilderFor$DefaultIm
 
 public abstract interface class io/cratis/chronicle/projections/ICompositeKeyBuilderFor {
 	public abstract fun property (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/ICompositeKeyBuilderFor;
+	public abstract fun toEventContextProperty (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/ICompositeKeyBuilderFor;
 }
 
 public abstract interface class io/cratis/chronicle/projections/IFromBuilderFor {

@@ -565,5 +565,10 @@ class CompositeKeyBuilderFor : ICompositeKeyBuilderFor {
         return this
     }
 
+    override fun toEventContextProperty(targetPropertyName: String, contextProperty: String): ICompositeKeyBuilderFor {
+        parts[targetPropertyName] = "\$eventContext($contextProperty)"
+        return this
+    }
+
     fun build(): String = "\$composite(" + parts.entries.joinToString(",") { "${it.key}=${it.value}" } + ")"
 }

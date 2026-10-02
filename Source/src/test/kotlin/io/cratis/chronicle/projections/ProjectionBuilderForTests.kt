@@ -142,6 +142,43 @@ class ProjectionBuilderForTests {
     }
 
     @Test
+    fun `usingCompositeKey emits the exact year and ISO week expression from the dotnet specs`() {
+        val builder = ProjectionBuilderFor(Order::class)
+        builder.from(OrderPlaced::class) { from ->
+            from.usingCompositeKey { key ->
+                key.toEventContextProperty("Year", "Occurred.Year")
+                    .toEventContextProperty("Week", "Occurred.Week")
+            }
+        }
+        // Chronicle #4087: and_accessor_is_an_iso_week_derived_function.
+        assertEquals(
+            "\$composite(Year=\$eventContext(Occurred.Year),Week=\$eventContext(Occurred.Week))",
+            builder.fromEntries.single().key,
+        )
+    }
+
+    @Test
+    fun `composite key mixes event properties and context date parts in insertion order`() {
+        val key = CompositeKeyBuilderFor()
+        key.property("orderId", "orderId")
+            .toEventContextProperty("Month", "Occurred.Month")
+            .toEventContextProperty("Day", "Occurred.Day")
+            .property("Week", "oldWeek")
+            .toEventContextProperty("Week", "Occurred.Week")
+        assertEquals(
+            "\$composite(orderId=orderId,Month=\$eventContext(Occurred.Month),Day=\$eventContext(Occurred.Day),Week=\$eventContext(Occurred.Week))",
+            key.build(),
+        )
+    }
+
+    @Test
+    fun `set ISO week emits the exact event context expression from the dotnet specs`() {
+        val builder = ProjectionBuilderFor(Order::class)
+        builder.from(OrderPlaced::class) { it.set(Order::version).toEventContextProperty("Occurred.Week") }
+        assertEquals("\$eventContext(Occurred.Week)", builder.fromEntries.single().properties["version"])
+    }
+
+    @Test
     fun `usingConstantKey wraps the value as a dollar-value expression`() {
         val builder = ProjectionBuilderFor(Order::class)
         builder.from(OrderPlaced::class) { fb -> fb.usingConstantKey("singleton") }
