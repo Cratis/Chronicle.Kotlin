@@ -462,9 +462,13 @@ interface ICompositeKeyBuilderFor {
      * around New Year. A week-based-year accessor is tracked in
      * https://github.com/Cratis/Chronicle/issues/4505.
      *
+     * The default implementation delegates to [property] so implementations written before this
+     * method was added keep compiling and linking.
+     *
      * @param targetPropertyName The property of the composite key to set.
      * @param contextProperty The event-context path, without the `$eventContext` wrapper or method parentheses.
      * @return This builder, for chaining.
      */
-    fun toEventContextProperty(targetPropertyName: String, contextProperty: String): ICompositeKeyBuilderFor
+    fun toEventContextProperty(targetPropertyName: String, contextProperty: String): ICompositeKeyBuilderFor =
+        property(targetPropertyName, "\$eventContext($contextProperty)")
 }

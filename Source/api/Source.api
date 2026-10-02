@@ -2878,7 +2878,11 @@ public final class io/cratis/chronicle/projections/IChildrenBuilderFor$DefaultIm
 
 public abstract interface class io/cratis/chronicle/projections/ICompositeKeyBuilderFor {
 	public abstract fun property (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/ICompositeKeyBuilderFor;
-	public abstract fun toEventContextProperty (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/ICompositeKeyBuilderFor;
+	public fun toEventContextProperty (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/ICompositeKeyBuilderFor;
+}
+
+public final class io/cratis/chronicle/projections/ICompositeKeyBuilderFor$DefaultImpls {
+	public static fun toEventContextProperty (Lio/cratis/chronicle/projections/ICompositeKeyBuilderFor;Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/ICompositeKeyBuilderFor;
 }
 
 public abstract interface class io/cratis/chronicle/projections/IFromBuilderFor {

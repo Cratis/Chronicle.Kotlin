@@ -172,6 +172,23 @@ class ProjectionBuilderForTests {
     }
 
     @Test
+    fun `custom composite key builder inherits the event context default without overriding it`() {
+        val stored = CompositeKeyBuilderFor()
+        val custom = object : ICompositeKeyBuilderFor {
+            override fun property(targetPropertyName: String, eventPropertyName: String): ICompositeKeyBuilderFor {
+                stored.property(targetPropertyName, eventPropertyName)
+                return this
+            }
+        }
+        custom.toEventContextProperty("Year", "Occurred.Year")
+            .toEventContextProperty("Week", "Occurred.Week")
+        assertEquals(
+            "\$composite(Year=\$eventContext(Occurred.Year),Week=\$eventContext(Occurred.Week))",
+            stored.build(),
+        )
+    }
+
+    @Test
     fun `set ISO week emits the exact event context expression from the dotnet specs`() {
         val builder = ProjectionBuilderFor(Order::class)
         builder.from(OrderPlaced::class) { it.set(Order::version).toEventContextProperty("Occurred.Week") }
