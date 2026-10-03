@@ -238,18 +238,38 @@ class EventSourceAppendTests {
     }
 
     @Test
-    fun `an unchecked definition sharing an id with a checked one is rejected not silently guarded`() {
-        assertThrows<ConflictingEventSourceConcurrency> {
-            runBlocking {
-                sequence.appendMany(
-                    listOf(
-                        EventForEventSourceId("shared", Deposited(1), eventSource = LedgerEventSource::class),
-                        EventForEventSourceId("shared", Deposited(2), eventSource = AccountEventSource::class)
-                    )
-                )
-            }
+    fun `an unguarded entry sharing an id with a guarded one never suppresses the guard in either order`() = runBlocking {
+        tail = 5
+        val unguarded = EventForEventSourceId("shared", Deposited(1), eventSource = LedgerEventSource::class)
+        val guarded = EventForEventSourceId("shared", Deposited(2), eventSource = AccountEventSource::class)
+
+        sequence.appendMany(listOf(unguarded, guarded))
+        sequence.appendMany(listOf(guarded, unguarded))
+
+        // The captured slot holds the last request; both orders must have produced the same guard.
+        val scope = appendMany.captured.concurrencyScopesList.single()
+        assertEquals("shared", scope.eventSourceId)
+        assertEquals(5, scope.scope.sequenceNumber)
+        coVerify(exactly = 2) { stub.appendManyForEventSources(any(), any()) }
+    }
+
+    @Test
+    fun `equivalent predicates keep the first guard when the tail moves between derivations`() = runBlocking {
+        tail = 5
+        coEvery { stub.tailSequenceNumber(capture(tails), any()) } answers {
+            Sequences.QueryResult_EventSequenceTailResponse.newBuilder().setIsAuthorized(true)
+                .setData(Sequences.EventSequenceTailResponse.newBuilder().setSequenceNumber(tail++)).build()
         }
-        coVerify(exactly = 0) { stub.appendManyForEventSources(any(), any()) }
+
+        sequence.appendMany(
+            listOf(
+                EventForEventSourceId("shared", Deposited(1), eventSource = AccountEventSource::class),
+                EventForEventSourceId("shared", Deposited(2), eventSource = AccountEventSource::class, eventStream = "Settings"),
+                EventForEventSourceId("shared", Deposited(3), eventSource = AccountEventSource::class)
+            )
+        )
+
+        assertEquals(5, appendMany.captured.concurrencyScopesList.single().scope.sequenceNumber)
     }
 
     @Test

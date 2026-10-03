@@ -196,12 +196,14 @@ An explicit `concurrencyScope` always wins, in single appends and for any
 event source id in a batch's `concurrencyScopes` map.
 
 In a batch the kernel takes one scope per event source id. The client derives
-the scope for every event from its own definition and stream, never from the
-first event that mentions the id. Events that share an id and derive the same
-scope are sent with it once. If they derive different scopes, for example one
+the guard for every event from its own definition and stream, never from the
+first event that mentions the id. Events that derive no guard never suppress
+one that does, in any order. Guarded events that select on the same event
+source, stream type, stream id and source type share the first guard taken,
+whatever the current tail is. If they select differently, for example one
 through the `Transactions` stream and one through the event source alone, the
 batch is rejected with `ConflictingEventSourceConcurrency` before anything is
-appended, because applying either scope would guard the other event wrongly.
+appended, because applying either guard would guard the other event wrongly.
 Pass an explicit scope for that id, or append the events in separate batches.
 
 ## Read the event source name

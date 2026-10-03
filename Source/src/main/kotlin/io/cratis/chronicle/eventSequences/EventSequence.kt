@@ -494,37 +494,73 @@ open class EventSequence(
         concurrencyScopes: Map<String, ConcurrencyScope>
     ): Map<String, ConcurrencyScope> {
         val resolved = concurrencyScopes.toMutableMap()
-        val derivedCache = mutableMapOf<ScopeKey, ConcurrencyScope?>()
+        val derivedCache = mutableMapOf<ScopePredicate, ConcurrencyScope>()
         val routedBySource = events.indices.filter { routings[it] != null }.groupBy { events[it].eventSourceId }
 
         for ((eventSourceId, indices) in routedBySource) {
             val existing = resolved[eventSourceId]
             if (existing != null && existing != ConcurrencyScope.notSet) continue
 
-            val derived = indices.map { index ->
+            // Unguarded entries need no guard and never suppress a checked one; only the predicates the
+            // guarded entries actually select on are compared. The first guard is kept, so an older (or
+            // empty) snapshot is never replaced by a newer tail.
+            val predicates = indices.mapNotNull { index ->
                 val event = events[index]
-                val routing = routings[index]!!
-                val key = ScopeKey(routing.dimensions, eventSourceId, event.eventStreamType, event.eventStreamId, event.eventSourceType)
-                if (key in derivedCache) {
-                    derivedCache[key]
-                } else {
-                    scopeFor(routing, eventSourceId, event.eventStreamType, event.eventStreamId, event.eventSourceType)
-                        .also { derivedCache[key] = it }
-                }
+                predicateFor(routings[index]!!, eventSourceId, event.eventStreamType, event.eventStreamId, event.eventSourceType)
             }
-            if (derived.distinct().size > 1) throw ConflictingEventSourceConcurrency(eventSourceId)
-            derived.first()?.let { resolved[eventSourceId] = it }
+            if (predicates.distinct().size > 1) throw ConflictingEventSourceConcurrency(eventSourceId)
+            val predicate = predicates.firstOrNull() ?: continue
+            resolved[eventSourceId] = derivedCache.getOrPut(predicate) { guardFor(predicate, eventSourceId) }
         }
         return resolved
     }
 
-    private data class ScopeKey(
-        val dimensions: Set<ConcurrencyDimension>,
-        val eventSourceId: String,
+    /** The effective selectors of a derived guard; the sequence number and expected-empty state are not part of it. */
+    private data class ScopePredicate(
+        val eventSourceId: Boolean,
         val eventStreamType: String?,
         val eventStreamId: String?,
-        val eventSourceType: String?
+        val eventSourceType: String?,
+        val eventTypes: List<EventTypeDescriptor> = emptyList()
     )
+
+    /** Returns the predicate for the dimensions a definition declares, or `null` when the append is unguarded. */
+    private fun predicateFor(
+        routing: ResolvedEventRouting,
+        eventSourceId: String,
+        eventStreamType: String?,
+        eventStreamId: String?,
+        eventSourceType: String?
+    ): ScopePredicate? {
+        val dimensions = routing.dimensions
+        val scopedSourceId = ConcurrencyDimension.EventSourceId in dimensions
+        val scopedSourceType = eventSourceType?.takeIf { ConcurrencyDimension.EventSourceType in dimensions && it.isNotEmpty() }
+        val scopedStreamType = eventStreamType?.takeIf { ConcurrencyDimension.EventStreamType in dimensions && it.isNotEmpty() }
+        val scopedStreamId = eventStreamId?.takeIf { ConcurrencyDimension.EventStreamId in dimensions && it.isNotEmpty() }
+
+        if (!scopedSourceId && scopedSourceType == null && scopedStreamType == null && scopedStreamId == null) return null
+        return ScopePredicate(scopedSourceId, scopedStreamType, scopedStreamId, scopedSourceType)
+    }
+
+    private suspend fun guardFor(predicate: ScopePredicate, eventSourceId: String): ConcurrencyScope {
+        val tail = getTailSequenceNumberInternal(
+            eventSourceId = eventSourceId.takeIf { predicate.eventSourceId },
+            filterEventTypes = emptyList(),
+            eventSourceType = predicate.eventSourceType,
+            eventStreamType = predicate.eventStreamType,
+            eventStreamId = predicate.eventStreamId
+        )
+
+        // Nothing matches yet: the scope expects it to stay that way until this append lands.
+        return ConcurrencyScope(
+            sequenceNumber = if (tail.isActualValue) tail else EventSequenceNumber.unavailable,
+            eventSourceId = predicate.eventSourceId,
+            eventStreamType = predicate.eventStreamType,
+            eventStreamId = predicate.eventStreamId,
+            eventSourceType = predicate.eventSourceType,
+            expectsNoMatchingEvent = !tail.isActualValue
+        )
+    }
 
     /**
      * Builds the concurrency scope for the dimensions a definition declares, or `null` when it declares none
@@ -537,33 +573,8 @@ open class EventSequence(
         eventStreamType: String?,
         eventStreamId: String?,
         eventSourceType: String?
-    ): ConcurrencyScope? {
-        val dimensions = routing.dimensions
-        val scopedSourceId = ConcurrencyDimension.EventSourceId in dimensions
-        val scopedSourceType = eventSourceType?.takeIf { ConcurrencyDimension.EventSourceType in dimensions && it.isNotEmpty() }
-        val scopedStreamType = eventStreamType?.takeIf { ConcurrencyDimension.EventStreamType in dimensions && it.isNotEmpty() }
-        val scopedStreamId = eventStreamId?.takeIf { ConcurrencyDimension.EventStreamId in dimensions && it.isNotEmpty() }
-
-        if (!scopedSourceId && scopedSourceType == null && scopedStreamType == null && scopedStreamId == null) return null
-
-        val tail = getTailSequenceNumberInternal(
-            eventSourceId = eventSourceId.takeIf { scopedSourceId },
-            filterEventTypes = emptyList(),
-            eventSourceType = scopedSourceType,
-            eventStreamType = scopedStreamType,
-            eventStreamId = scopedStreamId
-        )
-
-        // Nothing matches yet: the scope expects it to stay that way until this append lands.
-        return ConcurrencyScope(
-            sequenceNumber = if (tail.isActualValue) tail else EventSequenceNumber.unavailable,
-            eventSourceId = scopedSourceId,
-            eventStreamType = scopedStreamType,
-            eventStreamId = scopedStreamId,
-            eventSourceType = scopedSourceType,
-            expectsNoMatchingEvent = !tail.isActualValue
-        )
-    }
+    ): ConcurrencyScope? = predicateFor(routing, eventSourceId, eventStreamType, eventStreamId, eventSourceType)
+        ?.let { guardFor(it, eventSourceId) }
 
     private fun emitAppendOperations(
         events: List<EventForEventSourceId>,
