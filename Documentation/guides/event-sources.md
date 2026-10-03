@@ -195,6 +195,15 @@ an append without a definition.
 An explicit `concurrencyScope` always wins, in single appends and for any
 event source id in a batch's `concurrencyScopes` map.
 
+In a batch the kernel takes one scope per event source id. The client derives
+the scope for every event from its own definition and stream, never from the
+first event that mentions the id. Events that share an id and derive the same
+scope are sent with it once. If they derive different scopes, for example one
+through the `Transactions` stream and one through the event source alone, the
+batch is rejected with `ConflictingEventSourceConcurrency` before anything is
+appended, because applying either scope would guard the other event wrongly.
+Pass an explicit scope for that id, or append the events in separate batches.
+
 ## Read the event source name
 
 Events appended through a definition carry its name in
@@ -208,24 +217,23 @@ up a name.
 Event sources are an additive, optional feature. Code that does not use them
 behaves as before, and they need a kernel at 19.30.0 or later.
 
-- **Custom `IEventStore` implementations** keep compiling and linking: the
-  registry is a separate `IEventSourcesCapability` interface that only
-  `EventStore` and the Spring `ResolvedEventStore` implement. Java and Kotlin
-  implementers are not required to change.
-- **Source compatibility** is preserved for `EventContext`, `AppendOptions`
-  and `EventForEventSourceId`: the constructors and `copy` signatures from
-  before event sources still exist, and `EventLog` and `EventSequence` keep
-  their previous constructors.
-- **Binary compatibility** is preserved for those explicit constructors and
-  `copy` methods, and for Java callers (through `@JvmOverloads`). The caveat is
-  Kotlin code compiled against an earlier release that relies on default
-  arguments: it calls a synthetic `$default` constructor or `copy$default`
-  whose signature changed, so that code must be recompiled.
-- `IClientArtifacts.eventSources` has a default, but as a Kotlin interface
-  default it is not visible to Java implementers of `IClientArtifacts`, which
-  must add the property.
+- **Custom `IEventStore` and `IClientArtifacts` implementations** keep
+  compiling and linking, in Kotlin and Java, compiled or not. Neither interface
+  gained a member: the registry is the optional `IEventSourcesCapability`, and
+  the declared classes are the optional `IEventSourceArtifacts`. Only
+  `EventStore`, the Spring `ResolvedEventStore`, `ClientArtifacts` and
+  `KnownClientArtifacts` implement them. Read them through the
+  `IEventStore.eventSources` and `IClientArtifacts.eventSources` extensions: a
+  store without the capability reports an unsupported registry, an artifacts
+  implementation without it reports no event sources. Declaring `@EventSource`
+  classes against a store that does not support them fails at registration.
+- **Source and binary compatibility** is preserved for `EventContext`,
+  `AppendOptions` and `EventForEventSourceId`. The constructors and `copy`
+  methods from before event sources exist with their original defaults, so the
+  synthetic default-argument constructors and `copy$default` methods that
+  Kotlin code compiled against an earlier release calls are still generated.
+  That code, and Java callers using the short positional forms, runs against
+  this release without recompiling. `EventLog` and `EventSequence` keep their
+  previous constructors.
 - The in-memory test sequence cannot honor a definition; appending through one
   fails with `UnsupportedOperationException` instead of dropping the metadata.
-- Several routed events in one batch that share an event source id are
-  concurrency-checked using the first of them; give each event source id one
-  definition per batch.
