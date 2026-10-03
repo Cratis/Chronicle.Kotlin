@@ -24,6 +24,7 @@ class KnownClientArtifacts(classes: Iterable<KClass<*>>) : IClientArtifacts {
     private val candidates = classes.distinct()
 
     override val eventTypes: List<KClass<*>> = candidates.filter { it.isEventType() }
+    override val eventSources: List<KClass<*>> = candidates.filter { it.isEventSource() }
     override val eventTypeMigrations: List<KClass<*>> = candidates.filter { it.isEventTypeMigration() }
     override val readModels: List<KClass<*>> = candidates.filter { it.isReadModel() }
     override val projections: List<KClass<*>> = candidates.filter { it.isDeclarativeProjection() }

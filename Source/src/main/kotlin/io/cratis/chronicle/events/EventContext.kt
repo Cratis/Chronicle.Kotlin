@@ -26,6 +26,8 @@ import java.util.UUID
  * @property tags The tags associated with this event.
  * @property hash The hash of the event content.
  * @property subject The compliance subject acknowledged by the kernel, or empty when not supplied.
+ * @property eventSource The name of the registered event source the event was appended through, or empty when
+ *   it was not appended through a definition - including events stored before event sources existed.
  * @property observationState The [EventObservationState] this event is being observed in.
  *   Use this to tell a live event from one arriving during a replay.
  */
@@ -45,5 +47,30 @@ data class EventContext(
     val tags: List<String> = emptyList(),
     val hash: String = "",
     val observationState: EventObservationState = EventObservationState.none,
-    val subject: String = ""
-)
+    val subject: String = "",
+    val eventSource: String = ""
+) {
+    /** Preserves the constructor shape from before [eventSource] existed, for binary compatibility. */
+    constructor(
+        sequenceNumber: Long,
+        eventSourceId: String,
+        eventType: EventTypeDescriptor,
+        occurred: Instant,
+        correlationId: UUID,
+        causedBy: Identity,
+        eventSourceType: String,
+        eventStreamType: String,
+        eventStreamId: String,
+        eventStore: String,
+        namespace: String,
+        causation: List<Causation>,
+        tags: List<String>,
+        hash: String,
+        observationState: EventObservationState,
+        subject: String
+    ) : this(
+        sequenceNumber, eventSourceId, eventType, occurred, correlationId, causedBy, eventSourceType,
+        eventStreamType, eventStreamId, eventStore, namespace, causation, tags, hash, observationState,
+        subject, ""
+    )
+}

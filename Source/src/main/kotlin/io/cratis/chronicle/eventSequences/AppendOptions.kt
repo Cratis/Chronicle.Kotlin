@@ -7,6 +7,7 @@ import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import java.time.Instant
 import java.util.UUID
+import kotlin.reflect.KClass
 
 /**
  * Options that can be supplied when appending events to an event sequence.
@@ -36,6 +37,12 @@ import java.util.UUID
  *   nearly every append should use. Set this only to attribute an append to something other than
  *   the work the current thread is doing - an imported event, or a side effect that belongs to a
  *   chain of its own. An empty list means "no override" and leaves the ambient chain in charge.
+ * @property eventSource The class carrying an [io.cratis.chronicle.eventSources.EventSource] definition to
+ *   append through. Resolves the event source type, validates [eventStream], records the event source name
+ *   on the event and - when [concurrencyScope] is not supplied - applies the definition's concurrency
+ *   dimensions. Explicit routing that contradicts the definition is rejected. Optional: without it an
+ *   append behaves exactly as before.
+ * @property eventStream The name of a stream declared by [eventSource]. Requires [eventSource].
  */
 data class AppendOptions @JvmOverloads constructor(
     val correlationId: UUID? = null,
@@ -46,7 +53,9 @@ data class AppendOptions @JvmOverloads constructor(
     val subject: String? = null,
     val tags: List<String> = emptyList(),
     val occurred: Instant? = null,
-    val causation: List<Causation> = emptyList()
+    val causation: List<Causation> = emptyList(),
+    val eventSource: KClass<*>? = null,
+    val eventStream: String? = null
 ) {
     internal companion object {
         /** Legacy JVM constant retained for compatibility; request construction does not apply it. */

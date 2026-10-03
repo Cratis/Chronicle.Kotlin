@@ -23,6 +23,12 @@ interface IClientArtifacts {
     /** Every class implementing [io.cratis.chronicle.events.migrations.IEventTypeMigration]. */
     val eventTypeMigrations: List<KClass<*>>
 
+    /**
+     * Classes annotated with [io.cratis.chronicle.eventSources.EventSource], carrying event source and
+     * stream definitions. Empty by default so existing implementations keep working.
+     */
+    val eventSources: List<KClass<*>> get() = emptyList()
+
     /** Every class annotated with [io.cratis.chronicle.readModels.ReadModel]. */
     val readModels: List<KClass<*>>
 

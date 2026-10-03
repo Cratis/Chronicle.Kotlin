@@ -45,7 +45,8 @@ internal fun ObservationReactors.EventContext.toEventContext(): EventContext = E
     tags = tagsList.toList(),
     hash = hash,
     observationState = EventObservationState(observationStateValue),
-    subject = subject
+    subject = subject,
+    eventSource = eventSource
 )
 
 /** Converts the reducer contract's event context into an [EventContext]. */
@@ -68,7 +69,8 @@ internal fun ObservationReducers.EventContext.toEventContext(): EventContext = E
     tags = tagsList.toList(),
     hash = hash,
     observationState = EventObservationState(observationStateValue),
-    subject = subject
+    subject = subject,
+    eventSource = eventSource
 )
 
 private fun ObservationReactors.Identity.toIdentity(): Identity = Identity(

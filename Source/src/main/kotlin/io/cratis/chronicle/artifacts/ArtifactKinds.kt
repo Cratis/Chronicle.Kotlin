@@ -6,6 +6,7 @@ package io.cratis.chronicle.artifacts
 import io.cratis.chronicle.captures.ICapture
 import io.cratis.chronicle.constraints.IConstraint
 import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.eventSources.EventSource
 import io.cratis.chronicle.events.migrations.IEventTypeMigration
 import io.cratis.chronicle.java.BlockingReactorMethodArgumentResolver
 import io.cratis.chronicle.java.BlockingReactorMiddleware
@@ -65,6 +66,8 @@ internal fun KClass<*>.isInstantiableArtifact(): Boolean =
 internal fun KClass<*>.isEventType(): Boolean = hasAnnotation<EventType>()
 
 /** Whether this class describes a migration between two generations of an event type. */
+internal fun KClass<*>.isEventSource(): Boolean = !java.isAnnotation && hasAnnotation<EventSource>()
+
 internal fun KClass<*>.isEventTypeMigration(): Boolean =
     isInstantiableArtifact() && isSubclassOf(IEventTypeMigration::class)
 

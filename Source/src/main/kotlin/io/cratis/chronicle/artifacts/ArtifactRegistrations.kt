@@ -67,6 +67,10 @@ class ArtifactRegistrations(
         // call: the event types service merges them into the registration for the type they migrate.
         eventStore.eventTypes.register(*(artifacts.eventTypes + artifacts.eventTypeMigrations).toTypedArray())
 
+        // Event sources are independent of event types - routing belongs to the append - so this has
+        // no ordering requirement beyond the event store existing. Registration is an upsert.
+        eventStore.eventSources.register()
+
         // Reducers and projections register their own read models, tagged with the observer that
         // produces them. Registering those here as well would overwrite that with "no observer", so
         // only the read models nobody produces are registered directly.

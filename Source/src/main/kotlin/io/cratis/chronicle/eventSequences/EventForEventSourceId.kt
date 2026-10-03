@@ -5,6 +5,7 @@ package io.cratis.chronicle.eventSequences
 
 import io.cratis.chronicle.auditing.Causation
 import java.time.Instant
+import kotlin.reflect.KClass
 
 /**
  * An event together with the event source it belongs to, and how it should be placed in a sequence.
@@ -39,6 +40,10 @@ import java.time.Instant
  *   triggering event left on the thread. Note that the kernel carries one chain per
  *   [IEventSequence.appendMany] batch rather than one per event, so a batch whose events disagree
  *   on causation cannot be expressed and is rejected rather than having the difference dropped.
+ * @property eventSource The class carrying an [io.cratis.chronicle.eventSources.EventSource] definition this
+ *   event goes through. Per-event, so one atomic batch can mix events of different event sources.
+ *   It must agree with any explicit [eventSourceType] and [eventStreamType] or the append is rejected.
+ * @property eventStream The name of a stream declared by [eventSource]. Requires [eventSource].
  */
 data class EventForEventSourceId @JvmOverloads constructor(
     val eventSourceId: String,
@@ -49,7 +54,9 @@ data class EventForEventSourceId @JvmOverloads constructor(
     val tags: List<String> = emptyList(),
     val occurred: Instant? = null,
     val subject: String? = null,
-    val causation: List<Causation> = emptyList()
+    val causation: List<Causation> = emptyList(),
+    val eventSource: KClass<*>? = null,
+    val eventStream: String? = null
 ) {
     /**
      * The shaping expressed as [AppendOptions], for the paths that append one event at a time -
@@ -63,6 +70,8 @@ data class EventForEventSourceId @JvmOverloads constructor(
         subject = subject,
         tags = tags,
         occurred = occurred,
-        causation = causation
+        causation = causation,
+        eventSource = eventSource,
+        eventStream = eventStream
     )
 }

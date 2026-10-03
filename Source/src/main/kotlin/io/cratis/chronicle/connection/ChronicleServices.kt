@@ -4,6 +4,7 @@
 package io.cratis.chronicle.connection
 
 import Cratis.Chronicle.Contracts.Captures.CapturesGrpcKt
+import Cratis.Chronicle.Contracts.EventSources.EventSourcesGrpcKt
 import Cratis.Chronicle.Contracts.Clients.ConnectionServiceGrpcKt
 import Cratis.Chronicle.Contracts.Compliance.ComplianceGrpcKt
 import Cratis.Chronicle.Contracts.Events.Constraints.ConstraintsGrpcKt
@@ -69,6 +70,8 @@ class ChronicleServices(channel: io.grpc.Channel) {
         ObserversGrpcKt.ObserversCoroutineStub(channel)
     val failedPartitions: FailedPartitionsGrpcKt.FailedPartitionsCoroutineStub =
         FailedPartitionsGrpcKt.FailedPartitionsCoroutineStub(channel)
+    val eventSources: EventSourcesGrpcKt.EventSourcesCoroutineStub =
+        EventSourcesGrpcKt.EventSourcesCoroutineStub(channel)
     val captures: CapturesGrpcKt.CapturesCoroutineStub =
         CapturesGrpcKt.CapturesCoroutineStub(channel)
 }

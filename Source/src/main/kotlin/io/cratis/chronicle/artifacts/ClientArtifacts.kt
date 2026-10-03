@@ -6,6 +6,7 @@ package io.cratis.chronicle.artifacts
 import io.cratis.chronicle.captures.ICapture
 import io.cratis.chronicle.constraints.IConstraint
 import io.cratis.chronicle.events.EventType
+import io.cratis.chronicle.eventSources.EventSource
 import io.cratis.chronicle.events.migrations.IEventTypeMigration
 import io.cratis.chronicle.java.BlockingReactorMethodArgumentResolver
 import io.cratis.chronicle.java.BlockingReactorMiddleware
@@ -53,6 +54,7 @@ class ClientArtifacts(
 
     override val eventTypes: List<KClass<*>> get() = discovered.eventTypes
     override val eventTypeMigrations: List<KClass<*>> get() = discovered.eventTypeMigrations
+    override val eventSources: List<KClass<*>> get() = discovered.eventSources
     override val readModels: List<KClass<*>> get() = discovered.readModels
     override val projections: List<KClass<*>> get() = discovered.projections
     override val modelBoundProjections: List<KClass<*>> get() = discovered.modelBoundProjections
@@ -68,6 +70,7 @@ class ClientArtifacts(
     private fun scan(): Discovered = newClassGraph().scan().use { result ->
         Discovered(
             eventTypes = result.withAnnotation(EventType::class) { it.isEventType() },
+            eventSources = result.withAnnotation(EventSource::class) { it.isEventSource() },
             eventTypeMigrations = result.implementing(IEventTypeMigration::class) { it.isEventTypeMigration() },
             readModels = result.withAnnotation(ReadModel::class) { it.isReadModel() },
             projections = result.implementing(IProjectionFor::class) { it.isDeclarativeProjection() },
@@ -140,6 +143,7 @@ class ClientArtifacts(
     private class Discovered(
         val eventTypes: List<KClass<*>>,
         val eventTypeMigrations: List<KClass<*>>,
+        val eventSources: List<KClass<*>>,
         val readModels: List<KClass<*>>,
         val projections: List<KClass<*>>,
         val modelBoundProjections: List<KClass<*>>,

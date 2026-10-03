@@ -38,7 +38,8 @@ internal fun Sequences.AppendedEventResponse.toClient(eventStore: String, namesp
             tags = context.tagsList.toList(),
             hash = context.hash,
             observationState = EventObservationState(context.observationStateValue),
-            subject = context.subject
+            subject = context.subject,
+            eventSource = context.eventSource
         ),
         content = content
     )
