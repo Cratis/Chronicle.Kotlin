@@ -6,7 +6,9 @@ package io.cratis.chronicle.eventSources
 import io.cratis.chronicle.ChronicleClient
 import io.cratis.chronicle.ChronicleOptions
 import io.cratis.chronicle.artifacts.KnownClientArtifacts
+import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
+import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import io.cratis.chronicle.eventSequences.appendThroughEventSource
 import io.cratis.chronicle.events.EventType
 import java.util.UUID
@@ -65,6 +67,43 @@ class EventSourceKernelRoundtripTests {
 
             val definitions = store.eventSources.all
             assertEquals(listOf("Account"), definitions.map { it.name })
+        }
+    }
+
+    @Test
+    fun `a stale scope on one id rejects the whole mixed batch and appends nothing`() = runBlocking {
+        val port = System.getenv("CHRONICLE_KERNEL_PORT")
+        val options = ChronicleOptions.fromConnectionString(
+            "chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:$port"
+        ).copy(
+            autoDiscoverAndRegister = true,
+            artifacts = KnownClientArtifacts(MoneyDeposited::class, AccountRoundtripEventSource::class)
+        )
+
+        ChronicleClient(options).use { client ->
+            val store = client.getEventStore("eventsource-kotlin-${UUID.randomUUID().toString().take(8)}")
+            val log = store.eventLog
+            val guarded = UUID.randomUUID().toString()
+            val other = UUID.randomUUID().toString()
+
+            val seeded = log.append(guarded, MoneyDeposited(1))
+            assertTrue(seeded.isSuccess, seeded.errors.toString())
+            val before = log.getFromSequenceNumber(EventSequenceNumber.first).size
+
+            // Scope expecting the guarded id to still be at sequence number -1 (nothing) - it is stale.
+            val stale = ConcurrencyScope(EventSequenceNumber.unavailable, eventSourceId = true, expectsNoMatchingEvent = true)
+            val results = runCatching {
+                log.appendMany(
+                    listOf(
+                        EventForEventSourceId(other, MoneyDeposited(2), eventSource = AccountRoundtripEventSource::class),
+                        EventForEventSourceId(guarded, MoneyDeposited(3), eventSource = AccountRoundtripEventSource::class)
+                    ),
+                    mapOf(guarded to stale)
+                )
+            }
+
+            assertTrue(results.isFailure || results.getOrThrow().any { !it.isSuccess }, "the stale scope must be rejected")
+            assertEquals(before, log.getFromSequenceNumber(EventSequenceNumber.first).size, "no entry of the batch may be appended")
         }
     }
 }

@@ -8,6 +8,7 @@ import Cratis.Chronicle.Contracts.Sequences.Sequences
 import io.cratis.chronicle.artifacts.KnownClientArtifacts
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import io.cratis.chronicle.eventSources.ConcurrencyDimension
+import io.cratis.chronicle.eventSources.ConflictingEventSourceConcurrency
 import io.cratis.chronicle.eventSources.EventRoutingContradictsEventSource
 import io.cratis.chronicle.eventSources.EventSource
 import io.cratis.chronicle.eventSources.EventSources
@@ -198,6 +199,106 @@ class EventSourceAppendTests {
         assertEquals(setOf("acc-1", "acc-2"), scopes.keys)
         assertEquals(5, scopes["acc-1"]!!.sequenceNumber)
         assertEquals(77, scopes["acc-2"]!!.sequenceNumber)
+    }
+
+    @Test
+    fun `entries sharing an id but deriving different scopes are rejected before anything is sent`() {
+        tail = 5
+
+        val failure = assertThrows<ConflictingEventSourceConcurrency> {
+            runBlocking {
+                sequence.appendMany(
+                    listOf(
+                        EventForEventSourceId("shared", Deposited(1), eventSource = AccountEventSource::class, eventStream = "Transactions"),
+                        EventForEventSourceId("shared", Deposited(2), eventSource = AccountEventSource::class)
+                    )
+                )
+            }
+        }
+
+        assertEquals("shared", failure.eventSourceId)
+        coVerify(exactly = 0) { stub.appendManyForEventSources(any(), any()) }
+    }
+
+    @Test
+    fun `a conflict is detected whichever entry comes first`() {
+        tail = 5
+
+        assertThrows<ConflictingEventSourceConcurrency> {
+            runBlocking {
+                sequence.appendMany(
+                    listOf(
+                        EventForEventSourceId("shared", Deposited(1), eventSource = AccountEventSource::class),
+                        EventForEventSourceId("shared", Deposited(2), eventSource = AccountEventSource::class, eventStream = "Transactions")
+                    )
+                )
+            }
+        }
+        coVerify(exactly = 0) { stub.appendManyForEventSources(any(), any()) }
+    }
+
+    @Test
+    fun `an unchecked definition sharing an id with a checked one is rejected not silently guarded`() {
+        assertThrows<ConflictingEventSourceConcurrency> {
+            runBlocking {
+                sequence.appendMany(
+                    listOf(
+                        EventForEventSourceId("shared", Deposited(1), eventSource = LedgerEventSource::class),
+                        EventForEventSourceId("shared", Deposited(2), eventSource = AccountEventSource::class)
+                    )
+                )
+            }
+        }
+        coVerify(exactly = 0) { stub.appendManyForEventSources(any(), any()) }
+    }
+
+    @Test
+    fun `entries sharing an id that agree on the derived scope send it once`() = runBlocking {
+        tail = 5
+
+        sequence.appendMany(
+            listOf(
+                EventForEventSourceId("shared", Deposited(1), eventSource = AccountEventSource::class),
+                EventForEventSourceId("shared", Deposited(2), eventSource = AccountEventSource::class)
+            )
+        )
+
+        val scopes = appendMany.captured.concurrencyScopesList
+        assertEquals(1, scopes.size)
+        assertEquals("shared", scopes.single().eventSourceId)
+        assertEquals(5, scopes.single().scope.sequenceNumber)
+    }
+
+    @Test
+    fun `an explicit scope for the shared id settles the conflict and wins`() = runBlocking {
+        tail = 5
+        val explicit = ConcurrencyScope(EventSequenceNumber(77), eventSourceId = true)
+
+        sequence.appendMany(
+            listOf(
+                EventForEventSourceId("shared", Deposited(1), eventSource = AccountEventSource::class, eventStream = "Transactions"),
+                EventForEventSourceId("shared", Deposited(2), eventSource = AccountEventSource::class)
+            ),
+            mapOf("shared" to explicit)
+        )
+
+        assertEquals(77, appendMany.captured.concurrencyScopesList.single().scope.sequenceNumber)
+    }
+
+    @Test
+    fun `different ids keep their own derived scopes per entry`() = runBlocking {
+        tail = 5
+
+        sequence.appendMany(
+            listOf(
+                EventForEventSourceId("one", Deposited(1), eventSource = AccountEventSource::class, eventStream = "Transactions"),
+                EventForEventSourceId("two", Deposited(2), eventSource = AccountEventSource::class)
+            )
+        )
+
+        val scopes = appendMany.captured.concurrencyScopesList.associate { it.eventSourceId to it.scope }
+        assertTrue(scopes["one"]!!.eventStreamType.isNotEmpty())
+        assertTrue(scopes["two"]!!.eventStreamType.isEmpty())
     }
 
     @Test

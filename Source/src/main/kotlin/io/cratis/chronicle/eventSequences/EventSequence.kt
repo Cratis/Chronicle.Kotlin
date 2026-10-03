@@ -15,6 +15,7 @@ import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.events.EventTypeDescriptor
 import io.cratis.chronicle.eventSources.ConcurrencyDimension
+import io.cratis.chronicle.eventSources.ConflictingEventSourceConcurrency
 import io.cratis.chronicle.eventSources.IEventSources
 import io.cratis.chronicle.eventSources.ResolvedEventRouting
 import io.cratis.chronicle.identity.Identity as ChronicleIdentity
@@ -44,13 +45,14 @@ open class EventSequence(
     private val registrationGate: IRegistrationGate = IRegistrationGate.open,
     private val eventSources: IEventSources = IEventSources.none
 ) : IEventSequence, IEventSourceRoutingPreflight {
+    /** The shape from before event sources existed, with its original default arguments. */
     constructor(
         id: EventSequenceId,
         eventStoreName: String,
         namespace: String,
         stub: EventSequencesGrpcKt.EventSequencesCoroutineStub,
-        traces: ChronicleTraces,
-        registrationGate: IRegistrationGate
+        traces: ChronicleTraces = ChronicleTraces.default,
+        registrationGate: IRegistrationGate = IRegistrationGate.open
     ) : this(id, eventStoreName, namespace, stub, traces, registrationGate, IEventSources.none)
 
     private val _appendOperations = MutableSharedFlow<List<AppendedEventWithResult>>(
@@ -481,25 +483,48 @@ open class EventSequence(
         return (if (scope != null) routed.copy(concurrencyScope = scope) else routed) to routing
     }
 
+    /**
+     * Resolves the batch's concurrency scopes. The wire carries one scope per event source id, so a scope is
+     * derived per entry and entries sharing an id must agree: a derived scope is never taken from the first
+     * entry alone. Explicit per-id scopes keep precedence over anything derived.
+     */
     private suspend fun resolveBatchScopes(
         events: List<EventForEventSourceId>,
         routings: List<ResolvedEventRouting?>,
         concurrencyScopes: Map<String, ConcurrencyScope>
     ): Map<String, ConcurrencyScope> {
         val resolved = concurrencyScopes.toMutableMap()
+        val derivedCache = mutableMapOf<ScopeKey, ConcurrencyScope?>()
         val routedBySource = events.indices.filter { routings[it] != null }.groupBy { events[it].eventSourceId }
 
         for ((eventSourceId, indices) in routedBySource) {
             val existing = resolved[eventSourceId]
             if (existing != null && existing != ConcurrencyScope.notSet) continue
 
-            val first = indices.first()
-            val event = events[first]
-            scopeFor(routings[first]!!, eventSourceId, event.eventStreamType, event.eventStreamId, event.eventSourceType)
-                ?.let { resolved[eventSourceId] = it }
+            val derived = indices.map { index ->
+                val event = events[index]
+                val routing = routings[index]!!
+                val key = ScopeKey(routing.dimensions, eventSourceId, event.eventStreamType, event.eventStreamId, event.eventSourceType)
+                if (key in derivedCache) {
+                    derivedCache[key]
+                } else {
+                    scopeFor(routing, eventSourceId, event.eventStreamType, event.eventStreamId, event.eventSourceType)
+                        .also { derivedCache[key] = it }
+                }
+            }
+            if (derived.distinct().size > 1) throw ConflictingEventSourceConcurrency(eventSourceId)
+            derived.first()?.let { resolved[eventSourceId] = it }
         }
         return resolved
     }
+
+    private data class ScopeKey(
+        val dimensions: Set<ConcurrencyDimension>,
+        val eventSourceId: String,
+        val eventStreamType: String?,
+        val eventStreamId: String?,
+        val eventSourceType: String?
+    )
 
     /**
      * Builds the concurrency scope for the dimensions a definition declares, or `null` when it declares none
