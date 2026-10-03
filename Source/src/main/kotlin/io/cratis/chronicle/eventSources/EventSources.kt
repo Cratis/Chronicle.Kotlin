@@ -6,6 +6,7 @@ package io.cratis.chronicle.eventSources
 import Cratis.Chronicle.Contracts.EventSources.EventSourcesGrpcKt
 import Cratis.Chronicle.Contracts.EventSources.Eventsources
 import io.cratis.chronicle.artifacts.IClientArtifacts
+import io.cratis.chronicle.artifacts.eventSources
 import io.cratis.chronicle.eventSequences.ChronicleCommandRejected
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation

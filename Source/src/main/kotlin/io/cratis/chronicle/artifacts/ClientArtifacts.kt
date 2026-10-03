@@ -47,7 +47,7 @@ import kotlin.reflect.KClass
 class ClientArtifacts(
     private val packages: List<String> = emptyList(),
     private val classLoaders: List<ClassLoader> = defaultClassLoaders()
-) : IClientArtifacts {
+) : IClientArtifacts, IEventSourceArtifacts {
     constructor(vararg packages: String) : this(packages.toList())
 
     private val discovered: Discovered by lazy { scan() }
