@@ -92,4 +92,48 @@ class ApiCompatibilityTests {
 
         assertNull(event.eventSource)
     }
+
+    @Test
+    fun `the synthetic default argument bridges of the previous release are still generated`() {
+        // Kotlin callers compiled against the previous release call these synthetic members directly when
+        // they rely on default arguments. Removing them is a binary break even though source still compiles.
+        val appendOptions = AppendOptions::class.java
+        val eventFor = EventForEventSourceId::class.java
+        val context = EventContext::class.java
+
+        assertEquals(1, appendOptions.defaultConstructorsWithParameterCount(9 + 2))
+        assertEquals(1, eventFor.defaultConstructorsWithParameterCount(9 + 2))
+        assertEquals(1, context.defaultConstructorsWithParameterCount(16 + 2))
+        assertEquals(1, EventLog::class.java.defaultConstructorsWithParameterCount(6 + 2))
+        assertEquals(1, EventSequence::class.java.defaultConstructorsWithParameterCount(6 + 2))
+        assertEquals(1, appendOptions.copyDefaultsWithParameterCount(1 + 9 + 2))
+        assertEquals(1, eventFor.copyDefaultsWithParameterCount(1 + 9 + 2))
+        assertEquals(1, context.copyDefaultsWithParameterCount(1 + 16 + 2))
+    }
+
+    @Test
+    fun `a default argument construction and copy of the previous shape ignores event source routing`() {
+        assertNull(AppendOptions().eventSource)
+        assertNull(AppendOptions(subject = "s").copy(tags = listOf("t")).eventSource)
+        assertEquals(listOf("t"), EventForEventSourceId("id", Any()).copy(tags = listOf("t")).tags)
+    }
+
+    @Test
+    fun `routing arguments select the new primary shape and survive a legacy copy`() {
+        val routed = AppendOptions(eventSource = SomeSource::class, eventStream = "Stream")
+
+        val copied = routed.copy(subject = "s")
+
+        assertEquals(SomeSource::class, copied.eventSource)
+        assertEquals("Stream", copied.eventStream)
+        assertEquals(SomeSource::class, routed.copy(eventSource = SomeSource::class).eventSource)
+    }
+
+    private fun Class<*>.defaultConstructorsWithParameterCount(count: Int) =
+        declaredConstructors.count {
+            it.parameterCount == count && it.isSynthetic && it.parameterTypes[count - 2] == Int::class.javaPrimitiveType
+        }
+
+    private fun Class<*>.copyDefaultsWithParameterCount(count: Int) =
+        declaredMethods.count { it.name == "copy\$default" && it.parameterCount == count }
 }

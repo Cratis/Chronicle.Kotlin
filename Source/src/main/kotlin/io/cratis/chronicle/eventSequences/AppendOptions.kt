@@ -15,9 +15,11 @@ import kotlin.reflect.KClass
  * Every property is optional. Routing is forwarded without client-side defaults: missing or empty
  * routing values are resolved by the kernel; every explicit nonempty value is preserved.
  *
- * The constructor is `@JvmOverloads` so that Java callers keep the shorter positional forms they
- * already compile against. For anything beyond the first argument or two, Java should prefer
- * [io.cratis.chronicle.java.AppendOptionsBuilder] rather than passing nulls positionally.
+ * The pre-event-source constructor and `copy` shapes are kept as legacy members carrying their original
+ * defaults, so code compiled against an earlier release - Kotlin default arguments included - links and
+ * behaves unchanged. Java callers keep the shorter positional forms they already compile against; for
+ * routing, Java should use [io.cratis.chronicle.java.AppendOptionsBuilder] rather than passing nulls
+ * positionally.
  *
  * @property correlationId Correlation identifier for this operation.
  *   Defaults to the current [io.cratis.chronicle.correlation.CorrelationIdManager] value.
@@ -44,7 +46,7 @@ import kotlin.reflect.KClass
  *   append behaves exactly as before.
  * @property eventStream The name of a stream declared by [eventSource]. Requires [eventSource].
  */
-data class AppendOptions @JvmOverloads constructor(
+data class AppendOptions(
     val correlationId: UUID? = null,
     val concurrencyScope: ConcurrencyScope? = null,
     val eventSourceType: String? = null,
@@ -58,19 +60,39 @@ data class AppendOptions @JvmOverloads constructor(
     val eventStream: String? = null
 ) {
     /**
-     * Preserves the `copy` shape from before [eventSource] and [eventStream] existed, so callers compiled
-     * against it keep linking. The routing of this instance is carried over unchanged.
+     * Preserves the constructor shape, and its default arguments, from before [eventSource] and [eventStream]
+     * existed, so callers compiled against it keep linking. Routing through an event source is absent.
+     */
+    @JvmOverloads
+    constructor(
+        correlationId: UUID? = null,
+        concurrencyScope: ConcurrencyScope? = null,
+        eventSourceType: String? = null,
+        eventStreamType: String? = null,
+        eventStreamId: String? = null,
+        subject: String? = null,
+        tags: List<String> = emptyList(),
+        occurred: Instant? = null,
+        causation: List<Causation> = emptyList()
+    ) : this(
+        correlationId, concurrencyScope, eventSourceType, eventStreamType, eventStreamId, subject, tags, occurred,
+        causation, null, null
+    )
+
+    /**
+     * Preserves the `copy` shape, and its default arguments, from before [eventSource] and [eventStream]
+     * existed, so callers compiled against it keep linking. The routing of this instance is carried over unchanged.
      */
     fun copy(
-        correlationId: UUID?,
-        concurrencyScope: ConcurrencyScope?,
-        eventSourceType: String?,
-        eventStreamType: String?,
-        eventStreamId: String?,
-        subject: String?,
-        tags: List<String>,
-        occurred: Instant?,
-        causation: List<Causation>
+        correlationId: UUID? = this.correlationId,
+        concurrencyScope: ConcurrencyScope? = this.concurrencyScope,
+        eventSourceType: String? = this.eventSourceType,
+        eventStreamType: String? = this.eventStreamType,
+        eventStreamId: String? = this.eventStreamId,
+        subject: String? = this.subject,
+        tags: List<String> = this.tags,
+        occurred: Instant? = this.occurred,
+        causation: List<Causation> = this.causation
     ): AppendOptions = copy(
         correlationId, concurrencyScope, eventSourceType, eventStreamType, eventStreamId, subject, tags, occurred,
         causation, eventSource, eventStream

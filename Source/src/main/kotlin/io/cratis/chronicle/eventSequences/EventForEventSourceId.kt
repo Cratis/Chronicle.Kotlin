@@ -22,8 +22,10 @@ import kotlin.reflect.KClass
  *
  * Everything past [event] is optional and falls back to the same default a plain append uses.
  *
- * The constructor is `@JvmOverloads` so Java can construct the short forms positionally rather than
- * passing a run of nulls. Beyond the first field or two, prefer named arguments in Kotlin.
+ * The pre-event-source constructor and `copy` shapes are kept as legacy members carrying their original
+ * defaults, so code compiled against an earlier release - Kotlin default arguments included - links and
+ * behaves unchanged; `@JvmOverloads` lets Java construct the short forms positionally. Beyond the first
+ * field or two, prefer named arguments in Kotlin.
  *
  * @property eventSourceId The identifier of the event source to append [event] to.
  * @property event The event object to append. Must be annotated with [@EventType][io.cratis.chronicle.events.EventType].
@@ -45,7 +47,7 @@ import kotlin.reflect.KClass
  *   It must agree with any explicit [eventSourceType] and [eventStreamType] or the append is rejected.
  * @property eventStream The name of a stream declared by [eventSource]. Requires [eventSource].
  */
-data class EventForEventSourceId @JvmOverloads constructor(
+data class EventForEventSourceId(
     val eventSourceId: String,
     val event: Any,
     val eventStreamType: String? = null,
@@ -59,19 +61,39 @@ data class EventForEventSourceId @JvmOverloads constructor(
     val eventStream: String? = null
 ) {
     /**
-     * Preserves the `copy` shape from before [eventSource] and [eventStream] existed, so callers compiled
-     * against it keep linking. The routing of this instance is carried over unchanged.
+     * Preserves the constructor shape, and its default arguments, from before [eventSource] and [eventStream]
+     * existed, so callers compiled against it keep linking. Routing through an event source is absent.
      */
-    fun copy(
+    @JvmOverloads
+    constructor(
         eventSourceId: String,
         event: Any,
-        eventStreamType: String?,
-        eventStreamId: String?,
-        eventSourceType: String?,
-        tags: List<String>,
-        occurred: Instant?,
-        subject: String?,
-        causation: List<Causation>
+        eventStreamType: String? = null,
+        eventStreamId: String? = null,
+        eventSourceType: String? = null,
+        tags: List<String> = emptyList(),
+        occurred: Instant? = null,
+        subject: String? = null,
+        causation: List<Causation> = emptyList()
+    ) : this(
+        eventSourceId, event, eventStreamType, eventStreamId, eventSourceType, tags, occurred, subject,
+        causation, null, null
+    )
+
+    /**
+     * Preserves the `copy` shape, and its default arguments, from before [eventSource] and [eventStream]
+     * existed, so callers compiled against it keep linking. The routing of this instance is carried over unchanged.
+     */
+    fun copy(
+        eventSourceId: String = this.eventSourceId,
+        event: Any = this.event,
+        eventStreamType: String? = this.eventStreamType,
+        eventStreamId: String? = this.eventStreamId,
+        eventSourceType: String? = this.eventSourceType,
+        tags: List<String> = this.tags,
+        occurred: Instant? = this.occurred,
+        subject: String? = this.subject,
+        causation: List<Causation> = this.causation
     ): EventForEventSourceId = copy(
         eventSourceId, event, eventStreamType, eventStreamId, eventSourceType, tags, occurred, subject,
         causation, eventSource, eventStream

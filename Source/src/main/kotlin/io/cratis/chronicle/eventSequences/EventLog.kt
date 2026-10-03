@@ -18,13 +18,14 @@ class EventLog(
     registrationGate: IRegistrationGate = IRegistrationGate.open,
     eventSources: IEventSources = IEventSources.none
 ) : EventSequence(EventSequenceId.eventLog, name, namespace, stub, traces, registrationGate, eventSources), IEventLog {
+    /** The shape from before event sources existed, with its original default arguments. */
     constructor(
         name: String,
         namespace: String,
         stub: EventSequencesGrpcKt.EventSequencesCoroutineStub,
         unitOfWorkManager: IUnitOfWorkManager,
-        traces: ChronicleTraces,
-        registrationGate: IRegistrationGate
+        traces: ChronicleTraces = ChronicleTraces.default,
+        registrationGate: IRegistrationGate = IRegistrationGate.open
     ) : this(name, namespace, stub, unitOfWorkManager, traces, registrationGate, IEventSources.none)
 
     override val transactional: ITransactionalEventSequence by lazy {
