@@ -38,6 +38,12 @@ interface IEventSources {
     suspend fun register()
 
     companion object {
+        /**
+         * The capability of an event store that does not support event sources. It declares no definitions,
+         * registering is a no-op, and anything that needs a definition fails with [UnsupportedOperationException].
+         */
+        val unsupported: IEventSources = UnsupportedEventSources
+
         /** An instance with no definitions, for event sequences that are not part of an event store. */
         val none: IEventSources by lazy {
             EventSources("", null, io.cratis.chronicle.artifacts.KnownClientArtifacts.empty)

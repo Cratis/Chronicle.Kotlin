@@ -7,7 +7,6 @@ import io.cratis.chronicle.compliance.IComplianceService
 import io.cratis.chronicle.constraints.IConstraintsService
 import io.cratis.chronicle.events.IEventTypesService
 import io.cratis.chronicle.eventSequences.EventSequenceId
-import io.cratis.chronicle.eventSources.IEventSources
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.eventSequences.IEventSequence
 import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionsService
@@ -40,8 +39,6 @@ interface IEventStore {
     val compliance: IComplianceService
     val eventTypes: IEventTypesService
 
-    /** The event source and stream definitions of this event store. */
-    val eventSources: IEventSources
     val namespaces: INamespacesService
     val externalServices: IExternalServicesService
     val jobs: IJobsService

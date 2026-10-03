@@ -27,6 +27,7 @@ import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.eventSequences.IEventSequence
 import io.cratis.chronicle.eventSources.EventSources
 import io.cratis.chronicle.eventSources.IEventSources
+import io.cratis.chronicle.eventSources.IEventSourcesCapability
 import io.cratis.chronicle.eventStoreSubscriptions.EventStoreSubscriptionsService
 import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionsService
 import io.cratis.chronicle.externalServices.ExternalServicesService
@@ -106,7 +107,7 @@ class EventStore(
     private val autoDiscoverAndRegister: Boolean,
     private val traces: ChronicleTraces,
     private val readModelNamingPolicy: ReadModelNamingPolicy
-) : IEventStore {
+) : IEventStore, IEventSourcesCapability {
     /** Creates an event store that names read model containers after the read model identifier. */
     constructor(
         name: String,

@@ -43,7 +43,7 @@ open class EventSequence(
     private val traces: ChronicleTraces = ChronicleTraces.default,
     private val registrationGate: IRegistrationGate = IRegistrationGate.open,
     private val eventSources: IEventSources = IEventSources.none
-) : IEventSequence {
+) : IEventSequence, IEventSourceRoutingPreflight {
     constructor(
         id: EventSequenceId,
         eventStoreName: String,
@@ -440,6 +440,10 @@ open class EventSequence(
     // -------------------------------------------------------------------------
     // Event source definitions
     // -------------------------------------------------------------------------
+
+    override fun preflightRouting(options: AppendOptions?) {
+        routingFor(options?.eventSource, options?.eventStream, options?.eventSourceType, options?.eventStreamType)
+    }
 
     private fun routingFor(
         eventSource: KClass<*>?,

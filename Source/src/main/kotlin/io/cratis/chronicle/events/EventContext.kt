@@ -50,6 +50,30 @@ data class EventContext(
     val subject: String = "",
     val eventSource: String = ""
 ) {
+    /** Preserves the `copy` shape from before [eventSource] existed; [eventSource] is carried over unchanged. */
+    fun copy(
+        sequenceNumber: Long,
+        eventSourceId: String,
+        eventType: EventTypeDescriptor,
+        occurred: Instant,
+        correlationId: UUID,
+        causedBy: Identity,
+        eventSourceType: String,
+        eventStreamType: String,
+        eventStreamId: String,
+        eventStore: String,
+        namespace: String,
+        causation: List<Causation>,
+        tags: List<String>,
+        hash: String,
+        observationState: EventObservationState,
+        subject: String
+    ): EventContext = copy(
+        sequenceNumber, eventSourceId, eventType, occurred, correlationId, causedBy, eventSourceType,
+        eventStreamType, eventStreamId, eventStore, namespace, causation, tags, hash, observationState,
+        subject, eventSource
+    )
+
     /** Preserves the constructor shape from before [eventSource] existed, for binary compatibility. */
     constructor(
         sequenceNumber: Long,

@@ -4,7 +4,9 @@
 package io.cratis.chronicle.artifacts
 
 import io.cratis.chronicle.IEventStore
+import io.cratis.chronicle.eventSources
 import io.cratis.chronicle.captures.ICapture
+import io.cratis.chronicle.eventSources.IEventSources
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.projections.IProjectionFor
 import kotlinx.coroutines.CancellationException
@@ -69,6 +71,10 @@ class ArtifactRegistrations(
 
         // Event sources are independent of event types - routing belongs to the append - so this has
         // no ordering requirement beyond the event store existing. Registration is an upsert.
+        // A store that does not support event sources cannot honor declared definitions; fail rather than drop them.
+        check(artifacts.eventSources.isEmpty() || eventStore.eventSources !== IEventSources.unsupported) {
+            "Event sources are declared but this event store does not support them."
+        }
         eventStore.eventSources.register()
 
         // Reducers and projections register their own read models, tagged with the observer that

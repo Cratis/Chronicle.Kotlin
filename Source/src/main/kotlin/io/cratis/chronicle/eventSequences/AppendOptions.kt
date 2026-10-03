@@ -57,6 +57,25 @@ data class AppendOptions @JvmOverloads constructor(
     val eventSource: KClass<*>? = null,
     val eventStream: String? = null
 ) {
+    /**
+     * Preserves the `copy` shape from before [eventSource] and [eventStream] existed, so callers compiled
+     * against it keep linking. The routing of this instance is carried over unchanged.
+     */
+    fun copy(
+        correlationId: UUID?,
+        concurrencyScope: ConcurrencyScope?,
+        eventSourceType: String?,
+        eventStreamType: String?,
+        eventStreamId: String?,
+        subject: String?,
+        tags: List<String>,
+        occurred: Instant?,
+        causation: List<Causation>
+    ): AppendOptions = copy(
+        correlationId, concurrencyScope, eventSourceType, eventStreamType, eventStreamId, subject, tags, occurred,
+        causation, eventSource, eventStream
+    )
+
     internal companion object {
         /** Legacy JVM constant retained for compatibility; request construction does not apply it. */
         const val DEFAULT_EVENT_SOURCE_TYPE = "Default"

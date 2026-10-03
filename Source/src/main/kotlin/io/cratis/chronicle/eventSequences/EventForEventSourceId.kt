@@ -59,6 +59,25 @@ data class EventForEventSourceId @JvmOverloads constructor(
     val eventStream: String? = null
 ) {
     /**
+     * Preserves the `copy` shape from before [eventSource] and [eventStream] existed, so callers compiled
+     * against it keep linking. The routing of this instance is carried over unchanged.
+     */
+    fun copy(
+        eventSourceId: String,
+        event: Any,
+        eventStreamType: String?,
+        eventStreamId: String?,
+        eventSourceType: String?,
+        tags: List<String>,
+        occurred: Instant?,
+        subject: String?,
+        causation: List<Causation>
+    ): EventForEventSourceId = copy(
+        eventSourceId, event, eventStreamType, eventStreamId, eventSourceType, tags, occurred, subject,
+        causation, eventSource, eventStream
+    )
+
+    /**
      * The shaping expressed as [AppendOptions], for the paths that append one event at a time -
      * reactor side effects in particular, which would otherwise silently discard everything past
      * [eventSourceId] and [event].

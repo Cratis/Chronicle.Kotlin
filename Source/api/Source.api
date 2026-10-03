@@ -49,7 +49,7 @@ public final class io/cratis/chronicle/ChronicleOptions$Companion {
 	public final fun fromConnectionString (Ljava/lang/String;)Lio/cratis/chronicle/ChronicleOptions;
 }
 
-public final class io/cratis/chronicle/EventStore : io/cratis/chronicle/IEventStore {
+public final class io/cratis/chronicle/EventStore : io/cratis/chronicle/IEventStore, io/cratis/chronicle/eventSources/IEventSourcesCapability {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ChronicleServices;Lio/cratis/chronicle/connection/ConnectionLifecycle;Ljava/lang/String;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ZLio/cratis/chronicle/diagnostics/ChronicleTraces;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ChronicleServices;Lio/cratis/chronicle/connection/ConnectionLifecycle;Ljava/lang/String;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ZLio/cratis/chronicle/diagnostics/ChronicleTraces;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ChronicleServices;Lio/cratis/chronicle/connection/ConnectionLifecycle;Ljava/lang/String;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ZLio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/readModels/ReadModelNamingPolicy;)V
@@ -78,6 +78,10 @@ public final class io/cratis/chronicle/EventStore : io/cratis/chronicle/IEventSt
 	public fun getUnitOfWorkManager ()Lio/cratis/chronicle/transactions/UnitOfWorkManager;
 	public fun getWebhooks ()Lio/cratis/chronicle/webhooks/IWebhooksService;
 	public fun registerAll (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class io/cratis/chronicle/EventStoreEventSources {
+	public static final fun getEventSources (Lio/cratis/chronicle/IEventStore;)Lio/cratis/chronicle/eventSources/IEventSources;
 }
 
 public final class io/cratis/chronicle/EventStoreName {
@@ -134,7 +138,6 @@ public abstract interface class io/cratis/chronicle/IEventStore {
 	public abstract fun getConstraints ()Lio/cratis/chronicle/constraints/IConstraintsService;
 	public abstract fun getEventLog ()Lio/cratis/chronicle/eventSequences/IEventLog;
 	public abstract fun getEventSequence-WTFSefM (Ljava/lang/String;)Lio/cratis/chronicle/eventSequences/IEventSequence;
-	public abstract fun getEventSources ()Lio/cratis/chronicle/eventSources/IEventSources;
 	public abstract fun getEventStoreSubscriptions ()Lio/cratis/chronicle/eventStoreSubscriptions/IEventStoreSubscriptionsService;
 	public abstract fun getEventTypes ()Lio/cratis/chronicle/events/IEventTypesService;
 	public abstract fun getExternalServices ()Lio/cratis/chronicle/externalServices/IExternalServicesService;
@@ -1045,6 +1048,7 @@ public final class io/cratis/chronicle/eventSequences/AppendOptions {
 	public final fun component7 ()Ljava/util/List;
 	public final fun component8 ()Ljava/time/Instant;
 	public final fun component9 ()Ljava/util/List;
+	public final fun copy (Ljava/util/UUID;Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScope;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/time/Instant;Ljava/util/List;)Lio/cratis/chronicle/eventSequences/AppendOptions;
 	public final fun copy (Ljava/util/UUID;Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScope;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/time/Instant;Ljava/util/List;Lkotlin/reflect/KClass;Ljava/lang/String;)Lio/cratis/chronicle/eventSequences/AppendOptions;
 	public static synthetic fun copy$default (Lio/cratis/chronicle/eventSequences/AppendOptions;Ljava/util/UUID;Lio/cratis/chronicle/eventSequences/concurrency/ConcurrencyScope;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/time/Instant;Ljava/util/List;Lkotlin/reflect/KClass;Ljava/lang/String;ILjava/lang/Object;)Lio/cratis/chronicle/eventSequences/AppendOptions;
 	public fun equals (Ljava/lang/Object;)Z
@@ -1187,6 +1191,7 @@ public final class io/cratis/chronicle/eventSequences/EventForEventSourceId {
 	public final fun component7 ()Ljava/time/Instant;
 	public final fun component8 ()Ljava/lang/String;
 	public final fun component9 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/time/Instant;Ljava/lang/String;Ljava/util/List;)Lio/cratis/chronicle/eventSequences/EventForEventSourceId;
 	public final fun copy (Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/time/Instant;Ljava/lang/String;Ljava/util/List;Lkotlin/reflect/KClass;Ljava/lang/String;)Lio/cratis/chronicle/eventSequences/EventForEventSourceId;
 	public static synthetic fun copy$default (Lio/cratis/chronicle/eventSequences/EventForEventSourceId;Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/time/Instant;Ljava/lang/String;Ljava/util/List;Lkotlin/reflect/KClass;Ljava/lang/String;ILjava/lang/Object;)Lio/cratis/chronicle/eventSequences/EventForEventSourceId;
 	public fun equals (Ljava/lang/Object;)Z
@@ -1212,7 +1217,7 @@ public final class io/cratis/chronicle/eventSequences/EventLog : io/cratis/chron
 	public fun getTransactional ()Lio/cratis/chronicle/eventSequences/ITransactionalEventSequence;
 }
 
-public class io/cratis/chronicle/eventSequences/EventSequence : io/cratis/chronicle/eventSequences/IEventSequence {
+public class io/cratis/chronicle/eventSequences/EventSequence : io/cratis/chronicle/eventSequences/IEventSequence, io/cratis/chronicle/eventSequences/IEventSourceRoutingPreflight {
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/Sequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/artifacts/IRegistrationGate;Lio/cratis/chronicle/eventSources/IEventSources;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/Sequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/artifacts/IRegistrationGate;Lio/cratis/chronicle/eventSources/IEventSources;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/Sequences/EventSequencesGrpcKt$EventSequencesCoroutineStub;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/artifacts/IRegistrationGate;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -1228,6 +1233,7 @@ public class io/cratis/chronicle/eventSequences/EventSequence : io/cratis/chroni
 	public fun getTailSequenceNumber-NETI2YA (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getTailSequenceNumberForObserver-NETI2YA (Lkotlin/reflect/KClass;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun hasEventsFor (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun preflightRouting (Lio/cratis/chronicle/eventSequences/AppendOptions;)V
 	public fun redact-rxlEwpA (JLjava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun redactForEventSource-8d2Qhxo (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
@@ -1636,6 +1642,11 @@ public abstract interface class io/cratis/chronicle/eventSources/IEventSources {
 
 public final class io/cratis/chronicle/eventSources/IEventSources$Companion {
 	public final fun getNone ()Lio/cratis/chronicle/eventSources/IEventSources;
+	public final fun getUnsupported ()Lio/cratis/chronicle/eventSources/IEventSources;
+}
+
+public abstract interface class io/cratis/chronicle/eventSources/IEventSourcesCapability {
+	public abstract fun getEventSources ()Lio/cratis/chronicle/eventSources/IEventSources;
 }
 
 public final class io/cratis/chronicle/eventSources/InvalidEventSourceDefinition : java/lang/RuntimeException {
@@ -1692,6 +1703,7 @@ public final class io/cratis/chronicle/events/EventContext {
 	public final fun component7 ()Ljava/lang/String;
 	public final fun component8 ()Ljava/lang/String;
 	public final fun component9 ()Ljava/lang/String;
+	public final fun copy (JLjava/lang/String;Lio/cratis/chronicle/events/EventTypeDescriptor;Ljava/time/Instant;Ljava/util/UUID;Lio/cratis/chronicle/identity/Identity;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/lang/String;Lio/cratis/chronicle/events/EventObservationState;Ljava/lang/String;)Lio/cratis/chronicle/events/EventContext;
 	public final fun copy (JLjava/lang/String;Lio/cratis/chronicle/events/EventTypeDescriptor;Ljava/time/Instant;Ljava/util/UUID;Lio/cratis/chronicle/identity/Identity;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/lang/String;Lio/cratis/chronicle/events/EventObservationState;Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/events/EventContext;
 	public static synthetic fun copy$default (Lio/cratis/chronicle/events/EventContext;JLjava/lang/String;Lio/cratis/chronicle/events/EventTypeDescriptor;Ljava/time/Instant;Ljava/util/UUID;Lio/cratis/chronicle/identity/Identity;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/util/List;Ljava/lang/String;Lio/cratis/chronicle/events/EventObservationState;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lio/cratis/chronicle/events/EventContext;
 	public fun equals (Ljava/lang/Object;)Z

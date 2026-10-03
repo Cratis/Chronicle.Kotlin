@@ -11,6 +11,7 @@ import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.ConstraintViolation
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
+import io.cratis.chronicle.eventSequences.IEventSourceRoutingPreflight
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyViolation
 
 /**
@@ -99,6 +100,12 @@ class UnitOfWork(
      * preserving the overall staging order across groups.
      */
     private suspend fun appendStagedEventsGroupedByStream(): List<AppendResult> {
+        // Groups commit one after the other. Validate every group's event source routing first so a routing
+        // mistake in a later group cannot leave an earlier group already written.
+        _stagedEvents.forEach {
+            (eventStore.getEventSequence(it.eventSequenceId) as? IEventSourceRoutingPreflight)?.preflightRouting(it.options)
+        }
+
         val results = mutableListOf<AppendResult>()
         var index = 0
         while (index < _stagedEvents.size) {
