@@ -81,6 +81,13 @@ right after event types, when `autoDiscoverAndRegister` is on. To register by
 hand, call `eventStore.eventSources.register()`. Registration is an upsert:
 the kernel keeps definitions the client no longer declares.
 
+`eventSources` is a member of `EventStore`. Through the `IEventStore`
+interface it is the extension `io.cratis.chronicle.eventSources`, which
+returns the registry of an event store that implements
+`IEventSourcesCapability` and an unsupported one otherwise. Declaring an
+`@EventSource` class against a store without the capability fails
+registration instead of silently dropping the definition.
+
 ## Append through a definition
 
 `appendThroughEventSource` stamps the event source type from the definition,
@@ -195,3 +202,30 @@ Events appended through a definition carry its name in
 and reducers. Events appended without one, including events stored before
 event sources existed, have an empty `eventSource`; the client does not make
 up a name.
+
+## Compatibility
+
+Event sources are an additive, optional feature. Code that does not use them
+behaves as before, and they need a kernel at 19.30.0 or later.
+
+- **Custom `IEventStore` implementations** keep compiling and linking: the
+  registry is a separate `IEventSourcesCapability` interface that only
+  `EventStore` and the Spring `ResolvedEventStore` implement. Java and Kotlin
+  implementers are not required to change.
+- **Source compatibility** is preserved for `EventContext`, `AppendOptions`
+  and `EventForEventSourceId`: the constructors and `copy` signatures from
+  before event sources still exist, and `EventLog` and `EventSequence` keep
+  their previous constructors.
+- **Binary compatibility** is preserved for those explicit constructors and
+  `copy` methods, and for Java callers (through `@JvmOverloads`). The caveat is
+  Kotlin code compiled against an earlier release that relies on default
+  arguments: it calls a synthetic `$default` constructor or `copy$default`
+  whose signature changed, so that code must be recompiled.
+- `IClientArtifacts.eventSources` has a default, but as a Kotlin interface
+  default it is not visible to Java implementers of `IClientArtifacts`, which
+  must add the property.
+- The in-memory test sequence cannot honor a definition; appending through one
+  fails with `UnsupportedOperationException` instead of dropping the metadata.
+- Several routed events in one batch that share an event source id are
+  concurrency-checked using the first of them; give each event source id one
+  definition per batch.
