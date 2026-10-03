@@ -38,6 +38,7 @@ interface IEventStore {
     val unitOfWorkManager: UnitOfWorkManager
     val compliance: IComplianceService
     val eventTypes: IEventTypesService
+
     val namespaces: INamespacesService
     val externalServices: IExternalServicesService
     val jobs: IJobsService

@@ -5,6 +5,7 @@ package io.cratis.chronicle.eventSequences
 
 import io.cratis.chronicle.auditing.Causation
 import java.time.Instant
+import kotlin.reflect.KClass
 
 /**
  * An event together with the event source it belongs to, and how it should be placed in a sequence.
@@ -21,8 +22,10 @@ import java.time.Instant
  *
  * Everything past [event] is optional and falls back to the same default a plain append uses.
  *
- * The constructor is `@JvmOverloads` so Java can construct the short forms positionally rather than
- * passing a run of nulls. Beyond the first field or two, prefer named arguments in Kotlin.
+ * The pre-event-source constructor and `copy` shapes are kept as legacy members carrying their original
+ * defaults, so code compiled against an earlier release - Kotlin default arguments included - links and
+ * behaves unchanged; `@JvmOverloads` lets Java construct the short forms positionally. Beyond the first
+ * field or two, prefer named arguments in Kotlin.
  *
  * @property eventSourceId The identifier of the event source to append [event] to.
  * @property event The event object to append. Must be annotated with [@EventType][io.cratis.chronicle.events.EventType].
@@ -39,8 +42,12 @@ import java.time.Instant
  *   triggering event left on the thread. Note that the kernel carries one chain per
  *   [IEventSequence.appendMany] batch rather than one per event, so a batch whose events disagree
  *   on causation cannot be expressed and is rejected rather than having the difference dropped.
+ * @property eventSource The class carrying an [io.cratis.chronicle.eventSources.EventSource] definition this
+ *   event goes through. Per-event, so one atomic batch can mix events of different event sources.
+ *   It must agree with any explicit [eventSourceType] and [eventStreamType] or the append is rejected.
+ * @property eventStream The name of a stream declared by [eventSource]. Requires [eventSource].
  */
-data class EventForEventSourceId @JvmOverloads constructor(
+data class EventForEventSourceId(
     val eventSourceId: String,
     val event: Any,
     val eventStreamType: String? = null,
@@ -49,8 +56,49 @@ data class EventForEventSourceId @JvmOverloads constructor(
     val tags: List<String> = emptyList(),
     val occurred: Instant? = null,
     val subject: String? = null,
-    val causation: List<Causation> = emptyList()
+    val causation: List<Causation> = emptyList(),
+    val eventSource: KClass<*>? = null,
+    val eventStream: String? = null
 ) {
+    /**
+     * Preserves the constructor shape, and its default arguments, from before [eventSource] and [eventStream]
+     * existed, so callers compiled against it keep linking. Routing through an event source is absent.
+     */
+    @JvmOverloads
+    constructor(
+        eventSourceId: String,
+        event: Any,
+        eventStreamType: String? = null,
+        eventStreamId: String? = null,
+        eventSourceType: String? = null,
+        tags: List<String> = emptyList(),
+        occurred: Instant? = null,
+        subject: String? = null,
+        causation: List<Causation> = emptyList()
+    ) : this(
+        eventSourceId, event, eventStreamType, eventStreamId, eventSourceType, tags, occurred, subject,
+        causation, null, null
+    )
+
+    /**
+     * Preserves the `copy` shape, and its default arguments, from before [eventSource] and [eventStream]
+     * existed, so callers compiled against it keep linking. The routing of this instance is carried over unchanged.
+     */
+    fun copy(
+        eventSourceId: String = this.eventSourceId,
+        event: Any = this.event,
+        eventStreamType: String? = this.eventStreamType,
+        eventStreamId: String? = this.eventStreamId,
+        eventSourceType: String? = this.eventSourceType,
+        tags: List<String> = this.tags,
+        occurred: Instant? = this.occurred,
+        subject: String? = this.subject,
+        causation: List<Causation> = this.causation
+    ): EventForEventSourceId = copy(
+        eventSourceId, event, eventStreamType, eventStreamId, eventSourceType, tags, occurred, subject,
+        causation, eventSource, eventStream
+    )
+
     /**
      * The shaping expressed as [AppendOptions], for the paths that append one event at a time -
      * reactor side effects in particular, which would otherwise silently discard everything past
@@ -63,6 +111,8 @@ data class EventForEventSourceId @JvmOverloads constructor(
         subject = subject,
         tags = tags,
         occurred = occurred,
-        causation = causation
+        causation = causation,
+        eventSource = eventSource,
+        eventStream = eventStream
     )
 }

@@ -26,6 +26,8 @@ import java.util.UUID
  * @property tags The tags associated with this event.
  * @property hash The hash of the event content.
  * @property subject The compliance subject acknowledged by the kernel, or empty when not supplied.
+ * @property eventSource The name of the registered event source the event was appended through, or empty when
+ *   it was not appended through a definition - including events stored before event sources existed.
  * @property observationState The [EventObservationState] this event is being observed in.
  *   Use this to tell a live event from one arriving during a replay.
  */
@@ -45,5 +47,57 @@ data class EventContext(
     val tags: List<String> = emptyList(),
     val hash: String = "",
     val observationState: EventObservationState = EventObservationState.none,
-    val subject: String = ""
-)
+    val subject: String = "",
+    val eventSource: String = ""
+) {
+    /**
+     * Preserves the `copy` shape, and its default arguments, from before [eventSource] existed;
+     * [eventSource] is carried over unchanged.
+     */
+    fun copy(
+        sequenceNumber: Long = this.sequenceNumber,
+        eventSourceId: String = this.eventSourceId,
+        eventType: EventTypeDescriptor = this.eventType,
+        occurred: Instant = this.occurred,
+        correlationId: UUID = this.correlationId,
+        causedBy: Identity = this.causedBy,
+        eventSourceType: String = this.eventSourceType,
+        eventStreamType: String = this.eventStreamType,
+        eventStreamId: String = this.eventStreamId,
+        eventStore: String = this.eventStore,
+        namespace: String = this.namespace,
+        causation: List<Causation> = this.causation,
+        tags: List<String> = this.tags,
+        hash: String = this.hash,
+        observationState: EventObservationState = this.observationState,
+        subject: String = this.subject
+    ): EventContext = copy(
+        sequenceNumber, eventSourceId, eventType, occurred, correlationId, causedBy, eventSourceType,
+        eventStreamType, eventStreamId, eventStore, namespace, causation, tags, hash, observationState,
+        subject, eventSource
+    )
+
+    /** Preserves the constructor shape, and its default arguments, from before [eventSource] existed. */
+    constructor(
+        sequenceNumber: Long,
+        eventSourceId: String,
+        eventType: EventTypeDescriptor,
+        occurred: Instant,
+        correlationId: UUID,
+        causedBy: Identity,
+        eventSourceType: String = "",
+        eventStreamType: String = "",
+        eventStreamId: String = "",
+        eventStore: String = "",
+        namespace: String = "",
+        causation: List<Causation> = emptyList(),
+        tags: List<String> = emptyList(),
+        hash: String = "",
+        observationState: EventObservationState = EventObservationState.none,
+        subject: String = ""
+    ) : this(
+        sequenceNumber, eventSourceId, eventType, occurred, correlationId, causedBy, eventSourceType,
+        eventStreamType, eventStreamId, eventStore, namespace, causation, tags, hash, observationState,
+        subject, ""
+    )
+}

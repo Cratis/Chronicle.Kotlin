@@ -79,6 +79,7 @@ class InMemoryEventSequence(
     }
 
     override suspend fun append(eventSourceId: String, event: Any, options: AppendOptions?): AppendResult {
+        requireNoEventSourceRouting(options?.eventSource, options?.eventStream)
         val sequenceNumber = appended.size.toLong()
         appended.add(AppendedEvent(contextFor(eventSourceId, event, sequenceNumber, options), chronicleGson.toJson(event)))
 
@@ -112,7 +113,23 @@ class InMemoryEventSequence(
         events: List<EventForEventSourceId>,
         concurrencyScopes: Map<String, ConcurrencyScope>,
         correlationId: UUID?
-    ): List<AppendResult> = events.map { append(it.eventSourceId, it.event, it.toTestAppendOptions(correlationId)) }
+    ): List<AppendResult> {
+        // Check everything before appending anything, so an unsupported route leaves no partial batch.
+        events.forEach { requireNoEventSourceRouting(it.eventSource, it.eventStream) }
+        return events.map { append(it.eventSourceId, it.event, it.toTestAppendOptions(correlationId)) }
+    }
+
+    /**
+     * This double has no event source registry, so it cannot honor a definition-aware append. Failing is
+     * better than storing the event without the event source metadata the caller asked for.
+     */
+    private fun requireNoEventSourceRouting(eventSource: KClass<*>?, eventStream: String?) {
+        if (eventSource != null || eventStream != null) {
+            throw UnsupportedOperationException(
+                "InMemoryEventSequence does not support appending through event source definitions."
+            )
+        }
+    }
 
     override suspend fun hasEventsFor(eventSourceId: String): Boolean =
         appended.any { it.context.eventSourceId == eventSourceId }

@@ -14,6 +14,10 @@ import io.cratis.chronicle.diagnostics.ChronicleTraces
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.events.EventTypeDescriptor
+import io.cratis.chronicle.eventSources.ConcurrencyDimension
+import io.cratis.chronicle.eventSources.ConflictingEventSourceConcurrency
+import io.cratis.chronicle.eventSources.IEventSources
+import io.cratis.chronicle.eventSources.ResolvedEventRouting
 import io.cratis.chronicle.identity.Identity as ChronicleIdentity
 import io.cratis.chronicle.identity.identityProvider
 import io.cratis.chronicle.json.chronicleGson
@@ -38,8 +42,18 @@ open class EventSequence(
     private val namespace: String,
     private val stub: EventSequencesGrpcKt.EventSequencesCoroutineStub,
     private val traces: ChronicleTraces = ChronicleTraces.default,
-    private val registrationGate: IRegistrationGate = IRegistrationGate.open
-) : IEventSequence {
+    private val registrationGate: IRegistrationGate = IRegistrationGate.open,
+    private val eventSources: IEventSources = IEventSources.none
+) : IEventSequence, IEventSourceRoutingPreflight {
+    /** The shape from before event sources existed, with its original default arguments. */
+    constructor(
+        id: EventSequenceId,
+        eventStoreName: String,
+        namespace: String,
+        stub: EventSequencesGrpcKt.EventSequencesCoroutineStub,
+        traces: ChronicleTraces = ChronicleTraces.default,
+        registrationGate: IRegistrationGate = IRegistrationGate.open
+    ) : this(id, eventStoreName, namespace, stub, traces, registrationGate, IEventSources.none)
 
     private val _appendOperations = MutableSharedFlow<List<AppendedEventWithResult>>(
         extraBufferCapacity = 64,
@@ -64,7 +78,8 @@ open class EventSequence(
             "Chronicle append ${eventType.id.value}",
             appendAttributes(eventSourceId, eventType.id.value)
         ) {
-            appendInternal(eventSourceId, event, eventType, options)
+            val (routedOptions, routing) = routeThroughEventSource(eventSourceId, options)
+            appendInternal(eventSourceId, event, eventType, routedOptions, routing)
         }
     }
 
@@ -72,7 +87,8 @@ open class EventSequence(
         eventSourceId: String,
         event: Any,
         eventType: EventTypeDescriptor,
-        options: AppendOptions?
+        options: AppendOptions?,
+        routing: ResolvedEventRouting? = null
     ): AppendResult {
         val correlationId = options?.correlationId ?: correlationIdManager.current
         val concurrencyScope = options?.concurrencyScope ?: ConcurrencyScope.none
@@ -102,6 +118,7 @@ open class EventSequence(
             addAllTags(options?.tags ?: emptyList())
             options?.occurred?.let { this.occurred = it.toContractsDateTimeOffset() }
             this.concurrencyScope = concurrencyScope.toContract()
+            routing?.let { this.eventSource = it.definition.name }
         }.build()
 
         val response = stub.append(request).ensureSuccess("append event")
@@ -113,7 +130,13 @@ open class EventSequence(
             concurrencyViolation = if (response.hasConcurrencyViolation()) response.concurrencyViolation else null
         )
 
-        emitAppendOperations(listOf(EventForEventSourceId(eventSourceId, event)), listOf(result), correlationId, identity)
+        emitAppendOperations(
+            listOf(EventForEventSourceId(eventSourceId, event)),
+            listOf(result),
+            correlationId,
+            identity,
+            listOf(routing?.definition?.name.orEmpty())
+        )
 
         return result
     }
@@ -131,7 +154,8 @@ open class EventSequence(
             // AppendManyRequest has no routing fields. The rich endpoint preserves supplied routes
             // without changing the ordinary batch's single-source concurrency default.
             if (options != null && (options.eventSourceType != null ||
-                    options.eventStreamType != null || options.eventStreamId != null)) {
+                    options.eventStreamType != null || options.eventStreamId != null ||
+                    options.eventSource != null || options.eventStream != null)) {
                 appendManyForEventSourcesInternal(
                     events.map { event ->
                         EventForEventSourceId(
@@ -143,10 +167,18 @@ open class EventSequence(
                             subject = options.subject,
                             occurred = options.occurred,
                             tags = options.tags,
-                            causation = options.causation
+                            causation = options.causation,
+                            eventSource = options.eventSource,
+                            eventStream = options.eventStream
                         )
                     },
-                    mapOf(eventSourceId to (options.concurrencyScope ?: ConcurrencyScope.none)),
+                    // Through a definition, leaving the scope out lets the definition's concurrency
+                    // dimensions apply; an explicit scope is always forwarded and always wins.
+                    if (options.eventSource != null) {
+                        options.concurrencyScope?.let { mapOf(eventSourceId to it) } ?: emptyMap()
+                    } else {
+                        mapOf(eventSourceId to (options.concurrencyScope ?: ConcurrencyScope.none))
+                    },
                     options.correlationId
                 )
             } else {
@@ -220,6 +252,14 @@ open class EventSequence(
     ): List<AppendResult> {
         val effectiveCorrelationId = correlationId ?: correlationIdManager.current
 
+        val routings = events.map { routingFor(it.eventSource, it.eventStream, it.eventSourceType, it.eventStreamType) }
+        val routedEvents = events.mapIndexed { index, event ->
+            routings[index]?.let {
+                event.copy(eventSourceType = it.eventSourceType, eventStreamType = it.eventStreamType ?: event.eventStreamType)
+            } ?: event
+        }
+        val effectiveScopes = resolveBatchScopes(routedEvents, routings, concurrencyScopes)
+
         val causationChain = causationFor(batchCausationOf(events)) {
             causationManager.add(CausationType.appendManyEvents, mapOf("count" to events.size.toString()))
         }
@@ -231,12 +271,12 @@ open class EventSequence(
             this.eventStore = esName
             this.namespace = ns
             this.eventSequenceId = id.value
-            addAllEvents(events.map { it.toContractForEventSource() })
+            addAllEvents(routedEvents.mapIndexed { index, event -> event.toContractForEventSource(routings[index]?.definition?.name) })
             this.correlationId = effectiveCorrelationId.toBclGuid()
             addAllCausation(causationChain.map { c -> c.toContractsCausation() })
             this.causedBy = identity.withoutDuplicates().toContractsIdentity()
             addAllConcurrencyScopes(
-                concurrencyScopes.map { (source, scope) ->
+                effectiveScopes.map { (source, scope) ->
                     Sequences.EventSourceConcurrencyScope.newBuilder()
                         .setEventSourceId(source)
                         .setScope(scope.toContract())
@@ -251,7 +291,13 @@ open class EventSequence(
 
         val results = mapAppendManyResponse(events.size, response)
 
-        emitAppendOperations(events, results, effectiveCorrelationId, identity)
+        emitAppendOperations(
+            events,
+            results,
+            effectiveCorrelationId,
+            identity,
+            routings.map { it?.definition?.name.orEmpty() }
+        )
 
         return results
     }
@@ -393,11 +439,149 @@ open class EventSequence(
      * succeeded or failed. The occurred time is approximated client-side as the server does not echo
      * it back on [Sequences.AppendResponse]/[Sequences.AppendManyResponse].
      */
+    // -------------------------------------------------------------------------
+    // Event source definitions
+    // -------------------------------------------------------------------------
+
+    override fun preflightRouting(options: AppendOptions?) {
+        routingFor(options?.eventSource, options?.eventStream, options?.eventSourceType, options?.eventStreamType)
+    }
+
+    private fun routingFor(
+        eventSource: KClass<*>?,
+        eventStream: String?,
+        eventSourceType: String?,
+        eventStreamType: String?
+    ): ResolvedEventRouting? {
+        if (eventSource == null) {
+            require(eventStream == null) { "An event stream '$eventStream' can only be named together with an event source." }
+            return null
+        }
+        return ResolvedEventRouting.resolve(eventSources, eventSource, eventStream, eventSourceType, eventStreamType)
+    }
+
+    /**
+     * Resolves a definition-aware append: stamps the event source type and stream from the definition and,
+     * unless the caller supplied a concurrency scope, applies the definition's concurrency dimensions.
+     */
+    private suspend fun routeThroughEventSource(
+        eventSourceId: String,
+        options: AppendOptions?
+    ): Pair<AppendOptions?, ResolvedEventRouting?> {
+        val routing = routingFor(options?.eventSource, options?.eventStream, options?.eventSourceType, options?.eventStreamType)
+            ?: return options to null
+        val requested = checkNotNull(options)
+
+        val routed = requested.copy(
+            eventSourceType = routing.eventSourceType,
+            eventStreamType = routing.eventStreamType ?: requested.eventStreamType
+        )
+        val explicit = requested.concurrencyScope
+        if (explicit != null && explicit != ConcurrencyScope.notSet) return routed to routing
+
+        val scope = scopeFor(routing, eventSourceId, routed.eventStreamType, routed.eventStreamId, routed.eventSourceType)
+        return (if (scope != null) routed.copy(concurrencyScope = scope) else routed) to routing
+    }
+
+    /**
+     * Resolves the batch's concurrency scopes. The wire carries one scope per event source id, so a scope is
+     * derived per entry and entries sharing an id must agree: a derived scope is never taken from the first
+     * entry alone. Explicit per-id scopes keep precedence over anything derived.
+     */
+    private suspend fun resolveBatchScopes(
+        events: List<EventForEventSourceId>,
+        routings: List<ResolvedEventRouting?>,
+        concurrencyScopes: Map<String, ConcurrencyScope>
+    ): Map<String, ConcurrencyScope> {
+        val resolved = concurrencyScopes.toMutableMap()
+        val derivedCache = mutableMapOf<ScopePredicate, ConcurrencyScope>()
+        val routedBySource = events.indices.filter { routings[it] != null }.groupBy { events[it].eventSourceId }
+
+        for ((eventSourceId, indices) in routedBySource) {
+            val existing = resolved[eventSourceId]
+            if (existing != null && existing != ConcurrencyScope.notSet) continue
+
+            // Unguarded entries need no guard and never suppress a checked one; only the predicates the
+            // guarded entries actually select on are compared. The first guard is kept, so an older (or
+            // empty) snapshot is never replaced by a newer tail.
+            val predicates = indices.mapNotNull { index ->
+                val event = events[index]
+                predicateFor(routings[index]!!, eventSourceId, event.eventStreamType, event.eventStreamId, event.eventSourceType)
+            }
+            if (predicates.distinct().size > 1) throw ConflictingEventSourceConcurrency(eventSourceId)
+            val predicate = predicates.firstOrNull() ?: continue
+            resolved[eventSourceId] = derivedCache.getOrPut(predicate) { guardFor(predicate, eventSourceId) }
+        }
+        return resolved
+    }
+
+    /** The effective selectors of a derived guard; the sequence number and expected-empty state are not part of it. */
+    private data class ScopePredicate(
+        val eventSourceId: Boolean,
+        val eventStreamType: String?,
+        val eventStreamId: String?,
+        val eventSourceType: String?,
+        val eventTypes: List<EventTypeDescriptor> = emptyList()
+    )
+
+    /** Returns the predicate for the dimensions a definition declares, or `null` when the append is unguarded. */
+    private fun predicateFor(
+        routing: ResolvedEventRouting,
+        eventSourceId: String,
+        eventStreamType: String?,
+        eventStreamId: String?,
+        eventSourceType: String?
+    ): ScopePredicate? {
+        val dimensions = routing.dimensions
+        val scopedSourceId = ConcurrencyDimension.EventSourceId in dimensions
+        val scopedSourceType = eventSourceType?.takeIf { ConcurrencyDimension.EventSourceType in dimensions && it.isNotEmpty() }
+        val scopedStreamType = eventStreamType?.takeIf { ConcurrencyDimension.EventStreamType in dimensions && it.isNotEmpty() }
+        val scopedStreamId = eventStreamId?.takeIf { ConcurrencyDimension.EventStreamId in dimensions && it.isNotEmpty() }
+
+        if (!scopedSourceId && scopedSourceType == null && scopedStreamType == null && scopedStreamId == null) return null
+        return ScopePredicate(scopedSourceId, scopedStreamType, scopedStreamId, scopedSourceType)
+    }
+
+    private suspend fun guardFor(predicate: ScopePredicate, eventSourceId: String): ConcurrencyScope {
+        val tail = getTailSequenceNumberInternal(
+            eventSourceId = eventSourceId.takeIf { predicate.eventSourceId },
+            filterEventTypes = emptyList(),
+            eventSourceType = predicate.eventSourceType,
+            eventStreamType = predicate.eventStreamType,
+            eventStreamId = predicate.eventStreamId
+        )
+
+        // Nothing matches yet: the scope expects it to stay that way until this append lands.
+        return ConcurrencyScope(
+            sequenceNumber = if (tail.isActualValue) tail else EventSequenceNumber.unavailable,
+            eventSourceId = predicate.eventSourceId,
+            eventStreamType = predicate.eventStreamType,
+            eventStreamId = predicate.eventStreamId,
+            eventSourceType = predicate.eventSourceType,
+            expectsNoMatchingEvent = !tail.isActualValue
+        )
+    }
+
+    /**
+     * Builds the concurrency scope for the dimensions a definition declares, or `null` when it declares none
+     * (or none of the declared dimensions has a value), which leaves the append unchecked as it is without a
+     * definition. A dimension without a known value is not scoped on.
+     */
+    private suspend fun scopeFor(
+        routing: ResolvedEventRouting,
+        eventSourceId: String,
+        eventStreamType: String?,
+        eventStreamId: String?,
+        eventSourceType: String?
+    ): ConcurrencyScope? = predicateFor(routing, eventSourceId, eventStreamType, eventStreamId, eventSourceType)
+        ?.let { guardFor(it, eventSourceId) }
+
     private fun emitAppendOperations(
         events: List<EventForEventSourceId>,
         results: List<AppendResult>,
         correlationId: UUID,
-        causedBy: ChronicleIdentity
+        causedBy: ChronicleIdentity,
+        eventSourceNames: List<String> = emptyList()
     ) {
         val occurred = Instant.now()
         val entries = events.mapIndexed { index, event ->
@@ -407,7 +591,8 @@ open class EventSequence(
                 eventType = resolveEventType(event.event),
                 occurred = occurred,
                 correlationId = correlationId,
-                causedBy = causedBy
+                causedBy = causedBy,
+                eventSource = eventSourceNames.getOrElse(index) { "" }
             )
             AppendedEventWithResult(context, event.event, results[index])
         }
@@ -485,8 +670,9 @@ open class EventSequence(
      * Routing is sent only when supplied; the kernel owns missing/empty routing defaults.
      * Subject fallback remains independent of routing.
      */
-    private fun EventForEventSourceId.toContractForEventSource(): Sequences.EventForEventSourceId =
+    private fun EventForEventSourceId.toContractForEventSource(eventSourceName: String? = null): Sequences.EventForEventSourceId =
         Sequences.EventForEventSourceId.newBuilder().apply {
+            eventSourceName?.let { this.eventSource = it }
             this@toContractForEventSource.eventSourceType?.let { this.eventSourceType = it }
             this.eventSourceId = this@toContractForEventSource.eventSourceId
             this@toContractForEventSource.eventStreamType?.let { this.eventStreamType = it }
@@ -500,7 +686,10 @@ open class EventSequence(
 
     private suspend fun getTailSequenceNumberInternal(
         eventSourceId: String?,
-        filterEventTypes: List<EventTypeDescriptor>
+        filterEventTypes: List<EventTypeDescriptor>,
+        eventSourceType: String? = null,
+        eventStreamType: String? = null,
+        eventStreamId: String? = null
     ): EventSequenceNumber {
         val esName = eventStoreName
         val ns = this@EventSequence.namespace
@@ -509,6 +698,9 @@ open class EventSequence(
             this.namespace = ns
             this.eventSequenceId = id.value
             eventSourceId?.let { this.eventSourceId = it }
+            eventSourceType?.let { this.eventSourceType = it }
+            eventStreamType?.let { this.eventStreamType = it }
+            eventStreamId?.let { this.eventStreamId = it }
             this.eventTypeIds = filterEventTypes.joinToString(",") { it.id.value }
         }.build()
 

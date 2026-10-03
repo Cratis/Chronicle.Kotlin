@@ -18,12 +18,13 @@ import kotlin.reflect.KClass
  *
  * @param classes The classes making up the application's artifacts.
  */
-class KnownClientArtifacts(classes: Iterable<KClass<*>>) : IClientArtifacts {
+class KnownClientArtifacts(classes: Iterable<KClass<*>>) : IClientArtifacts, IEventSourceArtifacts {
     constructor(vararg classes: KClass<*>) : this(classes.toList())
 
     private val candidates = classes.distinct()
 
     override val eventTypes: List<KClass<*>> = candidates.filter { it.isEventType() }
+    override val eventSources: List<KClass<*>> = candidates.filter { it.isEventSource() }
     override val eventTypeMigrations: List<KClass<*>> = candidates.filter { it.isEventTypeMigration() }
     override val readModels: List<KClass<*>> = candidates.filter { it.isReadModel() }
     override val projections: List<KClass<*>> = candidates.filter { it.isDeclarativeProjection() }

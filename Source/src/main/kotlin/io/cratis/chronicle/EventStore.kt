@@ -25,6 +25,9 @@ import io.cratis.chronicle.eventSequences.EventLog
 import io.cratis.chronicle.eventSequences.EventSequence
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.eventSequences.IEventSequence
+import io.cratis.chronicle.eventSources.EventSources
+import io.cratis.chronicle.eventSources.IEventSources
+import io.cratis.chronicle.eventSources.IEventSourcesCapability
 import io.cratis.chronicle.eventStoreSubscriptions.EventStoreSubscriptionsService
 import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionsService
 import io.cratis.chronicle.externalServices.ExternalServicesService
@@ -104,7 +107,7 @@ class EventStore(
     private val autoDiscoverAndRegister: Boolean,
     private val traces: ChronicleTraces,
     private val readModelNamingPolicy: ReadModelNamingPolicy
-) : IEventStore {
+) : IEventStore, IEventSourcesCapability {
     /** Creates an event store that names read model containers after the read model identifier. */
     constructor(
         name: String,
@@ -140,7 +143,7 @@ class EventStore(
     private val registrationGate = IRegistrationGate { awaitRegistration() }
 
     override val eventLog: IEventLog by lazy {
-        EventLog(name, namespace, services.eventSequences, unitOfWorkManager, traces, registrationGate).also {
+        EventLog(name, namespace, services.eventSequences, unitOfWorkManager, traces, registrationGate, eventSources).also {
             it.resolveConstraintMessage = (constraints as ConstraintsService)::resolveMessageFor
         }
     }
@@ -244,6 +247,10 @@ class EventStore(
         ComplianceService(name, namespace, services.compliance)
     }
 
+    override val eventSources: IEventSources by lazy {
+        EventSources(name, services.eventSources, artifacts)
+    }
+
     override val eventTypes: IEventTypesService by lazy {
         EventTypesService(name, services.eventTypes)
     }
@@ -327,7 +334,7 @@ class EventStore(
             eventLog
         } else {
             eventSequences.getOrPut(id) {
-                EventSequence(id, name, namespace, services.eventSequences, traces, registrationGate).also {
+                EventSequence(id, name, namespace, services.eventSequences, traces, registrationGate, eventSources).also {
                     it.resolveConstraintMessage = (constraints as ConstraintsService)::resolveMessageFor
                 }
             }

@@ -27,6 +27,7 @@ These cover what only the Kotlin and Java client does:
 - [Testing a slice without a kernel](testing.md)
 - [Declaring strongly-typed identifiers](concepts.md)
 - [Seeding events](seeding.md)
+- [Event sources and streams](event-sources.md)
 - [Reacting to read model changes](read-model-reactors.md)
 - [Capturing external sources](captures.md)
 - [Registering external services](external-services.md)

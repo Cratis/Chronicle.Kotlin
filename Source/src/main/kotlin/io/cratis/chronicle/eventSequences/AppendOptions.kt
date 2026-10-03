@@ -7,6 +7,7 @@ import io.cratis.chronicle.auditing.Causation
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import java.time.Instant
 import java.util.UUID
+import kotlin.reflect.KClass
 
 /**
  * Options that can be supplied when appending events to an event sequence.
@@ -14,9 +15,11 @@ import java.util.UUID
  * Every property is optional. Routing is forwarded without client-side defaults: missing or empty
  * routing values are resolved by the kernel; every explicit nonempty value is preserved.
  *
- * The constructor is `@JvmOverloads` so that Java callers keep the shorter positional forms they
- * already compile against. For anything beyond the first argument or two, Java should prefer
- * [io.cratis.chronicle.java.AppendOptionsBuilder] rather than passing nulls positionally.
+ * The pre-event-source constructor and `copy` shapes are kept as legacy members carrying their original
+ * defaults, so code compiled against an earlier release - Kotlin default arguments included - links and
+ * behaves unchanged. Java callers keep the shorter positional forms they already compile against; for
+ * routing, Java should use [io.cratis.chronicle.java.AppendOptionsBuilder] rather than passing nulls
+ * positionally.
  *
  * @property correlationId Correlation identifier for this operation.
  *   Defaults to the current [io.cratis.chronicle.correlation.CorrelationIdManager] value.
@@ -36,8 +39,14 @@ import java.util.UUID
  *   nearly every append should use. Set this only to attribute an append to something other than
  *   the work the current thread is doing - an imported event, or a side effect that belongs to a
  *   chain of its own. An empty list means "no override" and leaves the ambient chain in charge.
+ * @property eventSource The class carrying an [io.cratis.chronicle.eventSources.EventSource] definition to
+ *   append through. Resolves the event source type, validates [eventStream], records the event source name
+ *   on the event and - when [concurrencyScope] is not supplied - applies the definition's concurrency
+ *   dimensions. Explicit routing that contradicts the definition is rejected. Optional: without it an
+ *   append behaves exactly as before.
+ * @property eventStream The name of a stream declared by [eventSource]. Requires [eventSource].
  */
-data class AppendOptions @JvmOverloads constructor(
+data class AppendOptions(
     val correlationId: UUID? = null,
     val concurrencyScope: ConcurrencyScope? = null,
     val eventSourceType: String? = null,
@@ -46,8 +55,49 @@ data class AppendOptions @JvmOverloads constructor(
     val subject: String? = null,
     val tags: List<String> = emptyList(),
     val occurred: Instant? = null,
-    val causation: List<Causation> = emptyList()
+    val causation: List<Causation> = emptyList(),
+    val eventSource: KClass<*>? = null,
+    val eventStream: String? = null
 ) {
+    /**
+     * Preserves the constructor shape, and its default arguments, from before [eventSource] and [eventStream]
+     * existed, so callers compiled against it keep linking. Routing through an event source is absent.
+     */
+    @JvmOverloads
+    constructor(
+        correlationId: UUID? = null,
+        concurrencyScope: ConcurrencyScope? = null,
+        eventSourceType: String? = null,
+        eventStreamType: String? = null,
+        eventStreamId: String? = null,
+        subject: String? = null,
+        tags: List<String> = emptyList(),
+        occurred: Instant? = null,
+        causation: List<Causation> = emptyList()
+    ) : this(
+        correlationId, concurrencyScope, eventSourceType, eventStreamType, eventStreamId, subject, tags, occurred,
+        causation, null, null
+    )
+
+    /**
+     * Preserves the `copy` shape, and its default arguments, from before [eventSource] and [eventStream]
+     * existed, so callers compiled against it keep linking. The routing of this instance is carried over unchanged.
+     */
+    fun copy(
+        correlationId: UUID? = this.correlationId,
+        concurrencyScope: ConcurrencyScope? = this.concurrencyScope,
+        eventSourceType: String? = this.eventSourceType,
+        eventStreamType: String? = this.eventStreamType,
+        eventStreamId: String? = this.eventStreamId,
+        subject: String? = this.subject,
+        tags: List<String> = this.tags,
+        occurred: Instant? = this.occurred,
+        causation: List<Causation> = this.causation
+    ): AppendOptions = copy(
+        correlationId, concurrencyScope, eventSourceType, eventStreamType, eventStreamId, subject, tags, occurred,
+        causation, eventSource, eventStream
+    )
+
     internal companion object {
         /** Legacy JVM constant retained for compatibility; request construction does not apply it. */
         const val DEFAULT_EVENT_SOURCE_TYPE = "Default"

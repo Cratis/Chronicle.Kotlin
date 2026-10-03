@@ -11,6 +11,9 @@ import io.cratis.chronicle.constraints.IConstraintsService
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.eventSequences.IEventLog
 import io.cratis.chronicle.eventSequences.IEventSequence
+import io.cratis.chronicle.eventSources.IEventSources
+import io.cratis.chronicle.eventSources.IEventSourcesCapability
+import io.cratis.chronicle.eventSources
 import io.cratis.chronicle.eventStoreSubscriptions.IEventStoreSubscriptionsService
 import io.cratis.chronicle.events.IEventTypesService
 import io.cratis.chronicle.externalServices.IExternalServicesService
@@ -47,7 +50,7 @@ class ResolvedEventStore(
     private val client: IChronicleClient,
     private val eventStoreName: String,
     private val namespaceResolver: IEventStoreNamespaceResolver
-) : IEventStore {
+) : IEventStore, IEventSourcesCapability {
     /** The event store for the namespace the current piece of work belongs to. */
     val current: IEventStore get() = client.getEventStore(eventStoreName, namespaceResolver.resolve())
 
@@ -63,6 +66,7 @@ class ResolvedEventStore(
     override val unitOfWorkManager: UnitOfWorkManager get() = current.unitOfWorkManager
     override val compliance: IComplianceService get() = current.compliance
     override val eventTypes: IEventTypesService get() = current.eventTypes
+    override val eventSources: IEventSources get() = current.eventSources
     override val namespaces: INamespacesService get() = current.namespaces
     override val externalServices: IExternalServicesService get() = current.externalServices
     override val jobs: IJobsService get() = current.jobs

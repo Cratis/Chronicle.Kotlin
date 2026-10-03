@@ -30,6 +30,8 @@ class AppendOptionsBuilder {
     private var tags: MutableList<String> = mutableListOf()
     private var occurred: Instant? = null
     private var causation: MutableList<Causation> = mutableListOf()
+    private var eventSource: Class<*>? = null
+    private var eventStream: String? = null
 
     /** Sets the correlation identifier for the operation. */
     fun correlationId(correlationId: UUID): AppendOptionsBuilder = apply { this.correlationId = correlationId }
@@ -70,6 +72,16 @@ class AppendOptionsBuilder {
     /** Adds all of [causation] as the chain this append is attributed to. */
     fun causation(causation: List<Causation>): AppendOptionsBuilder = apply { this.causation.addAll(causation) }
 
+    /**
+     * Appends through the event source definition carried by [eventSource] (a class annotated with
+     * `@EventSource`), optionally into one of the streams it declares.
+     */
+    @JvmOverloads
+    fun throughEventSource(eventSource: Class<*>, eventStream: String? = null): AppendOptionsBuilder = apply {
+        this.eventSource = eventSource
+        this.eventStream = eventStream
+    }
+
     /** Builds the [AppendOptions]. */
     fun build(): AppendOptions = AppendOptions(
         correlationId = correlationId,
@@ -80,6 +92,8 @@ class AppendOptionsBuilder {
         subject = subject,
         tags = tags.toList(),
         occurred = occurred,
-        causation = causation.toList()
+        causation = causation.toList(),
+        eventSource = eventSource?.kotlin,
+        eventStream = eventStream
     )
 }
