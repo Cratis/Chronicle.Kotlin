@@ -71,7 +71,28 @@ BODY_SNIPPETS = {
         val store: IEventStore = error("compile-only snippet dependency")
         val accountId = "account-42"
     """,
+    "site-concepts/projections-and-read-models/get-instance": """
+        val eventStore: IEventStore = error("compile-only snippet dependency")
+        val bookId = "book-42"
+    """,
 }
+
+# The cratis.io Concepts guides (site-concepts/<page>/...) reuse type names such as
+# BookBorrowed and DepositMade across pages with different shapes, and the snippets of one
+# page reference each other. Each page therefore compiles in a generated package of its own,
+# so the rendered snippets keep the exact type names the page's prose uses. The Kotlin and
+# Java variants of one page declare the same names, so they get separate package roots.
+SITE_CONCEPTS_PREFIX = "site-concepts/"
+SITE_CONCEPTS_KOTLIN_PACKAGE = "io.cratis.chronicle.documentation.kotlinsiteconcepts"
+SITE_CONCEPTS_JAVA_PACKAGE = "io.cratis.chronicle.documentation.siteconcepts"
+GENERATED_SITE_CONCEPTS_DIR = REPO_ROOT / "Testing" / "src" / "test" / "kotlin"
+GENERATED_SITE_CONCEPTS_JAVA_ROOT = GENERATED_JAVA_SOURCE_ROOT / "siteconcepts"
+
+
+def site_concepts_page(relative_path: str) -> str | None:
+    if not relative_path.startswith(SITE_CONCEPTS_PREFIX):
+        return None
+    return re.sub(r"[^a-z0-9]", "", relative_path[len(SITE_CONCEPTS_PREFIX):].split("/", 1)[0].lower())
 
 
 def snippet_files(root: Path) -> list[Path]:
@@ -134,6 +155,71 @@ def function_name(relative_path: str) -> str:
     return "snippet_" + re.sub(r"[^A-Za-z0-9_]", "_", relative_path)
 
 
+def snippet_function(relative_path: str, body: str) -> str:
+    prelude = textwrap.dedent(BODY_SNIPPETS[relative_path]).strip()
+    lines = [line for line in [prelude, body] if line]
+    function_body = textwrap.indent("\n\n".join(lines), "    ")
+    return f"suspend fun {function_name(relative_path)}() {{\n{function_body}\n}}"
+
+
+def generate_site_concepts_sources() -> dict[str, str]:
+    """One Kotlin file per Concepts page, each in the page's own package."""
+    pages: dict[str, tuple[set[str], list[str]]] = {}
+    for path in snippet_files(SNIPPET_ROOT):
+        relative_path = snippet_key(path, SNIPPET_ROOT)
+        page = site_concepts_page(relative_path)
+        if page is None:
+            continue
+        snippet = extract_snippet(path, "kotlin")
+        if snippet is None:
+            continue
+
+        imports, parts = pages.setdefault(page, ({"import io.cratis.chronicle.IEventStore"}, []))
+        snippet_imports, body = split_imports(snippet)
+        imports.update(snippet_imports)
+        parts.append(snippet_function(relative_path, body) if relative_path in BODY_SNIPPETS else body)
+
+    return {
+        page: "\n".join([
+            '@file:Suppress("RedundantSuspendModifier", "UNUSED_VARIABLE", "UNUSED_PARAMETER", "unused")',
+            "",
+            f"package {SITE_CONCEPTS_KOTLIN_PACKAGE}.{page}",
+            "",
+            *sorted(imports),
+            "",
+            *parts,
+            "",
+        ])
+        for page, (imports, parts) in pages.items()
+    }
+
+
+def write_site_concepts_sources() -> list[Path]:
+    written: list[Path] = []
+    for page, source in generate_site_concepts_sources().items():
+        path = GENERATED_SITE_CONCEPTS_DIR / f"DocumentationSiteConcepts_{page}.kt"
+        path.write_text(source, encoding="utf-8")
+        written.append(path)
+
+    for path in snippet_files(JAVA_SNIPPET_ROOT):
+        relative_path = snippet_key(path, JAVA_SNIPPET_ROOT)
+        page = site_concepts_page(relative_path)
+        if page is None:
+            continue
+        code = extract_snippet(path, "java")
+        if code is None:
+            continue
+        directory = GENERATED_SITE_CONCEPTS_JAVA_ROOT / page
+        directory.mkdir(parents=True, exist_ok=True)
+        generated = directory / java_snippet_file_name(path)
+        if generated in written:
+            raise ValueError(f"Java snippet {path.relative_to(REPO_ROOT)} generates {generated.name} twice")
+        generated.write_text(
+            "\n".join([f"package {SITE_CONCEPTS_JAVA_PACKAGE}.{page};", "", code, ""]), encoding="utf-8")
+        written.append(generated)
+    return written
+
+
 def generate_source() -> str:
     files = snippet_files(SNIPPET_ROOT)
     if not files:
@@ -150,6 +236,8 @@ def generate_source() -> str:
 
     for path in files:
         relative_path = snippet_key(path, SNIPPET_ROOT)
+        if site_concepts_page(relative_path) is not None:
+            continue
         snippet = extract_snippet(path, "kotlin")
         if snippet is None:
             continue
@@ -158,10 +246,7 @@ def generate_source() -> str:
         imports.update(snippet_imports)
 
         if relative_path in BODY_SNIPPETS:
-            prelude = textwrap.dedent(BODY_SNIPPETS[relative_path]).strip()
-            lines = [line for line in [prelude, body] if line]
-            function_body = textwrap.indent("\n\n".join(lines), "    ")
-            functions.append(f"suspend fun {function_name(relative_path)}() {{\n{function_body}\n}}")
+            functions.append(snippet_function(relative_path, body))
         else:
             declarations.append(body)
 
@@ -196,6 +281,8 @@ def write_java_sources() -> list[Path]:
     sources: list[tuple[Path, str]] = []
 
     for path in files:
+        if site_concepts_page(snippet_key(path, JAVA_SNIPPET_ROOT)) is not None:
+            continue
         code = extract_snippet(path, "java")
         if code is None:
             continue
@@ -391,11 +478,13 @@ def main() -> int:
 
     generated_java_sources: list[Path] = []
     generated_page_java_sources: list[Path] = []
+    generated_site_concepts_sources: list[Path] = []
     GENERATED_SOURCE.parent.mkdir(parents=True, exist_ok=True)
 
     try:
         GENERATED_SOURCE.write_text(generate_source(), encoding="utf-8")
         generated_java_sources = write_java_sources()
+        generated_site_concepts_sources = write_site_concepts_sources()
         GENERATED_PAGE_SOURCE.write_text(generate_page_kotlin(snippets), encoding="utf-8")
         generated_page_java_sources = write_page_java(snippets)
 
@@ -407,6 +496,18 @@ def main() -> int:
             generated_java_source.unlink(missing_ok=True)
         for generated_java_source in generated_page_java_sources:
             generated_java_source.unlink(missing_ok=True)
+        for generated_site_source in generated_site_concepts_sources:
+            generated_site_source.unlink(missing_ok=True)
+        if GENERATED_SITE_CONCEPTS_JAVA_ROOT.exists():
+            for directory in sorted(GENERATED_SITE_CONCEPTS_JAVA_ROOT.iterdir()):
+                try:
+                    directory.rmdir()
+                except OSError:
+                    pass
+            try:
+                GENERATED_SITE_CONCEPTS_JAVA_ROOT.rmdir()
+            except OSError:
+                pass
 
         gradle_dirs = [
             GENERATED_PAGE_JAVA_ROOT,
