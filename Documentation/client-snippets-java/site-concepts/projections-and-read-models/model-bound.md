@@ -8,7 +8,7 @@ import io.cratis.chronicle.readModels.ReadModel;
 @FromEvent(eventType = BookRegistered.class)
 @FromEvent(eventType = BookBorrowed.class)
 @FromEvent(eventType = BookReturned.class)
-class BookStatus {
+public class BookStatus {
     public String id = "";
 
     @SetFrom(eventType = BookRegistered.class) public String title = "";

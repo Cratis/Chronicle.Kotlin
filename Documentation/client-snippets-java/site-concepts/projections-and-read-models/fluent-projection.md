@@ -2,7 +2,7 @@
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 
-class BookStatusProjection implements IProjectionFor<BookStatus> {
+public class BookStatusProjection implements IProjectionFor<BookStatus> {
     @Override
     public void define(IProjectionBuilderFor<BookStatus> builder) {
         builder

@@ -1,12 +1,14 @@
 ```java
 import io.cratis.chronicle.events.EventType;
 
-@EventType
-record AccountOpened(String owner, double initialBalance) {}
+import java.math.BigDecimal;
 
 @EventType
-record DepositMade(double amount) {}
+public record AccountOpened(String owner, BigDecimal initialBalance) {}
 
 @EventType
-record WithdrawalMade(double amount) {}
+public record DepositMade(BigDecimal amount) {}
+
+@EventType
+public record WithdrawalMade(BigDecimal amount) {}
 ```

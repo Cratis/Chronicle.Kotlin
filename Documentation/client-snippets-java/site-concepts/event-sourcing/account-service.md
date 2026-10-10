@@ -2,14 +2,16 @@
 import io.cratis.chronicle.eventSequences.IEventLog;
 import io.cratis.chronicle.java.EventLogJavaBridge;
 
-class AccountService {
+import java.math.BigDecimal;
+
+public class AccountService {
     private final IEventLog eventLog;
 
-    AccountService(IEventLog eventLog) {
+    public AccountService(IEventLog eventLog) {
         this.eventLog = eventLog;
     }
 
-    void withdraw(String accountId, double amount) {
+    public void withdraw(String accountId, BigDecimal amount) {
         var result = EventLogJavaBridge.append(eventLog, accountId, new WithdrawalMade(amount), null);
 
         if (!result.isSuccess()) {

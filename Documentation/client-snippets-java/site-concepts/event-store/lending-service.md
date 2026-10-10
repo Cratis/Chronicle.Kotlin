@@ -7,16 +7,16 @@ import io.cratis.chronicle.java.EventLogJavaBridge;
 import java.time.LocalDate;
 
 @EventType
-record BookBorrowed(String member, LocalDate dueDate) {}
+public record BookBorrowed(String member, LocalDate dueDate) {}
 
-class LendingService {
+public class LendingService {
     private final IEventLog eventLog;
 
-    LendingService(IEventLog eventLog) {
+    public LendingService(IEventLog eventLog) {
         this.eventLog = eventLog;
     }
 
-    AppendResult lend(String bookId, String member, LocalDate dueDate) {
+    public AppendResult lend(String bookId, String member, LocalDate dueDate) {
         return EventLogJavaBridge.append(eventLog, bookId, new BookBorrowed(member, dueDate), null);
     }
 }

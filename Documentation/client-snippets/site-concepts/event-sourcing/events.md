@@ -1,12 +1,13 @@
 ```kotlin
 import io.cratis.chronicle.events.EventType
+import java.math.BigDecimal
 
 @EventType
-data class AccountOpened(val owner: String, val initialBalance: Double)
+data class AccountOpened(val owner: String, val initialBalance: BigDecimal)
 
 @EventType
-data class DepositMade(val amount: Double)
+data class DepositMade(val amount: BigDecimal)
 
 @EventType
-data class WithdrawalMade(val amount: Double)
+data class WithdrawalMade(val amount: BigDecimal)
 ```

@@ -3,23 +3,24 @@ import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
+import java.math.BigDecimal
 import java.time.Instant
 
 @EventType
-data class DepositMade(val amount: Double)
+data class DepositMade(val amount: BigDecimal)
 
 @EventType
-data class WithdrawalMade(val amount: Double)
+data class WithdrawalMade(val amount: BigDecimal)
 
 @ReadModel
-data class AccountBalance(val balance: Double = 0.0, val lastUpdated: Instant = Instant.EPOCH)
+data class AccountBalance(val balance: BigDecimal = BigDecimal.ZERO, val lastUpdated: Instant = Instant.EPOCH)
 
 @Reducer
 class AccountBalanceReducer {
     fun deposited(event: DepositMade, current: AccountBalance?, context: EventContext) =
-        AccountBalance((current?.balance ?: 0.0) + event.amount, context.occurred)
+        AccountBalance((current?.balance ?: BigDecimal.ZERO) + event.amount, context.occurred)
 
     fun withdrawalMade(event: WithdrawalMade, current: AccountBalance?, context: EventContext) =
-        AccountBalance((current?.balance ?: 0.0) - event.amount, context.occurred)
+        AccountBalance((current?.balance ?: BigDecimal.ZERO) - event.amount, context.occurred)
 }
 ```

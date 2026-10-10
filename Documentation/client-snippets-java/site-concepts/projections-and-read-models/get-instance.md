@@ -2,8 +2,8 @@
 import io.cratis.chronicle.IEventStore;
 import io.cratis.chronicle.java.BlockingEventStore;
 
-class BookStatusLookup {
-    void printStatus(IEventStore eventStore, String bookId) {
+public class BookStatusLookup {
+    public void printStatus(IEventStore eventStore, String bookId) {
         var status = new BlockingEventStore(eventStore)
             .getReadModels()
             .getInstanceByKey(BookStatus.class, bookId);

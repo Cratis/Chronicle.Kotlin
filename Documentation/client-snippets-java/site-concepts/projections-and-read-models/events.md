@@ -2,11 +2,11 @@
 import io.cratis.chronicle.events.EventType;
 
 @EventType
-record BookRegistered(String title, String isbn) {}
+public record BookRegistered(String title, String isbn) {}
 
 @EventType
-record BookBorrowed(String memberName) {}
+public record BookBorrowed(String memberName) {}
 
 @EventType
-record BookReturned() {}
+public record BookReturned() {}
 ```

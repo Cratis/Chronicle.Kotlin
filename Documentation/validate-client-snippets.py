@@ -194,13 +194,45 @@ def generate_site_concepts_sources() -> dict[str, str]:
     }
 
 
-def write_site_concepts_sources() -> list[Path]:
-    written: list[Path] = []
-    for page, source in generate_site_concepts_sources().items():
-        path = GENERATED_SITE_CONCEPTS_DIR / f"DocumentationSiteConcepts_{page}.kt"
-        path.write_text(source, encoding="utf-8")
-        written.append(path)
+JAVA_TOP_LEVEL_TYPE_RE = re.compile(
+    r"^(?:public\s+)?(?:final\s+|abstract\s+|sealed\s+)*(?:class|record|interface|enum)\s+(\w+)", re.M)
 
+
+def split_java_top_level_types(code: str, location: str) -> list[tuple[str, str]]:
+    """Split a snippet body into its top-level type declarations, each with its annotations.
+
+    A Concepts snippet shows several public types together (for example a page's events), the
+    way a reader sees them, while Java needs each public type in a file of its own. The client
+    only discovers public artifact types, so the snippets must not drop to package-private to
+    fit one file.
+    """
+    declarations: list[tuple[str, str]] = []
+    pending: list[str] = []
+    depth = 0
+    for line in code.splitlines():
+        if depth == 0 and not pending and not line.strip():
+            continue
+        pending.append(line)
+        # Braces inside string and character literals do not change the nesting.
+        structural = re.sub(r'"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'', "", line.split("//", 1)[0])
+        depth += structural.count("{") - structural.count("}")
+        if depth < 0:
+            raise ValueError(f"{location}: unbalanced braces in Java snippet")
+        if depth == 0 and "}" in structural:
+            block = "\n".join(pending).strip()
+            names = JAVA_TOP_LEVEL_TYPE_RE.findall(block)
+            if len(names) != 1:
+                raise ValueError(f"{location}: expected one top-level Java type per declaration, found {names}")
+            declarations.append((names[0], block))
+            pending = []
+    if depth != 0 or any(line.strip() for line in pending):
+        raise ValueError(f"{location}: Java snippet ends inside a declaration")
+    return declarations
+
+
+def generate_site_concepts_java_sources() -> dict[Path, str]:
+    """One Java file per top-level type, in the page's own package."""
+    sources: dict[Path, str] = {}
     for path in snippet_files(JAVA_SNIPPET_ROOT):
         relative_path = snippet_key(path, JAVA_SNIPPET_ROOT)
         page = site_concepts_page(relative_path)
@@ -209,15 +241,35 @@ def write_site_concepts_sources() -> list[Path]:
         code = extract_snippet(path, "java")
         if code is None:
             continue
-        directory = GENERATED_SITE_CONCEPTS_JAVA_ROOT / page
-        directory.mkdir(parents=True, exist_ok=True)
-        generated = directory / java_snippet_file_name(path)
-        if generated in written:
-            raise ValueError(f"Java snippet {path.relative_to(REPO_ROOT)} generates {generated.name} twice")
-        generated.write_text(
-            "\n".join([f"package {SITE_CONCEPTS_JAVA_PACKAGE}.{page};", "", code, ""]), encoding="utf-8")
-        written.append(generated)
-    return written
+        location = str(path.relative_to(REPO_ROOT))
+        imports, body = split_imports(code)
+        for name, declaration in split_java_top_level_types(body, location):
+            generated = GENERATED_SITE_CONCEPTS_JAVA_ROOT / page / f"{name}.java"
+            if generated in sources:
+                raise ValueError(f"{location}: the {page} Concepts page declares the Java type {name} twice")
+            sources[generated] = "\n".join(
+                [f"package {SITE_CONCEPTS_JAVA_PACKAGE}.{page};", "", *imports, "", declaration, ""])
+    return sources
+
+
+def write_site_concepts_sources() -> None:
+    # Generate every file in memory first, so a malformed snippet fails before anything is written.
+    sources = {
+        GENERATED_SITE_CONCEPTS_DIR / f"DocumentationSiteConcepts_{page}.kt": source
+        for page, source in generate_site_concepts_sources().items()
+    }
+    sources.update(generate_site_concepts_java_sources())
+    for path, source in sources.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(source, encoding="utf-8")
+
+
+def remove_site_concepts_sources() -> None:
+    # Remove by pattern rather than by a list of what was written, so a failure partway through
+    # generation still leaves no generated source behind for a later :Testing build to compile.
+    for path in GENERATED_SITE_CONCEPTS_DIR.glob("DocumentationSiteConcepts_*.kt"):
+        path.unlink(missing_ok=True)
+    shutil.rmtree(GENERATED_SITE_CONCEPTS_JAVA_ROOT, ignore_errors=True)
 
 
 def generate_source() -> str:
@@ -478,13 +530,12 @@ def main() -> int:
 
     generated_java_sources: list[Path] = []
     generated_page_java_sources: list[Path] = []
-    generated_site_concepts_sources: list[Path] = []
     GENERATED_SOURCE.parent.mkdir(parents=True, exist_ok=True)
 
     try:
         GENERATED_SOURCE.write_text(generate_source(), encoding="utf-8")
         generated_java_sources = write_java_sources()
-        generated_site_concepts_sources = write_site_concepts_sources()
+        write_site_concepts_sources()
         GENERATED_PAGE_SOURCE.write_text(generate_page_kotlin(snippets), encoding="utf-8")
         generated_page_java_sources = write_page_java(snippets)
 
@@ -496,18 +547,7 @@ def main() -> int:
             generated_java_source.unlink(missing_ok=True)
         for generated_java_source in generated_page_java_sources:
             generated_java_source.unlink(missing_ok=True)
-        for generated_site_source in generated_site_concepts_sources:
-            generated_site_source.unlink(missing_ok=True)
-        if GENERATED_SITE_CONCEPTS_JAVA_ROOT.exists():
-            for directory in sorted(GENERATED_SITE_CONCEPTS_JAVA_ROOT.iterdir()):
-                try:
-                    directory.rmdir()
-                except OSError:
-                    pass
-            try:
-                GENERATED_SITE_CONCEPTS_JAVA_ROOT.rmdir()
-            except OSError:
-                pass
+        remove_site_concepts_sources()
 
         gradle_dirs = [
             GENERATED_PAGE_JAVA_ROOT,
