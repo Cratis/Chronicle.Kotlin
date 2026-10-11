@@ -24,7 +24,6 @@ import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.toBclGuid
 import io.opentelemetry.api.common.Attributes
 import java.time.Instant
-import java.time.format.DateTimeFormatter
 import java.util.UUID
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberFunctions
@@ -153,32 +152,10 @@ open class EventSequence(
         return traces.span("Chronicle appendMany", appendManyAttributes(events.size)) {
             // AppendManyRequest has no routing fields. The rich endpoint preserves supplied routes
             // without changing the ordinary batch's single-source concurrency default.
-            if (options != null && (options.eventSourceType != null ||
-                    options.eventStreamType != null || options.eventStreamId != null ||
-                    options.eventSource != null || options.eventStream != null)) {
+            if (options != null && options.hasRouting()) {
                 appendManyForEventSourcesInternal(
-                    events.map { event ->
-                        EventForEventSourceId(
-                            eventSourceId = eventSourceId,
-                            event = event,
-                            eventSourceType = options.eventSourceType,
-                            eventStreamType = options.eventStreamType,
-                            eventStreamId = options.eventStreamId,
-                            subject = options.subject,
-                            occurred = options.occurred,
-                            tags = options.tags,
-                            causation = options.causation,
-                            eventSource = options.eventSource,
-                            eventStream = options.eventStream
-                        )
-                    },
-                    // Through a definition, leaving the scope out lets the definition's concurrency
-                    // dimensions apply; an explicit scope is always forwarded and always wins.
-                    if (options.eventSource != null) {
-                        options.concurrencyScope?.let { mapOf(eventSourceId to it) } ?: emptyMap()
-                    } else {
-                        mapOf(eventSourceId to (options.concurrencyScope ?: ConcurrencyScope.none))
-                    },
+                    events.map { event -> options.toEventFor(eventSourceId, event) },
+                    options.batchScopesFor(eventSourceId),
                     options.correlationId
                 )
             } else {
@@ -186,6 +163,34 @@ open class EventSequence(
             }
         }
     }
+
+    private fun AppendOptions.hasRouting(): Boolean =
+        eventSourceType != null || eventStreamType != null || eventStreamId != null ||
+            eventSource != null || eventStream != null
+
+    private fun AppendOptions.toEventFor(eventSourceId: String, event: Any): EventForEventSourceId =
+        EventForEventSourceId(
+            eventSourceId = eventSourceId,
+            event = event,
+            eventSourceType = eventSourceType,
+            eventStreamType = eventStreamType,
+            eventStreamId = eventStreamId,
+            subject = subject,
+            occurred = occurred,
+            tags = tags,
+            causation = causation,
+            eventSource = eventSource,
+            eventStream = eventStream
+        )
+
+    // Through a definition, leaving the scope out lets the definition's concurrency
+    // dimensions apply; an explicit scope is always forwarded and always wins.
+    private fun AppendOptions.batchScopesFor(eventSourceId: String): Map<String, ConcurrencyScope> =
+        if (eventSource != null) {
+            concurrencyScope?.let { mapOf(eventSourceId to it) } ?: emptyMap()
+        } else {
+            mapOf(eventSourceId to (concurrencyScope ?: ConcurrencyScope.none))
+        }
 
     private suspend fun appendManyInternal(
         eventSourceId: String,
@@ -498,21 +503,29 @@ open class EventSequence(
         val routedBySource = events.indices.filter { routings[it] != null }.groupBy { events[it].eventSourceId }
 
         for ((eventSourceId, indices) in routedBySource) {
-            val existing = resolved[eventSourceId]
-            if (existing != null && existing != ConcurrencyScope.notSet) continue
+            if (resolved[eventSourceId].isExplicit()) continue
 
             // Unguarded entries need no guard and never suppress a checked one; only the predicates the
             // guarded entries actually select on are compared. The first guard is kept, so an older (or
             // empty) snapshot is never replaced by a newer tail.
-            val predicates = indices.mapNotNull { index ->
-                val event = events[index]
-                predicateFor(routings[index]!!, eventSourceId, event.eventStreamType, event.eventStreamId, event.eventSourceType)
-            }
+            val predicates = predicatesFor(eventSourceId, indices, events, routings)
             if (predicates.distinct().size > 1) throw ConflictingEventSourceConcurrency(eventSourceId)
             val predicate = predicates.firstOrNull() ?: continue
             resolved[eventSourceId] = derivedCache.getOrPut(predicate) { guardFor(predicate, eventSourceId) }
         }
         return resolved
+    }
+
+    private fun ConcurrencyScope?.isExplicit(): Boolean = this != null && this != ConcurrencyScope.notSet
+
+    private fun predicatesFor(
+        eventSourceId: String,
+        indices: List<Int>,
+        events: List<EventForEventSourceId>,
+        routings: List<ResolvedEventRouting?>
+    ): List<ScopePredicate> = indices.mapNotNull { index ->
+        val event = events[index]
+        predicateFor(routings[index]!!, eventSourceId, event.eventStreamType, event.eventStreamId, event.eventSourceType)
     }
 
     /** The effective selectors of a derived guard; the sequence number and expected-empty state are not part of it. */
@@ -522,7 +535,10 @@ open class EventSequence(
         val eventStreamId: String?,
         val eventSourceType: String?,
         val eventTypes: List<EventTypeDescriptor> = emptyList()
-    )
+    ) {
+        val isScoped: Boolean
+            get() = eventSourceId || eventSourceType != null || eventStreamType != null || eventStreamId != null
+    }
 
     /** Returns the predicate for the dimensions a definition declares, or `null` when the append is unguarded. */
     private fun predicateFor(
@@ -538,8 +554,8 @@ open class EventSequence(
         val scopedStreamType = eventStreamType?.takeIf { ConcurrencyDimension.EventStreamType in dimensions && it.isNotEmpty() }
         val scopedStreamId = eventStreamId?.takeIf { ConcurrencyDimension.EventStreamId in dimensions && it.isNotEmpty() }
 
-        if (!scopedSourceId && scopedSourceType == null && scopedStreamType == null && scopedStreamId == null) return null
-        return ScopePredicate(scopedSourceId, scopedStreamType, scopedStreamId, scopedSourceType)
+        val predicate = ScopePredicate(scopedSourceId, scopedStreamType, scopedStreamId, scopedSourceType)
+        return predicate.takeIf { it.isScoped }
     }
 
     private suspend fun guardFor(predicate: ScopePredicate, eventSourceId: String): ConcurrencyScope {
@@ -798,116 +814,9 @@ open class EventSequence(
     private fun sanitizeSequenceNumber(raw: Long): Long = if (raw == Long.MAX_VALUE || raw < 0) 0L else raw
 }
 
-// -------------------------------------------------------------------------
-// Extension functions for proto conversion
-// -------------------------------------------------------------------------
-
 /**
  * The compliance subject defaults to the event source, matching the .NET client - the event is
  * about the thing it happened to unless the caller says otherwise.
  */
 private fun AppendOptions?.subjectOrDefault(eventSourceId: String): String =
     this?.subject ?: eventSourceId
-
-private fun Instant.toContractsDateTimeOffset(): Sequences.SerializableDateTimeOffset =
-    Sequences.SerializableDateTimeOffset.newBuilder()
-        .setValue(DateTimeFormatter.ISO_INSTANT.format(this))
-        .build()
-
-private fun EventTypeDescriptor.toContractsEventType(): Sequences.EventType =
-    Sequences.EventType.newBuilder()
-        .setId(id.value)
-        .setGeneration(generation.value)
-        .setTombstone(tombstone)
-        .build()
-
-private fun Sequences.ConstraintViolation.toClient(): ConstraintViolation = ConstraintViolation(
-    constraintId = constraintName,
-    message = message,
-    details = detailsMap.toMap()
-)
-
-private fun Sequences.ConcurrencyViolation.toClient(): io.cratis.chronicle.eventSequences.concurrency.ConcurrencyViolation =
-    io.cratis.chronicle.eventSequences.concurrency.ConcurrencyViolation(
-        eventSourceId = eventSourceId,
-        expectedSequenceNumber = EventSequenceNumber(expectedSequenceNumber),
-        actualSequenceNumber = EventSequenceNumber(actualSequenceNumber)
-    )
-
-private fun ConcurrencyScope.toContract(): Sequences.ConcurrencyScope {
-    val scope = this
-    return Sequences.ConcurrencyScope.newBuilder().apply {
-        this.sequenceNumber = scope.sequenceNumber.value
-        this.eventSourceId = scope.eventSourceId
-        scope.eventStreamType?.let { this.eventStreamType = it }
-        scope.eventStreamId?.let { this.eventStreamId = it }
-        scope.eventSourceType?.let { this.eventSourceType = it }
-        addAllEventTypes(scope.eventTypes.map { it.toContractsEventType() })
-        this.expectsNoMatchingEvent = scope.expectsNoMatchingEvent
-    }.build()
-}
-
-private fun io.cratis.chronicle.auditing.Causation.toContractsCausation(): Sequences.Causation =
-    Sequences.Causation.newBuilder()
-        .setOccurred(
-            Sequences.SerializableDateTimeOffset.newBuilder()
-                .setValue(DateTimeFormatter.ISO_INSTANT.format(timestamp))
-                .build()
-        )
-        .setType(type.name)
-        .putAllProperties(properties)
-        .build()
-
-private fun ChronicleIdentity.toContractsIdentity(): Sequences.Identity {
-    val builder = Sequences.Identity.newBuilder()
-        .setSubject(subject)
-        .setName(name)
-        .setUserName(userName)
-    onBehalfOf?.let { builder.setOnBehalfOf(it.toContractsIdentity()) }
-    return builder.build()
-}
-
-// -------------------------------------------------------------------------
-// Command/query envelope unwrapping
-// -------------------------------------------------------------------------
-//
-// A successful envelope always carries its Response/Data - the wire type only marks it optional
-// because protobuf gives every singular message field a technically-absent state.
-
-private fun ensureSuccessMessage(operation: String, isAuthorized: Boolean, authorizationFailureReason: String, exceptionMessages: List<String>) {
-    if (!isAuthorized) throw ChronicleCommandRejected(operation, authorizationFailureReason.ifEmpty { "not authorized" })
-    if (exceptionMessages.isNotEmpty()) throw ChronicleCommandRejected(operation, exceptionMessages.joinToString("; "))
-}
-
-private fun Sequences.CommandResult.ensureSuccess(operation: String) =
-    ensureSuccessMessage(operation, isAuthorized, authorizationFailureReason, exceptionMessagesList)
-
-private fun Sequences.CommandResult_AppendResponse.ensureSuccess(operation: String): Sequences.AppendResponse {
-    ensureSuccessMessage(operation, isAuthorized, authorizationFailureReason, exceptionMessagesList)
-    return response
-}
-
-private fun Sequences.CommandResult_AppendManyResponse.ensureSuccess(operation: String): Sequences.AppendManyResponse {
-    ensureSuccessMessage(operation, isAuthorized, authorizationFailureReason, exceptionMessagesList)
-    return response
-}
-
-private fun Sequences.CommandResult_CompleteStreamResponse.ensureSuccess(operation: String): Sequences.CompleteStreamResponse {
-    ensureSuccessMessage(operation, isAuthorized, authorizationFailureReason, exceptionMessagesList)
-    return response
-}
-
-private fun Sequences.QueryResult_EventSourceEventsResponse.ensureSuccess(operation: String): Sequences.EventSourceEventsResponse {
-    ensureSuccessMessage(operation, isAuthorized, "", exceptionMessagesList)
-    return data
-}
-
-private fun Sequences.QueryResult_EventSequenceTailResponse.ensureSuccess(operation: String): Sequences.EventSequenceTailResponse {
-    ensureSuccessMessage(operation, isAuthorized, "", exceptionMessagesList)
-    return data
-}
-
-private fun Sequences.QueryResult_IEnumerable_AppendedEventResponse.ensureSuccess(operation: String): Sequences.QueryResult_IEnumerable_AppendedEventResponse {
-    ensureSuccessMessage(operation, isAuthorized, "", exceptionMessagesList)
-    return this
-}
