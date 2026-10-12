@@ -14,7 +14,7 @@ val coroutinesVersion = "1.11.0"
 
 dependencies {
     implementation(project(":Source"))
-    runtimeOnly("io.grpc:grpc-netty-shaded:1.84.0")
+    runtimeOnly("io.grpc:grpc-netty-shaded:1.84.2")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:$coroutinesVersion")
 }
