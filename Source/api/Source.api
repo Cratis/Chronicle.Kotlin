@@ -2316,6 +2316,13 @@ public final class io/cratis/chronicle/java/NamespacesServiceJavaBridge {
 	public static final fun getAll (Lio/cratis/chronicle/namespaces/INamespacesService;)Ljava/util/List;
 }
 
+public final class io/cratis/chronicle/java/ObserversJavaBridge {
+	public static final field INSTANCE Lio/cratis/chronicle/java/ObserversJavaBridge;
+	public static final fun fastForward (Lio/cratis/chronicle/observation/IObservers;Ljava/lang/Class;)Lio/cratis/chronicle/observation/FastForwardResult;
+	public static final fun fastForward (Lio/cratis/chronicle/observation/IObservers;Ljava/lang/String;)Lio/cratis/chronicle/observation/FastForwardResult;
+	public static final fun fastForward (Lio/cratis/chronicle/observation/IObservers;Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/observation/FastForwardResult;
+}
+
 public final class io/cratis/chronicle/java/ProjectionBuilderJavaBridge {
 	public static final field INSTANCE Lio/cratis/chronicle/java/ProjectionBuilderJavaBridge;
 	public static final fun from (Lio/cratis/chronicle/projections/IProjectionBuilderFor;Ljava/lang/Class;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
@@ -2592,6 +2599,31 @@ public final class io/cratis/chronicle/observation/FailedPartitions : io/cratis/
 	public fun retry-uzUZsrw (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
+public final class io/cratis/chronicle/observation/FastForwardOutcome : java/lang/Enum {
+	public static final field AlreadyAtTail Lio/cratis/chronicle/observation/FastForwardOutcome;
+	public static final field FastForwarded Lio/cratis/chronicle/observation/FastForwardOutcome;
+	public static final field NotAvailable Lio/cratis/chronicle/observation/FastForwardOutcome;
+	public static final field Replaying Lio/cratis/chronicle/observation/FastForwardOutcome;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/cratis/chronicle/observation/FastForwardOutcome;
+	public static fun values ()[Lio/cratis/chronicle/observation/FastForwardOutcome;
+}
+
+public final class io/cratis/chronicle/observation/FastForwardResult {
+	public synthetic fun <init> (Lio/cratis/chronicle/observation/FastForwardOutcome;JJLkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/cratis/chronicle/observation/FastForwardOutcome;
+	public final fun component2-hvNBoNI ()J
+	public final fun component3-hvNBoNI ()J
+	public final fun copy-F8U0lX4 (Lio/cratis/chronicle/observation/FastForwardOutcome;JJ)Lio/cratis/chronicle/observation/FastForwardResult;
+	public static synthetic fun copy-F8U0lX4$default (Lio/cratis/chronicle/observation/FastForwardResult;Lio/cratis/chronicle/observation/FastForwardOutcome;JJILjava/lang/Object;)Lio/cratis/chronicle/observation/FastForwardResult;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getNextEventSequenceNumber-hvNBoNI ()J
+	public final fun getOutcome ()Lio/cratis/chronicle/observation/FastForwardOutcome;
+	public final fun getPreviousNextEventSequenceNumber-hvNBoNI ()J
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
 public abstract interface annotation class io/cratis/chronicle/observation/FilterEventsByTag : java/lang/annotation/Annotation {
 	public abstract fun value ()Ljava/lang/String;
 }
@@ -2616,8 +2648,15 @@ public final class io/cratis/chronicle/observation/IFailedPartitions$DefaultImpl
 }
 
 public abstract interface class io/cratis/chronicle/observation/IObservers {
+	public abstract fun fastForward (Lkotlin/reflect/KClass;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun fastForward-s7YucsY (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun fastForward-s7YucsY$default (Lio/cratis/chronicle/observation/IObservers;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun getAll (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun remove (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class io/cratis/chronicle/observation/IObservers$DefaultImpls {
+	public static synthetic fun fastForward-s7YucsY$default (Lio/cratis/chronicle/observation/IObservers;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 }
 
 public abstract interface class io/cratis/chronicle/observation/IReactorMethodArgumentResolver {
@@ -2732,6 +2771,8 @@ public final class io/cratis/chronicle/observation/ObserverType : java/lang/Enum
 
 public final class io/cratis/chronicle/observation/Observers : io/cratis/chronicle/observation/IObservers {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/Observation/ObserversGrpcKt$ObserversCoroutineStub;)V
+	public fun fastForward (Lkotlin/reflect/KClass;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun fastForward-s7YucsY (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getAll (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun remove (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }

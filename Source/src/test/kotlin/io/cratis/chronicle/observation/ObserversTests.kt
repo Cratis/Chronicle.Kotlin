@@ -6,6 +6,7 @@ package io.cratis.chronicle.observation
 import Cratis.Chronicle.Contracts.Observation.Observation
 import Cratis.Chronicle.Contracts.Observation.ObserversGrpcKt
 import io.cratis.chronicle.eventSequences.EventSequenceId
+import io.mockk.CapturingSlot
 import io.mockk.coEvery
 import io.mockk.mockk
 import io.mockk.slot
@@ -133,5 +134,61 @@ class ObserversTests {
         assertFalse(result.isRemoved)
         assertEquals(ObserverRemovalOutcome.ObserverActive, result.outcome)
         assertEquals("production", result.blockingNamespace)
+    }
+
+    @Reactor(id = "employee-alerts")
+    private class EmployeeAlerts {
+        fun bookReturned(@Suppress("UNUSED_PARAMETER") event: BookReturned) = Unit
+    }
+
+    @Reactor
+    @EventSequence("audit")
+    private class AuditTrail {
+        fun bookReturned(@Suppress("UNUSED_PARAMETER") event: BookReturned) = Unit
+    }
+
+    private fun fastForwardingObservers(request: CapturingSlot<Observation.FastForward>): Observers {
+        val stub = mockk<ObserversGrpcKt.ObserversCoroutineStub>()
+        coEvery { stub.fastForward(capture(request), any()) } returns Observation.FastForwardResponse.newBuilder()
+            .setOutcomeValue(0)
+            .setPreviousNextEventSequenceNumber(5)
+            .setNextEventSequenceNumber(101)
+            .build()
+        return Observers("my-store", "default", stub)
+    }
+
+    @Test
+    fun `fast forwarding by identifier asks for that observer on the event log`() = runBlocking {
+        val request = slot<Observation.FastForward>()
+
+        fastForwardingObservers(request).fastForward("employee-alerts")
+
+        assertEquals("my-store", request.captured.eventStore)
+        assertEquals("default", request.captured.namespace)
+        assertEquals("employee-alerts", request.captured.observerId)
+        assertEquals(EventSequenceId.eventLog.value, request.captured.eventSequenceId)
+    }
+
+    @Test
+    fun `fast forwarding by class reads the identifier and sequence off the class`() = runBlocking {
+        val request = slot<Observation.FastForward>()
+
+        fastForwardingObservers(request).fastForward(AuditTrail::class)
+
+        assertEquals("audit", request.captured.eventSequenceId)
+    }
+
+    @Test
+    fun `fast forwarding says what happened and where the observer is now`() = runBlocking {
+        val result = fastForwardingObservers(slot()).fastForward("employee-alerts")
+
+        assertEquals(FastForwardOutcome.FastForwarded, result.outcome)
+        assertEquals(5L, result.previousNextEventSequenceNumber.value)
+        assertEquals(101L, result.nextEventSequenceNumber.value)
+    }
+
+    @Test
+    fun `an outcome this client does not know is reported as not available`() {
+        assertEquals(FastForwardOutcome.NotAvailable, FastForwardOutcome.fromWire(99))
     }
 }
