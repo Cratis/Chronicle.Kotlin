@@ -1,17 +1,25 @@
 ```kotlin
+import io.cratis.chronicle.compliance.Pii
+import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.observation.Reducer
 
 data class ChoosingStyleBookStatusReducerModel(
-    val title: String = "",
-    val isbn: String = "",
+    val id: String,
+    val title: String? = null,
+    val isbn: String? = null,
     val isBorrowed: Boolean = false,
-    val borrowedBy: String? = null
+    @property:Pii val borrowedBy: String? = null
 )
 
 @Reducer
 class ChoosingStyleBookStatusReducer {
-    fun choosingStyleBookRegistered(event: ChoosingStyleBookRegistered): ChoosingStyleBookStatusReducerModel =
+    fun choosingStyleBookRegistered(
+        event: ChoosingStyleBookRegistered,
+        current: ChoosingStyleBookStatusReducerModel?,
+        context: EventContext
+    ): ChoosingStyleBookStatusReducerModel =
         ChoosingStyleBookStatusReducerModel(
+            id = context.eventSourceId,
             title = event.title,
             isbn = event.isbn,
             isBorrowed = false,
@@ -20,14 +28,18 @@ class ChoosingStyleBookStatusReducer {
 
     fun choosingStyleBookBorrowed(
         event: ChoosingStyleBookBorrowed,
-        current: ChoosingStyleBookStatusReducerModel
+        current: ChoosingStyleBookStatusReducerModel?,
+        context: EventContext
     ): ChoosingStyleBookStatusReducerModel =
-        current.copy(isBorrowed = true, borrowedBy = event.memberName)
+        (current ?: ChoosingStyleBookStatusReducerModel(context.eventSourceId))
+            .copy(isBorrowed = true, borrowedBy = event.memberName)
 
     fun choosingStyleBookReturned(
         event: ChoosingStyleBookReturned,
-        current: ChoosingStyleBookStatusReducerModel
+        current: ChoosingStyleBookStatusReducerModel?,
+        context: EventContext
     ): ChoosingStyleBookStatusReducerModel =
-        current.copy(isBorrowed = false, borrowedBy = null)
+        (current ?: ChoosingStyleBookStatusReducerModel(context.eventSourceId))
+            .copy(isBorrowed = false, borrowedBy = null)
 }
 ```

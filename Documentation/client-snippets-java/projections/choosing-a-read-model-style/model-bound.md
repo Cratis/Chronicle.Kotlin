@@ -1,7 +1,34 @@
-```text
-Java does not support this workflow yet.
-The model-bound `@SetFrom` annotation maps a property from an event, but there is
-no equivalent to C#'s `[SetValue<TEvent>(...)]` for assigning a constant value —
-so a flag like `isBorrowed` cannot be toggled per event type through model-bound
-attributes alone. Track the client SDK issue, or use a reducer instead.
+```java
+import io.cratis.chronicle.compliance.Pii;
+import io.cratis.chronicle.projections.FromEvent;
+import io.cratis.chronicle.projections.SetFrom;
+import io.cratis.chronicle.projections.SetFromContext;
+import io.cratis.chronicle.projections.SetValue;
+
+@FromEvent(eventType = ChoosingStyleBookRegistered.class)
+@FromEvent(eventType = ChoosingStyleBookBorrowed.class)
+@FromEvent(eventType = ChoosingStyleBookReturned.class)
+class ChoosingStyleBookStatusModelBound {
+    @SetFromContext(eventType = ChoosingStyleBookRegistered.class, contextProperty = "eventSourceId")
+    @SetFromContext(eventType = ChoosingStyleBookBorrowed.class, contextProperty = "eventSourceId")
+    @SetFromContext(eventType = ChoosingStyleBookReturned.class, contextProperty = "eventSourceId")
+    public String id = "";
+
+    @SetFrom(propertyPath = "title", eventType = ChoosingStyleBookRegistered.class)
+    public String title = null;
+
+    @SetFrom(propertyPath = "isbn", eventType = ChoosingStyleBookRegistered.class)
+    public String isbn = null;
+
+    @SetValue(eventType = ChoosingStyleBookRegistered.class, value = "false")
+    @SetValue(eventType = ChoosingStyleBookBorrowed.class, value = "true")
+    @SetValue(eventType = ChoosingStyleBookReturned.class, value = "false")
+    public boolean isBorrowed = false;
+
+    @Pii
+    @SetFrom(propertyPath = "memberName", eventType = ChoosingStyleBookBorrowed.class)
+    @SetValue(eventType = ChoosingStyleBookRegistered.class, clear = true)
+    @SetValue(eventType = ChoosingStyleBookReturned.class, clear = true)
+    public String borrowedBy = null;
+}
 ```

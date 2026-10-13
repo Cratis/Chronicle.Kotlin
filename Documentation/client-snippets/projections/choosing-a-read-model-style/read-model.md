@@ -1,9 +1,11 @@
 ```kotlin
+import io.cratis.chronicle.compliance.Pii
+
 data class ChoosingStyleBookStatus(
     val id: String = "",
-    val title: String = "",
-    val isbn: String = "",
+    val title: String? = null,
+    val isbn: String? = null,
     val isBorrowed: Boolean = false,
-    val borrowedBy: String? = null
+    @property:Pii val borrowedBy: String? = null
 )
 ```
