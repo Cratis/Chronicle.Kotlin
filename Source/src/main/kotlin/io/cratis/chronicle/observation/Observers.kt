@@ -7,6 +7,7 @@ import Cratis.Chronicle.Contracts.Observation.Observation
 import Cratis.Chronicle.Contracts.Observation.ObserversGrpcKt
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
+import kotlin.reflect.KClass
 
 /**
  * Talks to the kernel about the observers registered in an event store.
@@ -41,6 +42,27 @@ class Observers(
         val response = observers.removeObserver(request)
         return ObserverRemovalResult(response.outcome.toClient(), response.blockingNamespace)
     }
+
+    override suspend fun fastForward(observerId: String, eventSequenceId: EventSequenceId): FastForwardResult {
+        val request = Observation.FastForward.newBuilder().apply {
+            this.eventStore = eventStoreName
+            this.namespace = this@Observers.namespace
+            this.observerId = observerId
+            this.eventSequenceId = eventSequenceId.value
+        }.build()
+
+        val response = observers.fastForward(request)
+        return FastForwardResult(
+            outcome = FastForwardOutcome.fromWire(response.outcomeValue),
+            previousNextEventSequenceNumber = EventSequenceNumber(response.previousNextEventSequenceNumber),
+            nextEventSequenceNumber = EventSequenceNumber(response.nextEventSequenceNumber)
+        )
+    }
+
+    override suspend fun fastForward(observerClass: KClass<*>): FastForwardResult = fastForward(
+        observerId = ObserverDeclaration.idOf(observerClass),
+        eventSequenceId = EventSequenceId(ObserverDeclaration.eventSequenceIdOf(observerClass))
+    )
 
     private fun Observation.ObserverInformation.toClient() = ObserverInformation(
         id = id,

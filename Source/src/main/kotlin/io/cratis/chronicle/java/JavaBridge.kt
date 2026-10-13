@@ -35,7 +35,9 @@ import io.cratis.chronicle.captures.CaptureValidationMessage
 import io.cratis.chronicle.captures.ICapturesService
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.observation.FailedPartition
+import io.cratis.chronicle.observation.FastForwardResult
 import io.cratis.chronicle.observation.IFailedPartitions
+import io.cratis.chronicle.observation.IObservers
 import io.cratis.chronicle.projections.IProjectionsService
 import io.cratis.chronicle.projections.ProjectionQueryResult
 import io.cratis.chronicle.readModels.IReadModelsService
@@ -540,6 +542,26 @@ object FailedPartitionsJavaBridge {
     fun retry(service: IFailedPartitions, observerClass: Class<*>, partition: String) {
         runBlocking { service.retry(observerClass.kotlin, partition) }
     }
+}
+
+/**
+ * Java-friendly bridge for operational control of running observers.
+ */
+object ObserversJavaBridge {
+    /** Fast forwards the observer with this identifier to the tail of the event log. */
+    @JvmStatic
+    fun fastForward(service: IObservers, observerId: String): FastForwardResult =
+        runBlocking { service.fastForward(observerId) }
+
+    /** Fast forwards the observer with this identifier to the tail of a named event sequence. */
+    @JvmStatic
+    fun fastForward(service: IObservers, observerId: String, eventSequenceId: String): FastForwardResult =
+        runBlocking { service.fastForward(observerId, EventSequenceId(eventSequenceId)) }
+
+    /** Fast forwards the observer declared by this class to the tail of its event sequence. */
+    @JvmStatic
+    fun fastForward(service: IObservers, observerClass: Class<*>): FastForwardResult =
+        runBlocking { service.fastForward(observerClass.kotlin) }
 }
 
 /**
