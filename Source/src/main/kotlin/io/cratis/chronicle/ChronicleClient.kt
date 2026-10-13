@@ -9,7 +9,7 @@ import io.cratis.chronicle.connection.ChronicleConnection
 import java.util.concurrent.ConcurrentHashMap
 
 class ChronicleClient(private val options: ChronicleOptions) : IChronicleClient {
-    private val connection = ChronicleConnection(options.connectionString).also { it.connect() }
+    private val connection = ChronicleConnection(options.connectionString, options.maxReceiveMessageSize).also { it.connect() }
 
     // Built once per client so every event store shares one tracer. Resolving the global
     // OpenTelemetry is deferred to first use, so a client constructed before the SDK is installed
