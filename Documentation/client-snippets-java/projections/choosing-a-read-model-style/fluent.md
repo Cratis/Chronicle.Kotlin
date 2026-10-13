@@ -15,10 +15,12 @@ class ChoosingStyleBookStatusProjection implements IProjectionFor<ChoosingStyleB
                 fb.<String>set("borrowedBy").toValue(null);
             })
             .from(ChoosingStyleBookBorrowed.class, fb -> {
+                fb.<String>set("id").toEventSourceId();
                 fb.<Boolean>set("isBorrowed").toValue(true);
                 fb.<String>set("borrowedBy").toProperty("memberName");
             })
             .from(ChoosingStyleBookReturned.class, fb -> {
+                fb.<String>set("id").toEventSourceId();
                 fb.<Boolean>set("isBorrowed").toValue(false);
                 fb.<String>set("borrowedBy").toValue(null);
             });

@@ -14,10 +14,12 @@ class ChoosingStyleBookStatusProjection : IProjectionFor<ChoosingStyleBookStatus
                 it.set(ChoosingStyleBookStatus::borrowedBy).toValue(null)
             }
             .from(ChoosingStyleBookBorrowed::class) {
+                it.set(ChoosingStyleBookStatus::id).toEventSourceId()
                 it.set(ChoosingStyleBookStatus::isBorrowed).toValue(true)
                 it.set(ChoosingStyleBookStatus::borrowedBy).toProperty("memberName")
             }
             .from(ChoosingStyleBookReturned::class) {
+                it.set(ChoosingStyleBookStatus::id).toEventSourceId()
                 it.set(ChoosingStyleBookStatus::isBorrowed).toValue(false)
                 it.set(ChoosingStyleBookStatus::borrowedBy).toValue(null)
             }
