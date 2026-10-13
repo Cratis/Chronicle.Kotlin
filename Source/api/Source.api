@@ -9,6 +9,7 @@ public final class io/cratis/chronicle/ChronicleClient : io/cratis/chronicle/ICh
 
 public final class io/cratis/chronicle/ChronicleOptions {
 	public static final field Companion Lio/cratis/chronicle/ChronicleOptions$Companion;
+	public static final field DEFAULT_MAX_MESSAGE_SIZE I
 	public fun <init> (Lio/cratis/chronicle/connection/ChronicleConnectionString;)V
 	public fun <init> (Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/String;)V
 	public fun <init> (Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/String;Ljava/lang/String;)V
@@ -16,7 +17,8 @@ public final class io/cratis/chronicle/ChronicleOptions {
 	public fun <init> (Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/String;Ljava/lang/String;ZLio/cratis/chronicle/artifacts/IClientArtifacts;)V
 	public fun <init> (Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/String;Ljava/lang/String;ZLio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;)V
 	public fun <init> (Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/String;Ljava/lang/String;ZLio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;Lio/opentelemetry/api/OpenTelemetry;)V
-	public synthetic fun <init> (Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/String;Ljava/lang/String;ZLio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;Lio/opentelemetry/api/OpenTelemetry;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/String;Ljava/lang/String;ZLio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;Lio/opentelemetry/api/OpenTelemetry;Ljava/lang/Integer;)V
+	public synthetic fun <init> (Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/String;Ljava/lang/String;ZLio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;Lio/opentelemetry/api/OpenTelemetry;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public final fun component1 ()Lio/cratis/chronicle/connection/ChronicleConnectionString;
 	public final fun component2 ()Ljava/lang/String;
 	public final fun component3 ()Ljava/lang/String;
@@ -24,8 +26,9 @@ public final class io/cratis/chronicle/ChronicleOptions {
 	public final fun component5 ()Lio/cratis/chronicle/artifacts/IClientArtifacts;
 	public final fun component6 ()Lio/cratis/chronicle/artifacts/IArtifactActivator;
 	public final fun component7 ()Lio/opentelemetry/api/OpenTelemetry;
-	public final fun copy (Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/String;Ljava/lang/String;ZLio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;Lio/opentelemetry/api/OpenTelemetry;)Lio/cratis/chronicle/ChronicleOptions;
-	public static synthetic fun copy$default (Lio/cratis/chronicle/ChronicleOptions;Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/String;Ljava/lang/String;ZLio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;Lio/opentelemetry/api/OpenTelemetry;ILjava/lang/Object;)Lio/cratis/chronicle/ChronicleOptions;
+	public final fun component8 ()Ljava/lang/Integer;
+	public final fun copy (Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/String;Ljava/lang/String;ZLio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;Lio/opentelemetry/api/OpenTelemetry;Ljava/lang/Integer;)Lio/cratis/chronicle/ChronicleOptions;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/ChronicleOptions;Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/String;Ljava/lang/String;ZLio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;Lio/opentelemetry/api/OpenTelemetry;Ljava/lang/Integer;ILjava/lang/Object;)Lio/cratis/chronicle/ChronicleOptions;
 	public static final fun development ()Lio/cratis/chronicle/ChronicleOptions;
 	public fun equals (Ljava/lang/Object;)Z
 	public static final fun fromConnectionString (Ljava/lang/String;)Lio/cratis/chronicle/ChronicleOptions;
@@ -34,12 +37,14 @@ public final class io/cratis/chronicle/ChronicleOptions {
 	public final fun getAutoDiscoverAndRegister ()Z
 	public final fun getConnectionString ()Lio/cratis/chronicle/connection/ChronicleConnectionString;
 	public final fun getDefaultSinkTypeId ()Ljava/lang/String;
+	public final fun getMaxReceiveMessageSize ()Ljava/lang/Integer;
 	public final fun getOpenTelemetry ()Lio/opentelemetry/api/OpenTelemetry;
 	public final fun getProgramIdentifier ()Ljava/lang/String;
 	public final fun getReadModelNamingPolicy ()Lio/cratis/chronicle/readModels/ReadModelNamingPolicy;
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 	public final fun withArtifactsFrom ([Ljava/lang/String;)Lio/cratis/chronicle/ChronicleOptions;
+	public final fun withMaxReceiveMessageSize (Ljava/lang/Integer;)Lio/cratis/chronicle/ChronicleOptions;
 	public final fun withReadModelNamingPolicy (Lio/cratis/chronicle/readModels/ReadModelNamingPolicy;)Lio/cratis/chronicle/ChronicleOptions;
 	public final fun withoutAutoRegistration ()Lio/cratis/chronicle/ChronicleOptions;
 }
@@ -523,6 +528,8 @@ public final class io/cratis/chronicle/connection/BearerTokenInterceptor : io/gr
 
 public final class io/cratis/chronicle/connection/ChronicleConnection : java/lang/AutoCloseable {
 	public fun <init> (Lio/cratis/chronicle/connection/ChronicleConnectionString;)V
+	public fun <init> (Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/Integer;)V
+	public synthetic fun <init> (Lio/cratis/chronicle/connection/ChronicleConnectionString;Ljava/lang/Integer;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun close ()V
 	public final fun connect ()V
 	public final fun disconnect ()V

@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.connection
 
+import io.cratis.chronicle.ChronicleOptions.Companion.DEFAULT_MAX_MESSAGE_SIZE
 import io.grpc.Grpc
 import io.grpc.ManagedChannel
 import kotlinx.coroutines.Dispatchers
@@ -11,8 +12,15 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Manages the gRPC channel lifecycle and exposes Chronicle service stubs.
+ *
+ * @param connectionString The connection string to connect with.
+ * @param maxReceiveMessageSize The largest message, in bytes, accepted from the kernel. Defaults to 100 MB,
+ *   matching the other Chronicle clients; `null` keeps grpc-java's default of 4 MB.
  */
-class ChronicleConnection(private val connectionString: ChronicleConnectionString) : AutoCloseable {
+class ChronicleConnection @JvmOverloads constructor(
+    private val connectionString: ChronicleConnectionString,
+    private val maxReceiveMessageSize: Int? = DEFAULT_MAX_MESSAGE_SIZE
+) : AutoCloseable {
 
     init {
         require(connectionString.apiKey == null) {
@@ -67,6 +75,7 @@ class ChronicleConnection(private val connectionString: ChronicleConnectionStrin
             address.port,
             connectionString.createCredentials()
         )
+        maxReceiveMessageSize?.let { builder.maxInboundMessageSize(it) }
         builder.intercept(BearerTokenInterceptor(createTokenProvider(address)))
         val managed = builder.build()
         try {

@@ -46,7 +46,8 @@ data class ChronicleOptions @JvmOverloads constructor(
     val autoDiscoverAndRegister: Boolean = true,
     val artifacts: IClientArtifacts = ClientArtifacts.default,
     val artifactActivator: IArtifactActivator = ArtifactActivator,
-    val openTelemetry: OpenTelemetry? = null
+    val openTelemetry: OpenTelemetry? = null,
+    val maxReceiveMessageSize: Int? = DEFAULT_MAX_MESSAGE_SIZE
 ) {
     /**
      * Names the container each read model is stored in. See [ReadModelNamingPolicy].
@@ -72,6 +73,13 @@ data class ChronicleOptions @JvmOverloads constructor(
      */
     fun withReadModelNamingPolicy(policy: ReadModelNamingPolicy): ChronicleOptions =
         copy().also { it.readModelNamingPolicy = policy }
+
+    /**
+     * The same options with a different limit on the size of a message accepted from the kernel.
+     *
+     * @param bytes The largest message in bytes, or `null` for grpc-java's own default of 4 MB.
+     */
+    fun withMaxReceiveMessageSize(bytes: Int?): ChronicleOptions = copy(maxReceiveMessageSize = bytes)
 
     /**
      * The same options with artifact discovery narrowed to [packages] and everything beneath them.
@@ -107,6 +115,9 @@ data class ChronicleOptions @JvmOverloads constructor(
     ).hashCode()
 
     companion object {
+        /** The default maximum gRPC message size in bytes: 100 MB. */
+        const val DEFAULT_MAX_MESSAGE_SIZE: Int = 100 * 1024 * 1024
+
         /**
          * Creates [ChronicleOptions] from a raw connection string.
          *
