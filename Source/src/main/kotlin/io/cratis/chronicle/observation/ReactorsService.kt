@@ -116,6 +116,7 @@ class ReactorsService(
                                     .setReactorId(registration.id)
                                     .setEventSequenceId(registration.eventSequenceId)
                                     .setIsReplayable(registration.isReplayable)
+                                    .setStartAtTail(registration.startAtTail)
                                     .addAllTags(registration.tags)
                                     .setFilters(
                                         ObservationReactors.ObserverFilters.newBuilder()

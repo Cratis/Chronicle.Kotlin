@@ -49,6 +49,12 @@ class ReactorRegistrationTests {
         fun bookReturned(@Suppress("UNUSED_PARAMETER") event: BookReturned) = Unit
     }
 
+    @Reactor
+    @StartAtTail
+    class StartsAtTailReactor {
+        fun bookReturned(@Suppress("UNUSED_PARAMETER") event: BookReturned) = Unit
+    }
+
     @Test
     fun `id defaults to the class simple name`() {
         assertEquals("DefaultedReactor", ReactorRegistration.from(DefaultedReactor::class).id)
@@ -110,6 +116,27 @@ class ReactorRegistrationTests {
         // The whole reactor must still replay - only the marked handler is skipped, and that is
         // decided per event rather than at registration.
         assertTrue(ReactorRegistration.from(MethodLevelOnceOnlyReactor::class).isReplayable)
+    }
+
+    @Test
+    fun `a reactor starts from the beginning by default`() {
+        assertFalse(ReactorRegistration.from(DefaultedReactor::class).startAtTail)
+    }
+
+    @Test
+    fun `start at tail registers the reactor to begin at the tail`() {
+        assertTrue(ReactorRegistration.from(StartsAtTailReactor::class).startAtTail)
+    }
+
+    @Test
+    fun `start at tail leaves the reactor replayable`() {
+        // It only chooses where a reactor starts; an explicit replay still replays from the beginning.
+        assertTrue(ReactorRegistration.from(StartsAtTailReactor::class).isReplayable)
+    }
+
+    @Test
+    fun `java start at tail registers the reactor to begin at the tail`() {
+        assertTrue(ReactorRegistration.from(JavaStartAtTailReactor::class).startAtTail)
     }
 
     @Test
