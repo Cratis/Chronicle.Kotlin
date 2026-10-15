@@ -2876,6 +2876,9 @@ public final class io/cratis/chronicle/observation/ReplayContext {
 	public fun toString ()Ljava/lang/String;
 }
 
+public abstract interface annotation class io/cratis/chronicle/observation/StartAtTail : java/lang/annotation/Annotation {
+}
+
 public abstract interface annotation class io/cratis/chronicle/observation/Tag : java/lang/annotation/Annotation {
 	public abstract fun value ()[Ljava/lang/String;
 }

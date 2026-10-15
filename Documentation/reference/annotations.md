@@ -88,6 +88,41 @@ class PaymentNotifications {
 
 ---
 
+## @StartAtTail
+
+Marks a reactor class so it does not observe history that predates its first
+registration. A new reactor normally catches up from the very beginning of the
+event sequence, so one whose handlers cause side effects acts on every
+historical event the moment it is deployed. [@OnceOnly](#onceonly) does not
+prevent that, because it only excludes replay. With `@StartAtTail`, the first
+time Chronicle sees the reactor it begins at the tail of the event sequence and
+observes only what is appended afterwards.
+
+It only affects the first registration. A reactor that already has a position
+keeps it, so the annotation never skips events after a restart. Renaming the
+reactor or moving its package changes its default id and makes it a new reactor,
+which starts at the tail again; give `@Reactor` an explicit `id` to keep the old
+position. An explicit replay still replays from the beginning. The Chronicle
+server must also support it: a server that predates it ignores the request and
+the reactor catches up from the beginning.
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.observation.Reactor
+import io.cratis.chronicle.observation.StartAtTail
+
+@Reactor
+@StartAtTail
+class NewOrderNotifications {
+    fun orderPlaced(event: OrderPlaced) {
+        println("Notifying ${event.orderId} - only for new orders")
+    }
+}
+```
+
+---
+
 ## @Replay
 
 Marks a reactor handler as the one to run while events are being replayed. When
