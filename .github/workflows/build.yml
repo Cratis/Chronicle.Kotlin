@@ -36,6 +36,13 @@ jobs:
     permissions:
       contents: read
 
+    # A development kernel (MongoDB included) that the kernel-backed specifications run against.
+    services:
+      chronicle:
+        image: cratis/chronicle:19.70.0-development
+        ports:
+          - 35000:35000
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -66,5 +73,10 @@ jobs:
       # The whole workspace, not just the client: a change to the test-support module or an
       # integration has to be built and tested too, and apiCheck only runs as part of a module's
       # own build.
+      - name: Wait for the kernel
+        run: timeout 180 bash -c 'until curl -skf https://localhost:35000/health > /dev/null; do sleep 2; done'
+
       - name: Build and test
+        env:
+          CHRONICLE_INTEGRATION_CONNECTION_STRING: chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:35000
         run: gradle build --no-configuration-cache
