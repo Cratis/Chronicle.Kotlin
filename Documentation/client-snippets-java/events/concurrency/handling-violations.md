@@ -8,7 +8,6 @@ import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScopeBuilder;
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyViolation;
 
 import io.cratis.chronicle.java.AppendOptionsBuilder;
-import io.cratis.chronicle.java.ConcurrencyScopeBuilderJavaBridge;
 import io.cratis.chronicle.java.EventLogJavaBridge;
 
 @EventType
@@ -18,9 +17,10 @@ class EventsConcurrencyHandlingViolations {
     // Handles a concurrency violation reported on AppendResult.getConcurrencyViolation() - the
     // event source id it was reported for is enough to tell which account lost the race.
     boolean tryOpenAccount(EventStore store, String accountId, String accountName) {
-        ConcurrencyScope concurrencyScope = ConcurrencyScopeBuilderJavaBridge
-            .withSequenceNumber(new ConcurrencyScopeBuilder(), 0)
+        // Expect that no event exists yet for this account.
+        ConcurrencyScope concurrencyScope = new ConcurrencyScopeBuilder()
             .withEventSourceId()
+            .withExpectsNoMatchingEvent()
             .build();
 
         AppendOptions options = new AppendOptionsBuilder().concurrencyScope(concurrencyScope).build();
