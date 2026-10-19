@@ -35,7 +35,14 @@ allprojects {
             // 1.10.2. Updating these library declarations to 1.11+ breaks Boot applications.
             val pinnedCoroutines = candidate.group == "org.jetbrains.kotlinx" &&
                 candidate.module.startsWith("kotlinx-coroutines-") && currentVersion == "1.10.2"
+            // ClassGraph 5/6 are a from-scratch rewrite - a different API, not source- or
+            // binary-compatible with 4.x, and 6.x requires JDK 25+. 4.x stays the EOL line
+            // backported for serious bugs, so pin to it until someone deliberately ports
+            // ClientArtifacts.kt to the new API.
+            val pinnedClassGraph = candidate.group == "io.github.classgraph" &&
+                candidate.module == "classgraph" && currentVersion.startsWith("4.")
             (pinnedCoroutines && candidate.version != "1.10.2") ||
+                (pinnedClassGraph && !candidate.version.startsWith("4.")) ||
                 (isNonStable(candidate.version) && !isNonStable(currentVersion))
         }
     }
