@@ -57,9 +57,9 @@ mavenPublishing {
     coordinates("io.cratis", "chronicle", version.toString())
 
     pom {
-        name.set("Chronicle Kotlin Client")
+        name.set("Cratis Chronicle Kotlin Client")
         description.set("Idiomatic event sourcing client for Kotlin and Java (JVM) for Cratis Chronicle")
-        url.set("https://github.com/Cratis/Chronicle.Kotlin")
+        url.set("https://www.cratis.io/chronicle/clients/kotlin/")
         licenses {
             license {
                 name.set("MIT License")
