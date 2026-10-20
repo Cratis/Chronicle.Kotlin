@@ -1,6 +1,9 @@
 <div align="center">
 
-# 📜 Chronicle for the JVM
+# 📜 Cratis Chronicle for the JVM
+
+Cratis Chronicle for the JVM is a client library for Kotlin and Java developers
+to build event-sourced applications with Cratis Chronicle.
 
 **Event sourcing for Kotlin and Java — write the facts, annotate them, and the rest of the system builds itself.**
 
