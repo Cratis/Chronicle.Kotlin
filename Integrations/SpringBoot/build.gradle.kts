@@ -48,9 +48,9 @@ mavenPublishing {
     coordinates("io.cratis", "chronicle-spring-boot-starter", version.toString())
 
     pom {
-        name.set("Chronicle Spring Boot Starter")
+        name.set("Cratis Chronicle Spring Boot Starter")
         description.set("Spring Boot auto-configuration for the Cratis Chronicle event sourcing client for Kotlin and Java")
-        url.set("https://github.com/Cratis/Chronicle.Kotlin")
+        url.set("https://www.cratis.io/chronicle/clients/kotlin/")
         licenses {
             license {
                 name.set("MIT License")

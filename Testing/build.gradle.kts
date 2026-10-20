@@ -32,9 +32,9 @@ mavenPublishing {
     coordinates("io.cratis", "chronicle-testing", version.toString())
 
     pom {
-        name.set("Chronicle Kotlin Client Testing")
+        name.set("Cratis Chronicle Kotlin Client Testing")
         description.set("In-process test support for the Cratis Chronicle event sourcing client for Kotlin and Java")
-        url.set("https://github.com/Cratis/Chronicle.Kotlin")
+        url.set("https://www.cratis.io/chronicle/clients/kotlin/")
         licenses {
             license {
                 name.set("MIT License")
