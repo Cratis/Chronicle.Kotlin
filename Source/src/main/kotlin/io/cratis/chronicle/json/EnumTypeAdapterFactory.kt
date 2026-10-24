@@ -7,6 +7,7 @@ import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
 import com.google.gson.TypeAdapter
 import com.google.gson.TypeAdapterFactory
+import com.google.gson.annotations.SerializedName
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonToken
@@ -15,7 +16,8 @@ import com.google.gson.stream.JsonWriter
 /**
  * Writes enums as ordinal numbers, matching their generated integer schemas.
  *
- * Reads defined ordinals from numbers or numeric strings and constant names case insensitively.
+ * Reads defined ordinals from numbers or numeric strings. Text accepts serialized names and
+ * alternates, constant names, and `toString()` values, preferring exact matches before ignoring case.
  * Unlike the .NET converter's string parsing, undefined numeric strings are rejected: JVM enums
  * cannot represent an undefined ordinal. Gson's default map handling keeps keys textual; this
  * adapter changes enum values, not the existing map-key representation.
@@ -32,6 +34,35 @@ internal class EnumTypeAdapterFactory : TypeAdapterFactory {
 
 private class EnumTypeAdapter<T>(private val enumType: Class<*>) : TypeAdapter<T>() {
     private val constants = enumType.enumConstants.map { it as Enum<*> }
+    // Resolve every exact match before considering case-insensitive matches, in this priority order.
+    private val nameLookups = listOf(
+        serializedNames(),
+        constants.associateBy { it.name },
+        constants.associateBy { it.toString() }
+    )
+
+    private fun serializedNames(): Map<String, Enum<*>> = buildMap {
+        constants.forEach { constant ->
+            val annotation = enumType.getField(constant.name).getAnnotation(SerializedName::class.java)
+                ?: return@forEach
+            put(annotation.value, constant)
+            annotation.alternate.forEach { put(it, constant) }
+        }
+    }
+
+    private fun readName(value: String): Enum<*>? =
+        nameLookups.firstNotNullOfOrNull { it[value] }
+            ?: nameLookups.firstNotNullOfOrNull { lookup ->
+                lookup.entries.firstOrNull { it.key.equals(value, ignoreCase = true) }?.value
+            }
+
+    private fun readConstant(token: JsonToken, value: String): Enum<*>? {
+        val normalized = value.trim()
+        val ordinal = normalized.toIntOrNull()
+        if (ordinal != null) return constants.getOrNull(ordinal)
+        if (token != JsonToken.STRING) return null
+        return readName(value) ?: readName(normalized)
+    }
 
     override fun write(out: JsonWriter, value: T) {
         out.value((value as Enum<*>).ordinal)
@@ -43,13 +74,7 @@ private class EnumTypeAdapter<T>(private val enumType: Class<*>) : TypeAdapter<T
             throw JsonSyntaxException("Expected an ordinal or name for enum '${enumType.name}', got $token at ${reader.path}")
         }
         val value = reader.nextString()
-        val normalized = value.trim()
-        val ordinal = normalized.toIntOrNull()
-        val constant = if (ordinal != null) {
-            constants.getOrNull(ordinal)
-        } else {
-            constants.firstOrNull { token == JsonToken.STRING && it.name.equals(normalized, ignoreCase = true) }
-        }
+        val constant = readConstant(token, value)
         if (constant == null) {
             throw JsonSyntaxException("Unable to convert '$value' to enum '${enumType.name}' at ${reader.previousPath}: value is not defined")
         }
