@@ -168,7 +168,7 @@ object JsonSchemaGenerator {
 
     /**
      * Builds an `"integer"` schema carrying the enum's ordinal values, with `x-enumNames` alongside
-     * so the kernel can validate either representation.
+     * as name metadata. The kernel validates numeric values; the client also reads names for compatibility.
      *
      * This mirrors the .NET client exactly: the `enum` array is the ordinal values a converter maps
      * to/from BSON, and `x-enumNames` is the auxiliary metadata that lets those same converters (and

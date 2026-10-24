@@ -286,7 +286,30 @@ data class AppendedEvent(
 ```
 
 `content` is the event's raw stored JSON — deserialize it with the concrete
-event class matching `context.eventType` to get a typed event object.
+event class matching `context.eventType` to get a typed event object using
+`io.cratis.chronicle.json.chronicleGson` (`ChronicleGson.chronicleGson` in Java).
+
+### Enum wire format
+
+Kotlin and Java enum values in event content and read-model state are written
+as JSON numbers: the constant's zero-based ordinal. This also applies to enum
+values inside collections and maps. Enum map keys keep Gson's existing text
+representation (the constant name unless `toString()` is overridden).
+
+The generated schema has `type: integer`, an `enum` array of ordinals, and
+`x-enumNames` metadata containing the names. Names are metadata, not alternative
+values accepted by the kernel's integer schema.
+
+For compatibility with previously stored name-encoded payloads, the client
+reads names case insensitively as well as defined ordinals in numbers or numeric
+strings. Unknown names and undefined ordinals fail with an error naming the
+enum type and value. Unlike the .NET converter's numeric-string parsing, JVM
+enums cannot represent undefined values, so an undefined numeric string is
+rejected too. Nullable enum values remain null.
+
+New events use numbers; existing name-encoded payloads remain readable. Keep
+the order of enum constants stable: reordering or inserting constants changes
+the meaning of previously stored ordinals. Add new constants at the end.
 
 ### Redacting events
 
