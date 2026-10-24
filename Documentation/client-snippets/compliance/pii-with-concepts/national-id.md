@@ -1,7 +1,9 @@
 ```kotlin
 import io.cratis.chronicle.compliance.Pii
-import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.ConceptAs
 
 @Pii(description = "National ID number — sensitive personal identifier")
-data class PiiConceptsNationalIdNumber(override val value: String) : ConceptAs<String>
+data class PiiConceptsNationalIdNumber(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 ```

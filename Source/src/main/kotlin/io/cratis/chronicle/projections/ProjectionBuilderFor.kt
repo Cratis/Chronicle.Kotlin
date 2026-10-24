@@ -3,7 +3,7 @@
 
 package io.cratis.chronicle.projections
 
-import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.ConceptAs
 import java.math.BigDecimal
 import java.util.function.Consumer
 import kotlin.reflect.KClass
@@ -548,7 +548,7 @@ class NestedBuilderFor<TNested : Any>(
 
 /** Constant expressions use the invariant textual value consumed by the kernel. */
 private fun valueExpression(value: Any?): String {
-    val actual = if (value is ConceptAs<*>) value.value else value
+    val actual = if (value is ConceptAs<*>) value.value() else value
     return when (actual) {
         null -> "\$null"
         is Enum<*> -> "\$value(${actual.ordinal})"

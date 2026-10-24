@@ -4,7 +4,7 @@
 package io.cratis.chronicle.transactions
 
 import io.cratis.chronicle.IEventStore
-import io.cratis.chronicle.correlation.CorrelationId
+import io.cratis.fundamentals.execution.CorrelationId
 import java.util.concurrent.ConcurrentHashMap
 
 /**

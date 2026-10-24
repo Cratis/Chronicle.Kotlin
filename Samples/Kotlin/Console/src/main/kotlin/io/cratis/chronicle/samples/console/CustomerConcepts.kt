@@ -4,7 +4,7 @@
 package io.cratis.chronicle.samples.console
 
 import io.cratis.chronicle.compliance.Pii
-import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.ConceptAs
 import io.cratis.chronicle.concepts.EventSourceId
 
 /**
@@ -37,31 +37,45 @@ import io.cratis.chronicle.concepts.EventSourceId
  * make its own key unfindable. That is why this is a random surrogate id rather than something
  * personal like an email address - keep the personal values in the `@Pii` concepts below.
  */
-data class CustomerId(override val value: String) : EventSourceId
+data class CustomerId(val value: String) : EventSourceId {
+    override fun value(): String = value
+}
 
 /** A customer's full legal name. */
 @Pii(description = "Customer full legal name")
-data class FullName(override val value: String) : ConceptAs<String>
+data class FullName(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 /** A customer's email address. */
 @Pii(description = "Customer email address")
-data class EmailAddress(override val value: String) : ConceptAs<String>
+data class EmailAddress(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 /** A customer's phone contact number. */
 @Pii(description = "Customer phone contact number")
-data class PhoneNumber(override val value: String) : ConceptAs<String>
+data class PhoneNumber(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 /** The street part of a customer's address. */
 @Pii(description = "Customer street address")
-data class StreetAddress(override val value: String) : ConceptAs<String>
+data class StreetAddress(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 /** The city a customer resides in. */
 @Pii(description = "City of residence")
-data class City(override val value: String) : ConceptAs<String>
+data class City(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 /** The postal code of a customer's address. */
 @Pii(description = "Postal code")
-data class PostalCode(override val value: String) : ConceptAs<String>
+data class PostalCode(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 /**
  * The country a customer resides in.
@@ -69,4 +83,6 @@ data class PostalCode(override val value: String) : ConceptAs<String>
  * Not marked `@Pii` - a country on its own identifies nobody. It is a concept anyway, so it cannot
  * be passed where a [City] or a [PostalCode] was expected.
  */
-data class Country(override val value: String) : ConceptAs<String>
+data class Country(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}

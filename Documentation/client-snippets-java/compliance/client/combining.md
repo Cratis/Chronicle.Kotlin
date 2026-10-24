@@ -1,14 +1,10 @@
 ```java
 import io.cratis.chronicle.compliance.Pii;
-import io.cratis.chronicle.concepts.ConceptAs;
+import io.cratis.fundamentals.concepts.ConceptAs;
 import io.cratis.chronicle.events.EventType;
 
 @Pii
 record ComplianceClientEmailAddress(String value) implements ConceptAs<String> {
-    @Override
-    public String getValue() {
-        return value;
-    }
 }
 
 @EventType

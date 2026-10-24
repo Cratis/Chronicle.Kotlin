@@ -4,5 +4,7 @@ import io.cratis.chronicle.concepts.EventSourceId
 
 // Throws PiiNotSupportedOnEventSourceId
 @Pii
-data class PiiConceptsEmployeeId(override val value: String) : EventSourceId
+data class PiiConceptsEmployeeId(val value: String) : EventSourceId {
+    override fun value(): String = value
+}
 ```

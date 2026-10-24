@@ -8,6 +8,7 @@ group = "io.cratis"
 version = providers.gradleProperty("version").getOrElse("0.0.0-SNAPSHOT")
 
 val coroutinesVersion = "1.10.2"
+val fundamentalsVersion = "0.1.0"
 val chronicleContractsVersion = "19.70.0"
 val dnsJavaVersion = "3.6.5"
 val classGraphVersion = "4.8.198"
@@ -17,6 +18,7 @@ dependencies {
     api("io.cratis:chronicle-contracts:$chronicleContractsVersion")
     api("io.grpc:grpc-netty-shaded:1.84.2")
     api("com.google.code.gson:gson:2.14.0")
+    api("io.cratis:fundamentals:$fundamentalsVersion")
     api("org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion")
     api("dnsjava:dnsjava:$dnsJavaVersion")
     api(kotlin("reflect"))

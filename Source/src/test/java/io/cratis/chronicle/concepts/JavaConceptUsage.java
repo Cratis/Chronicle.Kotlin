@@ -3,6 +3,8 @@
 
 package io.cratis.chronicle.concepts;
 
+import io.cratis.fundamentals.concepts.ConceptAs;
+
 /**
  * Concepts declared and used from Java, exercised from Kotlin specs.
  *
@@ -18,18 +20,10 @@ public final class JavaConceptUsage {
 
     /** An identifier declared in Java. */
     public record JavaBookId(String value) implements ConceptAs<String> {
-        @Override
-        public String getValue() {
-            return value;
-        }
     }
 
     /** A different identifier, which the compiler will not let you confuse with the first. */
     public record JavaMemberId(String value) implements ConceptAs<String> {
-        @Override
-        public String getValue() {
-            return value;
-        }
     }
 
     /** An event whose properties are typed rather than being three interchangeable strings. */
@@ -43,6 +37,6 @@ public final class JavaConceptUsage {
 
     /** Reading the underlying value back out. */
     public static String valueOf(ConceptAs<String> concept) {
-        return concept.getValue();
+        return concept.value();
     }
 }

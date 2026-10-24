@@ -5,7 +5,7 @@ package io.cratis.chronicle.samples.console;
 
 import io.cratis.chronicle.IEventStore;
 import io.cratis.chronicle.compliance.Pii;
-import io.cratis.chronicle.concepts.ConceptAs;
+import io.cratis.fundamentals.concepts.ConceptAs;
 import io.cratis.chronicle.events.EventType;
 import io.cratis.chronicle.eventSequences.AppendedEvent;
 import io.cratis.chronicle.eventSequences.AppendResult;
@@ -201,8 +201,8 @@ public class Compliance {
         );
 
         // The event source id is a String on the wire and always will be, so the blocking Java
-        // bridge takes one — getValue() is where a concept goes back to being a plain value.
-        String eventSourceId = sampleCustomer.id.getValue();
+        // bridge takes one — value() is where a concept goes back to being a plain value.
+        String eventSourceId = sampleCustomer.id.value();
         AppendResult result1 = EventLogJavaBridge.append(store.getEventLog(), eventSourceId, registered, null);
         AppendResult result2 = EventLogJavaBridge.append(store.getEventLog(), eventSourceId, addressUpdated, null);
 
@@ -219,12 +219,12 @@ public class Compliance {
                     .map(v -> v.getMessage())
                     .collect(Collectors.joining("; ")));
             }
-            System.out.println("[pii] Could not register " + sampleCustomer.fullName.getValue() + ": " + violations);
+            System.out.println("[pii] Could not register " + sampleCustomer.fullName.value() + ": " + violations);
             return;
         }
 
         long lastSeq = EventLogJavaBridge.getSequenceNumber(result2);
-        System.out.println("[pii] Registered " + sampleCustomer.fullName.getValue() + " (" +
+        System.out.println("[pii] Registered " + sampleCustomer.fullName.value() + " (" +
                           eventSourceId + ") with PII events up to sequence " + lastSeq);
     }
 
@@ -233,16 +233,16 @@ public class Compliance {
         CustomerDetails customer = ReadModelsJavaBridge.getInstanceByKey(
             store.getReadModels(),
             CustomerDetails.class,
-            sampleCustomer.id.getValue()
+            sampleCustomer.id.value()
         );
 
-        if (customer == null || customer.getId().getValue().isEmpty()) {
+        if (customer == null || customer.getId().value().isEmpty()) {
             System.out.println("[pii] No CustomerDetails read model found for " +
-                             sampleCustomer.id.getValue() + ". Register the customer first (press C).");
+                             sampleCustomer.id.value() + ". Register the customer first (press C).");
             return;
         }
 
-        System.out.println("Customer read model for " + customer.getId().getValue() + ":");
+        System.out.println("Customer read model for " + customer.getId().value() + ":");
         System.out.println(fmt("Full name", customer.getFullName()));
         System.out.println(fmt("Email", customer.getEmail()));
         System.out.println(fmt("Phone number", customer.getPhoneNumber()));
@@ -260,9 +260,9 @@ public class Compliance {
      */
     public static void deleteCustomerEncryptionKey(EventStore store) {
         SampleCustomerData sampleCustomer = SampleCustomerData.instance;
-        ComplianceServiceJavaBridge.deleteEncryptionKey(store.getCompliance(), sampleCustomer.id.getValue());
-        System.out.println("[pii] Deleted the encryption key for " + sampleCustomer.fullName.getValue() + " (" +
-                          sampleCustomer.id.getValue() + "). Its encrypted PII can no longer be decrypted.");
+        ComplianceServiceJavaBridge.deleteEncryptionKey(store.getCompliance(), sampleCustomer.id.value());
+        System.out.println("[pii] Deleted the encryption key for " + sampleCustomer.fullName.value() + " (" +
+                          sampleCustomer.id.value() + "). Its encrypted PII can no longer be decrypted.");
     }
 
     /**
@@ -304,10 +304,10 @@ public class Compliance {
      */
     public static void redactAllCustomerEvents(IEventStore store) throws Exception {
         SampleCustomerData sampleCustomer = SampleCustomerData.instance;
-        EventLogJavaBridge.redactForEventSource(store.getEventLog(), sampleCustomer.id.getValue(),
+        EventLogJavaBridge.redactForEventSource(store.getEventLog(), sampleCustomer.id.value(),
             "Sample: GDPR erasure request", List.of());
-        System.out.println("[redact] Permanently redacted every event for " + sampleCustomer.fullName.getValue() + " (" +
-                          sampleCustomer.id.getValue() + "). This cannot be undone.");
+        System.out.println("[redact] Permanently redacted every event for " + sampleCustomer.fullName.value() + " (" +
+                          sampleCustomer.id.value() + "). This cannot be undone.");
     }
 
     /**
@@ -320,7 +320,7 @@ public class Compliance {
     private static String fmt(String label, ConceptAs<String> value) {
         Pii pii = value.getClass().getAnnotation(Pii.class);
         String marker = pii != null ? "   [PII: " + pii.description() + "]" : "";
-        String displayValue = value.getValue().isEmpty() ? "(empty)" : value.getValue();
+        String displayValue = value.value().isEmpty() ? "(empty)" : value.value();
         return "  " + String.format("%-15s", label) + ": " + displayValue + marker;
     }
 }

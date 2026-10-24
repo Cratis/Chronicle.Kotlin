@@ -4,7 +4,7 @@
 package io.cratis.chronicle.projections
 
 import io.cratis.chronicle.events.EventType
-import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.ConceptAs
 import java.math.BigDecimal
 import java.time.Instant
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -38,7 +38,9 @@ private data class Order(
 )
 
 private data class OrderSummary(val note: String)
-private data class LabelConcept(override val value: String) : ConceptAs<String>
+private data class LabelConcept(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 private enum class OrderPhase { NEW, SENT }
 private data class ConstantState(
     val at: Instant = Instant.EPOCH,

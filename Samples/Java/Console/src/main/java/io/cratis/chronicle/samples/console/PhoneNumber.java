@@ -4,13 +4,9 @@
 package io.cratis.chronicle.samples.console;
 
 import io.cratis.chronicle.compliance.Pii;
-import io.cratis.chronicle.concepts.ConceptAs;
+import io.cratis.fundamentals.concepts.ConceptAs;
 
 /** A customer's phone contact number. */
 @Pii(description = "Customer phone contact number")
 record PhoneNumber(String value) implements ConceptAs<String> {
-    @Override
-    public String getValue() {
-        return value;
-    }
 }

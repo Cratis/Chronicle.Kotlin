@@ -1,6 +1,6 @@
 ```kotlin
 import io.cratis.chronicle.compliance.Pii
-import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.ConceptAs
 import io.cratis.chronicle.events.EventType
 
 // Property-level: requires repetition across every event
@@ -12,7 +12,9 @@ data class PiiConceptsComparisonEmployeeNameChanged(@Pii val newName: String) //
 
 // Concept-level: declare once, apply everywhere automatically
 @Pii
-data class PiiConceptsComparisonPersonName(override val value: String) : ConceptAs<String>
+data class PiiConceptsComparisonPersonName(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 // name is encrypted
 @EventType

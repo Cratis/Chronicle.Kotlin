@@ -18,6 +18,8 @@
   href: event-sources.md
 - name: Migrate append routing
   href: migrate-append-routing.md
+- name: Migrate to Fundamentals
+  href: migrate-to-fundamentals.md
 - name: Reactors
   href: reactors.md
 - name: Read Model Reactors

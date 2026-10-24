@@ -6,7 +6,9 @@ import io.cratis.chronicle.events.EventType
 import java.util.UUID
 
 // A strongly typed domain concept, stored as a string on the wire.
-data class EventSourceIdCustomerId(override val value: String) : EventSourceId {
+data class EventSourceIdCustomerId(val value: String) : EventSourceId {
+    override fun value(): String = value
+
     companion object {
         fun new() = EventSourceIdCustomerId(UUID.randomUUID().toString())
     }

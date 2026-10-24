@@ -23,7 +23,7 @@ class BlockingUnitOfWork(private val unitOfWork: IUnitOfWork) : AutoCloseable {
     val isSuccess: Boolean get() = unitOfWork.isSuccess
 
     /** The correlation identifier the whole unit of work is held under. */
-    val correlationId: String get() = unitOfWork.correlationId.value.toString()
+    val correlationId: String get() = unitOfWork.correlationId.value().toString()
 
     /** Commits everything staged, appending it as one atomic operation. */
     fun commit() {

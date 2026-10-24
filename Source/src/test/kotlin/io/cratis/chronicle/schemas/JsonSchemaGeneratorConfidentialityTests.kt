@@ -5,7 +5,7 @@ package io.cratis.chronicle.schemas
 
 import com.google.gson.Gson
 import io.cratis.chronicle.compliance.Pii
-import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.ConceptAs
 import io.cratis.chronicle.concepts.EventSourceId
 import io.cratis.chronicle.confidentiality.Encrypted
 import io.cratis.chronicle.confidentiality.EncryptedNotSupportedOnEventSourceId
@@ -26,12 +26,16 @@ private data class PartnerIntegration(
 )
 
 @Encrypted
-private data class WebhookSecret(override val value: String) : ConceptAs<String>
+private data class WebhookSecret(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 private data class Configuration(val webhookSecret: WebhookSecret)
 
 @Encrypted
-private data class LicenseToken(override val value: String) : ConceptAs<String>
+private data class LicenseToken(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 private data class FullyEncryptedClass(val value: String, val otherValue: String)
 
@@ -47,15 +51,21 @@ private data class ConflictedValue(@Pii @Encrypted val value: String)
 private data class MixedClass(@Encrypted val value: String)
 
 @Encrypted
-private data class EncryptedEmployeeId(override val value: String) : EventSourceId
+private data class EncryptedEmployeeId(val value: String) : EventSourceId {
+    override fun value(): String = value
+}
 
 private data class EventWithEncryptedEventSourceId(val employeeId: EncryptedEmployeeId, val name: String)
 
 @Encrypted(scope = EncryptionScope.Namespace)
-private data class WebhookSecretScoped(override val value: String) : ConceptAs<String>
+private data class WebhookSecretScoped(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 @Encrypted(scope = EncryptionScope.Global)
-private data class LicenseTokenScoped(override val value: String) : ConceptAs<String>
+private data class LicenseTokenScoped(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 private data class ScopedSecrets(val namespaceSecret: WebhookSecretScoped, val globalSecret: LicenseTokenScoped)
 

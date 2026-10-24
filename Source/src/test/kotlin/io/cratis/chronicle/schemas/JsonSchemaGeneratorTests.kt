@@ -6,7 +6,7 @@ package io.cratis.chronicle.schemas
 import com.google.gson.Gson
 import io.cratis.chronicle.compliance.Pii
 import io.cratis.chronicle.compliance.PiiNotSupportedOnEventSourceId
-import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.ConceptAs
 import io.cratis.chronicle.concepts.EventSourceId
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.geospatial.LineString
@@ -51,7 +51,9 @@ private data class PersonWithPii(
 )
 
 @Pii(description = "Wraps a sensitive value")
-private data class SensitiveValue(override val value: String) : ConceptAs<String>
+private data class SensitiveValue(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 private data class PersonWithPiiTypedProperty(
     val name: String,
@@ -75,12 +77,16 @@ private data class PatientRecord(val name: String, val details: MedicalDetails)
 private data class PiiEnvelope(val secret: SensitiveValue)
 
 @Pii(description = "Employee identifier")
-private data class PiiEmployeeId(override val value: String) : EventSourceId
+private data class PiiEmployeeId(val value: String) : EventSourceId {
+    override fun value(): String = value
+}
 
 private data class EventWithPiiEventSourceId(val employeeId: PiiEmployeeId, val name: String)
 
 @Pii(description = "Employee national identifier")
-private data class NationalId(override val value: String) : ConceptAs<String>
+private data class NationalId(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 @EventType
 private data class EmployeeHired(val employeeId: String, val nationalId: NationalId)
@@ -116,11 +122,25 @@ private data class ScalarFormats(
     val payload: ByteArray
 )
 
-private data class MemberId(override val value: UUID) : ConceptAs<UUID>
+private data class MemberId(val value: UUID) : ConceptAs<UUID> {
+    override fun value(): UUID = value
+}
 
-private data class LastSeen(override val value: Instant) : ConceptAs<Instant>
+private data class LastSeen(val value: Instant) : ConceptAs<Instant> {
+    override fun value(): Instant = value
+}
 
 private data class Membership(val member: MemberId, val lastSeen: LastSeen)
+
+private data class PrivateCount(private val count: Int) : ConceptAs<Int> {
+    override fun value(): Int = count
+}
+
+private data class PrivateId(private val id: UUID) : ConceptAs<UUID> {
+    override fun value(): UUID = id
+}
+
+private data class PrivateConcepts(val count: PrivateCount, val id: PrivateId)
 
 @JsonSchemaType(String::class)
 private data class Price(val amount: Long, val currency: String)
@@ -133,6 +153,14 @@ private data class SelfReferencing(val value: String)
 private data class HasSelfReferencing(val ref: SelfReferencing)
 
 class JsonSchemaGeneratorTests {
+
+    @Test
+    fun `concepts with private differently named values keep their scalar schemas`() {
+        assertEquals(
+            """{"type":"object","properties":{"count":{"type":"integer","format":"int32"},"id":{"type":"string","format":"guid"}}}""",
+            JsonSchemaGenerator.generate(PrivateConcepts::class)
+        )
+    }
 
     @Test
     fun `generate produces a real schema instead of an empty object literal`() {

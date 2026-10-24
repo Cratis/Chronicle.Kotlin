@@ -15,8 +15,4 @@ import io.cratis.chronicle.concepts.EventSourceId;
  * this one.
  */
 record CustomerId(String value) implements EventSourceId {
-    @Override
-    public String getValue() {
-        return value;
-    }
 }

@@ -13,6 +13,7 @@ import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.eventSequences.IEventSequence
 import io.cratis.chronicle.eventSequences.RedactionReason
 import io.cratis.chronicle.readModels.IReadModelsService
+import io.cratis.fundamentals.concepts.ConceptAs
 import kotlin.reflect.KClass
 
 /**
@@ -33,22 +34,22 @@ suspend fun IEventSequence.append(
     eventSourceId: ConceptAs<String>,
     event: Any,
     options: AppendOptions? = null
-): AppendResult = append(eventSourceId.value, event, options)
+): AppendResult = append(eventSourceId.value(), event, options)
 
 /** Appends [events] against the event source named by [eventSourceId], as one atomic batch. */
 suspend fun IEventSequence.appendMany(
     eventSourceId: ConceptAs<String>,
     events: List<Any>,
     options: AppendOptions? = null
-): List<AppendResult> = appendMany(eventSourceId.value, events, options)
+): List<AppendResult> = appendMany(eventSourceId.value(), events, options)
 
 /** Whether the sequence holds any event for [eventSourceId]. */
 suspend fun IEventSequence.hasEventsFor(eventSourceId: ConceptAs<String>): Boolean =
-    hasEventsFor(eventSourceId.value)
+    hasEventsFor(eventSourceId.value())
 
 /** The position of the last event appended for [eventSourceId]. */
 suspend fun IEventSequence.getTailSequenceNumber(eventSourceId: ConceptAs<String>): EventSequenceNumber =
-    getTailSequenceNumber(eventSourceId.value)
+    getTailSequenceNumber(eventSourceId.value())
 
 /** The events of [eventTypes] appended for [eventSourceId]. */
 suspend fun IEventSequence.getForEventSourceIdAndEventTypes(
@@ -58,7 +59,7 @@ suspend fun IEventSequence.getForEventSourceIdAndEventTypes(
     eventStreamId: String? = null,
     eventSourceType: String? = null
 ): List<AppendedEvent> = getForEventSourceIdAndEventTypes(
-    eventSourceId.value,
+    eventSourceId.value(),
     eventTypes,
     eventStreamType,
     eventStreamId,
@@ -70,14 +71,14 @@ suspend fun IEventSequence.redactForEventSource(
     eventSourceId: ConceptAs<String>,
     reason: RedactionReason,
     eventTypes: List<KClass<*>> = emptyList()
-) = redactForEventSource(eventSourceId.value, reason, eventTypes)
+) = redactForEventSource(eventSourceId.value(), reason, eventTypes)
 
 /** The instance of [readModelClass] held under [key]. */
 suspend fun <T : Any> IReadModelsService.getInstanceByKey(
     readModelClass: KClass<T>,
     key: ConceptAs<String>
-): T? = getInstanceByKey(readModelClass, key.value)
+): T? = getInstanceByKey(readModelClass, key.value())
 
 /** An event naming the event source it belongs to with a concept rather than a bare `String`. */
 fun EventForEventSourceId(eventSourceId: ConceptAs<String>, event: Any): EventForEventSourceId =
-    EventForEventSourceId(eventSourceId.value, event)
+    EventForEventSourceId(eventSourceId.value(), event)

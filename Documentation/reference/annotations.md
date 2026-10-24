@@ -428,7 +428,10 @@ import io.cratis.chronicle.events.EventType
 // Declared once on the concept, every event or read model property that
 // reuses EmailAddress is PII automatically.
 @Pii(description = "Customer email address")
-data class EmailAddress(override val value: String) : io.cratis.chronicle.concepts.ConceptAs<String>
+data class EmailAddress(val value: String) :
+    io.cratis.fundamentals.concepts.ConceptAs<String> {
+    override fun value(): String = value
+}
 
 @EventType
 data class CustomerRegistered(

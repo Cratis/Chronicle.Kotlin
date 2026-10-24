@@ -1,10 +1,12 @@
 ```kotlin
 import io.cratis.chronicle.compliance.Pii
-import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.ConceptAs
 import io.cratis.chronicle.events.EventType
 
 @Pii
-data class ComplianceClientEmailAddress(override val value: String) : ConceptAs<String>
+data class ComplianceClientEmailAddress(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 @EventType
 data class ComplianceClientCustomerRegistered(

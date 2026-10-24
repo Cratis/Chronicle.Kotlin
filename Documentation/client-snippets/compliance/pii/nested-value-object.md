@@ -1,9 +1,11 @@
 ```kotlin
 import io.cratis.chronicle.compliance.Pii
-import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.ConceptAs
 
 @Pii
-data class PiiAttrDateOfBirth(override val value: String) : ConceptAs<String>
+data class PiiAttrDateOfBirth(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 // The concept sits one level down, inside a value object.
 data class PiiAttrVerifiedDateOfBirth(val dateOfBirth: PiiAttrDateOfBirth, val verifiedBy: String)

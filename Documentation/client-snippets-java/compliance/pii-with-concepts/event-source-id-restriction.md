@@ -5,9 +5,5 @@ import io.cratis.chronicle.concepts.EventSourceId;
 // Throws PiiNotSupportedOnEventSourceId
 @Pii
 record PiiConceptsEmployeeId(String value) implements EventSourceId {
-    @Override
-    public String getValue() {
-        return value;
-    }
 }
 ```

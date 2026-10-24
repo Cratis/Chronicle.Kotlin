@@ -4,13 +4,9 @@
 package io.cratis.chronicle.samples.console;
 
 import io.cratis.chronicle.compliance.Pii;
-import io.cratis.chronicle.concepts.ConceptAs;
+import io.cratis.fundamentals.concepts.ConceptAs;
 
 /** The street part of a customer's address. */
 @Pii(description = "Customer street address")
 record StreetAddress(String value) implements ConceptAs<String> {
-    @Override
-    public String getValue() {
-        return value;
-    }
 }
