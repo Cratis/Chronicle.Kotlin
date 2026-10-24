@@ -22,7 +22,8 @@ import io.cratis.chronicle.geospatial.Polygon
  * are the other: [java.time.Instant], [java.time.OffsetDateTime], [java.time.ZonedDateTime],
  * [java.time.LocalDateTime], [java.time.LocalDate], and [java.time.LocalTime] are written as
  * ISO-8601 strings, which is what their schema formats promise. A [java.time.ZonedDateTime] is
- * written as an offset date-time, so its zone id does not survive the round trip.
+ * written as an offset date-time, so its zone id does not survive the round trip. Enum values are
+ * written as ordinal numbers to match their integer schemas; names remain readable for compatibility.
  *
  * It is public so that callers who serialize event content themselves produce the same JSON the
  * client would. Java reaches it as `ChronicleGson.chronicleGson`.
@@ -35,6 +36,7 @@ val chronicleGson: Gson = GsonBuilder()
     // A concept serializes as the value it wraps, so introducing one into an event that is already
     // in production changes neither the JSON nor the schema the kernel validates against.
     .registerTypeAdapterFactory(ConceptTypeAdapterFactory())
+    .registerTypeAdapterFactory(EnumTypeAdapterFactory())
     .apply {
         // Gson has no java.time support, and the schemas describe these as strings (date-time,
         // date-time-offset, date, time), so they must go over the wire as ISO-8601 strings.
