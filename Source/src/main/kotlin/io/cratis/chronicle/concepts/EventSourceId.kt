@@ -3,6 +3,8 @@
 
 package io.cratis.chronicle.concepts
 
+import io.cratis.fundamentals.concepts.ConceptAs
+
 /**
  * Marks a concept as the strongly-typed identity of an event source.
  *
@@ -20,7 +22,9 @@ package io.cratis.chronicle.concepts
  * separate `@Pii` property instead.
  *
  * ```kotlin
- * data class EmployeeId(override val value: String) : EventSourceId
+ * data class EmployeeId(val value: String) : EventSourceId {
+ *     override fun value(): String = value
+ * }
  * ```
  */
 interface EventSourceId : ConceptAs<String>

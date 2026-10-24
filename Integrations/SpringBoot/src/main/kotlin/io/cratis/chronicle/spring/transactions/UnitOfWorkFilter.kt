@@ -4,7 +4,7 @@
 package io.cratis.chronicle.spring.transactions
 
 import io.cratis.chronicle.IEventStore
-import io.cratis.chronicle.correlation.CorrelationId
+import io.cratis.fundamentals.execution.CorrelationId
 import io.cratis.chronicle.correlation.correlationIdManager
 import jakarta.servlet.FilterChain
 import jakarta.servlet.http.HttpServletRequest

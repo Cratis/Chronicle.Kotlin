@@ -9,7 +9,7 @@ import com.google.gson.TypeAdapterFactory
 import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
-import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.ConceptAs
 import java.lang.reflect.ParameterizedType
 
 /**
@@ -48,7 +48,7 @@ class ConceptTypeAdapterFactory : TypeAdapterFactory {
                     out.nullValue()
                     return
                 }
-                underlyingAdapter.write(out, (value as ConceptAs<*>).value)
+                underlyingAdapter.write(out, (value as ConceptAs<*>).value())
             }
 
             override fun read(reader: JsonReader): T? {

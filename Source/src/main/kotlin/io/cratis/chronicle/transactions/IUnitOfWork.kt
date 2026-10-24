@@ -3,7 +3,7 @@
 
 package io.cratis.chronicle.transactions
 
-import io.cratis.chronicle.correlation.CorrelationId
+import io.cratis.fundamentals.execution.CorrelationId
 import io.cratis.chronicle.eventSequences.AppendError
 import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.ConstraintViolation

@@ -7,7 +7,7 @@ package io.cratis.chronicle.compliance
  * Marks a property, constructor parameter, field, or type as containing personally identifiable
  * information (PII).
  *
- * Declare it once on a [io.cratis.chronicle.concepts.ConceptAs] and every event or read model
+ * Declare it once on a [io.cratis.fundamentals.concepts.ConceptAs] and every event or read model
  * property that reuses that concept is PII automatically - there is nothing to repeat at each call
  * site. It also works declared directly on an event or read model property, and on a composite
  * value object type, in which case every value the type holds is treated as PII wherever that type

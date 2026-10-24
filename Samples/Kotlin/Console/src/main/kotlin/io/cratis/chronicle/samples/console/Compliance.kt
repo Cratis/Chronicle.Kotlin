@@ -5,7 +5,8 @@ package io.cratis.chronicle.samples.console
 
 import io.cratis.chronicle.EventStore
 import io.cratis.chronicle.compliance.Pii
-import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.value
 import io.cratis.chronicle.concepts.appendMany
 import io.cratis.chronicle.concepts.getInstanceByKey
 import io.cratis.chronicle.concepts.redactForEventSource

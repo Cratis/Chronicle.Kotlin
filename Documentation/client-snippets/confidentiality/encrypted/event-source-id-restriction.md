@@ -4,5 +4,7 @@ import io.cratis.chronicle.confidentiality.Encrypted
 
 // This will throw EncryptedNotSupportedOnEventSourceId
 @Encrypted
-data class EncryptedAttrPartnerId(override val value: String) : EventSourceId
+data class EncryptedAttrPartnerId(val value: String) : EventSourceId {
+    override fun value(): String = value
+}
 ```

@@ -1,13 +1,9 @@
 ```java
 import io.cratis.chronicle.compliance.Pii;
-import io.cratis.chronicle.concepts.ConceptAs;
+import io.cratis.fundamentals.concepts.ConceptAs;
 
 @Pii
 record PiiAttrDateOfBirth(String value) implements ConceptAs<String> {
-    @Override
-    public String getValue() {
-        return value;
-    }
 }
 
 // The concept sits one level down, inside a value object.

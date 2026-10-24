@@ -457,6 +457,8 @@ creates and tracks `IUnitOfWork` instances scoped to the current thread.
 <!-- validate: skip -->
 
 ```kotlin
+import io.cratis.fundamentals.execution.CorrelationId
+
 interface IUnitOfWorkManager {
     val current: IUnitOfWork
     val hasCurrent: Boolean

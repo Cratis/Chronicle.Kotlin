@@ -4,7 +4,7 @@
 package io.cratis.chronicle.transactions
 
 import io.cratis.chronicle.IEventStore
-import io.cratis.chronicle.correlation.CorrelationId
+import io.cratis.fundamentals.execution.CorrelationId
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -42,7 +42,7 @@ class UnitOfWorkManagerTests {
 
         val unitOfWork = manager.begin()
 
-        assertNotEquals(CorrelationId.notSet, unitOfWork.correlationId)
+        assertNotEquals(CorrelationId.NOT_SET, unitOfWork.correlationId)
         assertSame(unitOfWork, manager.current)
     }
 

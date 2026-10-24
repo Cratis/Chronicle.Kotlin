@@ -26,11 +26,17 @@ A concept is any type implementing `ConceptAs<T>`:
 <!-- validate: skip -->
 
 ```kotlin
-import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.ConceptAs
 
-data class BookId(override val value: String) : ConceptAs<String>
-data class MemberId(override val value: String) : ConceptAs<String>
-data class CopyNumber(override val value: Int) : ConceptAs<Int>
+data class BookId(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
+data class MemberId(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
+data class CopyNumber(private val number: Int) : ConceptAs<Int> {
+    override fun value(): Int = number
+}
 ```
 
 Then use them wherever the value used to be:
@@ -92,13 +98,16 @@ A concept is an ordinary type, so Java declares one as a record:
 <!-- validate: skip -->
 
 ```java
-public record BookId(String value) implements ConceptAs<String> {
-    @Override public String getValue() { return value; }
-}
+import io.cratis.fundamentals.concepts.ConceptAs;
+
+public record BookId(String value) implements ConceptAs<String> {}
 ```
 
-The extra `getValue()` is the Kotlin property's accessor — a Java record's
-`value()` does not satisfy it on its own.
+The record's `value()` accessor implements the interface directly. Read through
+the interface with `concept.value()` in Java or Kotlin. Kotlin can also use
+`concept.value` by importing `io.cratis.fundamentals.concepts.value`.
+
+For existing applications, see [Migrating to Fundamentals](migrate-to-fundamentals.md).
 
 ## Data class or value class
 

@@ -3,20 +3,9 @@
 
 package io.cratis.chronicle.correlation
 
-import java.util.UUID
-
 /**
- * Represents a correlation identifier used to track operations across call boundaries.
+ * Compatibility name for [io.cratis.fundamentals.execution.CorrelationId].
+ * See the migration guide at `Documentation/guides/migrate-to-fundamentals.md`.
  */
-@JvmInline
-value class CorrelationId(val value: UUID) {
-    companion object {
-        /** Creates a new unique [CorrelationId]. */
-        fun create(): CorrelationId = CorrelationId(UUID.randomUUID())
-
-        /** A well-known [CorrelationId] representing an empty/not-set value. */
-        val notSet: CorrelationId = CorrelationId(UUID.fromString("00000000-0000-0000-0000-000000000000"))
-    }
-
-    override fun toString(): String = value.toString()
-}
+@Deprecated("Moved to io.cratis.fundamentals.execution.CorrelationId.", ReplaceWith("CorrelationId", "io.cratis.fundamentals.execution.CorrelationId"))
+typealias CorrelationId = io.cratis.fundamentals.execution.CorrelationId

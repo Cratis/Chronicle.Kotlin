@@ -3,7 +3,7 @@
 
 package io.cratis.chronicle.samples.console;
 
-import io.cratis.chronicle.concepts.ConceptAs;
+import io.cratis.fundamentals.concepts.ConceptAs;
 
 /**
  * The country a customer resides in.
@@ -12,8 +12,4 @@ import io.cratis.chronicle.concepts.ConceptAs;
  * cannot be passed where a {@link City} or a {@link PostalCode} was expected.
  */
 record Country(String value) implements ConceptAs<String> {
-    @Override
-    public String getValue() {
-        return value;
-    }
 }

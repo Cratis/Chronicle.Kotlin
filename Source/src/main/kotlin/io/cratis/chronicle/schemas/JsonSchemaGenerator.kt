@@ -10,7 +10,7 @@ import io.cratis.chronicle.confidentiality.Encrypted
 import io.cratis.chronicle.confidentiality.EncryptedNotSupportedOnEventSourceId
 import io.cratis.chronicle.confidentiality.EncryptionScope
 import io.cratis.chronicle.confidentiality.PiiAndEncryptedCombinedNotSupported
-import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.ConceptAs
 import io.cratis.chronicle.concepts.EventSourceId
 import io.cratis.chronicle.geospatial.LineString
 import io.cratis.chronicle.geospatial.Point
@@ -20,6 +20,7 @@ import kotlin.reflect.KAnnotatedElement
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KType
+import kotlin.reflect.full.allSupertypes
 import kotlin.reflect.full.createType
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.isSubclassOf
@@ -155,12 +156,12 @@ object JsonSchemaGenerator {
     /**
      * Builds the schema for the value a concept wraps.
      *
-     * The `value` property is what goes on the wire, so its type is what the schema describes. A
-     * concept with no readable `value` falls back to a string, which is what every identifier
-     * concept is anyway.
+     * The `ConceptAs<T>` supertype declares the scalar type that goes on the wire, regardless of
+     * the implementation's property names. An unresolved value type falls back to a string.
      */
     private fun conceptSchema(kClass: KClass<*>, visiting: MutableSet<KClass<*>>): MutableMap<String, Any> {
-        val underlying = kClass.memberProperties.firstOrNull { it.name == "value" }?.returnType
+        val underlying = kClass.allSupertypes.firstOrNull { it.classifier == ConceptAs::class }
+            ?.arguments?.firstOrNull()?.type
             ?: return mutableMapOf("type" to "string")
         return schemaForType(underlying, visiting)
     }

@@ -6,27 +6,45 @@ package io.cratis.chronicle.concepts
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.schemas.JsonSchemaGenerator
+import io.cratis.fundamentals.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.value
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import java.util.UUID
 
-data class BookId(override val value: String) : ConceptAs<String>
+data class BookId(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
-data class MemberId(override val value: String) : ConceptAs<String>
+data class MemberId(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
-data class CopyNumber(override val value: Int) : ConceptAs<Int>
+data class CopyNumber(private val number: Int) : ConceptAs<Int> {
+    override fun value(): Int = number
+}
 
-data class LoanId(override val value: UUID) : ConceptAs<UUID>
+data class LoanId(val value: UUID) : ConceptAs<UUID> {
+    override fun value(): UUID = value
+}
+
+data class GuestId(private val id: UUID) : ConceptAs<UUID> {
+    override fun value(): UUID = id
+}
 
 @JvmInline
-value class ShelfCode(override val value: String) : ConceptAs<String>
+value class ShelfCode(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 
 /** A concept reached through an interface of its own rather than implementing ConceptAs directly. */
 interface Identifier : ConceptAs<String>
 
-data class BranchId(override val value: String) : Identifier
+data class BranchId(val value: String) : Identifier {
+    override fun value(): String = value
+}
 
 @EventType
 data class BookBorrowed(
@@ -42,6 +60,19 @@ data class BookBorrowed(
  * that used to be a plain String changes neither the JSON nor the schema.
  */
 class ConceptAsTests {
+
+    @Test
+    fun `a concept reference exposes the Kotlin property extension`() {
+        val concept: ConceptAs<String> = BookId("dune")
+        assertEquals("dune", concept.value)
+    }
+
+    @Test
+    fun `a concept with a private differently named value serializes and reads back`() {
+        val id = UUID.fromString("6f1a9b6a-0f6d-4f3f-9b8e-9a2f0d5e1c77")
+        assertEquals("\"$id\"", chronicleGson.toJson(GuestId(id)))
+        assertEquals(GuestId(id), chronicleGson.fromJson("\"$id\"", GuestId::class.java))
+    }
 
     @Test
     fun `a concept serializes as the value it wraps`() {

@@ -1,7 +1,9 @@
 ```kotlin
 import io.cratis.chronicle.compliance.Pii
-import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.ConceptAs
 
 @Pii
-data class PiiAttrConceptPersonName(override val value: String) : ConceptAs<String>
+data class PiiAttrConceptPersonName(val value: String) : ConceptAs<String> {
+    override fun value(): String = value
+}
 ```

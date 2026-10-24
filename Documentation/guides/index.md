@@ -33,6 +33,7 @@ These cover what only the Kotlin and Java client does:
 - [Registering external services](external-services.md)
 - [Tracing with OpenTelemetry](tracing.md)
 - [Migrating append routing](migrate-append-routing.md)
+- [Migrating to Fundamentals](migrate-to-fundamentals.md)
 
 Use the Kotlin client section for
 [setup](/chronicle/clients/kotlin/get-started/) and [API

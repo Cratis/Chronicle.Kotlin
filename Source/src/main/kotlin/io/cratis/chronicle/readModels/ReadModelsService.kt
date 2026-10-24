@@ -12,7 +12,7 @@ import Cratis.Chronicle.Contracts.ReadModels.Readmodels
 import bcl.Bcl
 import io.cratis.chronicle.Subject
 import io.cratis.chronicle.compliance.ComplianceService
-import io.cratis.chronicle.concepts.ConceptAs
+import io.cratis.fundamentals.concepts.ConceptAs
 import io.cratis.chronicle.eventSequences.AppendedEvent
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
@@ -300,7 +300,7 @@ class ReadModelsService(
     /** Unwraps a resolved subject property's value to the string a release call needs. */
     private fun subjectValueOf(value: Any?): String? = when (value) {
         null -> null
-        is ConceptAs<*> -> subjectValueOf(value.value)
+        is ConceptAs<*> -> subjectValueOf(value.value())
         is String -> value.ifEmpty { null }
         else -> value.toString().ifEmpty { null }
     }

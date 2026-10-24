@@ -4,13 +4,9 @@
 package io.cratis.chronicle.samples.console;
 
 import io.cratis.chronicle.compliance.Pii;
-import io.cratis.chronicle.concepts.ConceptAs;
+import io.cratis.fundamentals.concepts.ConceptAs;
 
 /** The city a customer resides in. */
 @Pii(description = "City of residence")
 record City(String value) implements ConceptAs<String> {
-    @Override
-    public String getValue() {
-        return value;
-    }
 }
