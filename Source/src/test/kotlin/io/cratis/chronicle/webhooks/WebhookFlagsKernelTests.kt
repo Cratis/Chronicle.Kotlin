@@ -78,12 +78,14 @@ class WebhookFlagsKernelTests {
                     observers.any { it.id == "active-hook" }
             }
 
-            // Kernel v19.70.0: Source/Kernel/Storage.MongoDB/Observation/Webhooks/
-            // WebhookDefinitionConverters.cs:44-53 (SQL counterpart:40-49) drops IsActive on read.
-            // CI also reported IsReplayable=true for the disabled hook; that is not explained by this converter.
-            // Core/Observation/Webhooks/Webhooks.cs:204-251 skips inactive subscriptions but does not forward
-            // IsReplayable to observers, so observer metadata cannot prove webhook replayability either.
-            // Assert observable inactivity here; the unit specs assert both disabling wire companions.
+            // Kernels before 19.100.0 drop IsActive when reading webhook definitions back from storage
+            // (Storage.MongoDB and Storage.Sql WebhookDefinitionConverters.ToKernel), so GetWebhooks reports the
+            // inactive hook as active. Prove inactivity through the missing subscription instead.
+            // Kernel observers do not carry webhook replayability (Core/Observation/Webhooks/Webhooks.cs does not
+            // pass IsReplayable when subscribing), so replayability is asserted on the stored definition.
+            // The unit specs assert both disabling wire companions.
+            val inactive = webhooks.single { it.identifier == "inactive-hook" }
+            assertFalse(inactive.isReplayable)
             assertFalse(observers.any { it.id == "inactive-hook" })
             val active = webhooks.single { it.identifier == "active-hook" }
             assertTrue(active.isReplayable)
