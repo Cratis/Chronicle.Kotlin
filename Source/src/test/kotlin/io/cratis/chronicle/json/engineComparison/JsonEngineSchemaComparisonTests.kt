@@ -4,6 +4,10 @@
 package io.cratis.chronicle.json.engineComparison
 
 import com.google.gson.JsonParser
+import io.cratis.chronicle.eventSequences.AppendError
+import io.cratis.chronicle.eventSequences.AppendResult
+import io.cratis.chronicle.eventSequences.ConstraintViolation
+import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.schemas.JsonSchemaGenerator
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -13,6 +17,41 @@ import org.junit.jupiter.api.Test
 
 /** Cheap client-side evidence; these assertions do not replace kernel schema validation. */
 class JsonEngineSchemaComparisonTests {
+    @Test
+    fun `schema rejection checks extract constraint violations even when append errors are empty`() {
+        // Reproduce CI's result channel and observed mismatches, not a verbatim server response.
+        // Split evidence across message and details to exercise both fields without assuming detail keys.
+        val result = AppendResult(
+            sequenceNumber = EventSequenceNumber.first,
+            constraintViolations = listOf(
+                ConstraintViolation("SchemaValidation", "counts", mapOf("expected" to "string", "actual" to "object")),
+                ConstraintViolation("SchemaValidation", "expected string got null", mapOf("property" to "optional")),
+                ConstraintViolation("SchemaValidation", "count expected integer got string")
+            ),
+            errors = emptyList(),
+            isSuccess = false
+        )
+        assertTrue(result.errors.isEmpty())
+        assertFalse(result.isSuccess)
+        assertTrue(result.hasSchemaValidationViolation("counts", "string", "object"))
+        assertTrue(result.hasSchemaValidationViolation("optional", "string", "null"))
+        assertTrue(result.hasSchemaValidationViolation("count", "integer", "string"))
+        assertFalse(result.hasSchemaValidationViolation("counts", "integer", "object"))
+    }
+
+    @Test
+    fun `append errors and unrelated constraints cannot satisfy schema rejection checks`() {
+        val description = "counts expected string got object"
+        val result = AppendResult(
+            sequenceNumber = EventSequenceNumber.first,
+            constraintViolations = listOf(ConstraintViolation("OtherConstraint", description)),
+            errors = listOf(AppendError("SchemaValidation $description")),
+            isSuccess = false
+        )
+        assertFalse(result.hasSchemaValidationViolation("counts", "string", "object"))
+        assertFalse(result.copy(constraintViolations = emptyList()).hasSchemaValidationViolation("counts", "string", "object"))
+    }
+
     @Test
     fun `the original schema describes a map and nullable string as strings despite object and null output`() {
         val schema = JsonSchemaGenerator.generate(JsonEngineComparisonEvent::class)

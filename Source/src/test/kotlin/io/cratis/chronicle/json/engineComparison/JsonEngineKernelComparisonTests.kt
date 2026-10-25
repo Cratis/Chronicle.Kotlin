@@ -10,6 +10,7 @@ import com.google.gson.stream.JsonWriter
 import io.cratis.chronicle.ChronicleClient
 import io.cratis.chronicle.ChronicleOptions
 import io.cratis.chronicle.artifacts.KnownClientArtifacts
+import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.json.chronicleGson
@@ -48,6 +49,12 @@ class RawSimpleJsonAdapter : TypeAdapter<RawSimpleEventContent>() {
     override fun read(reader: JsonReader): RawSimpleEventContent = throw UnsupportedOperationException("Write-only comparison wrapper")
 }
 
+/** Schema rejections arrive as constraint violations, not append errors. */
+internal fun AppendResult.hasSchemaValidationViolation(vararg evidence: String): Boolean = constraintViolations.any { violation ->
+    val description = "${violation.message} ${violation.details}"
+    violation.constraintId == "SchemaValidation" && evidence.all { description.contains(it) }
+}
+
 /** CI's existing kernel lane owns this evidence; local runs must skip, never start a kernel. */
 class JsonEngineKernelComparisonTests {
     @Test
@@ -64,11 +71,11 @@ class JsonEngineKernelComparisonTests {
             results.forEach { (name, result) -> observe(reporter, "complex.$name", result.toString()) }
             val checks = results.map { (name, result) -> Executable {
                 assertEquals(false, result.isSuccess, "$name: $result")
-                assertTrue(result.errors.any { it.message.contains("SchemaValidation") && it.message.contains("counts") }, "$name: $result")
+                assertTrue(result.hasSchemaValidationViolation("counts", "string", "object"), "$name: $result")
             } }.toMutableList()
-            // These additional errors were observed in CI; they do not establish broader null behavior.
-            checks.add(Executable { assertTrue(results.getValue("fundamentals").errors.any { it.message.contains("optional") }, results.getValue("fundamentals").toString()) })
-            checks.add(Executable { assertTrue(results.getValue("negative").errors.any { it.message.contains("count") && it.message.contains("integer") }, results.getValue("negative").toString()) })
+            // These additional violations were observed in CI; they do not establish broader null behavior.
+            checks.add(Executable { assertTrue(results.getValue("fundamentals").hasSchemaValidationViolation("optional", "string", "null"), results.getValue("fundamentals").toString()) })
+            checks.add(Executable { assertTrue(results.getValue("negative").hasSchemaValidationViolation("count", "integer", "string"), results.getValue("negative").toString()) })
             val stored = store.eventLog.getFromSequenceNumber(EventSequenceNumber.first)
             observe(reporter, "complex.stored", stored.size.toString())
             checks.add(Executable { assertEquals(0, stored.size, "all original complex-event appends are rejected") })
@@ -92,7 +99,7 @@ class JsonEngineKernelComparisonTests {
             val checks = expected.mapNotNull { (name, success) ->
                 success?.let { Executable { assertEquals(it, results.getValue(name).isSuccess, "$name: ${results.getValue(name)}") } }
             }.toMutableList()
-            checks.add(Executable { assertTrue(results.getValue("negative").errors.any { it.message.contains("SchemaValidation") && it.message.contains("count") && it.message.contains("integer") }, results.getValue("negative").toString()) })
+            checks.add(Executable { assertTrue(results.getValue("negative").hasSchemaValidationViolation("count", "integer", "string"), results.getValue("negative").toString()) })
             val stored = store.eventLog.getFromSequenceNumber(EventSequenceNumber.first)
             checks.add(Executable { assertEquals(results.values.count { it.isSuccess }, stored.size, "every successful append is stored") })
             // Stored events keep append order, so they pair with the successful appends in insertion order.
