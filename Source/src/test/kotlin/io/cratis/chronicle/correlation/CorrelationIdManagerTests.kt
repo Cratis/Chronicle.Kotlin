@@ -53,4 +53,55 @@ class CorrelationIdManagerTests {
         assertNotNull(threadId)
         assertNotEquals(mainId, threadId)
     }
+
+    @Test
+    fun `separately constructed managers are isolated from each other and the singleton`() {
+        val other = CorrelationIdManager()
+        val id = java.util.UUID.randomUUID()
+        manager.set(id)
+        assertNotEquals(id, other.current)
+        assertNotEquals(id, correlationIdManager.current)
+        assertNotSame(manager, correlationIdManager)
+        other.clear()
+    }
+
+    @Test
+    fun `explicit zero uuid survives reads`() {
+        val zero = java.util.UUID(0L, 0L)
+        manager.set(zero)
+        assertEquals(zero, manager.current)
+        assertEquals(zero, manager.current)
+    }
+
+    @Test
+    fun `worker thread set clear and reuse leave fresh state and do not leak to the caller`() {
+        val mainId = manager.current
+        val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+        try {
+            val inherited = executor.submit<java.util.UUID> { manager.current }.get()
+            assertNotEquals(mainId, inherited)
+            val explicit = java.util.UUID.randomUUID()
+            val reused = executor.submit<List<java.util.UUID>> {
+                manager.set(explicit)
+                val set = manager.current
+                manager.clear()
+                listOf(set, manager.current)
+            }.get()
+            assertEquals(explicit, reused[0])
+            assertNotEquals(explicit, reused[1])
+            assertNotEquals(inherited, reused[1])
+        } finally {
+            executor.shutdownNow()
+        }
+        assertEquals(mainId, manager.current)
+    }
+
+    @Test
+    fun `java callers can use the manager and the module singleton`() {
+        val id = java.util.UUID.randomUUID()
+        val javaManager = JavaCorrelationUsage.create()
+        assertEquals(id, JavaCorrelationUsage.roundTrip(javaManager, id))
+        assertEquals(JavaCorrelationUsage.current(javaManager), JavaCorrelationUsage.current(javaManager))
+        assertSame(correlationIdManager, JavaCorrelationUsage.singleton())
+    }
 }
