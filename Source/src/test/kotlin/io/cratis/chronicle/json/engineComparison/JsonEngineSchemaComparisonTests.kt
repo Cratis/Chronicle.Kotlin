@@ -10,6 +10,8 @@ import io.cratis.chronicle.eventSequences.ConstraintViolation
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.schemas.JsonSchemaGenerator
+import java.time.Instant
+import java.time.temporal.ChronoField.NANO_OF_SECOND
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -93,6 +95,21 @@ class JsonEngineSchemaComparisonTests {
             assertEquals(event, chronicleGson.fromJson(json, JsonEngineComparisonSimpleEvent::class.java), name)
             assertEquals(json, chronicleGson.toJson(RawSimpleEventContent(json)), "raw wrapper: $name")
         }
+    }
+
+    @Test
+    fun `the unchanged nine-digit input exposes the kernel timestamp truncation observed in CI`() {
+        val event = ComparisonFixtures.simpleEvent
+        val expected = event.copy(at = Instant.parse("2024-05-01T10:00:00.123456700Z"))
+        assertEquals(123456789, event.at.nano, "retain the original nine-digit input")
+        assertEquals(event.at.with(NANO_OF_SECOND, (event.at.nano / 100) * 100L), expected.at)
+        val stored = JsonParser.parseString(chronicleGson.toJson(event)).asJsonObject.apply {
+            // Exact stored timestamp observed for all three engines in CI run 40148807431.
+            addProperty("at", "2024-05-01T10:00:00.1234567+00:00")
+        }
+        val readBack = chronicleGson.fromJson(stored, JsonEngineComparisonSimpleEvent::class.java)
+        assertEquals(expected, readBack)
+        assertEquals(89, event.at.nano - readBack.at.nano, "kernel truncation, not an engine difference")
     }
 
     @Test

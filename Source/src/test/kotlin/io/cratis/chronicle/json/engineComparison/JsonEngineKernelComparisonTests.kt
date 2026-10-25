@@ -14,6 +14,7 @@ import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.json.chronicleGson
+import java.time.Instant
 import java.util.UUID
 import kotlin.reflect.KClass
 import kotlinx.coroutines.runBlocking
@@ -89,15 +90,18 @@ class JsonEngineKernelComparisonTests {
             val store = client.getEventStore("JsonSimple${UUID.randomUUID().toString().replace("-", "").take(12)}")
             store.awaitRegistration()
             val event = ComparisonFixtures.simpleEvent
+            // CI run 40148807431: the kernel truncates Instant values to 100 ns for every engine.
+            // Keep the nine-digit input unchanged so the lost 89 ns remains visible evidence.
+            val expectedReadBack = event.copy(at = Instant.parse("2024-05-01T10:00:00.123456700Z"))
             val contents = linkedMapOf<String, Any>("gson" to event)
             comparisonMappers.forEach { (name, mapper) -> contents[name] = RawSimpleEventContent(mapper.writeValueAsString(event)) }
             contents["negative"] = RawSimpleEventContent(ComparisonFixtures.invalidCountJson(event))
             val results = contents.mapValues { (_, content) -> store.eventLog.append(UUID.randomUUID().toString(), content) }
             results.forEach { (name, result) -> observe(reporter, "simple.$name", result.toString()) }
-            // Fundamentals acceptance/read-back remains an observation for this new fixture until CI.
-            val expected: Map<String, Boolean?> = mapOf("gson" to true, "fundamentals" to null, "gsonParity" to true, "negative" to false)
-            val checks = expected.mapNotNull { (name, success) ->
-                success?.let { Executable { assertEquals(it, results.getValue(name).isSuccess, "$name: ${results.getValue(name)}") } }
+            // All three engines were accepted in CI; the isolated count-string negative was rejected.
+            val expected = mapOf("gson" to true, "fundamentals" to true, "gsonParity" to true, "negative" to false)
+            val checks = expected.map { (name, success) ->
+                Executable { assertEquals(success, results.getValue(name).isSuccess, "$name: ${results.getValue(name)}") }
             }.toMutableList()
             checks.add(Executable { assertTrue(results.getValue("negative").hasSchemaValidationViolation("count", "integer", "string"), results.getValue("negative").toString()) })
             val stored = store.eventLog.getFromSequenceNumber(EventSequenceNumber.first)
@@ -106,10 +110,10 @@ class JsonEngineKernelComparisonTests {
             val storedNames = results.filterValues { it.isSuccess }.keys.toList()
             stored.zip(storedNames).forEach { (item, name) ->
                 val readBack = runCatching { chronicleGson.fromJson(item.content, JsonEngineComparisonSimpleEvent::class.java) }
-                observe(reporter, "simple.$name.readBack", readBack.fold({ "equal=${it == event}" }, { "failed=${it.message}" }))
-                if (expected[name] == true) {
-                    checks.add(Executable { assertEquals(event, readBack.getOrThrow(), item.content) })
-                }
+                observe(reporter, "simple.$name.readBack", readBack.fold({
+                    "equalToInput=${it == event}, equalToKernelExpected=${it == expectedReadBack}, inputAt=${event.at}, storedAt=${it.at}, kernelPrecision=100ns"
+                }, { "failed=${it.message}" }))
+                checks.add(Executable { assertEquals(expectedReadBack, readBack.getOrThrow(), "kernel 100ns truncation: ${item.content}") })
             }
             assertAll(checks)
         }
