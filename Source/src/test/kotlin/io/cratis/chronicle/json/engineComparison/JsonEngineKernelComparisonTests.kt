@@ -62,11 +62,11 @@ class JsonEngineKernelComparisonTests {
                 reporter.publishEntry(key, value)
                 println("[json-engine-kernel] $key: $value")
             }
-            results.forEach { (name, result) -> observe(name, "isSuccess=${result.isSuccess}; errors=${result.errors}") }
+            results.forEach { (name, result) -> observe(name, result.toString()) }
             // Fundamentals is an observation pending the first CI run, not a guessed outcome.
             val expected: Map<String, Boolean?> = mapOf("gson" to true, "fundamentals" to null, "gsonParity" to true, "negative" to false)
             val checks = expected.mapNotNull { (name, success) ->
-                success?.let { Executable { assertEquals(it, results.getValue(name).isSuccess, "$name: ${results.getValue(name).errors}") } }
+                success?.let { Executable { assertEquals(it, results.getValue(name).isSuccess, "$name: ${results.getValue(name)}") } }
             }.toMutableList()
             val stored = store.eventLog.getFromSequenceNumber(EventSequenceNumber.first)
             checks.add(Executable { assertEquals(results.values.count { it.isSuccess }, stored.size, "every successful append is stored") })
