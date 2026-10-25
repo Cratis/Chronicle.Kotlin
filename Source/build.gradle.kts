@@ -9,6 +9,7 @@ version = providers.gradleProperty("version").getOrElse("0.0.0-SNAPSHOT")
 
 val coroutinesVersion = "1.10.2"
 val fundamentalsVersion = "0.1.0"
+val jacksonVersion = "3.2.4" // Comparison-only test dependencies for #154.
 val chronicleContractsVersion = "19.70.0"
 val dnsJavaVersion = "3.6.5"
 val classGraphVersion = "4.8.198"
@@ -34,6 +35,8 @@ dependencies {
     implementation("io.github.classgraph:classgraph:$classGraphVersion")
 
     testImplementation("org.junit.jupiter:junit-jupiter:6.1.3")
+    testImplementation("io.cratis:fundamentals-jackson:0.5.0")
+    testImplementation("tools.jackson.module:jackson-module-kotlin:$jacksonVersion")
     // The OpenTelemetry SDK is a test-only dependency: the client ships the API alone so that
     // instrumenting stays the application's choice. The in-memory exporter is what lets a spec
     // assert on the spans the client actually produced.
@@ -50,6 +53,13 @@ kotlin {
 
 tasks.test {
     useJUnitPlatform()
+    testLogging {
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+    // The kernel comparison (#154) runs only in CI, so its observations must reach the CI log.
+    onOutput(KotlinClosure2<TestDescriptor, TestOutputEvent, Unit>({ descriptor, event ->
+        if (descriptor.className?.endsWith("JsonEngineKernelComparisonTests") == true) logger.lifecycle(event.message.trimEnd())
+    }))
 }
 
 mavenPublishing {

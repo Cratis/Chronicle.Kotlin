@@ -1,0 +1,1 @@
+{"name":"delivery","count":3,"total":9007199254740991,"price":12.5,"isActive":true,"id":"48e95d01-b98f-4280-8731-54bb12c3abc4","tags":["first","second"],"counts":{"z":2,"a":1},"nested":{"label":"parcel","quantity":2},"concept":"order-1","status":1,"at":"2024-05-01T10:00:00.123456789Z","location":{"type":"Point","coordinates":[10.5,59.9]}}

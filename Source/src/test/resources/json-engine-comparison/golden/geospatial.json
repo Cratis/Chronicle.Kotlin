@@ -1,0 +1,1 @@
+{"point":{"type":"Point","coordinates":[10.5,59.9]},"line":{"type":"LineString","coordinates":[[1.0,2.0],[3.0,4.0]]},"polygon":{"type":"Polygon","coordinates":[[[0.0,0.0],[4.0,0.0],[4.0,4.0],[0.0,0.0]]]}}
