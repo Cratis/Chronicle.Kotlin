@@ -32,6 +32,7 @@ These cover what only the Kotlin and Java client does:
 - [Capturing external sources](captures.md)
 - [Registering external services](external-services.md)
 - [Tracing with OpenTelemetry](tracing.md)
+- [Correlation](correlation.md)
 - [Migrating append routing](migrate-append-routing.md)
 - [Migrating to Fundamentals](migrate-to-fundamentals.md)
 
