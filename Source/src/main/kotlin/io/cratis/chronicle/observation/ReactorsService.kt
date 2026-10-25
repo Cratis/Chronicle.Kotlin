@@ -116,6 +116,8 @@ class ReactorsService(
                                     .setReactorId(registration.id)
                                     .setEventSequenceId(registration.eventSequenceId)
                                     .setIsReplayable(registration.isReplayable)
+                                    // Proto3 omits false; the kernel defaults to true, so send the companion (ignored by older kernels).
+                                    .setIsNotReplayable(!registration.isReplayable)
                                     .setStartAtTail(registration.startAtTail)
                                     .addAllTags(registration.tags)
                                     .setFilters(

@@ -113,6 +113,8 @@ class WebhookDefinitionBuilder : IWebhookDefinitionBuilder {
             .setTarget(targetBuilder.build())
             .setIsReplayable(isReplayable)
             .setIsActive(isActive)
+            .setIsNotReplayable(!isReplayable)
+            .setIsInactive(!isActive)
             .build()
     }
 
