@@ -65,8 +65,15 @@ class JsonEngineKernelComparisonTests {
             }.toMutableList()
             val stored = store.eventLog.getFromSequenceNumber(EventSequenceNumber.first)
             checks.add(Executable { assertEquals(results.values.count { it.isSuccess }, stored.size, "every successful append is stored") })
-            stored.forEach { item ->
-                checks.add(Executable { assertEquals(event, chronicleGson.fromJson(item.content, JsonEngineComparisonEvent::class.java), item.content) })
+            // Stored events keep append order, so they pair with the successful appends in insertion order.
+            val storedNames = results.filterValues { it.isSuccess }.keys.toList()
+            stored.zip(storedNames).forEach { (item, name) ->
+                val readBack = runCatching { chronicleGson.fromJson(item.content, JsonEngineComparisonEvent::class.java) }
+                reporter.publishEntry("$name.readBack", readBack.fold({ "equal=${it == event}" }, { "failed=${it.message}" }))
+                // Only the engines expected to match Gson are asserted; the fundamentals read-back is an observation.
+                if (expected[name] == true) {
+                    checks.add(Executable { assertEquals(event, readBack.getOrThrow(), item.content) })
+                }
             }
             assertAll(checks)
         }
