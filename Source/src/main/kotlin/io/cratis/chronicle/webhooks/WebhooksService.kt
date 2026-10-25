@@ -82,4 +82,6 @@ private fun ObservationWebhooks.WebhookDetailsResponse.toDefinition(): Observati
         )
         .setIsReplayable(isReplayable)
         .setIsActive(isActive)
+        .setIsNotReplayable(!isReplayable)
+        .setIsInactive(!isActive)
         .build()
