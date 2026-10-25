@@ -53,6 +53,13 @@ kotlin {
 
 tasks.test {
     useJUnitPlatform()
+    testLogging {
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+    // The kernel comparison (#154) runs only in CI, so its observations must reach the CI log.
+    onOutput(KotlinClosure2<TestDescriptor, TestOutputEvent, Unit>({ descriptor, event ->
+        if (descriptor.className?.endsWith("JsonEngineKernelComparisonTests") == true) logger.lifecycle(event.message.trimEnd())
+    }))
 }
 
 mavenPublishing {

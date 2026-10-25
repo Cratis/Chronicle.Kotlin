@@ -57,7 +57,12 @@ class JsonEngineKernelComparisonTests {
             contents["negative"] = RawEventContent(chronicleGson.toJson(event).replace("\"count\":3", "\"count\":\"not-a-number\""))
             // Collect every append before asserting, so CI records all engines even on a rejection.
             val results = contents.mapValues { (_, content) -> store.eventLog.append(UUID.randomUUID().toString(), content) }
-            results.forEach { (name, result) -> reporter.publishEntry(name, "isSuccess=${result.isSuccess}; errors=${result.errors}") }
+            // Printed as well as reported: Gradle forwards this class's output to the CI log.
+            fun observe(key: String, value: String) {
+                reporter.publishEntry(key, value)
+                println("[json-engine-kernel] $key: $value")
+            }
+            results.forEach { (name, result) -> observe(name, "isSuccess=${result.isSuccess}; errors=${result.errors}") }
             // Fundamentals is an observation pending the first CI run, not a guessed outcome.
             val expected: Map<String, Boolean?> = mapOf("gson" to true, "fundamentals" to null, "gsonParity" to true, "negative" to false)
             val checks = expected.mapNotNull { (name, success) ->
@@ -69,7 +74,7 @@ class JsonEngineKernelComparisonTests {
             val storedNames = results.filterValues { it.isSuccess }.keys.toList()
             stored.zip(storedNames).forEach { (item, name) ->
                 val readBack = runCatching { chronicleGson.fromJson(item.content, JsonEngineComparisonEvent::class.java) }
-                reporter.publishEntry("$name.readBack", readBack.fold({ "equal=${it == event}" }, { "failed=${it.message}" }))
+                observe("$name.readBack", readBack.fold({ "equal=${it == event}" }, { "failed=${it.message}" }))
                 // Only the engines expected to match Gson are asserted; the fundamentals read-back is an observation.
                 if (expected[name] == true) {
                     checks.add(Executable { assertEquals(event, readBack.getOrThrow(), item.content) })
