@@ -10,6 +10,7 @@ import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.eventSequences.IEventSequence
 import io.cratis.chronicle.eventSequences.RedactionReason
+import io.cratis.fundamentals.concepts.ConceptAs
 import kotlinx.coroutines.runBlocking
 import kotlin.reflect.KClass
 
@@ -45,6 +46,17 @@ class BlockingEventSequence(private val sequence: IEventSequence) {
     fun append(eventSourceId: String, event: Any, options: AppendOptions? = null): AppendResult =
         runBlocking { sequence.append(eventSourceId, event, options) }
 
+    /**
+     * Appends [event] against the event source named by the typed [eventSourceId].
+     *
+     * @param eventSourceId The typed event source the event belongs to.
+     * @param event The event. Its class must carry `@EventType`.
+     * @return What the kernel made of it, including any constraint violation.
+     */
+    @JvmOverloads
+    fun append(eventSourceId: ConceptAs<String>, event: Any, options: AppendOptions? = null): AppendResult =
+        append(eventSourceId.value(), event, options)
+
     /** Appends [events] against [eventSourceId] as one atomic batch. */
     @JvmOverloads
     fun appendMany(
@@ -53,6 +65,14 @@ class BlockingEventSequence(private val sequence: IEventSequence) {
         options: AppendOptions? = null
     ): List<AppendResult> = runBlocking { sequence.appendMany(eventSourceId, events, options) }
 
+    /** Appends [events] against the typed [eventSourceId] as one atomic batch. */
+    @JvmOverloads
+    fun appendMany(
+        eventSourceId: ConceptAs<String>,
+        events: List<Any>,
+        options: AppendOptions? = null
+    ): List<AppendResult> = appendMany(eventSourceId.value(), events, options)
+
     /** Appends [events], each naming its own event source, as one atomic batch. */
     fun appendMany(events: List<EventForEventSourceId>): List<AppendResult> =
         runBlocking { sequence.appendMany(events) }
@@ -60,10 +80,17 @@ class BlockingEventSequence(private val sequence: IEventSequence) {
     /** Whether the sequence holds any event for [eventSourceId]. */
     fun hasEventsFor(eventSourceId: String): Boolean = runBlocking { sequence.hasEventsFor(eventSourceId) }
 
+    /** Whether the sequence holds any event for the typed [eventSourceId]. */
+    fun hasEventsFor(eventSourceId: ConceptAs<String>): Boolean = hasEventsFor(eventSourceId.value())
+
     /** The position of the last event in the sequence, or in [eventSourceId] when given. */
     @JvmOverloads
     fun getTailSequenceNumber(eventSourceId: String? = null): Long =
         runBlocking { sequence.getTailSequenceNumber(eventSourceId).value }
+
+    /** The position of the last event in the typed [eventSourceId]. */
+    fun getTailSequenceNumber(eventSourceId: ConceptAs<String>): Long =
+        getTailSequenceNumber(eventSourceId.value())
 
     /** The position the next append will land at. */
     fun getNextSequenceNumber(): Long = runBlocking { sequence.getNextSequenceNumber().value }
@@ -75,6 +102,12 @@ class BlockingEventSequence(private val sequence: IEventSequence) {
     ): List<AppendedEvent> = runBlocking {
         sequence.getForEventSourceIdAndEventTypes(eventSourceId, eventTypes.map { it.kotlin })
     }
+
+    /** The events of [eventTypes] appended for the typed [eventSourceId]. */
+    fun getForEventSourceIdAndEventTypes(
+        eventSourceId: ConceptAs<String>,
+        vararg eventTypes: Class<*>
+    ): List<AppendedEvent> = getForEventSourceIdAndEventTypes(eventSourceId.value(), *eventTypes)
 
     /** The events from [sequenceNumber] onwards. */
     @JvmOverloads
@@ -95,5 +128,10 @@ class BlockingEventSequence(private val sequence: IEventSequence) {
                 eventTypes.map { it.kotlin as KClass<*> }
             )
         }
+    }
+
+    /** Redacts every event appended for the typed [eventSourceId], or only those of [eventTypes]. */
+    fun redactForEventSource(eventSourceId: ConceptAs<String>, reason: String, vararg eventTypes: Class<*>) {
+        redactForEventSource(eventSourceId.value(), reason, *eventTypes)
     }
 }

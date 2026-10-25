@@ -2047,13 +2047,20 @@ public final class io/cratis/chronicle/java/BlockingChronicleClient$Companion {
 
 public final class io/cratis/chronicle/java/BlockingEventSequence {
 	public fun <init> (Lio/cratis/chronicle/eventSequences/IEventSequence;)V
+	public final fun append (Lio/cratis/fundamentals/concepts/ConceptAs;Ljava/lang/Object;)Lio/cratis/chronicle/eventSequences/AppendResult;
+	public final fun append (Lio/cratis/fundamentals/concepts/ConceptAs;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;)Lio/cratis/chronicle/eventSequences/AppendResult;
 	public final fun append (Ljava/lang/String;Ljava/lang/Object;)Lio/cratis/chronicle/eventSequences/AppendResult;
 	public final fun append (Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;)Lio/cratis/chronicle/eventSequences/AppendResult;
+	public static synthetic fun append$default (Lio/cratis/chronicle/java/BlockingEventSequence;Lio/cratis/fundamentals/concepts/ConceptAs;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;ILjava/lang/Object;)Lio/cratis/chronicle/eventSequences/AppendResult;
 	public static synthetic fun append$default (Lio/cratis/chronicle/java/BlockingEventSequence;Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;ILjava/lang/Object;)Lio/cratis/chronicle/eventSequences/AppendResult;
+	public final fun appendMany (Lio/cratis/fundamentals/concepts/ConceptAs;Ljava/util/List;)Ljava/util/List;
+	public final fun appendMany (Lio/cratis/fundamentals/concepts/ConceptAs;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;)Ljava/util/List;
 	public final fun appendMany (Ljava/lang/String;Ljava/util/List;)Ljava/util/List;
 	public final fun appendMany (Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;)Ljava/util/List;
 	public final fun appendMany (Ljava/util/List;)Ljava/util/List;
+	public static synthetic fun appendMany$default (Lio/cratis/chronicle/java/BlockingEventSequence;Lio/cratis/fundamentals/concepts/ConceptAs;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;ILjava/lang/Object;)Ljava/util/List;
 	public static synthetic fun appendMany$default (Lio/cratis/chronicle/java/BlockingEventSequence;Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;ILjava/lang/Object;)Ljava/util/List;
+	public final fun getForEventSourceIdAndEventTypes (Lio/cratis/fundamentals/concepts/ConceptAs;[Ljava/lang/Class;)Ljava/util/List;
 	public final fun getForEventSourceIdAndEventTypes (Ljava/lang/String;[Ljava/lang/Class;)Ljava/util/List;
 	public final fun getFromSequenceNumber (J)Ljava/util/List;
 	public final fun getFromSequenceNumber (JLjava/lang/String;)Ljava/util/List;
@@ -2061,10 +2068,13 @@ public final class io/cratis/chronicle/java/BlockingEventSequence {
 	public final fun getId ()Ljava/lang/String;
 	public final fun getNextSequenceNumber ()J
 	public final fun getTailSequenceNumber ()J
+	public final fun getTailSequenceNumber (Lio/cratis/fundamentals/concepts/ConceptAs;)J
 	public final fun getTailSequenceNumber (Ljava/lang/String;)J
 	public static synthetic fun getTailSequenceNumber$default (Lio/cratis/chronicle/java/BlockingEventSequence;Ljava/lang/String;ILjava/lang/Object;)J
+	public final fun hasEventsFor (Lio/cratis/fundamentals/concepts/ConceptAs;)Z
 	public final fun hasEventsFor (Ljava/lang/String;)Z
 	public final fun redact (JLjava/lang/String;)V
+	public final fun redactForEventSource (Lio/cratis/fundamentals/concepts/ConceptAs;Ljava/lang/String;[Ljava/lang/Class;)V
 	public final fun redactForEventSource (Ljava/lang/String;Ljava/lang/String;[Ljava/lang/Class;)V
 	public final fun unwrap ()Lio/cratis/chronicle/eventSequences/IEventSequence;
 }
