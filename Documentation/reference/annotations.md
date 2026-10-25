@@ -68,7 +68,8 @@ Excludes a reactor, or a single handler, from replay. Put it on the class and th
 whole reactor is registered as non-replayable, so redaction, revision, and observer
 rewind never replay it. Put it on one method and only that handler is skipped when
 an event arrives as part of a replay — the reactor's other handlers still replay.
-Class-level `@OnceOnly` needs a Chronicle 19.33.0 or later kernel; an older kernel ignores it and still replays the reactor.
+Class-level `@OnceOnly` needs a Chronicle 19.33.0 or later kernel; an older kernel
+ignores it and still replays the reactor.
 
 Use it for side effects where running again is worse than never running again.
 
