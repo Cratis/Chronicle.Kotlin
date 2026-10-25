@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.json.engineComparison
 
+import com.google.gson.JsonParser
 import com.google.gson.annotations.SerializedName
 import io.cratis.chronicle.concepts.EventSourceId
 import io.cratis.chronicle.events.EventType
@@ -10,6 +11,7 @@ import io.cratis.chronicle.geospatial.LineString
 import io.cratis.chronicle.geospatial.LinearRing
 import io.cratis.chronicle.geospatial.Point
 import io.cratis.chronicle.geospatial.Polygon
+import io.cratis.chronicle.json.chronicleGson
 import io.cratis.fundamentals.concepts.ConceptAs
 import java.time.Instant
 import java.time.LocalDate
@@ -62,6 +64,18 @@ data class JsonEngineComparisonEvent(
     val location: Point
 )
 
+/** A separate map-free, non-null fixture for kernel acceptance, not a replacement for the golden event. */
+@EventType("JsonEngineComparisonSimpleEvent")
+data class JsonEngineComparisonSimpleEvent(
+    val name: String,
+    val count: Int,
+    val tags: List<String>,
+    val nested: ComparisonNested,
+    val concept: StringConcept,
+    val status: ComparisonStatus,
+    val at: Instant
+)
+
 data class ComparisonReadModel(val name: String, val groups: List<List<ComparisonNested>>)
 data class ComparisonConcepts(
     val text: StringConcept,
@@ -109,6 +123,10 @@ object ComparisonFixtures {
         listOf("first", "second"), linkedMapOf("z" to 2, "a" to 1), ComparisonNested("parcel", 2),
         null, StringConcept("order-1"), ComparisonStatus.Dispatched, instant, Point(10.5, 59.9)
     )
+    val simpleEvent = JsonEngineComparisonSimpleEvent(
+        "delivery", 3, listOf("first", "second"), ComparisonNested("parcel", 2),
+        StringConcept("order-1"), ComparisonStatus.Dispatched, instant
+    )
     val all = listOf(
         ComparisonFixture("event", event),
         ComparisonFixture("read-model", ComparisonReadModel("nested", listOf(listOf(ComparisonNested("one", 1), ComparisonNested("two", 2))))),
@@ -120,6 +138,10 @@ object ComparisonFixtures {
         ComparisonFixture("java-pojo", ComparisonPojo()),
         ComparisonFixture("java-record", ComparisonRecord("record", ComparisonStatus.Dispatched, instant))
     )
+
+    fun invalidCountJson(event: Any): String = JsonParser.parseString(chronicleGson.toJson(event)).asJsonObject.apply {
+        addProperty("count", "not-a-number")
+    }.toString()
 
     fun resource(folder: String, name: String): String = requireNotNull(
         ComparisonFixtures::class.java.getResource("/json-engine-comparison/$folder/$name.json")
