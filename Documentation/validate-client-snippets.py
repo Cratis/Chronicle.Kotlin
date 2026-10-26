@@ -517,7 +517,7 @@ def write_page_java(snippets: list[dict]) -> list[Path]:
 def gradle_command() -> list[str]:
     gradlew = REPO_ROOT / "gradlew"
     executable = str(gradlew) if gradlew.exists() else "gradle"
-    return [executable, ":Testing:compileTestKotlin", ":Testing:compileTestJava", "--no-configuration-cache"]
+    return [executable, ":Testing:compileTestKotlin", ":Testing:compileTestJava", "--rerun", "--no-configuration-cache"]
 
 
 def main() -> int:
