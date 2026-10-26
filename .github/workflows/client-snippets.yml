@@ -13,6 +13,7 @@ on:
     paths:
       - "Documentation/**/*.md"
       - "Documentation/validate-client-snippets.py"
+      - "Documentation/validate-client-snippets.test.mjs"
       - "Source/**"
       - ".github/workflows/client-snippets.yml"
 
@@ -21,6 +22,7 @@ on:
     paths:
       - "Documentation/**/*.md"
       - "Documentation/validate-client-snippets.py"
+      - "Documentation/validate-client-snippets.test.mjs"
       - "Source/**"
       - ".github/workflows/client-snippets.yml"
 
@@ -47,5 +49,8 @@ jobs:
         with:
           gradle-version: '8.14.4'
 
-      - name: Compile client snippets
-        run: python3 Documentation/validate-client-snippets.py
+      # The real regression's final restored-valid run also compiles all snippets.
+      - name: Verify client snippets and warm Java recompilation
+        env:
+          VALIDATE_CLIENT_SNIPPETS_REAL: '1'
+        run: node --test Documentation/validate-client-snippets.test.mjs
