@@ -1,8 +1,8 @@
 ```java
 import io.cratis.chronicle.events.EventType;
-import io.cratis.chronicle.geospatial.LineString;
-import io.cratis.chronicle.geospatial.Point;
-import io.cratis.chronicle.geospatial.Polygon;
+import io.cratis.fundamentals.geospatial.LineString;
+import io.cratis.fundamentals.geospatial.Point;
+import io.cratis.fundamentals.geospatial.Polygon;
 
 @EventType
 record GeospatialAssetLocationUpdated(Point location) {}

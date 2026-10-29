@@ -65,6 +65,13 @@ class TypeFormatsTests {
     }
 
     @Test
+    fun `formatFor maps the Fundamentals geospatial types to the same formats`() {
+        assertEquals("point", TypeFormats.formatFor(io.cratis.fundamentals.geospatial.Point::class))
+        assertEquals("linestring", TypeFormats.formatFor(io.cratis.fundamentals.geospatial.LineString::class))
+        assertEquals("polygon", TypeFormats.formatFor(io.cratis.fundamentals.geospatial.Polygon::class))
+    }
+
+    @Test
     fun `formatFor returns null for a type with no known format`() {
         assertNull(TypeFormats.formatFor(String::class))
         assertNull(TypeFormats.formatFor(Boolean::class))

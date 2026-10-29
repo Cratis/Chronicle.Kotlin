@@ -1,8 +1,8 @@
 ```java
-import io.cratis.chronicle.geospatial.LinearRing;
-import io.cratis.chronicle.geospatial.LineString;
-import io.cratis.chronicle.geospatial.Point;
-import io.cratis.chronicle.geospatial.Polygon;
+import io.cratis.fundamentals.geospatial.LinearRing;
+import io.cratis.fundamentals.geospatial.LineString;
+import io.cratis.fundamentals.geospatial.Point;
+import io.cratis.fundamentals.geospatial.Polygon;
 
 import java.util.Collections;
 

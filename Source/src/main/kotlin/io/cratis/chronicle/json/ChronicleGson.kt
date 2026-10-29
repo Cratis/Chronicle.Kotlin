@@ -2,6 +2,7 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
 @file:JvmName("ChronicleGson")
+@file:Suppress("DEPRECATION")
 
 package io.cratis.chronicle.json
 
@@ -10,6 +11,9 @@ import com.google.gson.GsonBuilder
 import io.cratis.chronicle.geospatial.LineString
 import io.cratis.chronicle.geospatial.Point
 import io.cratis.chronicle.geospatial.Polygon
+import io.cratis.fundamentals.geospatial.LineString as FundamentalsLineString
+import io.cratis.fundamentals.geospatial.Point as FundamentalsPoint
+import io.cratis.fundamentals.geospatial.Polygon as FundamentalsPolygon
 
 /**
  * The [Gson] instance the client serializes event content and read model state with.
@@ -33,6 +37,9 @@ val chronicleGson: Gson = GsonBuilder()
     .registerTypeAdapter(Point::class.java, PointTypeAdapter().nullSafe())
     .registerTypeAdapter(LineString::class.java, LineStringTypeAdapter().nullSafe())
     .registerTypeAdapter(Polygon::class.java, PolygonTypeAdapter().nullSafe())
+    .registerTypeAdapter(FundamentalsPoint::class.java, FundamentalsPointTypeAdapter().nullSafe())
+    .registerTypeAdapter(FundamentalsLineString::class.java, FundamentalsLineStringTypeAdapter().nullSafe())
+    .registerTypeAdapter(FundamentalsPolygon::class.java, FundamentalsPolygonTypeAdapter().nullSafe())
     // A concept serializes as the value it wraps, so introducing one into an event that is already
     // in production changes neither the JSON nor the schema the kernel validates against.
     .registerTypeAdapterFactory(ConceptTypeAdapterFactory())

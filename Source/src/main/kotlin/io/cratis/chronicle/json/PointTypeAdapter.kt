@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+@file:Suppress("DEPRECATION")
+
 package io.cratis.chronicle.json
 
 import com.google.gson.TypeAdapter
@@ -13,6 +15,7 @@ import io.cratis.chronicle.geospatial.Point
  * value. Without this the point would go over the wire as an anonymous `{ longitude, latitude }`
  * object and the sink could not index or query it geospatially.
  */
+@Deprecated("Registered by chronicleGson; removed with the legacy geospatial types")
 class PointTypeAdapter : TypeAdapter<Point>() {
 
     /** Writes [value] as `{ "type": "Point", "coordinates": [longitude, latitude] }`. */

@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+@file:Suppress("DEPRECATION")
+
 package io.cratis.chronicle.json
 
 import com.google.gson.JsonParseException
@@ -13,6 +15,7 @@ import io.cratis.chronicle.geospatial.LineString
  * Serializes [LineString] as a GeoJSON `LineString`, which is what the kernel recognizes as a
  * geospatial value.
  */
+@Deprecated("Registered by chronicleGson; removed with the legacy geospatial types")
 class LineStringTypeAdapter : TypeAdapter<LineString>() {
 
     /** Writes [value] as `{ "type": "LineString", "coordinates": [[longitude, latitude], ...] }`. */

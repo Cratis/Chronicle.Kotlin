@@ -8,7 +8,7 @@ shape. The client ships three types that serialize to that shape, so the sink
 can index and query them geospatially. A hand-rolled coordinate class
 serializes as an ordinary nested object and gets none of that.
 
-They live in `io.cratis.chronicle.geospatial` and are usable on any event, read
+They live in `io.cratis.fundamentals.geospatial` and are usable on any event, read
 model, or reducer state.
 
 ## Types
@@ -49,7 +49,7 @@ holes.
 
 ```kotlin
 import io.cratis.chronicle.events.EventType
-import io.cratis.chronicle.geospatial.Point
+import io.cratis.fundamentals.geospatial.Point
 
 @EventType
 data class WarehouseInspected(
@@ -62,7 +62,7 @@ data class WarehouseInspected(
 
 ```java
 import io.cratis.chronicle.events.EventType;
-import io.cratis.chronicle.geospatial.Point;
+import io.cratis.fundamentals.geospatial.Point;
 
 @EventType
 public record WarehouseInspected(String warehouseId, Point inspectedAt) {}
@@ -74,7 +74,7 @@ out:
 <!-- validate: body needs=store -->
 
 ```kotlin
-import io.cratis.chronicle.geospatial.Point
+import io.cratis.fundamentals.geospatial.Point
 
 store.eventLog.append(
     eventSourceId = "warehouse-1",
@@ -99,9 +99,9 @@ at least four points. Holes follow the same rule.
 <!-- validate: body -->
 
 ```kotlin
-import io.cratis.chronicle.geospatial.LinearRing
-import io.cratis.chronicle.geospatial.Point
-import io.cratis.chronicle.geospatial.Polygon
+import io.cratis.fundamentals.geospatial.LinearRing
+import io.cratis.fundamentals.geospatial.Point
+import io.cratis.fundamentals.geospatial.Polygon
 
 val deliveryZone = Polygon(
     shell = LinearRing(
@@ -141,7 +141,7 @@ need to produce the same JSON the client would.
 <!-- validate: body -->
 
 ```kotlin
-import io.cratis.chronicle.geospatial.Point
+import io.cratis.fundamentals.geospatial.Point
 import io.cratis.chronicle.json.chronicleGson
 
 val json = chronicleGson.toJson(Point(10.75, 59.91))
@@ -150,7 +150,7 @@ val json = chronicleGson.toJson(Point(10.75, 59.91))
 <!-- validate: body -->
 
 ```java
-import io.cratis.chronicle.geospatial.Point;
+import io.cratis.fundamentals.geospatial.Point;
 import io.cratis.chronicle.json.ChronicleGson;
 
 String json = ChronicleGson.chronicleGson.toJson(new Point(10.75, 59.91));

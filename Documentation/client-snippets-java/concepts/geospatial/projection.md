@@ -1,6 +1,6 @@
 ```java
 import io.cratis.chronicle.events.EventType;
-import io.cratis.chronicle.geospatial.Point;
+import io.cratis.fundamentals.geospatial.Point;
 import io.cratis.chronicle.projections.IProjectionBuilderFor;
 import io.cratis.chronicle.projections.IProjectionFor;
 import io.cratis.chronicle.projections.Projection;
