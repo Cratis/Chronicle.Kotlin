@@ -109,22 +109,24 @@ its correlation id as a string.
 ## Geospatial types
 
 `Point`, `LineString`, `LinearRing` and `Polygon` also move to Fundamentals, in
-`io.cratis.fundamentals.geospatial`. This is a non-breaking, minor change: change the
-import. The constructors, property names and `copy`/destructuring are the same.
-The wire format and event schemas are unchanged, so stored events read back as
-before. The old `io.cratis.chronicle.geospatial` types are deprecated at warning
-level in 7.3 and removed in the next major. For code that mixes both, the old
-types have `toFundamentals()` and a constructor that takes the Fundamentals type.
+`io.cratis.fundamentals.geospatial`. This is a non-breaking, minor change:
+change the import. The constructors, property names and `copy`/destructuring
+are the same. The wire format and event schemas are unchanged, so stored
+events read back as before. The old `io.cratis.chronicle.geospatial` types are
+deprecated at warning level in 7.3 and removed in the next major. For code
+that mixes both, the old types have `toFundamentals()` and a constructor that
+takes the Fundamentals type.
 
 ## Deprecated names
 
 For 7.x, `io.cratis.chronicle.concepts.ConceptAs` and
 `io.cratis.chronicle.correlation.CorrelationId` remain deprecated Kotlin
 typealiases, at warning level, with IDE import quick-fixes. The
-`io.cratis.chronicle.geospatial` classes are likewise deprecated at warning level. References to the
-old types can still compile, but concept implementations must implement
-`value()` and the old `notSet` name is not available. Java cannot see Kotlin
-typealiases; Java imports must change to Fundamentals.
+`io.cratis.chronicle.geospatial` classes are likewise deprecated at warning
+level. References to the old types can still compile, but concept
+implementations must implement `value()` and the old `notSet` name is not
+available. Java cannot see Kotlin typealiases; Java imports must change to
+Fundamentals.
 
 ## Release notes
 
