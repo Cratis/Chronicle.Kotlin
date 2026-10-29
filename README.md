@@ -336,7 +336,7 @@ header, a subdomain, or a claim. See the [Spring Boot guide](Documentation/guide
 ## 🌍 Facts with a place
 
 A fact often happened *somewhere*. `Point`, `LineString` and `Polygon` are ordinary properties on an
-event, read model or reducer state, and they serialize as GeoJSON — which is how the kernel
+event, read model or reducer state (from `io.cratis.fundamentals.geospatial`), and they serialize as GeoJSON — which is how the kernel
 recognizes the value as geospatial and how the sink knows to index and query it:
 
 <table>

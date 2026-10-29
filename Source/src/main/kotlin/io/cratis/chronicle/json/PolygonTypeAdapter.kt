@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+@file:Suppress("DEPRECATION")
+
 package io.cratis.chronicle.json
 
 import com.google.gson.JsonParseException
@@ -22,6 +24,7 @@ private const val CLOSURE_TOLERANCE = 1e-9
  * GeoJSON gives a polygon one flat array of rings where the first is the shell and the rest are
  * holes, so the shell/holes split that makes [Polygon] readable only exists on this side of the wire.
  */
+@Deprecated("Registered by chronicleGson; removed with the legacy geospatial types")
 class PolygonTypeAdapter : TypeAdapter<Polygon>() {
 
     /** Writes [value] as `{ "type": "Polygon", "coordinates": [shell, ...holes] }`. */

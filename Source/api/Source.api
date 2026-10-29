@@ -1912,6 +1912,7 @@ public abstract interface class io/cratis/chronicle/externalServices/IExternalSe
 }
 
 public final class io/cratis/chronicle/geospatial/LineString {
+	public fun <init> (Lio/cratis/fundamentals/geospatial/LineString;)V
 	public fun <init> (Ljava/util/List;)V
 	public fun <init> ([Lio/cratis/chronicle/geospatial/Point;)V
 	public final fun component1 ()Ljava/util/List;
@@ -1920,10 +1921,12 @@ public final class io/cratis/chronicle/geospatial/LineString {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getCoordinates ()Ljava/util/List;
 	public fun hashCode ()I
+	public final fun toFundamentals ()Lio/cratis/fundamentals/geospatial/LineString;
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/cratis/chronicle/geospatial/LinearRing {
+	public fun <init> (Lio/cratis/fundamentals/geospatial/LinearRing;)V
 	public fun <init> (Ljava/util/List;)V
 	public fun <init> ([Lio/cratis/chronicle/geospatial/Point;)V
 	public final fun component1 ()Ljava/util/List;
@@ -1932,11 +1935,13 @@ public final class io/cratis/chronicle/geospatial/LinearRing {
 	public fun equals (Ljava/lang/Object;)Z
 	public final fun getCoordinates ()Ljava/util/List;
 	public fun hashCode ()I
+	public final fun toFundamentals ()Lio/cratis/fundamentals/geospatial/LinearRing;
 	public fun toString ()Ljava/lang/String;
 }
 
 public final class io/cratis/chronicle/geospatial/Point {
 	public fun <init> (DD)V
+	public fun <init> (Lio/cratis/fundamentals/geospatial/Point;)V
 	public final fun component1 ()D
 	public final fun component2 ()D
 	public final fun copy (DD)Lio/cratis/chronicle/geospatial/Point;
@@ -1945,6 +1950,7 @@ public final class io/cratis/chronicle/geospatial/Point {
 	public final fun getLatitude ()D
 	public final fun getLongitude ()D
 	public fun hashCode ()I
+	public final fun toFundamentals ()Lio/cratis/fundamentals/geospatial/Point;
 	public fun toString ()Ljava/lang/String;
 }
 
@@ -1952,6 +1958,7 @@ public final class io/cratis/chronicle/geospatial/Polygon {
 	public fun <init> (Lio/cratis/chronicle/geospatial/LinearRing;)V
 	public fun <init> (Lio/cratis/chronicle/geospatial/LinearRing;Ljava/util/List;)V
 	public synthetic fun <init> (Lio/cratis/chronicle/geospatial/LinearRing;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Lio/cratis/fundamentals/geospatial/Polygon;)V
 	public final fun component1 ()Lio/cratis/chronicle/geospatial/LinearRing;
 	public final fun component2 ()Ljava/util/List;
 	public final fun copy (Lio/cratis/chronicle/geospatial/LinearRing;Ljava/util/List;)Lio/cratis/chronicle/geospatial/Polygon;
@@ -1960,6 +1967,7 @@ public final class io/cratis/chronicle/geospatial/Polygon {
 	public final fun getHoles ()Ljava/util/List;
 	public final fun getShell ()Lio/cratis/chronicle/geospatial/LinearRing;
 	public fun hashCode ()I
+	public final fun toFundamentals ()Lio/cratis/fundamentals/geospatial/Polygon;
 	public fun toString ()Ljava/lang/String;
 }
 

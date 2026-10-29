@@ -1,11 +1,16 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+@file:Suppress("DEPRECATION")
+
 package io.cratis.chronicle.schemas
 
 import io.cratis.chronicle.geospatial.LineString
 import io.cratis.chronicle.geospatial.Point
 import io.cratis.chronicle.geospatial.Polygon
+import io.cratis.fundamentals.geospatial.LineString as FundamentalsLineString
+import io.cratis.fundamentals.geospatial.Point as FundamentalsPoint
+import io.cratis.fundamentals.geospatial.Polygon as FundamentalsPolygon
 import java.math.BigDecimal
 import java.time.Duration
 import java.time.Instant
@@ -53,6 +58,9 @@ internal object TypeFormats {
         Point::class to "point",
         LineString::class to "linestring",
         Polygon::class to "polygon",
+        FundamentalsPoint::class to "point",
+        FundamentalsLineString::class to "linestring",
+        FundamentalsPolygon::class to "polygon",
         ByteArray::class to "byte-array"
     )
 

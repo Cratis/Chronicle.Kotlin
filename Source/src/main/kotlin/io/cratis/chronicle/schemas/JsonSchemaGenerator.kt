@@ -1,6 +1,8 @@
 // Copyright (c) Cratis. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
+@file:Suppress("DEPRECATION")
+
 package io.cratis.chronicle.schemas
 
 import com.google.gson.Gson
@@ -15,6 +17,9 @@ import io.cratis.chronicle.concepts.EventSourceId
 import io.cratis.chronicle.geospatial.LineString
 import io.cratis.chronicle.geospatial.Point
 import io.cratis.chronicle.geospatial.Polygon
+import io.cratis.fundamentals.geospatial.LineString as FundamentalsLineString
+import io.cratis.fundamentals.geospatial.Point as FundamentalsPoint
+import io.cratis.fundamentals.geospatial.Polygon as FundamentalsPolygon
 import java.math.BigDecimal
 import kotlin.reflect.KAnnotatedElement
 import kotlin.reflect.KClass
@@ -33,7 +38,10 @@ private val integerTypes = setOf(Int::class, Long::class, Short::class, Byte::cl
 private val numberTypes = setOf(Double::class, Float::class, BigDecimal::class)
 
 /** Formatted types whose schema is a leaf `"object"` rather than a `"string"`/`"integer"`/`"number"` scalar. */
-private val objectFormatTypes = setOf(Point::class, LineString::class, Polygon::class)
+private val objectFormatTypes = setOf(
+    Point::class, LineString::class, Polygon::class,
+    FundamentalsPoint::class, FundamentalsLineString::class, FundamentalsPolygon::class
+)
 
 /**
  * Generates JSON schemas for Kotlin classes using reflection over their member properties.

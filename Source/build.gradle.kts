@@ -8,7 +8,7 @@ group = "io.cratis"
 version = providers.gradleProperty("version").getOrElse("0.0.0-SNAPSHOT")
 
 val coroutinesVersion = "1.10.2"
-val fundamentalsVersion = "0.6.0"
+val fundamentalsVersion = "0.8.0"
 val jacksonVersion = "3.2.4" // Comparison-only test dependencies for #154.
 val chronicleContractsVersion = "19.70.0"
 val dnsJavaVersion = "3.6.5"

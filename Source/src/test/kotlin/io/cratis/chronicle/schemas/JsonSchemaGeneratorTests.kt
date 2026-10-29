@@ -101,6 +101,15 @@ private data class Territory(
     val area: Polygon
 )
 
+private data class FundamentalsTerritory(
+    val center: io.cratis.fundamentals.geospatial.Point,
+    val route: io.cratis.fundamentals.geospatial.LineString,
+    val area: io.cratis.fundamentals.geospatial.Polygon,
+    val ring: io.cratis.fundamentals.geospatial.LinearRing
+)
+
+private data class LegacyRing(val ring: io.cratis.chronicle.geospatial.LinearRing)
+
 private data class Numbers(
     val small: Short,
     val medium: Int,
@@ -325,6 +334,15 @@ class JsonSchemaGeneratorTests {
         assertEquals("point", formatOf(properties, "center"))
         assertEquals("linestring", formatOf(properties, "route"))
         assertEquals("polygon", formatOf(properties, "area"))
+    }
+
+    @Test
+    fun `generate describes Fundamentals geospatial properties like the legacy ones`() {
+        val legacy = propertiesOf(Territory::class)
+        val fundamentals = propertiesOf(FundamentalsTerritory::class)
+        listOf("center", "route", "area").forEach { assertEquals(legacy[it], fundamentals[it]) }
+        assertEquals("point", formatOf(fundamentals, "center"))
+        assertEquals(propertiesOf(LegacyRing::class)["ring"], fundamentals["ring"])
     }
 
     @Test
