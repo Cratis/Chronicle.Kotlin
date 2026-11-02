@@ -11,6 +11,7 @@ import com.google.gson.GsonBuilder
 import io.cratis.chronicle.geospatial.LineString
 import io.cratis.chronicle.geospatial.Point
 import io.cratis.chronicle.geospatial.Polygon
+import java.time.Duration
 import io.cratis.fundamentals.geospatial.LineString as FundamentalsLineString
 import io.cratis.fundamentals.geospatial.Point as FundamentalsPoint
 import io.cratis.fundamentals.geospatial.Polygon as FundamentalsPolygon
@@ -28,12 +29,16 @@ import io.cratis.fundamentals.geospatial.Polygon as FundamentalsPolygon
  * ISO-8601 strings, which is what their schema formats promise. A [java.time.ZonedDateTime] is
  * written as an offset date-time, so its zone id does not survive the round trip. Enum values are
  * written as ordinal numbers to match their integer schemas; names remain readable for compatibility.
+ * [Duration] uses .NET's constant TimeSpan format (truncating sub-tick nanoseconds toward zero), and
+ * [ByteArray] uses standard padded base64, matching the kernel's duration and byte-array formats.
  *
  * It is public so that callers who serialize event content themselves produce the same JSON the
  * client would. Java reaches it as `ChronicleGson.chronicleGson`.
  */
 @JvmField
 val chronicleGson: Gson = GsonBuilder()
+    .registerTypeAdapter(Duration::class.java, DurationTypeAdapter().nullSafe())
+    .registerTypeAdapter(ByteArray::class.java, ByteArrayTypeAdapter().nullSafe())
     .registerTypeAdapter(Point::class.java, PointTypeAdapter().nullSafe())
     .registerTypeAdapter(LineString::class.java, LineStringTypeAdapter().nullSafe())
     .registerTypeAdapter(Polygon::class.java, PolygonTypeAdapter().nullSafe())
