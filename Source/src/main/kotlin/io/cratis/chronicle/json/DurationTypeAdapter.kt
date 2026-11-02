@@ -21,8 +21,10 @@ import java.time.format.DateTimeParseException
 internal class DurationTypeAdapter : TypeAdapter<Duration>() {
     private val ticksPerSecond = BigInteger.valueOf(10_000_000)
     private val maximumTicks = BigInteger.valueOf(Long.MAX_VALUE)
-    private val timePattern = Regex("""(-)?(?:(\d+)\.)?(\d{1,2}):(\d{1,2})(?::(\d{1,2})(?:\.(\d{1,7}))?)?""")
-    private val daysPattern = Regex("""-?\d+""")
+    // TimeSpan holds at most 10,675,199 days, so a days part never needs more than eight digits. Bounding it keeps
+    // an oversized input from costing more than a regular parse before it is rejected.
+    private val timePattern = Regex("""(-)?(?:(\d{1,8})\.)?(\d{1,2}):(\d{1,2})(?::(\d{1,2})(?:\.(\d{1,7}))?)?""")
+    private val daysPattern = Regex("""-?\d{1,8}""")
 
     override fun write(out: JsonWriter, value: Duration) {
         val ticks = ticks(value)
