@@ -3,26 +3,34 @@
 
 package io.cratis.chronicle.observation
 
-import Cratis.Chronicle.Contracts.Observation.Reactors.ObservationReactors
 import io.cratis.chronicle.diagnostics.ChronicleTraces
 import io.cratis.chronicle.events.EventContext
+import io.cratis.chronicle.events.EventObservationState
+import io.cratis.chronicle.eventSequences.AppendedEvent
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.json.chronicleGson
 import io.opentelemetry.api.common.Attributes
+import kotlinx.coroutines.CancellationException
 
 /**
- * Runs one batch of events past a reactor, and reports how far it got.
+ * Runs one delivery of events past a reactor, and reports how far it got in each partition.
  *
- * This is everything that happens between the kernel handing over a batch and the client answering
- * for it: choosing the handler, resolving what it asked for, running the middlewares around it,
- * appending whatever it returned, and bracketing a replay with the notifications the reactor asked
- * for. [ReactorsService] is left holding the gRPC conversation.
+ * This is everything that happens between the kernel handing over a page and the client answering
+ * for it: calling each batch method once with the events of the types it observes, choosing the
+ * per-event handler for every other event, resolving what it asked for, running the middlewares
+ * around it, appending whatever it returned, and bracketing a replay with the notifications the
+ * reactor asked for. [ReactorsService] is left holding the gRPC conversation.
+ *
+ * Each event type reaches exactly one method. Each method sees its events in sequence order, but two
+ * methods are not ordered relative to each other. A partition settles at the earliest event any
+ * method reported a problem for: every event before it counts as observed, and everything from it is
+ * delivered again.
  *
  * @param registration What was read off the reactor class at registration.
  * @param reactor The reactor instance to dispatch to.
- * @param middlewares Wrapped around every handler invocation.
- * @param arguments Supplies the handler parameters past the event.
- * @param sideEffects Appends whatever a handler returned.
+ * @param middlewares Wrapped around every per-event handler invocation.
+ * @param arguments Supplies the per-event handler parameters past the event.
+ * @param sideEffects Appends whatever a per-event handler returned.
  * @param traces Produces a span per handler invocation.
  */
 internal class ReactorEventDispatch(
@@ -34,78 +42,144 @@ internal class ReactorEventDispatch(
     private val traces: ChronicleTraces = ChronicleTraces.default
 ) {
     /**
-     * Observes every event in [events] for [partition].
+     * Observes every event of [page], and answers with one outcome per partition, in the page's order.
      *
-     * One event failing does not stop the batch: the kernel is told the last position the reactor
-     * genuinely got past, so it can resume from there once the cause is fixed rather than from
-     * wherever the batch happened to end.
+     * @param context What batch methods are told about the page.
      */
-    suspend fun observe(
-        partition: String,
-        events: List<ObservationReactors.AppendedEvent>
-    ): ReactorObservationOutcome {
-        val outcome = ReactorObservationOutcome()
+    suspend fun observe(page: DeliveredPage, context: BatchContext): List<PartitionOutcome> {
+        val problems = mutableListOf<PartitionProblem>()
 
-        for (appendedEvent in events) {
-            val context = appendedEvent.context.toEventContext()
+        // The kernel flags the first and last event of a replay rather than sending a separate signal,
+        // so the notifications bracket the handling of the whole page.
+        notifyReplay(page, problems, { it.isHeadOfReplay }) { replayContext ->
+            registration.replayNotifications.notifyBegan(reactor, replayContext)
+        }
 
-            // The kernel flags the first and last event of a replay rather than sending a separate
-            // signal, so the notifications bracket the handling of those two events.
-            if (context.observationState.isHeadOfReplay) {
-                notify(partition, context, outcome) { replayContext ->
-                    registration.replayNotifications.notifyBegan(reactor, replayContext)
+        for (method in registration.handlers.batches) {
+            problems += observeInBatch(method, page, context)
+        }
+
+        for (partition in page.partitions) {
+            observeOneByOne(partition)?.let { problems += it }
+        }
+
+        notifyReplay(page, problems, { it.isTailOfReplay }) { replayContext ->
+            registration.replayNotifications.notifyEnded(reactor, replayContext)
+        }
+
+        return page.partitions.map { PartitionSettlement.settle(it.partition, it.sequenceNumbers, problems) }
+    }
+
+    /**
+     * Calls [method] once with every event of [page] it observes, across partitions and in sequence
+     * order, and collects the problems it reported. Throwing fails every partition in the batch at its
+     * first event in it.
+     */
+    private suspend fun observeInBatch(method: BatchMethod, page: DeliveredPage, context: BatchContext): List<PartitionProblem> {
+        val problems = mutableListOf<PartitionProblem>()
+        val observed = mutableListOf<Pair<String, EventAndContext>>()
+
+        for (partition in page.partitions) {
+            for (appendedEvent in partition.events) {
+                val eventContext = appendedEvent.context
+                val eventClass = method.eventTypes[eventContext.eventType.id.value] ?: continue
+
+                // A batch method marked @OnceOnly is left out of a replay, exactly like a per-event one:
+                // the replayed events count as observed without it.
+                if (method.isOnceOnly && eventContext.observationState.isReplay) continue
+
+                try {
+                    observed += partition.partition to EventAndContext(chronicleGson.fromJson(appendedEvent.content, eventClass.java), eventContext)
+                } catch (e: Exception) {
+                    problems += PartitionProblem.failed(partition.partition, eventContext.sequenceNumber, e, method.name)
                 }
             }
+        }
 
-            when (val resolution =
-                registration.handlers.resolve(context.eventType.id.value, context.observationState)) {
-                is ReactorHandlerResolution.Invoke -> invoke(resolution.handler, appendedEvent, context, outcome)
+        if (observed.isEmpty()) return problems
+        observed.sortBy { it.second.context.sequenceNumber }
+
+        val batch = EventBatch(observed.map { it.second }).apply { canDefer = context.canDefer }
+        try {
+            traces.span("Chronicle observe batch ${method.name}", batchAttributes(batch)) {
+                if (method.takesContextAt(2)) method.invoke(reactor, batch, context) else method.invoke(reactor, batch)
+            }
+            problems += batch.outcomes.map { outcome ->
+                // The batch speaks in event sources; the kernel in partitions, which name them.
+                val partition = observed.first { it.second.context.eventSourceId == outcome.partition }.first
+                outcome.copy(partition = partition).toProblem()
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            problems += observed.groupBy { it.first }.map { (partition, events) ->
+                PartitionProblem.failed(partition, events.first().second.context.sequenceNumber, e, method.name)
+            }
+        }
+
+        return problems
+    }
+
+    /**
+     * Observes the events of [partition] that no batch method observes, one at a time and in order,
+     * stopping at the first that fails - the partition is delivered again from there, so the events
+     * after it are left for then.
+     *
+     * @return The problem the partition stopped at, or `null` when every event was observed.
+     */
+    private suspend fun observeOneByOne(partition: DeliveredPartition): PartitionProblem? {
+        for (appendedEvent in partition.events) {
+            val context = appendedEvent.context
+            if (registration.handlers.batchFor(context.eventType.id.value) != null) continue
+
+            when (val resolution = registration.handlers.resolve(context.eventType.id.value, context.observationState)) {
+                is ReactorHandlerResolution.Invoke ->
+                    invoke(resolution.handler, appendedEvent)?.let { error ->
+                        return PartitionProblem.failed(partition.partition, context.sequenceNumber, error, resolution.handler.function.name)
+                    }
 
                 // A handler deliberately skipped for replay and an event no handler wants are both
                 // fully observed - the reactor is caught up past them either way. A skipped
                 // @OnceOnly handler produces no side effects either, which is the whole point of
                 // taking it out of the replay.
-                else -> outcome.observed(context.sequenceNumber)
-            }
-
-            if (context.observationState.isTailOfReplay) {
-                notify(partition, context, outcome) { replayContext ->
-                    registration.replayNotifications.notifyEnded(reactor, replayContext)
-                }
+                else -> Unit
             }
         }
-
-        return outcome
+        return null
     }
 
     /**
-     * Runs a replay notification, recording a failure the same way a failing handler is recorded.
+     * Runs a replay notification for every event of [page] matching [flagged], recording a failure the
+     * same way a failing handler is recorded.
      *
      * A notification that throws has to fail the partition rather than the whole observation: the
      * kernel is then told the position the reactor genuinely got past, and the partition turns up in
      * `failedPartitions` with the message. Letting it escape would tear the stream down instead, and
      * the reactor would silently retry the same batch forever.
      */
-    private suspend fun notify(
-        partition: String,
-        context: EventContext,
-        outcome: ReactorObservationOutcome,
+    private suspend fun notifyReplay(
+        page: DeliveredPage,
+        problems: MutableList<PartitionProblem>,
+        flagged: (EventObservationState) -> Boolean,
         notification: suspend (ReplayContext) -> Unit
     ) {
-        try {
-            notification(replayContextFor(partition, context.sequenceNumber))
-        } catch (e: Exception) {
-            outcome.failed(e, "replay notification")
+        for (partition in page.partitions) {
+            for (event in partition.events.filter { flagged(it.context.observationState) }) {
+                try {
+                    notification(replayContextFor(partition.partition, event.context.sequenceNumber))
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    problems += PartitionProblem.failed(partition.partition, event.context.sequenceNumber, e, "replay notification")
+                }
+            }
         }
     }
 
-    private suspend fun invoke(
-        handler: EventHandlerMethod,
-        appendedEvent: ObservationReactors.AppendedEvent,
-        context: EventContext,
-        outcome: ReactorObservationOutcome
-    ) {
-        try {
+    /** Invokes [handler] for [appendedEvent], returning what it failed with, or `null` when it succeeded. */
+    private suspend fun invoke(handler: EventHandlerMethod, appendedEvent: AppendedEvent): Exception? {
+        val context = appendedEvent.context
+        return try {
             // The span covers the middlewares as well as the handler, so a middleware that is itself
             // slow shows up as part of what handling the event cost - which is the number anyone
             // reading the trace came for.
@@ -116,9 +190,11 @@ internal class ReactorEventDispatch(
                 }
             }
             sideEffects.append(result, context.eventSourceId)
-            outcome.observed(context.sequenceNumber)
+            null
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            outcome.failed(e, handler.function.name)
+            e
         }
     }
 
@@ -130,6 +206,13 @@ internal class ReactorEventDispatch(
         .put(ChronicleTraces.EVENT_SEQUENCE_ID, registration.eventSequenceId)
         .put(ChronicleTraces.SEQUENCE_NUMBER, context.sequenceNumber)
         .put(ChronicleTraces.IS_REPLAY, context.observationState.isReplay)
+        .build()
+
+    /** What a reader of a trace needs to place a batch: which observer, where, and how many events. */
+    private fun batchAttributes(batch: EventBatch): Attributes = Attributes.builder()
+        .put(ChronicleTraces.OBSERVER_ID, registration.id)
+        .put(ChronicleTraces.EVENT_SEQUENCE_ID, registration.eventSequenceId)
+        .put(ChronicleTraces.EVENT_COUNT, batch.size.toLong())
         .build()
 
     private fun replayContextFor(partition: String, sequenceNumber: Long) = ReplayContext(

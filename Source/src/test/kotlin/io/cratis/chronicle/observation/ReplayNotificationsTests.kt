@@ -112,19 +112,19 @@ class ReplayNotificationsTests {
 
     @Test
     fun `a notification that throws is reported as a failure rather than escaping`() = runBlocking {
-        val outcome = ReactorObservationOutcome()
         val notifications = ReplayNotifications.from(FailingNotification::class)
 
         // Mirrors what the dispatch does: the throw is recorded, not propagated, so the kernel is
         // told the partition failed instead of the whole observation being torn down.
-        try {
+        val problem = try {
             notifications.notifyBegan(FailingNotification(), context)
+            null
         } catch (e: Exception) {
-            outcome.failed(e, "replay notification")
+            PartitionProblem.failed("partition", 0, e, "replay notification")
         }
 
-        assertFalse(outcome.isSuccess)
-        assertTrue(outcome.exceptions.single().contains("cache is gone"), outcome.exceptions.toString())
+        assertFalse(problem == null)
+        assertTrue(problem!!.messages.single().contains("cache is gone"), problem.messages.toString())
     }
 
     @Test
