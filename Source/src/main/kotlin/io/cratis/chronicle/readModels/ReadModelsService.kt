@@ -18,7 +18,11 @@ import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.eventSequences.IEventSequence
 import io.cratis.chronicle.json.chronicleGson
+import io.cratis.chronicle.observation.BatchContext
+import io.cratis.chronicle.observation.ReduceResult
+import io.cratis.chronicle.observation.ReducerFold
 import io.cratis.chronicle.observation.ReducerRegistration
+import io.cratis.chronicle.observation.unwrapReflectionFailure
 import io.cratis.chronicle.schemas.JsonSchemaGenerator
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import io.cratis.chronicle.toUuid
@@ -205,16 +209,20 @@ class ReadModelsService(
             (filters.eventStreamType == "All" || event.context.eventStreamType == filters.eventStreamType) &&
             event.context.tags.containsAll(filters.filterTags)
 
-    private fun ReducerRegistration.eventClasses(): List<KClass<*>> = handlers.values.map { it.eventClass }.distinct()
+    private fun ReducerRegistration.eventClasses(): List<KClass<*>> = eventTypes.values.distinct()
 
+    /**
+     * Folds a passive reducer locally, through its per-event handlers or its batch method alike. There
+     * is no kernel to recover a failed fold here, so a failure - or a deferral, which has nowhere to go
+     * - is thrown to the caller reading the read model.
+     */
     private suspend fun fold(events: List<AppendedEvent>, reducer: Any, registration: ReducerRegistration): Any? {
-        var state: Any? = null
-        for (appendedEvent in events.sortedBy { it.context.sequenceNumber }) {
-            val handler = registration.handlers[appendedEvent.context.eventType.id.value] ?: continue
-            val event = chronicleGson.fromJson(appendedEvent.content, handler.eventClass.java)
-            state = handler.invokeReducer(reducer, event, state, appendedEvent.context)
+        val context = BatchContext.unknown(registration.id, registration.eventSequenceId)
+        return when (val result = ReducerFold(registration, reducer).reduce(events.sortedBy { it.context.sequenceNumber }, null, context)) {
+            is ReduceResult.Reduced -> result.state
+            is ReduceResult.Failed -> throw result.error.unwrapReflectionFailure()
+            is ReduceResult.Deferred -> throw IllegalStateException("A passive reducer cannot defer, as it is folded on read.")
         }
-        return state
     }
 
     override suspend fun <T : Any> getSnapshotsById(readModelClass: KClass<T>, key: String): List<ReadModelSnapshot<T>> {

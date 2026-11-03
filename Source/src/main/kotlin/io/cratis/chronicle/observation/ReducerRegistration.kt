@@ -19,7 +19,10 @@ import kotlin.reflect.full.memberFunctions
  * @property readModelClass The class of the read model, inferred from the handlers' return type.
  * @property tags Descriptive labels for the reducer itself.
  * @property filters Narrows which events the kernel delivers.
- * @property handlers The handler methods, keyed by event type identifier.
+ * @property handlers The per-event handler methods, keyed by event type identifier. Empty when the
+ *   reducer has a [batch] method instead.
+ * @property batch The batch method, when the reducer folds an event source's events in one call.
+ * @property maxConcurrency How many event sources of one page are reduced at the same time.
  */
 internal data class ReducerRegistration(
     val id: String,
@@ -29,13 +32,20 @@ internal data class ReducerRegistration(
     val readModelClass: KClass<*>?,
     val tags: List<String>,
     val filters: ObserverFilters,
-    val handlers: Map<String, EventHandlerMethod>
+    val handlers: Map<String, EventHandlerMethod>,
+    val batch: BatchMethod? = null,
+    val maxConcurrency: Int = Runtime.getRuntime().availableProcessors()
 ) {
+    /** Every event type the reducer folds, keyed by event type identifier. */
+    val eventTypes: Map<String, KClass<*>>
+        get() = batch?.eventTypes ?: handlers.mapValues { (_, handler) -> handler.eventClass }
+
     companion object {
         /**
          * Reads [reducerClass] by convention: any method whose first parameter is a class annotated
          * with `@EventType` is a handler, and the read model is inferred from what those methods
-         * return.
+         * return. A method whose first parameter is an [EventBatch] is instead the reducer's one batch
+         * method, folding all of an event source's events in a single call.
          */
         fun from(reducerClass: KClass<*>): ReducerRegistration {
             val annotation = reducerClass.findAnnotation<Reducer>()
@@ -48,6 +58,7 @@ internal data class ReducerRegistration(
 
             for (function in reducerClass.memberFunctions) {
                 val handler = EventHandlerMethod.from(function) ?: continue
+                BatchMethods.requireNoBatchContext(reducerClass, listOf(handler))
                 requireDispatchable(handler, reducerClass)
                 handlers[handler.eventTypeId] = handler
 
@@ -56,11 +67,22 @@ internal data class ReducerRegistration(
                 }
             }
 
-            if (handlers.isEmpty()) {
+            val batch = batchMethodOf(reducerClass, hasPerEventHandlers = handlers.isNotEmpty())
+            if (batch != null) readModelClass = batch.function.returnType.classifier as? KClass<*>
+
+            if (handlers.isEmpty() && batch == null) {
                 throw ObserverHasNoHandlers(
                     reducerClass,
                     "A reducer handler is a public method whose first parameter is a class annotated " +
-                        "with @EventType, returning the read model it produces."
+                        "with @EventType, returning the read model it produces - or one batch method taking " +
+                        "an EventBatch and the read model so far, declaring the event types it @Observes."
+                )
+            }
+
+            val maxConcurrency = annotation?.maxConcurrency ?: 0
+            if (maxConcurrency < 0) {
+                throw IllegalArgumentException(
+                    "'${reducerClass.simpleName}' sets maxConcurrency to $maxConcurrency. Use 1 or more, or 0 for the default."
                 )
             }
 
@@ -76,8 +98,48 @@ internal data class ReducerRegistration(
                 readModelClass = readModelClass,
                 tags = ObserverFilters.tagsOf(reducerClass),
                 filters = ObserverFilters.from(reducerClass),
-                handlers = handlers
+                handlers = handlers,
+                batch = batch,
+                maxConcurrency = if (maxConcurrency == 0) Runtime.getRuntime().availableProcessors() else maxConcurrency
             )
+        }
+
+        /**
+         * The reducer's batch method, if it has one. A reducer is one fold over an event source's events
+         * in order, so it has either per-event handlers or exactly one batch method, never both.
+         *
+         * A batch method is `(batch, state)` or `(batch, state, context)`, where `state` is the read
+         * model so far - or `null` - and the method returns the next one, `null` removing it.
+         */
+        private fun batchMethodOf(reducerClass: KClass<*>, hasPerEventHandlers: Boolean): BatchMethod? {
+            val batches = BatchMethods.from(reducerClass)
+            if (batches.isEmpty()) return null
+            if (batches.size > 1) throw ReducerHasMoreThanOneBatchMethod(reducerClass)
+            if (hasPerEventHandlers) throw ReducerMixesBatchAndPerEventMethods(reducerClass)
+
+            val method = batches.single()
+            val parameters = method.function.parameters
+            val readModel = method.function.returnType.classifier as? KClass<*>
+
+            // Index 0 is the instance receiver, so the two valid shapes arrive as 3 and 4.
+            if (readModel == null || readModel == Unit::class || readModel == Any::class) {
+                throw InvalidBatchMethod(reducerClass, method.name, "a reducer batch method returns the read model it produces")
+            }
+
+            if (parameters.size !in 3..4 || parameters[2].type.classifier != readModel) {
+                throw InvalidBatchMethod(
+                    reducerClass,
+                    method.name,
+                    "a reducer batch method takes the EventBatch, then the ${readModel.simpleName} so far, " +
+                        "and optionally a BatchContext"
+                )
+            }
+
+            if (parameters.size == 4 && !method.takesContextAt(3)) {
+                throw InvalidBatchMethod(reducerClass, method.name, "its third parameter must be a BatchContext")
+            }
+
+            return method
         }
 
         /**

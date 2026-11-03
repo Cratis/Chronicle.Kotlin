@@ -6,6 +6,7 @@ package io.cratis.chronicle.testing
 import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.json.chronicleGson
+import io.cratis.chronicle.observation.EventBatch
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.callSuspend
@@ -80,6 +81,12 @@ class ReadModelScenario<TReadModel : Any>(
     private val states = mutableMapOf<String, Any?>()
 
     init {
+        // A batch reducer folds an event source's events in one call. The scenario folds one event at a
+        // time, so it says so plainly rather than reporting a reducer with no handlers.
+        require(reducer::class.memberFunctions.none { it.parameters.getOrNull(1)?.type?.classifier == EventBatch::class }) {
+            "'${reducer::class.simpleName}' has a batch method. ReadModelScenario folds per-event handlers only; " +
+                "call the batch method directly with an EventBatch to specify it."
+        }
         require(handlers.isNotEmpty()) {
             "'${reducer::class.simpleName}' has no handler methods, so there is nothing to fold. " +
                 "A reducer handler is a public method whose first parameter is a class annotated " +

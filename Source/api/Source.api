@@ -2968,6 +2968,7 @@ public abstract interface annotation class io/cratis/chronicle/observation/Reduc
 	public abstract fun eventSequence ()Ljava/lang/String;
 	public abstract fun id ()Ljava/lang/String;
 	public abstract fun isActive ()Z
+	public abstract fun maxConcurrency ()I
 }
 
 public final class io/cratis/chronicle/observation/ReducerHasMoreThanOneBatchMethod : java/lang/IllegalArgumentException {
