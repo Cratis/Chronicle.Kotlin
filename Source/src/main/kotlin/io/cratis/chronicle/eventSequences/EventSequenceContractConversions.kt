@@ -4,6 +4,7 @@
 package io.cratis.chronicle.eventSequences
 
 import Cratis.Chronicle.Contracts.Sequences.Sequences
+import bcl.Bcl
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
 import io.cratis.chronicle.events.EventTypeDescriptor
 import io.cratis.chronicle.identity.Identity as ChronicleIdentity
@@ -107,6 +108,12 @@ internal fun Sequences.CommandResult_AppendManyResponse.ensureSuccess(operation:
 
 @JvmSynthetic
 internal fun Sequences.CommandResult_CompleteStreamResponse.ensureSuccess(operation: String): Sequences.CompleteStreamResponse {
+    ensureSuccessMessage(operation, isAuthorized, authorizationFailureReason, exceptionMessagesList)
+    return response
+}
+
+@JvmSynthetic
+internal fun Sequences.CommandResult_Guid.ensureSuccess(operation: String): Bcl.Guid {
     ensureSuccessMessage(operation, isAuthorized, authorizationFailureReason, exceptionMessagesList)
     return response
 }
