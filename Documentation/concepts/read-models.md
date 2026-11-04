@@ -4,8 +4,8 @@ description: Where the shared Chronicle explanation of read models lives, for Ko
 sharedTopicBridge: true
 ---
 
-Read models are documented in the shared Chronicle docs so the model stays
-consistent across clients.
+For the concepts behind a read model and how to build one, use the shared
+Chronicle pages:
 
 - [Read models](/chronicle/read-models/)
 - [Getting a single read model
@@ -20,28 +20,14 @@ reference](/chronicle/clients/kotlin/reference/event-store-api/).
 
 ## Kotlin client: `IReadModelsService`
 
-Beyond `getInstanceByKey`, the Kotlin client's `store.readModels` exposes a
-richer surface for reading and managing read model instances:
+The Kotlin excerpts below use `EmployeeProfile` from the
+[Kotlin read model setup](../get-started/index.md#kotlin-read-model) and an
+existing `store` from that walkthrough. Run them inside a coroutine;
+class declarations, connection and registration setup are omitted here.
 
-| Member | Use it for |
-| --- | --- |
-| `getInstances` | Every instance; see the EventStore API reference. |
-| `getSnapshotsById` | Snapshots of a read model grouped by correlation id. |
-| `watch` | A `Flow` of changesets for a read model — a live view. |
-| `dehydrateSession` | Releasing session-scoped state for an instance. |
-| `release`/`releaseMany` | Decrypts `@Pii` properties, one or many. |
-| `materialized` | Paginated, server-materialized reads — see below. |
-
-To react to changes without collecting a `Flow` yourself, write a
-convention-dispatched reactor instead — see [Read Model
-Reactors](../guides/read-model-reactors.md).
-
-`getSnapshotsById` and `watch` both deserialize straight into the read
-model type you ask for — `getSnapshotsById(EmployeeProfile::class, key)`
-returns `List<ReadModelSnapshot<EmployeeProfile>>`, and
-`watch(EmployeeProfile::class)` returns
-`Flow<ReadModelChangeset<EmployeeProfile>>` — no manual JSON parsing
-either way.
+For a one-time read of every instance, call `store.readModels.getInstances`.
+The result is a list of profiles; the loop prints each employee's first
+and last name. Use `getInstanceByKey` when you need one instance instead.
 
 <!-- validate: body needs=store -->
 
@@ -51,6 +37,30 @@ employees.forEach { employee ->
     println("${employee.firstName} ${employee.lastName}")
 }
 ```
+
+For history, live changes or paginated reads, choose the operation that
+matches the task:
+
+| Member | Use it for |
+| --- | --- |
+| `getSnapshotsById` | Historical snapshots for a read model key, grouped by correlation id. |
+| `watch` | A `Flow` of live changesets for a read model. |
+| `materialized` | Paginated, server-materialized reads — see below. |
+
+`getSnapshotsById` and `watch` both deserialize straight into the read
+model type you ask for — `getSnapshotsById(EmployeeProfile::class, key)`
+returns `List<ReadModelSnapshot<EmployeeProfile>>`, and
+`watch(EmployeeProfile::class)` returns
+`Flow<ReadModelChangeset<EmployeeProfile>>` — no manual JSON parsing
+either way.
+
+To react to changes without collecting a `Flow` yourself, write a
+convention-dispatched reactor instead — see [Read Model
+Reactors](../guides/read-model-reactors.md).
+
+Session cleanup and privacy release are separate operations.
+`dehydrateSession` releases session-scoped state for an instance;
+`release`/`releaseMany` decrypt `@Pii` properties on one or many instances.
 
 ### Materialized (server-side) reads
 
