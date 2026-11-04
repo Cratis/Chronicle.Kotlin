@@ -548,6 +548,53 @@ class EventSequenceTests {
     }
 
     @Test
+    fun `copyForEventSource sends source, target and event type ids on the wire and returns the job id`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val request = slot<Sequences.CopyEventsForEventSourceRequest>()
+        val jobId = UUID.randomUUID()
+        coEvery { stub.copyEventsForEventSource(capture(request), any()) } returns
+            Sequences.CommandResult_Guid.newBuilder()
+                .setIsAuthorized(true)
+                .setResponse(jobId.toBclGuid())
+                .build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        val result = sequence.copyForEventSource("source-1", "target-1", listOf(ObservedEvent::class))
+
+        assertEquals(jobId.toString(), result)
+        assertEquals("my-store", request.captured.eventStore)
+        assertEquals("default", request.captured.namespace)
+        assertEquals("source-1", request.captured.sourceId)
+        assertEquals("target-1", request.captured.targetId)
+        assertEquals(listOf("ObservedEvent"), request.captured.eventTypesList)
+    }
+
+    @Test
+    fun `copyForEventSource with no event types copies every event type`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        val request = slot<Sequences.CopyEventsForEventSourceRequest>()
+        coEvery { stub.copyEventsForEventSource(capture(request), any()) } returns
+            Sequences.CommandResult_Guid.newBuilder().setIsAuthorized(true).setResponse(UUID.randomUUID().toBclGuid()).build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        sequence.copyForEventSource("source-1", "target-1")
+
+        assertTrue(request.captured.eventTypesList.isEmpty())
+    }
+
+    @Test
+    fun `copyForEventSource throws ChronicleCommandRejected when the kernel rejects the command`() = runBlocking {
+        val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
+        coEvery { stub.copyEventsForEventSource(any(), any()) } returns
+            Sequences.CommandResult_Guid.newBuilder().setIsAuthorized(true).addExceptionMessages("target has events").build()
+
+        val sequence = EventSequence(EventSequenceId.eventLog, "my-store", "default", stub)
+        val failure = runCatching { sequence.copyForEventSource("source-1", "target-1") }.exceptionOrNull()
+
+        assertTrue(failure is ChronicleCommandRejected)
+    }
+
+    @Test
     fun `appendOperations emits after a successful append through this instance`() = runBlocking {
         val stub = mockk<EventSequencesGrpcKt.EventSequencesCoroutineStub>()
         coEvery { stub.append(any(), any()) } returns

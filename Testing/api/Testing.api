@@ -30,6 +30,7 @@ public final class io/cratis/chronicle/testing/InMemoryEventSequence : io/cratis
 	public fun appendMany (Ljava/util/List;Ljava/util/Map;Ljava/util/UUID;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun clear ()V
 	public fun completeStream (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun copyForEventSource (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getAppendOperations ()Lkotlinx/coroutines/flow/SharedFlow;
 	public final fun getCount ()I
 	public final fun getEvents ()Ljava/util/List;

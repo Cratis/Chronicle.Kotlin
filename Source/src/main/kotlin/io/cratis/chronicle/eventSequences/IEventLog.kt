@@ -29,5 +29,6 @@ interface IEventLog : IEventSequence {
     override suspend fun completeStream(eventStreamType: String, eventStreamId: String): CompleteStreamResult
     override suspend fun redact(sequenceNumber: EventSequenceNumber, reason: RedactionReason)
     override suspend fun redactForEventSource(eventSourceId: String, reason: RedactionReason, eventTypes: List<KClass<*>>)
+    override suspend fun copyForEventSource(sourceId: String, targetId: String, eventTypes: List<KClass<*>>): String
     override val appendOperations: SharedFlow<List<AppendedEventWithResult>>
 }

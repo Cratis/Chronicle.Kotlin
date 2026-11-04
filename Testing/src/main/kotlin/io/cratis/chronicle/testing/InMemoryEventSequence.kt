@@ -209,6 +209,25 @@ class InMemoryEventSequence(
             .forEach { redacted.add(it.context.sequenceNumber) }
     }
 
+    /**
+     * Copies the matching events of [sourceId] onto [targetId] immediately. The kernel does this as a
+     * durable job; this double has no jobs, so the copies exist by the time the call returns. The
+     * originals stay, and each copy takes the next sequence number.
+     */
+    override suspend fun copyForEventSource(sourceId: String, targetId: String, eventTypes: List<KClass<*>>): String {
+        val wanted = eventTypes.map { it.eventTypeId() }.toSet()
+        appended
+            .filter { it.context.eventSourceId == sourceId }
+            .filter { wanted.isEmpty() || it.context.eventType.id.value in wanted }
+            .forEach {
+                val sequenceNumber = appended.size.toLong()
+                appended.add(
+                    it.copy(context = it.context.copy(sequenceNumber = sequenceNumber, eventSourceId = targetId))
+                )
+            }
+        return UUID.randomUUID().toString()
+    }
+
     /** Whether the event at [sequenceNumber] has been redacted. */
     fun isRedacted(sequenceNumber: Long): Boolean = sequenceNumber in redacted
 

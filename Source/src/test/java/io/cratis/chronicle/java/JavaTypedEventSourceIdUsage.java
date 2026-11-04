@@ -28,5 +28,6 @@ public final class JavaTypedEventSourceIdUsage {
         blocking.getTailSequenceNumber(id);
         blocking.getForEventSourceIdAndEventTypes(id, String.class);
         blocking.redactForEventSource(id, "reason", String.class);
+        blocking.copyForEventSource(id, new JavaCustomerId("customer-2"), String.class);
     }
 }

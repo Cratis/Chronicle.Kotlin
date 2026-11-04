@@ -26,6 +26,7 @@ class BlockingEventSequenceTypedEventSourceIdTests {
         coEvery { sequence.getTailSequenceNumber(any()) } returns EventSequenceNumber(7)
         coEvery { sequence.getForEventSourceIdAndEventTypes(any(), any(), any(), any(), any()) } returns emptyList()
         coEvery { sequence.redactForEventSource(any(), any(), any()) } returns Unit
+        coEvery { sequence.copyForEventSource(any(), any(), any()) } returns "job-1"
 
         JavaTypedEventSourceIdUsage.callEveryOverload(sequence, event, options)
 
@@ -41,5 +42,6 @@ class BlockingEventSequenceTypedEventSourceIdTests {
         coVerify(exactly = 1) {
             sequence.redactForEventSource("customer-1", RedactionReason("reason"), listOf(String::class))
         }
+        coVerify(exactly = 1) { sequence.copyForEventSource("customer-1", "customer-2", listOf(String::class)) }
     }
 }

@@ -22,6 +22,7 @@ import io.cratis.chronicle.identity.Identity as ChronicleIdentity
 import io.cratis.chronicle.identity.identityProvider
 import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.toBclGuid
+import io.cratis.chronicle.toUuid
 import io.opentelemetry.api.common.Attributes
 import java.time.Instant
 import java.util.UUID
@@ -433,6 +434,21 @@ open class EventSequence(
         }.build()
 
         stub.redactForEventSource(request).ensureSuccess("redact event source")
+    }
+
+    override suspend fun copyForEventSource(sourceId: String, targetId: String, eventTypes: List<KClass<*>>): String {
+        val esName = eventStoreName
+        val ns = this@EventSequence.namespace
+        val request = Sequences.CopyEventsForEventSourceRequest.newBuilder().apply {
+            this.eventStore = esName
+            this.namespace = ns
+            this.eventSequenceId = id.value
+            this.sourceId = sourceId
+            this.targetId = targetId
+            addAllEventTypes(eventTypes.map { resolveEventTypeFor(it).id.value })
+        }.build()
+
+        return stub.copyEventsForEventSource(request).ensureSuccess("copy events for event source").toUuid().toString()
     }
 
     // -------------------------------------------------------------------------

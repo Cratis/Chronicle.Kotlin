@@ -44,7 +44,7 @@ class KernelHistoryReactor {
 
 /**
  * Runs against a real Chronicle kernel. Opt in by pointing `CHRONICLE_INTEGRATION_CONNECTION_STRING`
- * at a development kernel of 19.70.0 or later, for example
+ * at a development kernel of 19.123.0 or later, for example
  * `chronicle://chronicle-dev-client:chronicle-dev-secret@localhost:35000`. In CI
  * (`CI` set) a missing connection string fails instead of skipping, so it cannot pass vacuously.
  */
