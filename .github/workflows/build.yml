@@ -39,7 +39,7 @@ jobs:
     # A development kernel (MongoDB included) that the kernel-backed specifications run against.
     services:
       chronicle:
-        image: cratis/chronicle:19.70.0-development
+        image: cratis/chronicle:19.123.0-development
         ports:
           - 35000:35000
 
