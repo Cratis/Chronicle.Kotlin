@@ -150,6 +150,12 @@ interface IEventSequence {
         reason: RedactionReason,
         eventTypes: List<KClass<*>> = emptyList()
     )
+
+    suspend fun compensate(
+        compensationFor: EventSequenceNumber,
+        event: Any,
+        options: CompensateOptions? = null
+    ): AppendResult
 }
 
 interface IEventLog : IEventSequence {

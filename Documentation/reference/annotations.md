@@ -27,6 +27,34 @@ identifier automatically.
 
 ---
 
+## @CompensationFor
+
+Marks an `@EventType` as a compensation for another event type. The target is
+recorded on the event type's schema, and `compensate` only accepts the event
+when its type is declared for the type of the event being compensated.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `eventType` | `KClass<*>` | The `@EventType` this event compensates for. |
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.events.CompensationFor
+import io.cratis.chronicle.events.EventType
+
+@EventType
+data class InvoiceIssued(val invoiceId: String)
+
+@EventType
+@CompensationFor(InvoiceIssued::class)
+data class InvoiceCredited(val reason: String)
+```
+
+See [Compensating events](../guides/compensation.md).
+
+---
+
 ## @Reactor
 
 Marks a class as a Chronicle reactor. Each public method becomes a handler
