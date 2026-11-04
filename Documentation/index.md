@@ -5,8 +5,8 @@ description: Install and configure the Chronicle JVM client for Kotlin and Java,
 
 The Chronicle JVM client lets a Kotlin or Java application append events,
 build read models from them, and react to them, with annotations on ordinary
-data classes and records. Kotlin gets a coroutine API; Java gets the same
-surface as blocking calls. One artifact, `io.cratis:chronicle`, serves both.
+data classes and records. Kotlin gets a coroutine API; Java has blocking
+wrappers. One artifact, `io.cratis:chronicle`, serves both.
 
 New here? Start with [Get started](get-started/index.md).
 
@@ -15,22 +15,59 @@ setup, Spring Boot, annotations, and the API reference. Shared Chronicle
 concepts and workflows live in the main Chronicle docs and show Kotlin and
 Java tabs next to the other clients.
 
-## Shared Chronicle topics
+## Requirements and compatibility
 
-- [Get started](/chronicle/get-started/)
-- [Events and event logs](/chronicle/events/)
-- [Appending events](/chronicle/events/appending/)
-- [Read models](/chronicle/read-models/)
-- [Projections](/chronicle/projections/)
-- [Reactors](/chronicle/reactors/)
-- [Reducers](/chronicle/reducers/)
-- [Constraints](/chronicle/constraints/)
-- [Event seeding](/chronicle/event-seeding/)
-- [Compliance](/chronicle/compliance/)
-- [Transactions and unit of work](/chronicle/events/transactions/)
-- [Event evolution](/chronicle/understanding-event-evolution/)
+- **Client**, `io.cratis:chronicle`: Java 17 or later, and
+  `kotlinx-coroutines` 1.10.2 or later at runtime.
+- **Spring Boot starter**, `io.cratis:chronicle-spring-boot-starter`:
+  Spring Boot 4 (built against 4.1.1); the per-request features need the
+  servlet stack.
+- **In-process testing**, `io.cratis:chronicle-testing`: any test runner and
+  no kernel.
+
+All three are released together with the same version number. The client
+ships with Kotlin 2.4 and brings the Kotlin standard library with it, so a
+Java application needs no Kotlin setup.
+
+The client checks compatibility with the kernel every time it connects, and
+refuses to send anything to a kernel that cannot serve it. There is no
+published version matrix. Client 6.5.0 has been exercised against kernel
+19.6.1. Kernel 19.4.8 rejects it at connect time. Treat other pairings as
+unverified until that check and your own tests pass. See [Connection lifecycle](reference/connection-lifecycle.md#compatibility).
 
 ## Kotlin and Java setup
+
+Add the client to your Gradle build. The pages in this section were
+checked against `6.5.0`; the
+[latest release](https://central.sonatype.com/artifact/io.cratis/chronicle) is
+on Maven Central:
+
+<!-- validate: skip -->
+
+```kotlin
+dependencies {
+    implementation("io.cratis:chronicle:6.5.0")
+}
+```
+
+Maven uses the same coordinates, `io.cratis:chronicle:6.5.0`. The same JVM
+client supports both Kotlin and Java. Shared pages include separate Kotlin
+and Java tabs when both examples exist.
+
+Spring Boot applications add the starter instead. It brings the client with
+it and wires everything up:
+
+<!-- validate: skip -->
+
+```kotlin
+dependencies {
+    implementation("io.cratis:chronicle-spring-boot-starter:6.5.0")
+}
+```
+
+For local development, use either the standalone image or the Docker Compose example below, not both.
+
+### Standalone development image
 
 You need a running Chronicle kernel. For a first try, the development image
 runs on its own:
@@ -39,8 +76,9 @@ runs on its own:
 docker run --rm -p 127.0.0.1:35000:35000 cratis/chronicle:latest-development
 ```
 
-For a setup closer to production, with storage in its own container, use
-Docker Compose. Chronicle serves gRPC, the API, and health checks on port
+### Development Docker Compose
+
+Alternatively, use Docker Compose to run the development kernel and database in separate containers. Chronicle serves gRPC, the API, and health checks on port
 `35000` over TLS with a self-signed development certificate. The ports below
 are bound to loopback so the development kernel and database are not
 reachable from other machines:
@@ -95,55 +133,9 @@ Chronicle is ready once `curl -sk https://localhost:35000/health` reports
 in the repository contain this file along with PostgreSQL, SQL Server, and
 SQLite profiles.
 
-Then add the client to your Gradle build. The pages in this section were
-checked against `6.5.0`; the
-[latest release](https://central.sonatype.com/artifact/io.cratis/chronicle) is
-on Maven Central:
-
-<!-- validate: skip -->
-
-```kotlin
-dependencies {
-    implementation("io.cratis:chronicle:6.5.0")
-}
-```
-
-Maven uses the same coordinates, `io.cratis:chronicle:6.5.0`. The same JVM
-client supports both Kotlin and Java. Shared pages include separate Kotlin
-and Java tabs when both examples exist.
-
-Spring Boot applications add the starter instead. It brings the client with
-it and wires everything up:
-
-<!-- validate: skip -->
-
-```kotlin
-dependencies {
-    implementation("io.cratis:chronicle-spring-boot-starter:6.5.0")
-}
-```
-
-## Requirements and compatibility
-
-- **Client**, `io.cratis:chronicle`: Java 17 or later, and
-  `kotlinx-coroutines` 1.10.2 or later at runtime.
-- **Spring Boot starter**, `io.cratis:chronicle-spring-boot-starter`:
-  Spring Boot 4 (built against 4.1.1); the per-request features need the
-  servlet stack.
-- **In-process testing**, `io.cratis:chronicle-testing`: any test runner and
-  no kernel.
-
-All three are released together with the same version number. The client
-ships with Kotlin 2.4 and brings the Kotlin standard library with it, so a
-Java application needs no Kotlin setup.
-
-The client checks compatibility with the kernel every time it connects, and
-refuses to send anything to a kernel that cannot serve it. There is no
-published version matrix. Client 6.5.0 has been exercised against kernel
-19.6.1. Kernel 19.4.8 rejects it at connect time. Treat other pairings as
-unverified until that check and your own tests pass. See [Connection lifecycle](reference/connection-lifecycle.md#compatibility).
-
 ## Client-specific pages
+
+Choose a next step for your application:
 
 - [Get Started](get-started/): install the JVM client, connect, append an
   event, and read the read model it produces, in Kotlin and Java
@@ -157,3 +149,18 @@ unverified until that check and your own tests pass. See [Connection lifecycle](
   connect, reconnect and failure, and how to troubleshoot it
 - [Reference](reference/): annotations, configuration, and service API details
 - [All JVM guides](guides/index.md)
+
+## Shared Chronicle topics
+
+- [Get started](/chronicle/get-started/)
+- [Events and event logs](/chronicle/events/)
+- [Appending events](/chronicle/events/appending/)
+- [Read models](/chronicle/read-models/)
+- [Projections](/chronicle/projections/)
+- [Reactors](/chronicle/reactors/)
+- [Reducers](/chronicle/reducers/)
+- [Constraints](/chronicle/constraints/)
+- [Event seeding](/chronicle/event-seeding/)
+- [Compliance](/chronicle/compliance/)
+- [Transactions and unit of work](/chronicle/events/transactions/)
+- [Event evolution](/chronicle/understanding-event-evolution/)
