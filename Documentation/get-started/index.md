@@ -4,13 +4,21 @@ description: Add the Chronicle JVM client to a Kotlin or Java project, connect t
 ---
 
 You have a Kotlin or Java service and want its state to come from a record of
-facts instead of rows that get overwritten. This page takes you from an empty
-Gradle project to an application that appends an `EmployeeHired` event, reacts
-to it, and reads the `EmployeeProfile` it produces, in both Kotlin and Java.
+facts instead of rows that get overwritten. This page shows the declarations
+and calls for an application that appends an `EmployeeHired` event, reacts to
+it, and reads the `EmployeeProfile` it produces, in Kotlin and Java.
 
-The steps are excerpts of one program. Put the declarations in your source set,
-and run the calls in order from one `main` function (Kotlin) or one `main`
-method (Java).
+Choose Kotlin or Java. These are excerpts, not a complete application scaffold.
+Put the annotated declarations in your source set before starting the client,
+and run the calls from one `main` function (Kotlin) or one `main` method
+(Java). Use the shell in step 3 rather than creating a second client from the
+separate connection example.
+
+Use the local connection and automatic discovery for the first path. The manual
+registration calls illustrate discovery-off alternatives; skip them on the
+default path. A successful append reports a stored sequence position. Step 8
+separately waits for a profile and prints its first name; that read can fail
+even after an append succeeds.
 
 ## Prerequisites
 
@@ -34,6 +42,10 @@ The client is published to Maven Central as `io.cratis:chronicle`. The examples
 on this page were checked against `6.5.0`; use the
 [latest release](https://central.sonatype.com/artifact/io.cratis/chronicle) for
 a new project.
+
+The client brings the Kotlin standard library and `kotlinx-coroutines` with it,
+so a Java project needs nothing else. It runs on `kotlinx-coroutines` 1.10.2 or
+later, which includes the version Spring Boot 4.1 manages.
 
 ### Kotlin Setup
 
@@ -65,15 +77,23 @@ With Maven:
 </dependency>
 ```
 
-The client brings the Kotlin standard library and `kotlinx-coroutines` with it,
-so a Java project needs nothing else. It runs on `kotlinx-coroutines` 1.10.2 or
-later, which includes the version Spring Boot 4.1 manages.
-
 ## 2. Connect to the kernel
 
 `ChronicleClient` is the entry point, and it takes a `ChronicleOptions`.
 For local development use the `development()` factory, which points at
 `localhost:35000` over TLS with the kernel's development credentials:
+
+Creating the client opens the connection straight away and checks that the
+kernel speaks a compatible protocol. If the kernel is unreachable, or
+incompatible, the constructor (or `connect`) throws, typically an
+`io.grpc.StatusException` with status `UNAVAILABLE`. After that first
+connection the client reconnects on its own. See
+[Connection lifecycle](../reference/connection-lifecycle.md) for what happens
+when.
+
+`development()` skips certificate validation so that it accepts the kernel's
+self-signed development certificate. Use it only against a kernel on your own
+machine.
 
 ### Kotlin Development Setup
 
@@ -104,68 +124,12 @@ var client = BlockingChronicleClient.connect(ChronicleOptions.development());
 BlockingEventStore store = client.getEventStore("MyApp");
 ```
 
-Creating the client opens the connection straight away and checks that the
-kernel speaks a compatible protocol. If the kernel is unreachable, or
-incompatible, the constructor (or `connect`) throws, typically an
-`io.grpc.StatusException` with status `UNAVAILABLE`. After that first
-connection the client reconnects on its own. See
-[Connection lifecycle](../reference/connection-lifecycle.md) for what happens
-when.
-
-`development()` skips certificate validation so that it accepts the kernel's
-self-signed development certificate. Use it only against a kernel on your own
-machine.
-
-For anything else, supply a connection string and turn certificate validation
-on. The grammar is
-`chronicle://<user>:<password>@<host>[:<port>][,<host>...][?<options>]`; see
-[Configuration](../reference/configuration.md) for the full set of hosts,
-options, and the `chronicle+srv://` form. Keep the secret out of source code.
-The connection string is not URL-decoded and everything after the first `?`
-is read as options, so a secret containing `?` needs the
-`ChronicleConnectionString` constructor instead; see
-[Configuration](../reference/configuration.md#tls-and-authentication):
-
-### Kotlin Production Setup
-
-<!-- validate: body -->
-
-```kotlin
-val secret = System.getenv("CHRONICLE_CLIENT_SECRET")
-    ?: error("Set CHRONICLE_CLIENT_SECRET to the secret for my-client")
-val client = ChronicleClient(
-    ChronicleOptions.fromConnectionString(
-        "chronicle://my-client:$secret@chronicle.internal:35000" +
-            "?skipTlsValidation=false"
-    )
-)
-```
-
-### Java Production Setup
-
-<!-- validate: body -->
-
-```java
-String secret = System.getenv("CHRONICLE_CLIENT_SECRET");
-if (secret == null) {
-    throw new IllegalStateException(
-        "Set CHRONICLE_CLIENT_SECRET to the client secret for my-client");
-}
-var client = BlockingChronicleClient.connect(
-    ChronicleOptions.fromConnectionString(
-        "chronicle://my-client:" + secret + "@chronicle.internal:35000"
-            + "?skipTlsValidation=false"
-    )
-);
-```
-
-:::danger[Certificate validation is off unless you turn it on]
-Every connection string defaults to `skipTlsValidation=true`, not only the
-development one. Without `?skipTlsValidation=false`, the client accepts any
-server certificate and sends its credentials to whoever answers.
-:::
-
 ## 3. Suspend functions and Java interop
+
+Place the append and query calls before client cleanup. The Java shell shows a
+run method, not a launchable main method, and the polling excerpt needs
+checked-exception handling. Supplying that application scaffolding is outside
+these snippets.
 
 Every call that talks to the kernel is a Kotlin `suspend` function. That covers
 appending, registering and querying. In Kotlin, call them from a coroutine;
@@ -264,6 +228,19 @@ services yourself, for example `store.eventTypes.register(EmployeeHired::class)`
 See [Artifact Registration](../guides/artifact-registration.md) for both paths
 in full.
 
+A constraint or concurrency violation does not throw: `isSuccess` is `false`,
+and the result carries the violations or errors. Two kinds of failure do
+throw. When the kernel refuses the command itself, for example because the
+client is not authorized, the client throws `ChronicleCommandRejected`. A
+transport failure, such as a lost connection, is thrown as a gRPC
+`StatusException`.
+
+`sequenceNumber` is an `EventSequenceNumber`, a Kotlin value class whose
+getter has a mangled JVM signature Java cannot name. That is why `AppendResult`
+carries `getSequenceNumberValue()` for reading the position as a plain `long`.
+Java never has to construct a value class either, because nothing Java-facing
+asks for one.
+
 ### Kotlin Append Event
 
 <!-- validate: body needs=store -->
@@ -316,19 +293,6 @@ if (result.isSuccess()) {
     System.out.println("Failed: " + violations + " " + result.getErrors());
 }
 ```
-
-A constraint or concurrency violation does not throw: `isSuccess` is `false`,
-and the result carries the violations or errors. Two kinds of failure do
-throw. When the kernel refuses the command itself, for example because the
-client is not authorized, the client throws `ChronicleCommandRejected`. A
-transport failure, such as a lost connection, is thrown as a gRPC
-`StatusException`.
-
-`sequenceNumber` is an `EventSequenceNumber`, a Kotlin value class whose
-getter has a mangled JVM signature Java cannot name. That is why `AppendResult`
-carries `getSequenceNumberValue()` for reading the position as a plain `long`.
-Java never has to construct a value class either, because nothing Java-facing
-asks for one.
 
 ## 6. React to events
 
@@ -522,6 +486,15 @@ caught up with it.
 For this walkthrough, wait for the instance with an explicit time limit, and
 fail clearly when it does not appear:
 
+The Kotlin `withTimeoutOrNull` also cancels a read that is still in flight.
+The Java loop only checks its deadline between reads, and a single blocking
+read has no time limit of its own, so it can overrun when the kernel stops
+answering.
+
+This loop waits for the instance to exist. When you are waiting for a change
+to an instance that already exists, check for the value you expect instead of
+`null`.
+
 ### Kotlin Query
 
 <!-- validate: body needs=store,employeeId -->
@@ -565,15 +538,6 @@ if (profile == null) {
 System.out.println(profile.getFirstName()); // Jane
 ```
 
-The Kotlin `withTimeoutOrNull` also cancels a read that is still in flight.
-The Java loop only checks its deadline between reads, and a single blocking
-read has no time limit of its own, so it can overrun when the kernel stops
-answering.
-
-This loop waits for the instance to exist. When you are waiting for a change
-to an instance that already exists, check for the value you expect instead of
-`null`.
-
 Polling after every write is a teaching device, not an application pattern.
 In an application, return the append result to the caller and let screens
 observe the read model, or design the next step so it does not depend on the
@@ -582,6 +546,61 @@ the reducer passive with `@Reducer(isActive = false)` (see
 [`@Reducer`](../reference/annotations.md#reducer)): the read model is then
 computed from its events on every read instead of stored. The shared
 [read model consistency](/chronicle/read-models/) docs explain the trade-offs.
+
+## Optional connection settings
+
+Choose these settings instead of the local setup when connecting elsewhere,
+and apply them before creating the client. This is an alternative connection,
+not another client to open after the first query.
+
+:::danger[Certificate validation is off unless you turn it on]
+Every connection string defaults to `skipTlsValidation=true`, not only the
+development one. Without `?skipTlsValidation=false`, the client accepts any
+server certificate and sends its credentials to whoever answers.
+:::
+
+For anything else, supply a connection string and turn certificate validation
+on. The grammar is
+`chronicle://<user>:<password>@<host>[:<port>][,<host>...][?<options>]`; see
+[Configuration](../reference/configuration.md) for the full set of hosts,
+options, and the `chronicle+srv://` form. Keep the secret out of source code.
+The connection string is not URL-decoded and everything after the first `?`
+is read as options, so a secret containing `?` needs the
+`ChronicleConnectionString` constructor instead; see
+[Configuration](../reference/configuration.md#tls-and-authentication):
+
+### Kotlin Production Setup
+
+<!-- validate: body -->
+
+```kotlin
+val secret = System.getenv("CHRONICLE_CLIENT_SECRET")
+    ?: error("Set CHRONICLE_CLIENT_SECRET to the secret for my-client")
+val client = ChronicleClient(
+    ChronicleOptions.fromConnectionString(
+        "chronicle://my-client:$secret@chronicle.internal:35000" +
+            "?skipTlsValidation=false"
+    )
+)
+```
+
+### Java Production Setup
+
+<!-- validate: body -->
+
+```java
+String secret = System.getenv("CHRONICLE_CLIENT_SECRET");
+if (secret == null) {
+    throw new IllegalStateException(
+        "Set CHRONICLE_CLIENT_SECRET to the client secret for my-client");
+}
+var client = BlockingChronicleClient.connect(
+    ChronicleOptions.fromConnectionString(
+        "chronicle://my-client:" + secret + "@chronicle.internal:35000"
+            + "?skipTlsValidation=false"
+    )
+);
+```
 
 ## Troubleshooting
 
@@ -604,6 +623,8 @@ That is expected; wait with a time limit, as in step 8.
 
 ## What's next
 
+- [Testing](../guides/testing.md): Kotlin append and reducer specifications
+  without a kernel
 - [Guides](../guides/index.md): Spring Boot, artifact registration, testing,
   seeding, and the other JVM-specific topics
 - [Concepts](../concepts/index.md): where the shared explanations of events,
