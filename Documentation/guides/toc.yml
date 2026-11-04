@@ -16,6 +16,8 @@
   href: testing.md
 - name: Appending Events
   href: appending-events.md
+- name: Compensating events
+  href: compensation.md
 - name: Event sources and streams
   href: event-sources.md
 - name: Migrate append routing

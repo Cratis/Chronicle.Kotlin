@@ -187,4 +187,30 @@ interface IEventSequence {
      * @throws ChronicleCommandRejected if the kernel rejects the request or it is not authorized.
      */
     suspend fun copyForEventSource(sourceId: String, targetId: String, eventTypes: List<KClass<*>> = emptyList()): String
+
+    /**
+     * Appends a compensating event for an event that is already in the event sequence.
+     *
+     * Works like an append, except that the event source, event stream and subject are taken from the
+     * event being compensated for. The original event is never changed; the new event records the
+     * original's sequence number as [io.cratis.chronicle.events.EventContext.compensationFor]. The same
+     * event can be compensated more than once.
+     *
+     * A compensation is emitted on [appendOperations] like an append, though without an event source id: the
+     * kernel takes that from the original, and the emitted context carries the original's sequence number as
+     * its `compensationFor`.
+     *
+     * A rejected compensation is reported in [AppendResult.errors] rather than thrown:
+     * [AppendError.COMPENSATED_EVENT_NOT_FOUND] when there is no event at [compensationFor], and
+     * [AppendError.EVENT_TYPE_DOES_NOT_COMPENSATE_EVENT_TYPE] when the type of [event] is not declared with
+     * [@CompensationFor][io.cratis.chronicle.events.CompensationFor] for the type of the original.
+     *
+     * @param compensationFor The [EventSequenceNumber] of the event to compensate for.
+     * @param event The compensating event. Must be annotated with [@EventType][io.cratis.chronicle.events.EventType].
+     * @param options Optional [CompensateOptions].
+     * @return The [AppendResult] of the operation.
+     * @throws CompensationsNotSupported if this implementation cannot append compensations.
+     */
+    suspend fun compensate(compensationFor: EventSequenceNumber, event: Any, options: CompensateOptions? = null): AppendResult =
+        throw CompensationsNotSupported(this::class.java)
 }

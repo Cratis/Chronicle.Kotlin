@@ -11,6 +11,7 @@ import io.cratis.chronicle.events.EventObservationState
 import io.cratis.chronicle.events.EventTypeDescriptor
 import io.cratis.chronicle.events.EventTypeGeneration
 import io.cratis.chronicle.events.EventTypeId
+import io.cratis.chronicle.events.toCompensatedSequenceNumber
 import io.cratis.chronicle.identity.Identity
 import io.cratis.chronicle.toUuid
 import java.time.Instant
@@ -39,7 +40,8 @@ internal fun Sequences.AppendedEventResponse.toClient(eventStore: String, namesp
             hash = context.hash,
             observationState = EventObservationState(context.observationStateValue),
             subject = context.subject,
-            eventSource = context.eventSource
+            eventSource = context.eventSource,
+            compensationFor = context.compensationFor.toCompensatedSequenceNumber()
         ),
         content = content
     )

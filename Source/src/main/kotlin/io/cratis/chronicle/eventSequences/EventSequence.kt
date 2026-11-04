@@ -399,6 +399,72 @@ open class EventSequence(
         }
     }
 
+    override suspend fun compensate(
+        compensationFor: EventSequenceNumber,
+        event: Any,
+        options: CompensateOptions?
+    ): AppendResult {
+        registrationGate.awaitOpen()
+        val eventType = resolveEventType(event)
+
+        return traces.span(
+            "Chronicle compensate ${eventType.id.value}",
+            appendAttributes("", eventType.id.value)
+        ) {
+            val correlationId = options?.correlationId ?: correlationIdManager.current
+            val causationChain = causationFor(options?.causation ?: emptyList()) {
+                causationManager.add(CausationType.appendEvent, mapOf("eventType" to eventType.id.value))
+            }
+            val identity = identityProvider.currentIdentity
+            val esName = eventStoreName
+            val ns = this@EventSequence.namespace
+            val request = Sequences.CompensateRequest.newBuilder().apply {
+                this.eventStore = esName
+                this.namespace = ns
+                this.eventSequenceId = id.value
+                this.compensationFor = compensationFor.value
+                this.eventType = eventType.toContractsEventType()
+                this.content = chronicleGson.toJson(event)
+                this.correlationId = correlationId.toBclGuid()
+                addAllTags(options?.tags ?: emptyList())
+                options?.occurred?.let { this.occurred = it.toContractsDateTimeOffset() }
+                addAllCausation(causationChain.map { c -> c.toContractsCausation() })
+                this.causedBy = identity.withoutDuplicates().toContractsIdentity()
+            }.build()
+
+            val response = stub.compensate(request).ensureSuccess("compensate event")
+
+            val result = mapAppendResponse(
+                sequenceNumber = response.sequenceNumber,
+                constraintViolations = response.constraintViolationsList,
+                errors = response.errorsList,
+                concurrencyViolation = if (response.hasConcurrencyViolation()) response.concurrencyViolation else null
+            )
+
+            // The event source belongs to the compensated event and is resolved by the kernel, so the
+            // emission carries no event source id - only the link back to the original.
+            _appendOperations.tryEmit(
+                listOf(
+                    AppendedEventWithResult(
+                        io.cratis.chronicle.events.EventContext(
+                            sequenceNumber = result.sequenceNumber.value,
+                            eventSourceId = "",
+                            eventType = eventType,
+                            occurred = options?.occurred ?: Instant.now(),
+                            correlationId = correlationId,
+                            causedBy = identity,
+                            compensationFor = compensationFor.value
+                        ),
+                        event,
+                        result
+                    )
+                )
+            )
+
+            result
+        }
+    }
+
     override suspend fun redact(sequenceNumber: EventSequenceNumber, reason: RedactionReason) {
         val causationChain = causationManager.currentChain
         val identity = identityProvider.currentIdentity

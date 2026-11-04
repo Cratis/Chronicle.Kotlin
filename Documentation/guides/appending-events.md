@@ -89,6 +89,7 @@ reading, redacting, and observing events:
 | `getNextSequenceNumber` | Sequence number the next append will get. |
 | `completeStream` | Closes a stream so it can't be appended to again. |
 | `redact`/`redactForEventSource` | Erases event content — see below. |
+| `compensate` | Appends an event that offsets an earlier one — see [Compensating events](compensation.md). |
 | `appendOperations` | Hot `Flow` of appends made through this instance. |
 
 See the [EventStore API reference](../reference/event-store-api.md) for the
