@@ -5,12 +5,17 @@ description: What the JVM client does when it connects, checks compatibility, re
 
 Most connection problems look the same from the outside: a call that throws,
 or a call that never returns. This page lists what the Kotlin and Java client
-does at each stage of a connection, and what you see when a stage fails. All
-of it applies equally to `ChronicleClient`, `BlockingChronicleClient` and the
-Spring Boot starter, which is built on them. It describes
-`io.cratis:chronicle` 6.5.0.
+does at each stage of a connection, and what you see when a stage fails.
+`ChronicleClient` exposes suspending operations; `BlockingChronicleClient`
+wraps them for Java. The Spring Boot starter uses these clients and bounds its
+startup registration wait as described below.
 
 ## Creating the client
+
+Before creating a client for a remote kernel, set `skipTlsValidation=false`
+and ensure the JVM trusts the server's certificate; see
+[TLS and authentication](configuration.md#tls-and-authentication). This matters
+before dialing because connection setup sends the configured credentials.
 
 `ChronicleClient(options)` and `BlockingChronicleClient.connect(options)` dial
 the kernel before they return. Dialing:
@@ -54,17 +59,11 @@ There is no published compatibility matrix between client and kernel versions.
 The compatibility check at connect time is what enforces it: an incompatible
 pairing fails before anything is sent.
 
-What has been checked for this page: client `io.cratis:chronicle` 6.5.0
-against kernel image `cratis/chronicle:19.6.1-development`. The client
-connects, appends, runs reactors and reducers, and reads projections and
-reducers, including passive ones. Kernel 19.4.8 rejects client 6.5.0 in the
-compatibility check, so upgrade the kernel before the client. Client 6.4.0
-connects to 19.4.8.
-
-Client 6.5.0 depends on `io.cratis:chronicle-contracts` 19.5.0. That is a
-build dependency, not a statement about which kernel versions work. Treat any
-pairing not listed above as unverified until the compatibility check and your
-own tests pass against it.
+A contracts dependency version is not a minimum supported kernel version.
+Check the requirements of the features you use and test the client/kernel
+pairing you intend to deploy. A successful compatibility check does not replace
+that application testing. Do not infer support for an untested pairing from
+an older example or from the version of the contracts package.
 
 ## Staying connected
 
@@ -103,19 +102,21 @@ With automatic registration on (the default), the client registers every
 discovered artifact each time a connection is established. See
 [Artifact Registration](../guides/artifact-registration.md) for the order.
 
-The first append on an event store waits until the first registration pass has
-run, so it cannot reach a kernel that does not know its event type yet.
-`awaitRegistration()` waits for the same thing, so you can put that wait at
-startup instead of on the first request.
+The first append on an event store waits for the first registration attempt.
+`awaitRegistration()` waits for that same attempt, so you can put the wait at
+startup instead of on the first request. It does not prove that an event type
+or any other artifact was registered successfully.
 
-Neither guarantees that registration succeeded. A pass that throws still lets
-the waiting calls through, so an append fails with a clear error instead of
-hanging. The failure is written to standard error as
-`[EventStore] Automatic registration of artifacts failed: <message>`, and the
-pass is tried again on the next reconnect. A reactor or reducer that cannot be
-started is reported on its own line and retried on the next pass, without
-holding back the others; see
-[Artifact Registration](../guides/artifact-registration.md#when-registration-fails).
+A pass that throws still releases the registration wait. Check standard error
+for the failure and inspect the append's `AppendResult`; a normal return from
+`awaitRegistration()` is not an acceptance check. Early registration failures
+stop the pass and produce the generic automatic-registration diagnostic.
+Reactor and reducer start failures are collected while the remaining observers,
+captures and seeders are attempted. If those later steps finish, automatic
+registration reports each failed observer on its own line. See
+[Artifact registration](../guides/artifact-registration.md#when-registration-fails)
+for both diagnostic forms, retry behavior and cancellation limits. A rejected
+connection can instead make the waiting calls throw, as described next.
 
 ## Rejected connections
 
@@ -196,9 +197,11 @@ the event you just appended. See the shared
 
 ## Disposing
 
-Call `dispose()` (or `close()`, or use try-with-resources on
-`BlockingChronicleClient`) when the application stops. It stops reconnecting,
-closes the connection, and gives in-flight calls up to 5 seconds to finish.
+Keep the client for the application's lifetime, rather than creating and
+disposing one for each append. Call `dispose()` (or `close()`, or use
+try-with-resources on `BlockingChronicleClient`) when the application stops.
+It stops reconnecting, closes the connection, and gives in-flight calls up to
+5 seconds to finish.
 Reactors and reducers that were observing report
 `failed: UNAVAILABLE: Channel shutdownNow invoked` on standard error as they
 stop; during shutdown that line is expected.
