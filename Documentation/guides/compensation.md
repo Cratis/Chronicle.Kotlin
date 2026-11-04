@@ -55,8 +55,10 @@ suspend fun reverseEntry(store: IEventStore, postedAt: Long) {
     if (!result.isSuccess) {
         result.errors.forEach { error ->
             when (error.message) {
-                AppendError.COMPENSATED_EVENT_NOT_FOUND -> println("There is no event at $postedAt")
-                AppendError.EVENT_TYPE_DOES_NOT_COMPENSATE_EVENT_TYPE -> println("EntryReversed does not compensate that event")
+                AppendError.COMPENSATED_EVENT_NOT_FOUND ->
+                    println("There is no event at $postedAt")
+                AppendError.EVENT_TYPE_DOES_NOT_COMPENSATE_EVENT_TYPE ->
+                    println("EntryReversed does not compensate that event")
             }
         }
     }
