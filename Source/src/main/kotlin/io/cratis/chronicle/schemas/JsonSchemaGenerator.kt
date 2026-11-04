@@ -14,6 +14,8 @@ import io.cratis.chronicle.confidentiality.EncryptionScope
 import io.cratis.chronicle.confidentiality.PiiAndEncryptedCombinedNotSupported
 import io.cratis.fundamentals.concepts.ConceptAs
 import io.cratis.chronicle.concepts.EventSourceId
+import io.cratis.chronicle.events.CompensationFor
+import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.geospatial.LineString
 import io.cratis.chronicle.geospatial.Point
 import io.cratis.chronicle.geospatial.Polygon
@@ -61,7 +63,32 @@ object JsonSchemaGenerator {
      * @param cls The class to generate a schema for.
      * @return The generated JSON schema, as a JSON string.
      */
-    fun generate(cls: KClass<*>): String = gson.toJson(generateNode(cls, mutableSetOf()))
+    fun generate(cls: KClass<*>): String {
+        val schema = generateNode(cls, mutableSetOf())
+        compensationOf(cls)?.let { schema[COMPENSATION_FOR_KEY] = it }
+        return gson.toJson(schema)
+    }
+
+    /**
+     * The key on an event type's schema holding the id of the event type it compensates for. The kernel
+     * reads it to check a compensation is declared for the type of the event being compensated.
+     */
+    const val COMPENSATION_FOR_KEY = "compensationFor"
+
+    /**
+     * The id of the event type [cls] compensates for when it is annotated with [CompensationFor]. Only the
+     * top-level type carries it - a nested object that happens to be annotated is not an event type.
+     */
+    private fun compensationOf(cls: KClass<*>): String? {
+        val compensated = cls.findAnnotation<CompensationFor>()?.eventType ?: return null
+        val compensatedType = compensated.findAnnotation<EventType>()
+            ?: throw IllegalArgumentException(
+                "'${cls.qualifiedName ?: cls.java.name}' is a @CompensationFor " +
+                    "'${compensated.qualifiedName ?: compensated.java.name}', which is not an event type - " +
+                    "annotate it with @EventType"
+            )
+        return compensatedType.id.ifEmpty { compensated.java.simpleName }
+    }
 
     /** Builds the `{ "type": "object", "properties": {...} }` schema node for [cls]. */
     private fun generateNode(cls: KClass<*>, visiting: MutableSet<KClass<*>>): MutableMap<String, Any> {

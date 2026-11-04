@@ -6,6 +6,7 @@ package io.cratis.chronicle.java
 import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.AppendedEvent
+import io.cratis.chronicle.eventSequences.CompensateOptions
 import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.eventSequences.IEventSequence
@@ -113,6 +114,18 @@ class BlockingEventSequence(private val sequence: IEventSequence) {
     @JvmOverloads
     fun getFromSequenceNumber(sequenceNumber: Long, eventSourceId: String? = null): List<AppendedEvent> =
         runBlocking { sequence.getFromSequenceNumber(EventSequenceNumber(sequenceNumber), eventSourceId) }
+
+    /**
+     * Appends [event] as a compensation for the event at [compensationFor]. The event goes to the event
+     * source, stream and subject of the event being compensated.
+     *
+     * @param compensationFor The sequence number of the event to compensate for.
+     * @param event The compensating event. Its class must carry `@EventType` and `@CompensationFor`.
+     * @return What the kernel made of it. A rejection is reported in the result's errors.
+     */
+    @JvmOverloads
+    fun compensate(compensationFor: Long, event: Any, options: CompensateOptions? = null): AppendResult =
+        runBlocking { sequence.compensate(EventSequenceNumber(compensationFor), event, options) }
 
     /** Redacts the event at [sequenceNumber]. */
     fun redact(sequenceNumber: Long, reason: String) {
