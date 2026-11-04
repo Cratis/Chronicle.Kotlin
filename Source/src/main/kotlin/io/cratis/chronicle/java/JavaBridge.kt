@@ -134,6 +134,11 @@ object EventLogJavaBridge {
         runBlocking { eventLog.redactForEventSource(eventSourceId, RedactionReason(reason), eventTypes.map { it.kotlin }) }
     }
 
+    /** Copies all events for [sourceId] onto [targetId] as a kernel job, optionally narrowed to [eventTypes]. Returns the job id. */
+    @JvmStatic
+    fun copyForEventSource(eventLog: IEventLog, sourceId: String, targetId: String, eventTypes: List<Class<*>>): String =
+        runBlocking { eventLog.copyForEventSource(sourceId, targetId, eventTypes.map { it.kotlin }) }
+
     /**
      * Subscribes [callback] to [IEventLog.getAppendOperations], the hot flow that emits after every
      * completed append made through this instance. Java cannot collect a Kotlin `Flow` directly, so

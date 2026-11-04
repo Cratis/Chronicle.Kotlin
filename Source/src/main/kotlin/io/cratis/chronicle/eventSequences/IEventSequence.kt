@@ -173,4 +173,18 @@ interface IEventSequence {
      *   for the event source are redacted.
      */
     suspend fun redactForEventSource(eventSourceId: String, reason: RedactionReason, eventTypes: List<KClass<*>> = emptyList())
+
+    /**
+     * Copies the events of one event source onto another event source in this event sequence, as a
+     * durable job that runs on the kernel. Copies are appended as new events with new sequence numbers;
+     * the originals are left untouched.
+     *
+     * @param sourceId The event source identifier to copy events from.
+     * @param targetId The event source identifier to copy events to.
+     * @param eventTypes Optional event types to narrow the copy to. If empty, events of every type
+     *   for the source event source are copied.
+     * @return The identifier of the started job, usable with the jobs service to follow its progress.
+     * @throws ChronicleCommandRejected if the kernel rejects the request or it is not authorized.
+     */
+    suspend fun copyForEventSource(sourceId: String, targetId: String, eventTypes: List<KClass<*>> = emptyList()): String
 }
