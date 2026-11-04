@@ -8,10 +8,13 @@ the job of collecting it, branching on the change type, keeping the
 subscription alive, and doing it again for every read model you care about.
 
 A read model reactor takes that plumbing away. You write one method per
-change, register the class, and Chronicle dispatches to it. Where a
-[reactor](./reactors.md) reacts to events, a read model reactor reacts to
-the *state those events produced* — an instance being added, modified, or
+change and register a reactor instance to start watching its read models.
+Where a [reactor](./reactors.md) reacts to events, a read model reactor reacts
+to the *state those events produced* — an instance being added, modified, or
 removed.
+
+Start with the [EmployeeProfile read model in Get started](../get-started/index.md#7-build-a-read-model).
+The multiple-model example also assumes an application-defined `OrderOverview`.
 
 ## Writing a reactor
 
@@ -72,6 +75,32 @@ Declaring it non-nullable fails at registration with
 `InvalidHandlerSignature` rather than throwing on every removal that
 arrives.
 
+## Registering and stopping
+
+`ReadModelReactors` needs the read models to watch through and the event log
+to append side effects to. Registration is not a suspending call: it starts
+the subscriptions and returns the `Job` backing them.
+
+Handlers may be called more than once for the same change — a watch that
+ends is re-established — so keep them idempotent, exactly as you would a
+reactor.
+
+<!-- validate: body needs=store -->
+
+```kotlin
+import io.cratis.chronicle.readModels.ReadModelReactors
+
+val readModelReactors = ReadModelReactors(store.readModels, store.eventLog)
+readModelReactors.register(EmployeeProfileAlerts())
+readModelReactors.register(EmployeeProfileOffboarding())
+
+// Later, when shutting down:
+readModelReactors.stop()
+```
+
+`stop()` cancels every reactor registered through that instance. Cancel the
+returned `Job` instead when you want to stop a single reactor.
+
 ## Watching more than one read model
 
 Each handler's first parameter stands on its own, so one reactor can cover
@@ -120,32 +149,6 @@ Return a `List` to append several events, and wrap one in
 `EventForEventSourceId` to send it to an event source other than the changed
 instance's key. Anything that is not an event type — including `Unit` — is
 ignored, so handlers that just do their work and return nothing are fine.
-
-## Registering and stopping
-
-`ReadModelReactors` needs the read models to watch through and the event log
-to append side effects to. Registration is not a suspending call: it starts
-the subscriptions and returns the `Job` backing them.
-
-<!-- validate: body needs=store -->
-
-```kotlin
-import io.cratis.chronicle.readModels.ReadModelReactors
-
-val readModelReactors = ReadModelReactors(store.readModels, store.eventLog)
-readModelReactors.register(EmployeeProfileAlerts())
-readModelReactors.register(EmployeeProfileOffboarding())
-
-// Later, when shutting down:
-readModelReactors.stop()
-```
-
-`stop()` cancels every reactor registered through that instance. Cancel the
-returned `Job` instead when you want to stop a single reactor.
-
-Handlers may be called more than once for the same change — a watch that
-ends is re-established — so keep them idempotent, exactly as you would a
-reactor.
 
 ## Java
 
