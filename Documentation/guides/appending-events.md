@@ -4,25 +4,41 @@ description: Where the shared guide to appending events lives, with Kotlin and J
 sharedTopicBridge: true
 ---
 
-Appending events is documented in the shared Chronicle docs with
-synchronized examples for C#, Kotlin, Java, Elixir, and TypeScript.
+In Kotlin, `store.eventLog.append(...)` is a suspending call. Java uses
+`store.getEventLog().append(...)` on a `BlockingEventStore`. Both return an
+`AppendResult`: keep it and check `isSuccess` (Java: `isSuccess()`) before using
+the accepted sequence number. Java reads that position with
+`getSequenceNumberValue()`, not the Kotlin value-class getter.
+
+For the declaration, registration and result-handling steps, follow
+[Artifact registration](artifact-registration.md#the-short-version), using the
+existing event declaration and configured client from
+[Get started](/chronicle/clients/kotlin/get-started/). A completed registration
+wait is not an acceptance check. Inspect returned constraint violations,
+errors and concurrency violations; a command or transport failure can throw
+instead. Do not automatically append again after an unsuccessful result or a
+lost response: an unconfirmed outcome does not establish that nothing was
+stored. Once accepted, an event can still be ahead of its
+[materialized read model](../reference/connection-lifecycle.md#reading-after-writing).
+
+Ordinary appends need no named source definition. Use
+[Event sources and streams](event-sources.md) to add one when your application
+needs that routing. The shared Chronicle guides explain the append contract
+with language-specific examples:
 
 - [Appending events](/chronicle/events/appending/)
 - [Appending many events](/chronicle/events/appending-many/)
 - [Event source identity](/chronicle/events/event-source-id/)
 - [Concurrency](/chronicle/events/concurrency/)
 
-Use the [Kotlin get started
-page](/chronicle/clients/kotlin/get-started/) for JVM setup before running
-the shared examples.
-
 For the breaking change to omitted routing defaults and explicit legacy
 routes, see [Migrate append routing](migrate-append-routing.md).
 
 ## Date and time properties
 
-Event and read model properties can use `java.time` types. The client writes
-each as an ISO-8601 string, which is what the schema it registers describes:
+Event and read model properties can use the following `java.time` types.
+These date and time values are written as ISO-8601 strings matching their
+registered schema formats:
 
 | Type | Schema `format` | Written as |
 | --- | --- | --- |
@@ -39,9 +55,13 @@ and the offset but not the zone id. Read back, its zone is the offset
 does not matter, or store the zone id in a separate string property when it
 does.
 
-Values written by the .NET client read back correctly, including a UTC
-`DateTimeOffset` written as `+00:00`. `Duration` and `ByteArray` are not covered
-by these adapters yet and have not been verified against the .NET wire format.
+`java.time.Duration` has its own adapter: it is written as a TimeSpan-style
+string with 100-nanosecond precision, truncating sub-tick nanoseconds toward
+zero. Do not rely on a round trip to retain finer precision. Its reader accepts
+supported TimeSpan and ISO-8601 duration strings. `ByteArray` (Java: `byte[]`)
+is written as standard padded base64. Their registered schema formats are
+`duration` and `byte-array`, respectively; they are not additional ISO-8601
+date/time rows.
 
 <!-- validate: declarations -->
 
@@ -108,6 +128,10 @@ store.eventLog.appendMany(
 )
 ```
 
+Keep the list of `AppendResult` values returned by `appendMany` and inspect
+their success and failure fields before continuing. The atomic batch is not a
+reason to ignore its response or replay it automatically after a lost response.
+
 Pass `concurrencyScopes` to check specific event sources optimistically —
 it is keyed by event source id, and any source left out is appended
 unchecked.
@@ -140,6 +164,9 @@ println(operations.getEventsToAppend())
 
 val results = operations.perform()
 ```
+
+Inspect the `results` returned by `perform()` just as you would those from
+`appendMany`; building or printing an operation has not confirmed acceptance.
 
 Concurrency lives on the event source rather than on an individual event,
 because that is where the kernel checks it. A source that never asks for a

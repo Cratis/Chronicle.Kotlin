@@ -134,4 +134,15 @@ class BlockingEventSequence(private val sequence: IEventSequence) {
     fun redactForEventSource(eventSourceId: ConceptAs<String>, reason: String, vararg eventTypes: Class<*>) {
         redactForEventSource(eventSourceId.value(), reason, *eventTypes)
     }
+
+    /**
+     * Copies every event of [sourceId] onto [targetId] as a kernel job, or only those of [eventTypes].
+     * Returns the id of the started job.
+     */
+    fun copyForEventSource(sourceId: String, targetId: String, vararg eventTypes: Class<*>): String =
+        runBlocking { sequence.copyForEventSource(sourceId, targetId, eventTypes.map { it.kotlin }) }
+
+    /** Copies every event of the typed [sourceId] onto [targetId] as a kernel job, or only those of [eventTypes]. */
+    fun copyForEventSource(sourceId: ConceptAs<String>, targetId: ConceptAs<String>, vararg eventTypes: Class<*>): String =
+        copyForEventSource(sourceId.value(), targetId.value(), *eventTypes)
 }

@@ -5,8 +5,10 @@ description: Define named event sources with streams and concurrency dimensions,
 
 An event source definition gives an event source a stable name, an optional
 description, the streams it uses and the concurrency dimensions an append to
-it should be checked on. Definitions are optional. Appending without one
-behaves exactly as it always has.
+it should be checked on. Definitions are optional: start with an
+[ordinary append and its acceptance check](artifact-registration.md#the-short-version)
+if you do not need named routing. A definition does not replace the event's
+`@EventType` declaration or schema registration.
 
 Routing belongs to the append, not to the event type: any event can be
 appended through any definition, and a definition is never attached to an
@@ -77,9 +79,12 @@ that declares no concurrency dimensions uses the ones of its event source.
 ## Register definitions
 
 Definitions are found with the other artifacts and registered at startup,
-right after event types, when `autoDiscoverAndRegister` is on. To register by
-hand, call `eventStore.eventSources.register()`. Registration is an upsert:
-the kernel keeps definitions the client no longer declares.
+right after event types, when `autoDiscoverAndRegister` is on. That is the
+client's registration order, not an attachment between definitions and event
+types. To register by hand, call `eventStore.eventSources.register()`.
+Registration is an upsert: the kernel keeps definitions the client no longer
+declares. See [Artifact registration](artifact-registration.md) for discovery,
+manual event-type registration and registration-failure diagnostics.
 
 `eventSources` is a member of `EventStore`. Through the `IEventStore`
 interface it is the extension `io.cratis.chronicle.eventSources`, which
@@ -94,6 +99,24 @@ registration instead of silently dropping the definition.
 checks the stream against the ones it declares, and records the event source
 name on the event. `appendManyThroughEventSource` does the same for an atomic
 batch.
+
+The names and ids in the example serve different purposes:
+
+| Value | Meaning |
+| --- | --- |
+| `AccountEventSource` | Definition carrier class |
+| `Account` | The definition name, used as the route's `eventSourceType` |
+| `accountId` | The instance id passed to the append as `eventSourceId` |
+| `Transactions` | A declared stream name, selected as `eventStreamType` |
+| `eventStreamId` | Optional stream-instance id in append options |
+
+`AccountEventSource` declares the definition; it is not an account instance.
+`eventStreamId` is separate from the declared stream name.
+
+Omitted stream-instance routing is left to the kernel's defaults; it is not
+implicitly the account id. The `deposited` argument below must be an instance
+of your application's declared, registered event type. Its `Any`/`Object`
+parameter does not make arbitrary objects registered events.
 
 <!-- validate: declarations -->
 
@@ -135,6 +158,15 @@ class Deposits {
 }
 ```
 
+The Kotlin helper returns the `AppendResult` from
+`appendThroughEventSource(...)`. Java builds the route with
+`AppendOptionsBuilder.throughEventSource(...)` and returns the result of the
+blocking sequence's `append(...)`. In either case, the caller must check
+`isSuccess` (Java: `isSuccess()`) and inspect the failure fields before using
+the accepted position, as in
+[Artifact registration](artifact-registration.md#the-short-version). Selecting
+a valid route does not itself confirm acceptance or observer progress.
+
 These errors are raised before anything is sent:
 
 - `UnknownEventSource`: the class is not a discovered definition.
@@ -150,7 +182,9 @@ nothing is appended.
 
 `EventForEventSourceId` takes an `eventSource` and an `eventStream`, so one
 atomic batch can span several definitions. A per-event definition applies to
-that event only, and events without one are appended as before.
+that event only, and events without one are appended as before. The caller of
+`transfer` below receives the batch's list of append results and must inspect
+it before continuing; the helper does not apply an application recovery policy.
 
 <!-- validate: declarations -->
 

@@ -15,7 +15,8 @@ data class ChronicleOptions(
     val autoDiscoverAndRegister: Boolean = true,
     val artifacts: IClientArtifacts = ClientArtifacts.default,
     val artifactActivator: IArtifactActivator = ArtifactActivator,
-    val openTelemetry: OpenTelemetry? = null
+    val openTelemetry: OpenTelemetry? = null,
+    val maxReceiveMessageSize: Int? = DEFAULT_MAX_MESSAGE_SIZE
 )
 ```
 
@@ -28,6 +29,7 @@ data class ChronicleOptions(
 | `artifacts` | `ClientArtifacts.default` | What the application is made of |
 | `artifactActivator` | `ArtifactActivator` | How artifacts are created |
 | `openTelemetry` | `null` | Where spans go — see [Tracing](../guides/tracing.md) |
+| `maxReceiveMessageSize` | `100 MiB` | Receive limit (bytes) |
 | `readModelNamingPolicy` | `DefaultReadModelNamingPolicy` | Names each read model's container — see [Read model container names](#read-model-container-names) |
 
 `programIdentifier` is a human-readable label that shows up in diagnostics.
@@ -35,8 +37,8 @@ data class ChronicleOptions(
 overridden per process with the `CHRONICLE_SINK_TYPE` environment variable
 — for example `CHRONICLE_SINK_TYPE=SQL`.
 
-The last three control artifact discovery and registration. Two helpers cover
-the common adjustments — see
+`autoDiscoverAndRegister`, `artifacts` and `artifactActivator` control artifact
+discovery and registration. Two helpers cover the common adjustments — see
 [Artifact Registration](../guides/artifact-registration.md) for the full picture:
 
 <!-- validate: body -->
@@ -49,6 +51,17 @@ ChronicleOptions.development().withArtifactsFrom("com.acme.ordering")
 `readModelNamingPolicy` is not a constructor parameter. Set it with
 `withReadModelNamingPolicy`, described below. `copy` does not carry it over,
 so set it again after copying.
+
+`maxReceiveMessageSize` defaults to `100 * 1024 * 1024` bytes (100 MiB).
+Set it in the constructor or with `withMaxReceiveMessageSize(bytes)`.
+Passing `null` leaves grpc-java's own receive limit in effect. This is a
+received-message limit, not an event-schema or append-payload validation rule.
+
+Use `development()` only for a kernel on your own machine. Before connecting
+to a remote kernel, set `skipTlsValidation=false` and ensure the JVM trusts
+the server's certificate. Supply your client id and secret securely; see
+[TLS and authentication](#tls-and-authentication) for the requirements and
+parser limitations.
 
 There are two factories on the companion object:
 

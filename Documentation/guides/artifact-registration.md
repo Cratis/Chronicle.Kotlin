@@ -9,44 +9,105 @@ validated and migrated. Reducers and projections need to be declared so the
 kernel knows what to feed them. Constraints need to exist before the append they
 are meant to stop.
 
-The client does all of that for you. Every class carrying `@EventType`,
-`@ReadModel`, `@Reactor`, `@Reducer`, `@Constraint`, `@FromEvent`, or
-implementing `IProjectionFor`, `ICanSeedEvents` or `IWebhookDefiner` is found on
-the classpath and registered the moment the client connects — in the order the
-kernel needs them.
+With automatic registration enabled (the default), the client discovers
+classes carrying `@EventType`, `@EventSource`, `@ReadModel`, `@Reactor`,
+`@Reducer`, `@Constraint` or `@FromEvent`, and implementations of
+`IProjectionFor`, `ICanSeedEvents` or `IWebhookDefiner`. It registers them when
+the client connects, in the order described below.
 
 ## The short version
 
-Write your artifacts. Connect. That is the whole setup:
+Start with the four-field `EmployeeHired` declaration in
+[Get started](../get-started/index.md#4-define-an-event-type) and a configured
+client with automatic registration enabled. Keep these helpers in the same
+package as that declaration, or import it from your application's package.
+The event class must be discoverable; a helper method does not register it.
+These are additions to an existing application, not standalone programs.
 
-<!-- validate: skip -->
+`MyApp` below is the event store, in the default namespace `Default`.
+`employee-1` identifies the employee's event source; this event also carries
+that id in its payload. Kotlin calls the suspending API from a coroutine:
+
+<!-- validate: declarations -->
 
 ```kotlin
-val client = ChronicleClient(ChronicleOptions.development())
-val store = client.getEventStore("MyApp")
-store.awaitRegistration()
+import io.cratis.chronicle.ChronicleClient
+import io.cratis.chronicle.eventSequences.AppendResult
 
-store.eventLog.append("employee-1", EmployeeHired("Ada", "Lovelace", "Engineer"))
+suspend fun appendRegisteredEmployee(client: ChronicleClient): AppendResult {
+    val store = client.getEventStore("MyApp")
+    store.awaitRegistration()
+    val result = store.eventLog.append(
+        "employee-1",
+        EmployeeHired("employee-1", "Ada", "Lovelace", "Engineer")
+    )
+    if (result.isSuccess) {
+        println("Accepted employee hire at ${result.sequenceNumber.value}")
+    } else {
+        System.err.println(
+            "Employee hire was not confirmed: constraints=" +
+                "${result.constraintViolations}, " +
+                "errors=${result.errors}, concurrency=${result.concurrencyViolation}"
+        )
+    }
+    return result
+}
 ```
 
-From Java:
+Java uses the blocking client. Call it from a thread that may block, not from
+a Kotlin coroutine:
 
-<!-- validate: skip -->
+<!-- validate: declarations -->
 
 ```java
-var client = BlockingChronicleClient.connect(ChronicleOptions.development());
-var store = client.getEventStore("MyApp");
-store.awaitRegistration();
+import io.cratis.chronicle.eventSequences.AppendResult;
+import io.cratis.chronicle.java.BlockingChronicleClient;
 
-store.getEventLog().append("employee-1",
-    new EmployeeHired("Ada", "Lovelace", "Engineer"));
+class RegisteredEmployeeAppender {
+    static AppendResult appendRegisteredEmployee(
+            BlockingChronicleClient client) {
+        var store = client.getEventStore("MyApp");
+        store.awaitRegistration();
+        var result = store.getEventLog().append("employee-1",
+            new EmployeeHired("employee-1", "Ada", "Lovelace", "Engineer"));
+        if (result.isSuccess()) {
+            System.out.println("Accepted employee hire at " +
+                result.getSequenceNumberValue());
+        } else {
+            System.err.println("Employee hire was not confirmed: constraints=" +
+                result.getConstraintViolations() + ", errors=" +
+                result.getErrors() +
+                ", concurrency=" + result.getConcurrencyViolation());
+        }
+        return result;
+    }
+}
 ```
 
-`awaitRegistration()` returns as soon as the first registration pass has run.
-It is not required: the first append waits for the same pass. Calling it at
-startup moves that wait out of your first request. It has no time limit of its
-own, so bound it; see
-[Connection lifecycle](../reference/connection-lifecycle.md#bound-the-first-call).
+`append` returns an `AppendResult`. Use the accepted position only when
+`isSuccess` (Java: `isSuccess()`) is true. Otherwise inspect
+`constraintViolations`, `errors` and `concurrencyViolation`; Java exposes them
+through the getters above. The helper returns the result so the caller can
+surface the problem or apply its recovery policy. A connection or command
+failure can throw instead of returning a result. Do not automatically append
+again after an error or a lost response: an unconfirmed outcome is not proof
+that nothing was stored.
+
+`awaitRegistration()` waits for the first registration **attempt**, not its
+success. It is optional: the first append waits for the same attempt. Calling
+it at startup moves that wait out of your first request. It has no time limit
+of its own; apply the
+[bounded startup wait](../reference/connection-lifecycle.md#bound-the-first-call)
+before accepting requests. Check registration diagnostics as well as the
+append result.
+
+A successful append confirms storage, not that an observer or read model has
+caught up. If the next action reads derived state, see
+[Reading after writing](../reference/connection-lifecycle.md#reading-after-writing).
+Keep the configured client for the application's lifetime and
+[dispose it when the application stops](../reference/connection-lifecycle.md#disposing).
+Named source and stream routing is optional; see
+[Event sources and streams](event-sources.md) when you need it.
 
 In a Spring Boot application the starter already waits for it at startup, for
 up to `cratis.chronicle.registration-timeout`. See [Spring Boot](spring-boot.md#startup).
@@ -57,6 +118,7 @@ up to `cratis.chronicle.registration-timeout`. See [Spring Boot](spring-boot.md#
 | --- | --- |
 | Event type | `@EventType` |
 | Event type migration | Implements `IEventTypeMigration` |
+| Event source definition | `@EventSource` |
 | Read model | `@ReadModel` |
 | Projection | Implements `IProjectionFor` |
 | Model-bound projection | Read model carrying `@FromEvent` |
@@ -83,19 +145,21 @@ up explicitly through `store.externalServices` and `store.eventStoreSubscription
 
 ## The order things are registered in
 
-Order matters, and the client gets it right so you do not have to think about it:
+The automatic pass uses this order:
 
 1. **Event types and their migrations**, together in one call, because
    everything else is expressed in terms of event type ids and because the
    kernel merges an event type's generations from a single registration.
-2. **Read models that no observer produces.** A read model built by a reducer or
+2. **Event source definitions.** Routing is independent of event types; this
+   stage registers the discovered definitions without attaching them to events.
+3. **Read models that no observer produces.** A read model built by a reducer or
    a projection is registered by that observer instead, which is the only place
    the observer's type and identity are known.
-3. **Constraints, projections and webhooks.**
-4. **Reactors and reducers**, which start observing.
-5. **Captures**, which start appending the moment they run, so like seeding they
+4. **Constraints, projections and webhooks.**
+5. **Reactors and reducers**, which start observing.
+6. **Captures**, which start appending the moment they run, so like seeding they
    go behind every observer that should see what they bring in.
-6. **Seeders**, last of all — the kernel appends seeded events immediately, so
+7. **Seeders**, last of all — the kernel appends seeded events immediately, so
    every observer that should see them has to be watching first.
 
 Registration runs again on every reconnect, because a kernel that restarted has
@@ -104,21 +168,25 @@ re-establishes its own observation when the connection comes back.
 
 ## When registration fails
 
-Reactors and reducers are started one at a time. When one cannot be started,
-the client reports it and carries on with the rest, including captures and
-seeders:
+Reactors and reducers are started one at a time. A failure to start one is
+collected while the client tries the others, then captures and seeders. If
+those later steps finish, the pass throws `ArtifactRegistrationFailed` with
+the collected failures. During automatic registration, the event store writes
+a line for each failed observer to standard error, in this form:
 
 ```text
-[ArtifactRegistrations] Reactor 'com.acme.Notifications' could not be started: <message>
+[EventStore] Automatic registration of 'com.acme.Notifications' failed: <message>
 ```
 
-The failed one is tried again on the next registration pass, after a reconnect
-or when you call `registerAll()`; one that started is never started twice.
+The failed observer is tried again on the next registration pass, after a
+reconnect or when you call `registerAll()`; one that started is never started
+twice. Cancellation stops the pass rather than becoming an observer failure.
 
-The other steps (event types, read models, constraints, projections and
-webhooks) run as a whole. When one of them throws, the pass stops there,
-everything later in the order is not registered in that pass, and the client
-writes the failure to standard error:
+Earlier steps (event types, event source definitions, read models, constraints,
+projections and webhooks) stop the pass when they throw. A capture or seeder
+failure also stops the pass, before collected observer failures can be
+reported. Automatic registration writes such a failure to standard error in
+this form:
 
 ```text
 [EventStore] Automatic registration of artifacts failed: <message>
@@ -126,10 +194,12 @@ writes the failure to standard error:
 
 The pass runs again on the next reconnect.
 
-The waiting calls are released anyway: `awaitRegistration()` returns normally,
-and the first append goes ahead, failing if its event type was never
-registered. So a clean return from `awaitRegistration()` does
-not prove that registration succeeded. Check standard error after startup.
+The registration wait is released even when the pass fails. A normal return
+from `awaitRegistration()` does not prove registration succeeded; an append
+can still fail because its event type was not registered. Check standard error
+after startup and inspect the append result. A rejected connection is a
+separate failure and can make the waiting calls throw; see
+[Connection lifecycle](../reference/connection-lifecycle.md#rejected-connections).
 
 Common causes:
 
@@ -144,9 +214,8 @@ skipped without a message.
 
 ## Narrowing the scan
 
-Scanning the whole classpath is fine for most applications and takes a fraction
-of a second. In a large one, or where third-party libraries ship Chronicle
-artifacts of their own, point discovery at the packages you own:
+To exclude third-party artifacts or limit discovery to part of an application,
+point the scan at the packages you own:
 
 <!-- validate: skip -->
 
@@ -325,4 +394,7 @@ reactor registers, rather than failing on every event.
 | Method on `IEventStore` | Description |
 | --- | --- |
 | `registerAll()` | Register everything now. Safe to call repeatedly |
-| `awaitRegistration()` | Wait for it. Returns at once when it is off |
+| `awaitRegistration()` | Wait for the first registration attempt |
+
+This wait does not prove registration succeeded. It returns at once when
+automatic registration is off.

@@ -1215,6 +1215,7 @@ public class io/cratis/chronicle/eventSequences/EventSequence : io/cratis/chroni
 	public fun appendMany (Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun appendMany (Ljava/util/List;Ljava/util/Map;Ljava/util/UUID;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun completeStream (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun copyForEventSource (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getAppendOperations ()Lkotlinx/coroutines/flow/SharedFlow;
 	public fun getForEventSourceIdAndEventTypes (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getFromSequenceNumber-ZSd2mZE (JLjava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -1286,6 +1287,7 @@ public abstract interface class io/cratis/chronicle/eventSequences/IEventLog : i
 	public abstract fun append (Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun appendMany (Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun completeStream (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun copyForEventSource (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getAppendOperations ()Lkotlinx/coroutines/flow/SharedFlow;
 	public abstract fun getForEventSourceIdAndEventTypes (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public abstract fun getFromSequenceNumber-ZSd2mZE (JLjava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -1306,6 +1308,8 @@ public abstract interface class io/cratis/chronicle/eventSequences/IEventSequenc
 	public static synthetic fun appendMany$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun appendMany$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/util/List;Ljava/util/Map;Ljava/util/UUID;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun completeStream (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun copyForEventSource (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun copyForEventSource$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public abstract fun getAppendOperations ()Lkotlinx/coroutines/flow/SharedFlow;
 	public abstract fun getForEventSourceIdAndEventTypes (Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public static synthetic fun getForEventSourceIdAndEventTypes$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
@@ -1326,6 +1330,7 @@ public final class io/cratis/chronicle/eventSequences/IEventSequence$DefaultImpl
 	public static synthetic fun append$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun appendMany$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun appendMany$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/util/List;Ljava/util/Map;Ljava/util/UUID;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun copyForEventSource$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun getForEventSourceIdAndEventTypes$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun getFromSequenceNumber-ZSd2mZE$default (Lio/cratis/chronicle/eventSequences/IEventSequence;JLjava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
 	public static synthetic fun getTailSequenceNumber-NETI2YA$default (Lio/cratis/chronicle/eventSequences/IEventSequence;Ljava/lang/String;Lkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
@@ -2068,6 +2073,8 @@ public final class io/cratis/chronicle/java/BlockingEventSequence {
 	public final fun appendMany (Ljava/util/List;)Ljava/util/List;
 	public static synthetic fun appendMany$default (Lio/cratis/chronicle/java/BlockingEventSequence;Lio/cratis/fundamentals/concepts/ConceptAs;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;ILjava/lang/Object;)Ljava/util/List;
 	public static synthetic fun appendMany$default (Lio/cratis/chronicle/java/BlockingEventSequence;Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;ILjava/lang/Object;)Ljava/util/List;
+	public final fun copyForEventSource (Lio/cratis/fundamentals/concepts/ConceptAs;Lio/cratis/fundamentals/concepts/ConceptAs;[Ljava/lang/Class;)Ljava/lang/String;
+	public final fun copyForEventSource (Ljava/lang/String;Ljava/lang/String;[Ljava/lang/Class;)Ljava/lang/String;
 	public final fun getForEventSourceIdAndEventTypes (Lio/cratis/fundamentals/concepts/ConceptAs;[Ljava/lang/Class;)Ljava/util/List;
 	public final fun getForEventSourceIdAndEventTypes (Ljava/lang/String;[Ljava/lang/Class;)Ljava/util/List;
 	public final fun getFromSequenceNumber (J)Ljava/util/List;
@@ -2195,6 +2202,7 @@ public final class io/cratis/chronicle/java/EventLogJavaBridge {
 	public static final fun append (Lio/cratis/chronicle/eventSequences/IEventLog;Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;)Lio/cratis/chronicle/eventSequences/AppendResult;
 	public static final fun appendMany (Lio/cratis/chronicle/eventSequences/IEventLog;Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;)Ljava/util/List;
 	public static final fun completeStream (Lio/cratis/chronicle/eventSequences/IEventLog;Ljava/lang/String;Ljava/lang/String;)Z
+	public static final fun copyForEventSource (Lio/cratis/chronicle/eventSequences/IEventLog;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Ljava/lang/String;
 	public static final fun getForEventSourceIdAndEventTypes (Lio/cratis/chronicle/eventSequences/IEventLog;Ljava/lang/String;Ljava/util/List;)Ljava/util/List;
 	public static final fun getFromSequenceNumber (Lio/cratis/chronicle/eventSequences/IEventLog;JLjava/lang/String;Ljava/util/List;)Ljava/util/List;
 	public static final fun getNextSequenceNumber (Lio/cratis/chronicle/eventSequences/IEventLog;)J
