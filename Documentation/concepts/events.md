@@ -4,8 +4,10 @@ description: Where the shared Chronicle explanation of events lives, for Kotlin 
 sharedTopicBridge: true
 ---
 
-Events are documented in the shared Chronicle docs so the concepts stay the
-same across C#, Kotlin, Java, Elixir, and TypeScript.
+An event is an immutable, past-tense fact that something happened, appended to an
+event log. The shared Chronicle docs explain events, so the concepts stay the
+same across C#, Kotlin, Java, Elixir, and TypeScript; the pages below cover the
+concepts, and the Kotlin and Java syntax lives in the client guides.
 
 - [Event concept](/chronicle/concepts/event/)
 - [Event types](/chronicle/concepts/event-type/)
