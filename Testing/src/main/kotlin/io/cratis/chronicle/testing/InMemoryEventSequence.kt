@@ -5,10 +5,12 @@ package io.cratis.chronicle.testing
 
 import io.cratis.chronicle.auditing.causationManager
 import io.cratis.chronicle.correlation.correlationIdManager
+import io.cratis.chronicle.eventSequences.AppendError
 import io.cratis.chronicle.eventSequences.AppendOptions
 import io.cratis.chronicle.eventSequences.AppendResult
 import io.cratis.chronicle.eventSequences.AppendedEvent
 import io.cratis.chronicle.eventSequences.AppendedEventWithResult
+import io.cratis.chronicle.eventSequences.CompensateOptions
 import io.cratis.chronicle.eventSequences.CompleteStreamResult
 import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.EventSequenceId
@@ -16,6 +18,7 @@ import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.eventSequences.IEventSequence
 import io.cratis.chronicle.eventSequences.RedactionReason
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
+import io.cratis.chronicle.events.CompensationFor
 import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.events.EventTypeDescriptor
 import io.cratis.chronicle.events.EventTypeGeneration
@@ -227,6 +230,59 @@ class InMemoryEventSequence(
             }
         return UUID.randomUUID().toString()
     }
+
+    /**
+     * Appends [event] as a compensation for the event at [compensationFor], on the kernel's terms: the
+     * original has to exist and the event's type has to be declared with
+     * [@CompensationFor][CompensationFor] for the original's type, and a miss is reported as an error on the
+     * result rather than thrown. The event goes to the original's event source, stream and subject.
+     */
+    override suspend fun compensate(
+        compensationFor: EventSequenceNumber,
+        event: Any,
+        options: CompensateOptions?
+    ): AppendResult {
+        val original = appended.firstOrNull { it.context.sequenceNumber == compensationFor.value }
+            ?: return rejectedCompensation(AppendError.COMPENSATED_EVENT_NOT_FOUND)
+        if (event::class.findAnnotation<CompensationFor>()?.eventType?.eventTypeId() != original.context.eventType.id.value) {
+            return rejectedCompensation(AppendError.EVENT_TYPE_DOES_NOT_COMPENSATE_EVENT_TYPE)
+        }
+
+        val sequenceNumber = appended.size.toLong()
+        val context = contextFor(
+            original.context.eventSourceId,
+            event,
+            sequenceNumber,
+            AppendOptions(
+                correlationId = options?.correlationId,
+                eventSourceType = original.context.eventSourceType,
+                eventStreamType = original.context.eventStreamType,
+                eventStreamId = original.context.eventStreamId,
+                subject = original.context.subject,
+                tags = options?.tags ?: emptyList(),
+                occurred = options?.occurred,
+                causation = options?.causation ?: emptyList()
+            )
+        ).copy(subject = original.context.subject, compensationFor = original.context.sequenceNumber)
+        appended.add(AppendedEvent(context, chronicleGson.toJson(event)))
+
+        val result = AppendResult(
+            sequenceNumber = EventSequenceNumber(sequenceNumber),
+            constraintViolations = emptyList(),
+            errors = emptyList(),
+            isSuccess = true
+        )
+        _appendOperations.tryEmit(listOf(AppendedEventWithResult(context, event, result)))
+        return result
+    }
+
+    /** Like the real client, a rejected append reports sequence number zero alongside its error. */
+    private fun rejectedCompensation(error: String) = AppendResult(
+        sequenceNumber = EventSequenceNumber.first,
+        constraintViolations = emptyList(),
+        errors = listOf(AppendError(error)),
+        isSuccess = false
+    )
 
     /** Whether the event at [sequenceNumber] has been redacted. */
     fun isRedacted(sequenceNumber: Long): Boolean = sequenceNumber in redacted

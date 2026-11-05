@@ -3,6 +3,29 @@ title: Annotations
 description: Every annotation in the Chronicle JVM client, with its parameters, defaults and where it applies.
 ---
 
+Use this reference to find an annotation's parameters, defaults, and where it
+applies. Browse by concern:
+
+- Events and schemas: [@EventType](#eventtype), [@JsonSchemaType](#jsonschematype).
+- Observers and event sequences: [@Reactor](#reactor), [@OnceOnly](#onceonly),
+  [@StartAtTail](#startattail), [@Replay](#replay), [@Reducer](#reducer),
+  [@EventSequence](#eventsequence).
+- Read models and projections: [@ReadModel](#readmodel), [@Passive](#passive),
+  [@Projection](#projection), [@FromEvent](#fromevent), [@Key](#key),
+  [@ContextKey](#contextkey).
+- Projection mappings: [@SetFrom](#setfrom), [@SetValue](#setvalue),
+  [@SetFromContext](#setfromcontext), [@Join](#join),
+  [@ChildrenFrom](#childrenfrom), [@Nested](#nested), [@ClearWith](#clearwith),
+  [@Count](#count), [@Increment / @Decrement](#increment--decrement),
+  [@AddFrom / @SubtractFrom](#addfrom--subtractfrom),
+  [@FromAll / @FromEvery](#fromall--fromevery), [@NotRewindable](#notrewindable),
+  [@RemovedWith](#removedwith), [@RemovedWithJoin](#removedwithjoin),
+  [@NoAutoMap](#noautomap).
+- Constraints: [@Constraint](#constraint), [@Unique](#unique),
+  [@RemoveConstraint](#removeconstraint).
+- Seeding, compliance and webhooks: [@Seeder](#seeder), [@Pii](#pii),
+  [@Subject](#subject), [@Webhook](#webhook).
+
 ## @EventType
 
 Marks a data class as a Chronicle event type.
@@ -24,6 +47,34 @@ data class OrderPlaced(val orderId: String, val totalAmount: Double)
 
 Omitting `id` is the common case — Chronicle uses `OrderPlaced` as the
 identifier automatically.
+
+---
+
+## @CompensationFor
+
+Marks an `@EventType` as a compensation for another event type. The target is
+recorded on the event type's schema, and `compensate` only accepts the event
+when its type is declared for the type of the event being compensated.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `eventType` | `KClass<*>` | The `@EventType` this event compensates for. |
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.events.CompensationFor
+import io.cratis.chronicle.events.EventType
+
+@EventType
+data class InvoiceIssued(val invoiceId: String)
+
+@EventType
+@CompensationFor(InvoiceIssued::class)
+data class InvoiceCredited(val reason: String)
+```
+
+See [Compensating events](../guides/compensation.md).
 
 ---
 

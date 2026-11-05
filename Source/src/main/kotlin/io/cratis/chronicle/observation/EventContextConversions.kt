@@ -12,6 +12,7 @@ import io.cratis.chronicle.events.EventObservationState
 import io.cratis.chronicle.events.EventTypeDescriptor
 import io.cratis.chronicle.events.EventTypeGeneration
 import io.cratis.chronicle.events.EventTypeId
+import io.cratis.chronicle.events.toCompensatedSequenceNumber
 import io.cratis.chronicle.identity.Identity
 import io.cratis.chronicle.toUuid
 import java.time.Instant
@@ -46,7 +47,8 @@ internal fun ObservationReactors.EventContext.toEventContext(): EventContext = E
     hash = hash,
     observationState = EventObservationState(observationStateValue),
     subject = subject,
-    eventSource = eventSource
+    eventSource = eventSource,
+    compensationFor = compensationFor.toCompensatedSequenceNumber()
 )
 
 /** Converts the reducer contract's event context into an [EventContext]. */
@@ -70,7 +72,8 @@ internal fun ObservationReducers.EventContext.toEventContext(): EventContext = E
     hash = hash,
     observationState = EventObservationState(observationStateValue),
     subject = subject,
-    eventSource = eventSource
+    eventSource = eventSource,
+    compensationFor = compensationFor.toCompensatedSequenceNumber()
 )
 
 private fun ObservationReactors.Identity.toIdentity(): Identity = Identity(
