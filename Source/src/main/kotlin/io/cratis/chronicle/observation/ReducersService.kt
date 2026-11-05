@@ -8,10 +8,8 @@ import Cratis.Chronicle.Contracts.Observation.Reducers.ReducersGrpcKt
 import io.cratis.chronicle.connection.ConnectionLifecycle
 import io.cratis.chronicle.diagnostics.ChronicleTraces
 import io.cratis.chronicle.events.EventType
-import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.projections.EVENT_SOURCE_ID_EXPRESSION
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
-import io.opentelemetry.api.common.Attributes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,8 +40,10 @@ class ReducersService(
         registration.readModelClass?.let { readModels?.registerWithObserver(it, 1, registration.id, passive = !registration.isActive) }
         readModels?.registerReducer(reducer, registration)
 
-        val eventTypes = registration.handlers.map { (id, handler) ->
-            val ann = handler.eventClass.findAnnotation<EventType>()!!
+        val dispatch = ReducerEventDispatch(registration, ReducerFold(registration, reducer, traces))
+
+        val eventTypes = registration.eventTypes.map { (id, eventClass) ->
+            val ann = eventClass.findAnnotation<EventType>()!!
             ObservationReducers.EventTypeWithKeyExpression.newBuilder()
                 .setEventType(
                     ObservationReducers.EventType.newBuilder()
@@ -62,7 +62,7 @@ class ReducersService(
             lifecycle.connections().collectLatest { connectionId ->
                 while (isActive) {
                     try {
-                        doObserve(connectionId, eventTypes, reducer, registration)
+                        doObserve(connectionId, eventTypes, dispatch, registration)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -80,7 +80,7 @@ class ReducersService(
     private suspend fun doObserve(
         connectionId: String,
         eventTypes: List<ObservationReducers.EventTypeWithKeyExpression>,
-        reducer: Any,
+        dispatch: ReducerEventDispatch,
         registration: ReducerRegistration
     ) {
         // Use a Channel instead of MutableSharedFlow so that messages sent before
@@ -113,6 +113,9 @@ class ReducersService(
                                             .addAllEventTypes(eventTypes)
                                             .build()
                                     )
+                                    // Ask for pages: many event sources per delivery, on every path. A
+                                    // kernel that does not know the field keeps sending one at a time.
+                                    .setPageDelivery(ObservationReducers.PageDelivery.newBuilder().setEnabled(true).build())
                                     .build()
                             )
                             .build()
@@ -121,67 +124,18 @@ class ReducersService(
             )
 
             stub.observe(requests.receiveAsFlow()).collect { operation ->
-                val partition = operation.partition
-                val initialStateJson = operation.initialState
-                val exceptions = mutableListOf<String>()
-                var stackTrace = ""
-                var currentState: Any? = null
-                var lastSuccessfulSequenceNumber = 0L
+                // A replay notification on its own carries no events and expects no answer.
+                if (operation.isReplayNotification()) return@collect
 
-                // Deserialize initial state if present
-                val readModelClass = registration.readModelClass
-                if (initialStateJson.isNotBlank() && readModelClass != null) {
-                    try {
-                        currentState = chronicleGson.fromJson(initialStateJson, readModelClass.java)
-                    } catch (_: Exception) {}
-                }
-
-                for (appendedEvent in operation.eventsList) {
-                    val handler = registration.handlers[appendedEvent.context.eventType.id]
-                    if (handler == null) {
-                        lastSuccessfulSequenceNumber = appendedEvent.context.sequenceNumber
-                        continue
-                    }
-
-                    try {
-                        val context = appendedEvent.context.toEventContext()
-                        currentState = traces.span(
-                            "Chronicle reduce ${context.eventType.id.value}",
-                            reduceAttributes(registration, context)
-                        ) {
-                            val event = chronicleGson.fromJson(appendedEvent.content, handler.eventClass.java)
-                            handler.invokeReducer(reducer, event, currentState, context)
-                        }
-                        lastSuccessfulSequenceNumber = appendedEvent.context.sequenceNumber
-                    } catch (e: Exception) {
-                        // Reflection wraps a throwing handler, so the message and stack trace the
-                        // kernel is told about are taken from what the handler actually raised.
-                        exceptions.add(e.messageFor(handler.function.name))
-                        stackTrace = e.unwrapReflectionFailure().stackTraceToString()
-                    }
-                }
-
-                val resultState = if (exceptions.isEmpty())
-                    ObservationReducers.ObservationState.Success
-                else
-                    ObservationReducers.ObservationState.Failed
-
-                val readModelStateJson = if (currentState != null) chronicleGson.toJson(currentState) else ""
+                val page = operation.toDeliveredPage()
+                val context = page.contextFor(registration.id, eventStoreName, namespace, registration.eventSequenceId)
+                val outcomes = dispatch.observe(page, context)
 
                 requests.send(
                     ObservationReducers.ReducerMessage.newBuilder()
                         .setContent(
                             ObservationReducers.OneOf_RegisterReducer_ReducerResult.newBuilder()
-                                .setValue1(
-                                    ObservationReducers.ReducerResult.newBuilder()
-                                        .setPartition(partition)
-                                        .setState(resultState)
-                                        .setLastSuccessfulObservation(lastSuccessfulSequenceNumber)
-                                        .addAllExceptionMessages(exceptions)
-                                        .setExceptionStackTrace(stackTrace)
-                                        .setReadModelState(readModelStateJson)
-                                        .build()
-                                )
+                                .setValue1(operation.resultFor(outcomes))
                                 .build()
                         )
                         .build()
@@ -194,18 +148,8 @@ class ReducersService(
         }
     }
 
-    /** What a reader of a trace needs to place this fold: which reducer, which event, where. */
-    private fun reduceAttributes(
-        registration: ReducerRegistration,
-        context: io.cratis.chronicle.events.EventContext
-    ): Attributes = Attributes.builder()
-        .put(ChronicleTraces.OBSERVER_ID, registration.id)
-        .put(ChronicleTraces.EVENT_TYPE, context.eventType.id.value)
-        .put(ChronicleTraces.EVENT_SOURCE_ID, context.eventSourceId)
-        .put(ChronicleTraces.EVENT_SEQUENCE_ID, registration.eventSequenceId)
-        .put(ChronicleTraces.SEQUENCE_NUMBER, context.sequenceNumber)
-        .put(ChronicleTraces.IS_REPLAY, context.observationState.isReplay)
-        .build()
+    private fun ObservationReducers.ReduceOperationMessage.isReplayNotification(): Boolean =
+        replayState != ObservationReducers.ReplayState.REPLAY_STATE_None && eventsCount == 0 && partitionsCount == 0
 
     private companion object {
         /** How long to wait before re-establishing an observation whose stream ended. */

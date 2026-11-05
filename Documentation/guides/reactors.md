@@ -9,6 +9,7 @@ examples for C#, Kotlin, Java, Elixir, and TypeScript.
 
 - [Getting started with reactors](/chronicle/reactors/getting-started/)
 - [Reactor event processing](/chronicle/reactors/event-processing/)
+- [Handling events in batches](/chronicle/reactors/batches/)
 - [Reactors overview](/chronicle/reactors/)
 
 Use the [Kotlin annotation

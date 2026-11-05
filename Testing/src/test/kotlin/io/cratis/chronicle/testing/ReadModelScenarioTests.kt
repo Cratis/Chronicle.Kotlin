@@ -4,6 +4,8 @@
 package io.cratis.chronicle.testing
 
 import io.cratis.chronicle.events.EventContext
+import io.cratis.chronicle.observation.EventBatch
+import io.cratis.chronicle.observation.Observes
 import io.cratis.chronicle.observation.Reducer
 import io.cratis.chronicle.readModels.ReadModel
 import kotlinx.coroutines.delay
@@ -44,6 +46,11 @@ private class SuspendingReducer {
 
 private class NotAReducer {
     fun somethingElse(name: String) = name
+}
+
+private class BatchEmployeeStateReducer {
+    @Observes(EmployeeHired::class)
+    fun reduce(@Suppress("UNUSED_PARAMETER") events: EventBatch, current: EmployeeState?): EmployeeState? = current
 }
 
 /**
@@ -146,6 +153,14 @@ class ReadModelScenarioTests {
             ReadModelScenario<EmployeeState>(NotAReducer())
         }
         assertTrue(error.message!!.contains("no handler methods"))
+    }
+
+    @Test
+    fun `a batch reducer is refused, naming its batch method`() {
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            ReadModelScenario<EmployeeState>(BatchEmployeeStateReducer())
+        }
+        assertTrue(error.message!!.contains("has a batch method"))
     }
 
     @Test

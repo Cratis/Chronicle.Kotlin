@@ -49,16 +49,16 @@ class HandlerFailureTests {
     }
 
     @Test
-    fun `an outcome records the handler's message and its stack trace`() {
-        val outcome = ReactorObservationOutcome()
-
-        outcome.failed(
+    fun `a problem records the handler's message and its stack trace`() {
+        val problem = PartitionProblem.failed(
+            "employee-1",
+            3,
             InvocationTargetException(IllegalStateException("mail server refused the connection")),
             "employeeHired"
         )
 
-        assertEquals(listOf("mail server refused the connection"), outcome.exceptions)
-        assertTrue(outcome.stackTrace.contains("IllegalStateException"), outcome.stackTrace)
-        assertTrue(!outcome.isSuccess)
+        assertEquals(listOf("mail server refused the connection"), problem.messages)
+        assertTrue(problem.stackTrace.contains("IllegalStateException"), problem.stackTrace)
+        assertEquals(PartitionState.Failed, problem.state)
     }
 }

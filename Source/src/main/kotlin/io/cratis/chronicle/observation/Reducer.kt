@@ -11,11 +11,15 @@ package io.cratis.chronicle.observation
  *   Defaults to the event log when not specified.
  * @property isActive Whether the reducer runs actively on the kernel. A passive reducer is
  *   registered but not run, so its read model is only produced on demand.
+ * @property maxConcurrency How many event sources of one delivered page are reduced at the same time.
+ *   Zero, the default, uses the number of processors; 1 reduces them one after another. The calls
+ *   share the one reducer instance, so a reducer that keeps state between calls should use 1.
  */
 @Target(AnnotationTarget.CLASS)
 @Retention(AnnotationRetention.RUNTIME)
 annotation class Reducer(
     val id: String = "",
     val eventSequence: String = "",
-    val isActive: Boolean = true
+    val isActive: Boolean = true,
+    val maxConcurrency: Int = 0
 )

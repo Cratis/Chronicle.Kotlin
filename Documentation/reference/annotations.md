@@ -207,6 +207,54 @@ class ShippingNotifications {
 
 ---
 
+## @Observes
+
+Declares an event type a **batch method** observes. A batch method takes an
+`EventBatch` as its first parameter and is called once per delivered page with
+every event of the types it observes, in sequence order and across event
+sources, rather than once per event. Repeat the annotation once per event type
+and match on the events inside. Java writes it the same way:
+`@Observes(OrderPlaced.class)`.
+
+A reactor batch method takes the `EventBatch` and optionally a `BatchContext`,
+and returns nothing. A reactor can have batch methods and per-event handlers
+side by side, but each event type reaches exactly one method: observing a type
+another method also handles, `@Observes` on a method without an `EventBatch`,
+a batch method without `@Observes`, or a per-event handler taking a
+`BatchContext` is refused at registration.
+
+`batch.fail(...)` and `batch.defer(...)` report a single event source - from its
+first event in the batch, or from a given event - and the rest of the batch
+succeeds. Throwing fails every event source in the batch. See
+[Handling events in batches](/chronicle/reactors/batches/).
+
+<!-- validate: declarations -->
+
+```kotlin
+import io.cratis.chronicle.observation.BatchContext
+import io.cratis.chronicle.observation.EventBatch
+import io.cratis.chronicle.observation.Observes
+import io.cratis.chronicle.observation.Reactor
+import java.time.Duration
+
+@Reactor
+class ShipmentIndex {
+    @Observes(OrderPlaced::class)
+    @Observes(OrderShipped::class)
+    suspend fun index(batch: EventBatch, context: BatchContext) {
+        for (e in batch) {
+            when (val event = e.event) {
+                is OrderPlaced -> println("Indexing ${event.orderId} (${context.origin})")
+                is OrderShipped ->
+                    if (event.carrier.isEmpty()) batch.defer(e.context, Duration.ofSeconds(30))
+            }
+        }
+    }
+}
+```
+
+---
+
 ## @Reducer
 
 Marks a class as a reducer. Each public method folds one event type into the
@@ -217,6 +265,11 @@ read model.
 | `id` | `String` | `""` | Stable identifier. Defaults to class name. |
 | `eventSequence` | `String` | event log | The event sequence to observe. Overridden by [@EventSequence](#eventsequence). |
 | `isActive` | `Boolean` | `true` | Whether the kernel runs the reducer. |
+| `maxConcurrency` | `Int` | `0` | Event sources reduced at once. |
+
+The event sources of one delivered page are reduced at the same time, up to
+`maxConcurrency`. `0` uses the processor count, and `1` reduces them one after
+another. The calls share the reducer instance.
 
 A passive reducer (`isActive = false`) stores nothing: reading its read model
 folds the event source's events from the reducer's event sequence in the
@@ -226,6 +279,13 @@ events on every call. A reducer whose read model carries
 
 A handler takes the event, the state so far, and optionally an `EventContext`.
 The state is `null` until the first event for an event source has been folded in.
+
+Instead of per-event handlers, a reducer can have exactly one batch method -
+never both. It takes an `EventBatch` of one event source's events, the state so
+far, and optionally a `BatchContext`, declares its event types with
+[@Observes](#observes), and returns the next state; `null` removes the read
+model. It is called once per event source of each delivered page. See
+[Reducing events in batches](/chronicle/reducers/batches/).
 
 <!-- validate: declarations -->
 

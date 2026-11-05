@@ -88,8 +88,14 @@ class ReactorsService(
             requests.send(registrationMessage(registration, connectionId, eventTypes))
 
             stub.observe(requests.receiveAsFlow()).collect { eventsToObserve ->
-                val outcome = dispatch.observe(eventsToObserve.partition, eventsToObserve.eventsList)
-                requests.send(resultMessage(eventsToObserve.partition, outcome))
+                // A replay notification on its own carries no events and expects no answer: this client
+                // learns of a replay from the flags on the replayed events themselves.
+                if (eventsToObserve.isReplayNotification()) return@collect
+
+                val page = eventsToObserve.toDeliveredPage()
+                val context = page.contextFor(registration.id, eventStoreName, namespace, registration.eventSequenceId)
+                val outcomes = dispatch.observe(page, context)
+                requests.send(resultMessage(eventsToObserve.resultFor(outcomes)))
             }
         } finally {
             // Leaking the channel would strand a dead stream holding buffered messages
@@ -130,37 +136,26 @@ class ReactorsService(
                                     .addAllEventTypes(eventTypes)
                                     .build()
                             )
+                            // Ask for pages: many partitions per delivery, on every path. A kernel that
+                            // does not know the field keeps sending one partition at a time.
+                            .setPageDelivery(ObservationReactors.PageDelivery.newBuilder().setEnabled(true).build())
                             .build()
                     )
                     .build()
             )
             .build()
 
-    private fun resultMessage(
-        partition: String,
-        outcome: ReactorObservationOutcome
-    ): ObservationReactors.ReactorMessage =
+    private fun resultMessage(result: ObservationReactors.ReactorResult): ObservationReactors.ReactorMessage =
         ObservationReactors.ReactorMessage.newBuilder()
             .setContent(
                 ObservationReactors.OneOf_RegisterReactor_ReactorResult.newBuilder()
-                    .setValue1(
-                        ObservationReactors.ReactorResult.newBuilder()
-                            .setPartition(partition)
-                            .setState(
-                                if (outcome.isSuccess) {
-                                    ObservationReactors.ObservationState.Success
-                                } else {
-                                    ObservationReactors.ObservationState.Failed
-                                }
-                            )
-                            .setLastSuccessfulObservation(outcome.lastSuccessfulSequenceNumber)
-                            .addAllExceptionMessages(outcome.exceptions)
-                            .setExceptionStackTrace(outcome.stackTrace)
-                            .build()
-                    )
+                    .setValue1(result)
                     .build()
             )
             .build()
+
+    private fun ObservationReactors.EventsToObserve.isReplayNotification(): Boolean =
+        replayState != ObservationReactors.ReplayState.REPLAY_STATE_None && eventsCount == 0 && partitionsCount == 0
 
     private companion object {
         /** How long to wait before re-establishing an observation whose stream ended. */

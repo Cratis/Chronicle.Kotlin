@@ -2600,6 +2600,106 @@ public final class io/cratis/chronicle/namespaces/NamespacesService : io/cratis/
 	public fun getAll (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
+public final class io/cratis/chronicle/observation/BatchContext {
+	public static final field Companion Lio/cratis/chronicle/observation/BatchContext$Companion;
+	public static final field NO_SEQUENCE_NUMBER J
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/observation/ObservationOrigin;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/observation/ObservationOrigin;Ljava/util/List;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/observation/ObservationOrigin;Ljava/util/List;I)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/observation/ObservationOrigin;Ljava/util/List;IJ)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/observation/ObservationOrigin;Ljava/util/List;IJJ)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/observation/ObservationOrigin;Ljava/util/List;IJJLjava/time/Instant;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/observation/ObservationOrigin;Ljava/util/List;IJJLjava/time/Instant;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun getDeadline ()Ljava/time/Instant;
+	public final fun getEventCount ()I
+	public final fun getEventSequenceId ()Ljava/lang/String;
+	public final fun getEventStore ()Ljava/lang/String;
+	public final fun getFirstSequenceNumber ()J
+	public final fun getLastSequenceNumber ()J
+	public final fun getNamespace ()Ljava/lang/String;
+	public final fun getObserverId ()Ljava/lang/String;
+	public final fun getOrigin ()Lio/cratis/chronicle/observation/ObservationOrigin;
+	public final fun getPartitions ()Ljava/util/List;
+	public final fun isReplay ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/observation/BatchContext$Companion {
+}
+
+public final class io/cratis/chronicle/observation/BatchContextOnlyForBatchMethods : java/lang/IllegalArgumentException {
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;)V
+}
+
+public final class io/cratis/chronicle/observation/BatchMethodObservesNothing : java/lang/IllegalArgumentException {
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;)V
+}
+
+public final class io/cratis/chronicle/observation/BatchMethodObservesUnknownEventType : java/lang/IllegalArgumentException {
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;Lkotlin/reflect/KClass;)V
+}
+
+public final class io/cratis/chronicle/observation/DeferralNotSupportedByKernel : java/lang/Exception {
+	public fun <init> (Ljava/lang/String;)V
+}
+
+public final class io/cratis/chronicle/observation/EventAndContext {
+	public fun <init> (Ljava/lang/Object;Lio/cratis/chronicle/events/EventContext;)V
+	public final fun component1 ()Ljava/lang/Object;
+	public final fun component2 ()Lio/cratis/chronicle/events/EventContext;
+	public final fun copy (Ljava/lang/Object;Lio/cratis/chronicle/events/EventContext;)Lio/cratis/chronicle/observation/EventAndContext;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/observation/EventAndContext;Ljava/lang/Object;Lio/cratis/chronicle/events/EventContext;ILjava/lang/Object;)Lio/cratis/chronicle/observation/EventAndContext;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getContext ()Lio/cratis/chronicle/events/EventContext;
+	public final fun getEvent ()Ljava/lang/Object;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/observation/EventBatch : java/util/List, kotlin/jvm/internal/markers/KMappedMarker {
+	public fun <init> (Ljava/util/List;)V
+	public fun add (ILio/cratis/chronicle/observation/EventAndContext;)V
+	public synthetic fun add (ILjava/lang/Object;)V
+	public fun add (Lio/cratis/chronicle/observation/EventAndContext;)Z
+	public synthetic fun add (Ljava/lang/Object;)Z
+	public fun addAll (ILjava/util/Collection;)Z
+	public fun addAll (Ljava/util/Collection;)Z
+	public fun clear ()V
+	public fun contains (Lio/cratis/chronicle/observation/EventAndContext;)Z
+	public final fun contains (Ljava/lang/Object;)Z
+	public fun containsAll (Ljava/util/Collection;)Z
+	public final fun defer (Lio/cratis/chronicle/events/EventContext;Ljava/time/Duration;)V
+	public final fun defer (Ljava/lang/String;Ljava/time/Duration;)V
+	public final fun fail (Lio/cratis/chronicle/events/EventContext;Ljava/lang/Throwable;)V
+	public final fun fail (Ljava/lang/String;Ljava/lang/Throwable;)V
+	public fun get (I)Lio/cratis/chronicle/observation/EventAndContext;
+	public synthetic fun get (I)Ljava/lang/Object;
+	public final fun getPartitions ()Ljava/util/List;
+	public fun getSize ()I
+	public fun indexOf (Lio/cratis/chronicle/observation/EventAndContext;)I
+	public final fun indexOf (Ljava/lang/Object;)I
+	public fun isEmpty ()Z
+	public fun iterator ()Ljava/util/Iterator;
+	public fun lastIndexOf (Lio/cratis/chronicle/observation/EventAndContext;)I
+	public final fun lastIndexOf (Ljava/lang/Object;)I
+	public fun listIterator ()Ljava/util/ListIterator;
+	public fun listIterator (I)Ljava/util/ListIterator;
+	public fun remove (I)Lio/cratis/chronicle/observation/EventAndContext;
+	public synthetic fun remove (I)Ljava/lang/Object;
+	public fun remove (Ljava/lang/Object;)Z
+	public fun removeAll (Ljava/util/Collection;)Z
+	public fun replaceAll (Ljava/util/function/UnaryOperator;)V
+	public fun retainAll (Ljava/util/Collection;)Z
+	public fun set (ILio/cratis/chronicle/observation/EventAndContext;)Lio/cratis/chronicle/observation/EventAndContext;
+	public synthetic fun set (ILjava/lang/Object;)Ljava/lang/Object;
+	public final fun size ()I
+	public fun sort (Ljava/util/Comparator;)V
+	public fun subList (II)Ljava/util/List;
+	public fun toArray ()[Ljava/lang/Object;
+	public fun toArray ([Ljava/lang/Object;)[Ljava/lang/Object;
+	public fun toString ()Ljava/lang/String;
+}
+
 public abstract interface annotation class io/cratis/chronicle/observation/EventSequence : java/lang/annotation/Annotation {
 	public static final field Companion Lio/cratis/chronicle/observation/EventSequence$Companion;
 	public abstract fun value ()Ljava/lang/String;
@@ -2614,6 +2714,10 @@ public abstract interface annotation class io/cratis/chronicle/observation/Event
 
 public abstract interface annotation class io/cratis/chronicle/observation/EventStreamType : java/lang/annotation/Annotation {
 	public abstract fun value ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/observation/EventTypeObservedByMoreThanOneMethod : java/lang/IllegalArgumentException {
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;)V
 }
 
 public final class io/cratis/chronicle/observation/FailedPartition {
@@ -2737,6 +2841,10 @@ public abstract interface class io/cratis/chronicle/observation/IReducersService
 	public abstract fun register (Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
+public final class io/cratis/chronicle/observation/InvalidBatchMethod : java/lang/IllegalArgumentException {
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/lang/String;)V
+}
+
 public final class io/cratis/chronicle/observation/InvalidHandlerSignature : java/lang/IllegalArgumentException {
 	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/lang/String;)V
 }
@@ -2744,6 +2852,17 @@ public final class io/cratis/chronicle/observation/InvalidHandlerSignature : jav
 public final class io/cratis/chronicle/observation/ObservationId {
 	public static final field INSTANCE Lio/cratis/chronicle/observation/ObservationId;
 	public final fun generate ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/observation/ObservationOrigin : java/lang/Enum {
+	public static final field CatchUp Lio/cratis/chronicle/observation/ObservationOrigin;
+	public static final field Live Lio/cratis/chronicle/observation/ObservationOrigin;
+	public static final field Replay Lio/cratis/chronicle/observation/ObservationOrigin;
+	public static final field Retry Lio/cratis/chronicle/observation/ObservationOrigin;
+	public static final field Unknown Lio/cratis/chronicle/observation/ObservationOrigin;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/cratis/chronicle/observation/ObservationOrigin;
+	public static fun values ()[Lio/cratis/chronicle/observation/ObservationOrigin;
 }
 
 public final class io/cratis/chronicle/observation/ObservationState : java/lang/Enum {
@@ -2837,7 +2956,27 @@ public final class io/cratis/chronicle/observation/Observers : io/cratis/chronic
 	public fun remove (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
+public abstract interface annotation class io/cratis/chronicle/observation/Observes : java/lang/annotation/Annotation {
+	public abstract fun value ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class io/cratis/chronicle/observation/Observes$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Lio/cratis/chronicle/observation/Observes;
+}
+
+public final class io/cratis/chronicle/observation/ObservesOnlyOnBatchMethods : java/lang/IllegalArgumentException {
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;)V
+}
+
 public abstract interface annotation class io/cratis/chronicle/observation/OnceOnly : java/lang/annotation/Annotation {
+}
+
+public final class io/cratis/chronicle/observation/PartitionFailedInBatch : java/lang/Exception {
+	public fun <init> (Ljava/lang/String;)V
+}
+
+public final class io/cratis/chronicle/observation/PartitionNotInBatch : java/lang/IllegalArgumentException {
+	public fun <init> (Ljava/lang/String;)V
 }
 
 public abstract interface annotation class io/cratis/chronicle/observation/Reactor : java/lang/annotation/Annotation {
@@ -2895,6 +3034,11 @@ public abstract interface annotation class io/cratis/chronicle/observation/Reduc
 	public abstract fun eventSequence ()Ljava/lang/String;
 	public abstract fun id ()Ljava/lang/String;
 	public abstract fun isActive ()Z
+	public abstract fun maxConcurrency ()I
+}
+
+public final class io/cratis/chronicle/observation/ReducerHasMoreThanOneBatchMethod : java/lang/IllegalArgumentException {
+	public fun <init> (Lkotlin/reflect/KClass;)V
 }
 
 public final class io/cratis/chronicle/observation/ReducerId {
@@ -2909,6 +3053,10 @@ public final class io/cratis/chronicle/observation/ReducerId {
 	public fun toString ()Ljava/lang/String;
 	public static fun toString-impl (Ljava/lang/String;)Ljava/lang/String;
 	public final synthetic fun unbox-impl ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/observation/ReducerMixesBatchAndPerEventMethods : java/lang/IllegalArgumentException {
+	public fun <init> (Lkotlin/reflect/KClass;)V
 }
 
 public final class io/cratis/chronicle/observation/ReducersService : io/cratis/chronicle/observation/IReducersService {
