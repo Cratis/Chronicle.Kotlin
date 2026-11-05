@@ -12,7 +12,10 @@ The scenario API is Kotlin: `given` and `fold` are
 `suspend` functions, so a Java test cannot call them directly. The examples on
 this page are Kotlin.
 
-These scenarios do not enforce constraints, execute projections, check concurrency scopes, or run observation and replay. Use a kernel-backed integration test when a spec needs that behavior; see [What is real and what is not](#what-is-real-and-what-is-not).
+These scenarios do not enforce constraints, execute projections, check concurrency
+scopes, or run observation and replay. Use a kernel-backed integration test when
+a spec needs that behavior; see
+[What is real and what is not](#what-is-real-and-what-is-not).
 
 The examples use application-defined events, registration logic and a reducer,
 rather than supplying a complete test project. See [Reducers](./reducers.md) for

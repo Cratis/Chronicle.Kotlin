@@ -43,7 +43,7 @@ matches the task:
 
 | Member | Use it for |
 | --- | --- |
-| `getSnapshotsById` | Historical snapshots for a read model key, grouped by correlation id. |
+| `getSnapshotsById` | Snapshots by key, grouped by correlation id. |
 | `watch` | A `Flow` of live changesets for a read model. |
 | `materialized` | Paginated, server-materialized reads — see below. |
 

@@ -65,7 +65,8 @@ dependencies {
 }
 ```
 
-For local development, use either the standalone image or the Docker Compose example below, not both.
+For local development, use either the standalone image or the Docker Compose
+example below, not both.
 
 ### Standalone development image
 
@@ -78,7 +79,8 @@ docker run --rm -p 127.0.0.1:35000:35000 cratis/chronicle:latest-development
 
 ### Development Docker Compose
 
-Alternatively, use Docker Compose to run the development kernel and database in separate containers. Chronicle serves gRPC, the API, and health checks on port
+Alternatively, use Docker Compose to run the development kernel and database in
+separate containers. Chronicle serves gRPC, the API, and health checks on port
 `35000` over TLS with a self-signed development certificate. The ports below
 are bound to loopback so the development kernel and database are not
 reachable from other machines:

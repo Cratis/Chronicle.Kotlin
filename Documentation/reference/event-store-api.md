@@ -3,10 +3,16 @@ title: EventStore API
 description: The IChronicleClient, IEventStore and service interfaces of the JVM client, and the blocking API for Java.
 ---
 
-Use this reference to find the JVM client's interfaces and service APIs, or the blocking API for Java.
+Use this reference to find the JVM client's interfaces and service APIs, or the
+blocking API for Java.
 
-- Kotlin: start with [IChronicleClient](#ichronicleclient) and [IEventStore](#ieventstore); see [IEventSequence and IEventLog](#ieventsequence-and-ieventlog) for appends and reads.
-- Java: start with [the blocking client](#start-here-the-blocking-client). [The lower-level bridges](#the-lower-level-bridges) cover interop without that wrapper.
+- Kotlin: start with [IChronicleClient](#ichronicleclient) and
+  [IEventStore](#ieventstore); see
+  [IEventSequence and IEventLog](#ieventsequence-and-ieventlog) for appends
+  and reads.
+- Java: start with [the blocking client](#start-here-the-blocking-client).
+  [The lower-level bridges](#the-lower-level-bridges) cover interop without that
+  wrapper.
 
 ## IChronicleClient
 
