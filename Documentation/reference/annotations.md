@@ -3,6 +3,29 @@ title: Annotations
 description: Every annotation in the Chronicle JVM client, with its parameters, defaults and where it applies.
 ---
 
+Use this reference to find an annotation's parameters, defaults, and where it
+applies. Browse by concern:
+
+- Events and schemas: [@EventType](#eventtype), [@JsonSchemaType](#jsonschematype).
+- Observers and event sequences: [@Reactor](#reactor), [@OnceOnly](#onceonly),
+  [@StartAtTail](#startattail), [@Replay](#replay), [@Reducer](#reducer),
+  [@EventSequence](#eventsequence).
+- Read models and projections: [@ReadModel](#readmodel), [@Passive](#passive),
+  [@Projection](#projection), [@FromEvent](#fromevent), [@Key](#key),
+  [@ContextKey](#contextkey).
+- Projection mappings: [@SetFrom](#setfrom), [@SetValue](#setvalue),
+  [@SetFromContext](#setfromcontext), [@Join](#join),
+  [@ChildrenFrom](#childrenfrom), [@Nested](#nested), [@ClearWith](#clearwith),
+  [@Count](#count), [@Increment / @Decrement](#increment--decrement),
+  [@AddFrom / @SubtractFrom](#addfrom--subtractfrom),
+  [@FromAll / @FromEvery](#fromall--fromevery), [@NotRewindable](#notrewindable),
+  [@RemovedWith](#removedwith), [@RemovedWithJoin](#removedwithjoin),
+  [@NoAutoMap](#noautomap).
+- Constraints: [@Constraint](#constraint), [@Unique](#unique),
+  [@RemoveConstraint](#removeconstraint).
+- Seeding, compliance and webhooks: [@Seeder](#seeder), [@Pii](#pii),
+  [@Subject](#subject), [@Webhook](#webhook).
+
 ## @EventType
 
 Marks a data class as a Chronicle event type.

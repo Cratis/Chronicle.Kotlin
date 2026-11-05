@@ -3,17 +3,23 @@ title: Testing
 description: Specify what a Kotlin slice appends and what a reducer folds, in-process with io.cratis:chronicle-testing and no kernel.
 ---
 
-Specifying a Chronicle-backed slice used to mean driving the real client against
-a running event store: a kernel, a sink, Docker, and a test that takes seconds
-instead of milliseconds. That is an integration test, and it has its place — but
-it is a poor place to specify "given these three events, the state should be
-this".
+Use `EventScenario` to check what a slice appends, or `ReadModelScenario` to
+fold events into a reducer's state, without starting a kernel.
 
-`io.cratis:chronicle-testing` runs the same code with nothing behind it.
+`io.cratis:chronicle-testing` runs these append and reducer scenarios in-process.
 
 The scenario API is Kotlin: `given` and `fold` are
 `suspend` functions, so a Java test cannot call them directly. The examples on
 this page are Kotlin.
+
+These scenarios do not enforce constraints, execute projections, check concurrency
+scopes, or run observation and replay. Use a kernel-backed integration test when
+a spec needs that behavior; see
+[What is real and what is not](#what-is-real-and-what-is-not).
+
+The examples use application-defined events, registration logic and a reducer,
+rather than supplying a complete test project. See [Reducers](./reducers.md) for
+the reducer model.
 
 ## Adding it
 
