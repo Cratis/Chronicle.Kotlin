@@ -1,6 +1,6 @@
 ---
 title: Spring Boot
-description: Add the Chronicle Spring Boot starter to a Kotlin or Java application, inject IEventStore or Chronicle, and use per-request tenancy, identity, causation and units of work.
+description: Add the Chronicle Spring Boot starter to a Kotlin or Java app, inject IEventStore or Chronicle, and use per-request tenancy, identity and units of work.
 ---
 
 The Chronicle Spring Boot starter turns "wire up an event-sourced backend" into

@@ -1,6 +1,6 @@
 ---
 title: Appending Events
-description: Where the shared guide to appending events lives, with Kotlin and Java tabs.
+description: Find the shared guide to appending events to an event log, with Kotlin and Java tabs showing the JVM client calls for event sources and event sequences.
 sharedTopicBridge: true
 ---
 

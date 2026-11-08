@@ -1,6 +1,6 @@
 ---
 title: Guides
-description: Where to find Chronicle task guides for Kotlin and Java, and the guides that only apply to the JVM client.
+description: Browse Chronicle task guides for Kotlin and Java, including the shared guides with JVM tabs and the guides that only apply to the Chronicle JVM client.
 sharedTopicBridge: true
 ---
 

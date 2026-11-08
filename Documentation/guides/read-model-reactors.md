@@ -1,6 +1,6 @@
 ---
 title: Read Model Reactors
-description: React to read model changes in Kotlin and Java with a read model reactor instead of collecting watch flows by hand.
+description: React to read model changes in Kotlin and Java with a read model reactor, and stop collecting watch flows by hand when you need to act on updated state.
 ---
 
 `store.readModels.watch(...)` hands you a `Flow` of changesets — and with it

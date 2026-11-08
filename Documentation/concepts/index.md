@@ -1,6 +1,6 @@
 ---
 title: Concepts
-description: Where the shared Chronicle concept pages live, and which JVM pages cover syntax.
+description: Find the shared Chronicle concept pages for events, observers and read models, and see which JVM pages show the matching Kotlin and Java client syntax.
 sharedTopicBridge: true
 ---
 

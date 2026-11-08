@@ -1,6 +1,6 @@
 ---
 title: Seeding
-description: Seed events from Kotlin and Java so an event store starts with the facts it needs, per namespace.
+description: Seed events from Kotlin and Java so an event store starts with the facts it needs, either for every namespace or per namespace, such as for demo or test data.
 ---
 
 This page shows how to seed events using the Chronicle Kotlin client.

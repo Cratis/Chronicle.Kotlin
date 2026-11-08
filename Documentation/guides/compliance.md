@@ -1,6 +1,6 @@
 ---
 title: PII Compliance
-description: Where the shared guide to PII compliance lives, with Kotlin and Java tabs.
+description: Find the shared guide to PII compliance and encryption of personal data in events, with Kotlin and Java tabs showing how to mark sensitive properties.
 sharedTopicBridge: true
 ---
 

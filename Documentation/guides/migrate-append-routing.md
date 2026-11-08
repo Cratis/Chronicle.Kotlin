@@ -1,6 +1,6 @@
 ---
 title: Migrate append routing
-description: Preserve explicit legacy event routes when upgrading the Kotlin and Java client.
+description: Preserve explicit legacy event routes when upgrading the Kotlin and Java client, so existing appends keep reaching the same event sequences after the change.
 ---
 
 Since version 6.0.0 (released 2026-09-17), the Kotlin and Java client no

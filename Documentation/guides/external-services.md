@@ -1,6 +1,6 @@
 ---
 title: External Services
-description: Register named HTTP and database external services with the Kotlin and Java client.
+description: Register named HTTP and database external services with the Kotlin and Java client so reactors and captures can call them by name from your application code.
 ---
 
 This page shows how to register external services using the Chronicle

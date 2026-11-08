@@ -1,6 +1,6 @@
 ---
 title: Reference
-description: Look up the JVM client's annotations, IEventStore API, configuration, connection lifecycle and geospatial types.
+description: Look up the JVM client's annotations, IEventStore API, configuration, connection lifecycle and geospatial types, with a link to the page covering each of them.
 ---
 
 Complete API and annotation reference for the Chronicle client for Kotlin and

@@ -1,6 +1,6 @@
 ---
 title: Events
-description: Where the shared Chronicle explanation of events lives, for Kotlin and Java readers.
+description: Find the shared Chronicle explanation of events and see which Kotlin and Java pages cover the JVM client syntax for defining and using event types.
 sharedTopicBridge: true
 ---
 

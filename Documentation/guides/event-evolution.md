@@ -1,6 +1,6 @@
 ---
 title: Event Evolution
-description: Where the shared guide to evolving event types lives, with Kotlin and Java tabs.
+description: Find the shared guide to evolving event types with generations and migrations, with Kotlin and Java tabs showing how to version events in the JVM client.
 sharedTopicBridge: true
 ---
 

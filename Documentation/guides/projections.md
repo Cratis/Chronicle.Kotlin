@@ -1,6 +1,6 @@
 ---
 title: Projections
-description: Where the shared guide to projections lives, with Kotlin and Java tabs.
+description: Find the shared guide to projections that build read models from events, with Kotlin and Java tabs showing how to declare them in the JVM client.
 sharedTopicBridge: true
 ---
 

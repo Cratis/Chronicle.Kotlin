@@ -1,6 +1,6 @@
 ---
 title: Annotations
-description: Every annotation in the Chronicle JVM client, with its parameters, defaults and where it applies.
+description: Look up every annotation in the Chronicle JVM client, with its parameters, defaults and the kind of class or member it applies to in Kotlin and Java code.
 ---
 
 Use this reference to find an annotation's parameters, defaults, and where it

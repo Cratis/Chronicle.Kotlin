@@ -1,6 +1,6 @@
 ---
 title: Compensating events
-description: Declare compensating event types with @CompensationFor and append them with compensate in the Chronicle Kotlin client.
+description: Declare compensating event types with @CompensationFor and append them with compensate in the Chronicle Kotlin client to correct earlier events.
 ---
 
 A compensating event records, as a new fact, that an earlier event is being
