@@ -1,6 +1,6 @@
 ---
 title: Geospatial types
-description: Point, LineString and Polygon in the JVM client, and how they serialize as GeoJSON for geospatial indexing.
+description: Use Point, LineString and Polygon in the JVM client, and learn how they serialize as GeoJSON so Chronicle can index geospatial data in your read models.
 ---
 
 Chronicle recognizes a value as geospatial by its [GeoJSON](https://geojson.org)

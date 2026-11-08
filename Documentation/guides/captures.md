@@ -1,6 +1,6 @@
 ---
 title: Captures
-description: Declare a capture in Kotlin or Java so the kernel pulls facts from an external source and appends them as events.
+description: Declare a capture in Kotlin or Java so the Chronicle kernel pulls facts from an external source and appends them to the event log as events.
 ---
 
 Not everything that matters happens inside your application. An exchange rate

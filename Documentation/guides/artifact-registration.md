@@ -1,6 +1,6 @@
 ---
 title: Artifact Registration
-description: How the JVM client discovers event types, read models, observers, constraints and other artifacts, registers them in order, and how to narrow, replace or turn that off.
+description: Learn how the JVM client discovers event types, read models, observers and constraints, registers them in order, and how to narrow, replace or disable it.
 ---
 
 Chronicle's kernel has to know what your application is made of before it can do

@@ -1,6 +1,6 @@
 ---
 title: Observers
-description: Where the shared Chronicle explanation of observers lives, for Kotlin and Java readers.
+description: Find the shared Chronicle explanation of observers and see which Kotlin and Java pages show how to declare reactors, reducers and projections in the JVM client.
 sharedTopicBridge: true
 ---
 

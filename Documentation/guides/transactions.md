@@ -1,6 +1,6 @@
 ---
 title: Transactions
-description: Where the shared guide to transactions and units of work lives, with Kotlin and Java tabs.
+description: Find the shared guide to transactions and units of work, with Kotlin and Java tabs showing how to group appended events and commit them together.
 sharedTopicBridge: true
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: Constraints
-description: Where the shared guide to constraints lives, with Kotlin and Java tabs.
+description: Find the shared guide to declaring constraints such as unique values on events, with Kotlin and Java tabs showing how to define them in the JVM client.
 sharedTopicBridge: true
 ---
 

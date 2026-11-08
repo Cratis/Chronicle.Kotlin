@@ -1,6 +1,6 @@
 ---
 title: Read Models
-description: Where the shared Chronicle explanation of read models lives, for Kotlin and Java readers.
+description: Find the shared Chronicle explanation of read models and see which Kotlin and Java pages show how to define and query them with the JVM client.
 sharedTopicBridge: true
 ---
 

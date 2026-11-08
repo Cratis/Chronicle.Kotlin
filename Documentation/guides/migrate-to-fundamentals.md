@@ -1,6 +1,6 @@
 ---
 title: Migrate to Fundamentals
-description: Update concepts and correlation ids for Chronicle 7.x in Kotlin and Java without changing stored JSON or schemas.
+description: Update concepts and correlation ids for Chronicle 7.x in Kotlin and Java without changing stored JSON or schemas, and learn which code changes you need.
 ---
 
 Chronicle 7.x adopts `io.cratis:fundamentals:0.1.0`. This is a **major,

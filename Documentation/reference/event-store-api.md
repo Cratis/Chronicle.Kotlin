@@ -1,6 +1,6 @@
 ---
 title: EventStore API
-description: The IChronicleClient, IEventStore and service interfaces of the JVM client, and the blocking API for Java.
+description: Look up the IChronicleClient, IEventStore and service interfaces of the JVM client, and the blocking API that lets Java code call them without coroutines.
 ---
 
 Use this reference to find the JVM client's interfaces and service APIs, or the

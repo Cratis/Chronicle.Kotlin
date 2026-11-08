@@ -1,6 +1,6 @@
 ---
 title: Reactors
-description: Where the shared guide to reactors lives, with Kotlin and Java tabs.
+description: Find the shared guide to reactors that run side effects when events are appended, with Kotlin and Java tabs showing how to declare them in the JVM client.
 sharedTopicBridge: true
 ---
 

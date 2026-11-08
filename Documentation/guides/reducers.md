@@ -1,6 +1,6 @@
 ---
 title: Reducers
-description: Where the shared guide to reducers lives, with Kotlin and Java tabs.
+description: Find the shared guide to reducers that fold events into read model state, with Kotlin and Java tabs showing how to declare them in the JVM client.
 sharedTopicBridge: true
 ---
 
