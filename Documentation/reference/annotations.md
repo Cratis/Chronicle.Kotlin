@@ -21,6 +21,9 @@ applies. Browse by concern:
   [@FromAll / @FromEvery](#fromall--fromevery), [@NotRewindable](#notrewindable),
   [@RemovedWith](#removedwith), [@RemovedWithJoin](#removedwithjoin),
   [@NoAutoMap](#noautomap).
+- Graph projections: [@Graph](#graph), [@Node](#node), [@Edge](#edge),
+  [@EdgeSource / @EdgeTarget](#edgesource--edgetarget),
+  [@EdgeFrom](#edgefrom), [@EdgeRemovedWith](#edgeremovedwith).
 - Constraints: [@Constraint](#constraint), [@Unique](#unique),
   [@RemoveConstraint](#removeconstraint).
 - Seeding, compliance and webhooks: [@Seeder](#seeder), [@Pii](#pii),
@@ -655,6 +658,10 @@ takes this today as a bare property-name string; `@Key` is the
 strongly-typed alternative for consumers that resolve the key by
 reflection instead of by name.
 
+On a [@Node](#node) it marks the property holding the node's unique key, and
+on an [@Edge](#edge) the property that identifies the edge among edges of the
+same type between the same two nodes.
+
 No parameters.
 
 <!-- validate: declarations -->
@@ -960,9 +967,11 @@ collection.
 | `eventType` | `KClass<*>` | — | The event class that triggers removal. |
 | `key` | `String` | `"EventSourceId"` | Event property for what to remove. |
 | `parentKey` | `String` | `"EventSourceId"` | Event property for the parent. |
+| `detach` | `Boolean` | `false` | Only on a [@Node](#node): delete the node's edges with it. |
 
 `parentKey` only applies when removing a single child from a
-`@ChildrenFrom` collection.
+`@ChildrenFrom` collection. `detach` only applies to a graph node; without
+it a node that still has edges cannot be deleted.
 
 ---
 
@@ -986,6 +995,81 @@ single property, it excludes just that property from AutoMap while
 siblings keep auto-mapping.
 
 No parameters.
+
+---
+
+## @Graph
+
+Names the property graph a node or an edge belongs to, or a fluent
+`IGraphProjection` builds. Without it the graph is named after the package of
+the type. The name is the identifier of the read model the graph is registered
+as. See [Graph projections](../guides/graph-projections.md).
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `value` | `String` | — | The name of the graph. |
+
+---
+
+## @Node
+
+Marks a class as a node of a property graph. The label of the node is the
+simple name of the class. Exactly one property needs [@Key](#key). Project
+events onto it with [@FromEvent](#fromevent), [@RemovedWith](#removedwith) and
+the property mappings of a read model. A node cannot also be a
+[@ReadModel](#readmodel).
+
+No parameters.
+
+---
+
+## @Edge
+
+Marks a class as an edge of a property graph. Exactly one property needs
+[@EdgeSource](#edgesource--edgetarget) and one
+[@EdgeTarget](#edgesource--edgetarget). One property with [@Key](#key) gives
+the edge an identity.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `value` | `String` | — | The type of the edge, such as `MEMBER_OF`. |
+
+---
+
+## @EdgeSource / @EdgeTarget
+
+Mark the properties of an [@Edge](#edge) holding the keys of the node the edge
+starts from and the node it ends at. They are not properties of the edge. They
+are the `[Source<T>]` and `[Target<T>]` of the .NET client.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `value` | `KClass<*>` | — | The node class. |
+
+---
+
+## @EdgeFrom
+
+Declares that an event creates or updates an [@Edge](#edge). Repeatable. The
+properties of the edge map by name from the event, or with the property
+mappings of a read model naming this event.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `eventType` | `KClass<*>` | — | The event class. |
+| `sourceKey` | `String` | `"EventSourceId"` | Event property: source key. |
+| `targetKey` | `String` | `"EventSourceId"` | Event property: target key. |
+| `identity` | `String` | `""` | Event property: edge identity. |
+
+`identity` defaults to the event property named like the edge's `@Key`.
+
+---
+
+## @EdgeRemovedWith
+
+Declares that an event deletes an [@Edge](#edge). The nodes at both ends stay.
+Repeatable, with the same parameters as [@EdgeFrom](#edgefrom) except that it
+maps no properties.
 
 ---
 

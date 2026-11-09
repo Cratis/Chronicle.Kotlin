@@ -14,6 +14,8 @@ and client-tabbed examples.
 - [Model-bound projections](/chronicle/projections/model-bound/)
 - [Declarative projections](/chronicle/projections/declarative/)
 - [Kotlin and Java client setup](../get-started/)
+- [Graph projections](graph-projections.md): project events onto a property
+  graph of nodes and edges instead of a document read model.
 
 ## Kotlin model-bound attributes
 

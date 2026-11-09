@@ -32,6 +32,8 @@
   href: reducers.md
 - name: Projections
   href: projections.md
+- name: Graph projections
+  href: graph-projections.md
 - name: Constraints
   href: constraints.md
 - name: Seeding
