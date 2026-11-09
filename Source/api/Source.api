@@ -2365,6 +2365,12 @@ public final class io/cratis/chronicle/java/BlockingEventSequence {
 	public final fun appendMany (Ljava/util/List;)Ljava/util/List;
 	public static synthetic fun appendMany$default (Lio/cratis/chronicle/java/BlockingEventSequence;Lio/cratis/fundamentals/concepts/ConceptAs;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;ILjava/lang/Object;)Ljava/util/List;
 	public static synthetic fun appendMany$default (Lio/cratis/chronicle/java/BlockingEventSequence;Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;ILjava/lang/Object;)Ljava/util/List;
+	public final fun beginImport ()Ljava/util/concurrent/CompletableFuture;
+	public final fun beginImport (Lio/cratis/chronicle/imports/ImportId;)Ljava/util/concurrent/CompletableFuture;
+	public final fun beginImport (Lio/cratis/chronicle/imports/ImportId;Lio/cratis/chronicle/imports/ImportOptions;)Ljava/util/concurrent/CompletableFuture;
+	public final fun beginImport (Lio/cratis/chronicle/imports/ImportOptions;)Ljava/util/concurrent/CompletableFuture;
+	public static synthetic fun beginImport$default (Lio/cratis/chronicle/java/BlockingEventSequence;Lio/cratis/chronicle/imports/ImportId;Lio/cratis/chronicle/imports/ImportOptions;ILjava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
+	public static synthetic fun beginImport$default (Lio/cratis/chronicle/java/BlockingEventSequence;Lio/cratis/chronicle/imports/ImportOptions;ILjava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
 	public final fun compensate (JLjava/lang/Object;)Lio/cratis/chronicle/eventSequences/AppendResult;
 	public final fun compensate (JLjava/lang/Object;Lio/cratis/chronicle/eventSequences/CompensateOptions;)Lio/cratis/chronicle/eventSequences/AppendResult;
 	public static synthetic fun compensate$default (Lio/cratis/chronicle/java/BlockingEventSequence;JLjava/lang/Object;Lio/cratis/chronicle/eventSequences/CompensateOptions;ILjava/lang/Object;)Lio/cratis/chronicle/eventSequences/AppendResult;
@@ -2383,6 +2389,14 @@ public final class io/cratis/chronicle/java/BlockingEventSequence {
 	public static synthetic fun getTailSequenceNumber$default (Lio/cratis/chronicle/java/BlockingEventSequence;Ljava/lang/String;ILjava/lang/Object;)J
 	public final fun hasEventsFor (Lio/cratis/fundamentals/concepts/ConceptAs;)Z
 	public final fun hasEventsFor (Ljava/lang/String;)Z
+	public final fun importEvents (Ljava/util/concurrent/Flow$Publisher;)Ljava/util/concurrent/CompletableFuture;
+	public final fun importEvents (Ljava/util/concurrent/Flow$Publisher;Lio/cratis/chronicle/imports/ImportOptions;)Ljava/util/concurrent/CompletableFuture;
+	public final fun importEvents (Ljava/util/concurrent/Flow$Publisher;Lio/cratis/chronicle/imports/ImportOptions;Ljava/util/function/Consumer;)Ljava/util/concurrent/CompletableFuture;
+	public final fun importEvents (Ljava/util/stream/Stream;)Ljava/util/concurrent/CompletableFuture;
+	public final fun importEvents (Ljava/util/stream/Stream;Lio/cratis/chronicle/imports/ImportOptions;)Ljava/util/concurrent/CompletableFuture;
+	public final fun importEvents (Ljava/util/stream/Stream;Lio/cratis/chronicle/imports/ImportOptions;Ljava/util/function/Consumer;)Ljava/util/concurrent/CompletableFuture;
+	public static synthetic fun importEvents$default (Lio/cratis/chronicle/java/BlockingEventSequence;Ljava/util/concurrent/Flow$Publisher;Lio/cratis/chronicle/imports/ImportOptions;Ljava/util/function/Consumer;ILjava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
+	public static synthetic fun importEvents$default (Lio/cratis/chronicle/java/BlockingEventSequence;Ljava/util/stream/Stream;Lio/cratis/chronicle/imports/ImportOptions;Ljava/util/function/Consumer;ILjava/lang/Object;)Ljava/util/concurrent/CompletableFuture;
 	public final fun redact (JLjava/lang/String;)V
 	public final fun redactForEventSource (Lio/cratis/fundamentals/concepts/ConceptAs;Ljava/lang/String;[Ljava/lang/Class;)V
 	public final fun redactForEventSource (Ljava/lang/String;Ljava/lang/String;[Ljava/lang/Class;)V
@@ -2595,6 +2609,20 @@ public final class io/cratis/chronicle/java/FailedPartitionsJavaBridge {
 public final class io/cratis/chronicle/java/IdentityManagerServiceJavaBridge {
 	public static final field INSTANCE Lio/cratis/chronicle/java/IdentityManagerServiceJavaBridge;
 	public static final fun rename (Lio/cratis/chronicle/identities/IIdentityManagerService;Ljava/lang/String;Ljava/lang/String;)V
+}
+
+public final class io/cratis/chronicle/java/JavaEventImport {
+	public fun <init> (Lio/cratis/chronicle/imports/IEventImport;)V
+	public final fun abandon ()Ljava/util/concurrent/CompletableFuture;
+	public final fun add (Ljava/util/List;)Ljava/util/concurrent/CompletableFuture;
+	public final fun add (Ljava/util/concurrent/Flow$Publisher;)Ljava/util/concurrent/CompletableFuture;
+	public final fun add (Ljava/util/stream/Stream;)Ljava/util/concurrent/CompletableFuture;
+	public final fun close ()Ljava/util/concurrent/CompletableFuture;
+	public final fun complete ()Ljava/util/concurrent/CompletableFuture;
+	public final fun getEventsAcknowledged ()J
+	public final fun getImportId ()Lio/cratis/chronicle/imports/ImportId;
+	public final fun onProgress (Ljava/util/function/Consumer;)Ljava/lang/AutoCloseable;
+	public final fun unwrap ()Lio/cratis/chronicle/imports/IEventImport;
 }
 
 public final class io/cratis/chronicle/java/JobsServiceJavaBridge {

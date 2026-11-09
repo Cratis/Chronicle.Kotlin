@@ -11,9 +11,23 @@ import io.cratis.chronicle.eventSequences.EventForEventSourceId
 import io.cratis.chronicle.eventSequences.EventSequenceNumber
 import io.cratis.chronicle.eventSequences.IEventSequence
 import io.cratis.chronicle.eventSequences.RedactionReason
+import io.cratis.chronicle.imports.ImportId
+import io.cratis.chronicle.imports.ImportOptions
+import io.cratis.chronicle.imports.ImportProgress
+import io.cratis.chronicle.imports.ImportResult
 import io.cratis.fundamentals.concepts.ConceptAs
-import kotlinx.coroutines.runBlocking
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Flow as JdkFlow
+import java.util.function.Consumer
+import java.util.stream.Stream
 import kotlin.reflect.KClass
+import kotlin.streams.asSequence
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.FlowCollector
+import kotlinx.coroutines.future.future
+import kotlinx.coroutines.jdk9.asFlow
+import kotlinx.coroutines.runBlocking
 
 /**
  * An event sequence for Java, without the coroutines.
@@ -158,4 +172,67 @@ class BlockingEventSequence(private val sequence: IEventSequence) {
     /** Copies every event of the typed [sourceId] onto [targetId] as a kernel job, or only those of [eventTypes]. */
     fun copyForEventSource(sourceId: ConceptAs<String>, targetId: ConceptAs<String>, vararg eventTypes: Class<*>): String =
         copyForEventSource(sourceId.value(), targetId.value(), *eventTypes)
+
+    /**
+     * Imports events from a reactive publisher in bulk, without blocking: the publisher is read as
+     * chunks are sent, every event is validated before any is committed, and the commit runs on the
+     * kernel. Cancelling the future stops reading; nothing staged is committed.
+     *
+     * Unlike the rest of this class, this does not block - an import can run for a long time - and is
+     * named `importEvents` because `import` is reserved in Java.
+     *
+     * @param events The events, in the order they are to be committed.
+     * @param options The [ImportOptions].
+     * @param onProgress Receives the progress the kernel reports while the import runs.
+     * @return The [ImportResult], once committed unless [ImportOptions.waitForCommit] is false.
+     */
+    @JvmOverloads
+    fun importEvents(
+        events: JdkFlow.Publisher<EventForEventSourceId>,
+        options: ImportOptions = ImportOptions.default,
+        onProgress: Consumer<ImportProgress>? = null,
+    ): CompletableFuture<ImportResult> =
+        futures.future { sequence.import(events.asFlow(), options, onProgress?.toCollector()) }
+
+    /**
+     * Imports events from a stream in bulk, without blocking, reading it lazily as chunks are sent. The
+     * stream is closed afterwards. Otherwise the same as the publisher overload.
+     *
+     * @param events The events, in the order they are to be committed.
+     * @param options The [ImportOptions].
+     * @param onProgress Receives the progress the kernel reports while the import runs.
+     * @return The [ImportResult].
+     */
+    @JvmOverloads
+    fun importEvents(
+        events: Stream<EventForEventSourceId>,
+        options: ImportOptions = ImportOptions.default,
+        onProgress: Consumer<ImportProgress>? = null,
+    ): CompletableFuture<ImportResult> =
+        futures.future { events.use { sequence.import(it.asSequence(), options, onProgress?.toCollector()) } }
+
+    /**
+     * Begins an import session, for producers that are not one stream.
+     *
+     * @param options The [ImportOptions].
+     * @return The session.
+     */
+    @JvmOverloads
+    fun beginImport(options: ImportOptions = ImportOptions.default): CompletableFuture<JavaEventImport> =
+        futures.future { JavaEventImport(sequence.beginImport(options)) }
+
+    /**
+     * Reattaches to an import session that is still staging.
+     *
+     * @param importId The import to reattach to.
+     * @param options The [ImportOptions].
+     * @return The session, continuing after the events the kernel acknowledged.
+     */
+    @JvmOverloads
+    fun beginImport(importId: ImportId, options: ImportOptions = ImportOptions.default): CompletableFuture<JavaEventImport> =
+        futures.future { JavaEventImport(sequence.beginImport(importId, options)) }
+
+    private val futures: CoroutineScope get() = CoroutineScope(Dispatchers.IO)
+
+    private fun Consumer<ImportProgress>.toCollector(): FlowCollector<ImportProgress> = FlowCollector { accept(it) }
 }
