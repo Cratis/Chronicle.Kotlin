@@ -174,13 +174,31 @@ class ChildrenOrderingProjectionTests {
     }
 
     @Test
-    fun `registering a fluent ordering fails clearly until the contracts carry it`() {
-        val error = assertThrows(ChildrenOrderingNotSupportedByContracts::class.java) { register(OrderedThreadProjection()) }
-        assertEquals(true, error.message!!.contains("'comments'"))
+    fun `registering a fluent ordering sends it with the children`() {
+        val ordering = register(OrderedThreadProjection()).single().childrenMap.getValue("comments").ordering
+        assertEquals(ProjectionsOuterClass.ChildrenPlacement.Sorted, ordering.placement)
+        assertEquals("postedAt", ordering.sortBy)
+        assertEquals(ProjectionsOuterClass.SortDirection.Ascending, ordering.direction)
     }
 
     @Test
-    fun `registering a model-bound ordering fails clearly until the contracts carry it`() {
-        assertThrows(ChildrenOrderingNotSupportedByContracts::class.java) { register(NewestFirstThread::class) }
+    fun `registering a model-bound ordering sends it with the children`() {
+        val ordering = register(NewestFirstThread::class).single().childrenMap.getValue("comments").ordering
+        assertEquals(ProjectionsOuterClass.ChildrenPlacement.Prepend, ordering.placement)
+        assertEquals("", ordering.sortBy)
+    }
+
+    @Test
+    fun `registering a model-bound descending ordering sends its direction`() {
+        val ordering = register(SameOrderingThread::class).single().childrenMap.getValue("comments").ordering
+        assertEquals(ProjectionsOuterClass.ChildrenPlacement.Sorted, ordering.placement)
+        assertEquals("postedAt", ordering.sortBy)
+        assertEquals(ProjectionsOuterClass.SortDirection.Descending, ordering.direction)
+    }
+
+    @Test
+    fun `unordered children send no ordering`() {
+        val children = register(UnorderedThread::class).single().childrenMap.getValue("comments")
+        assertEquals(false, children.hasOrdering())
     }
 }

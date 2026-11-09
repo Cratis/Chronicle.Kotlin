@@ -3229,10 +3229,6 @@ public final class io/cratis/chronicle/projections/ChildrenOrderingAlreadyDefine
 	public fun <init> (Lkotlin/reflect/KClass;)V
 }
 
-public final class io/cratis/chronicle/projections/ChildrenOrderingNotSupportedByContracts : java/lang/UnsupportedOperationException {
-	public fun <init> (Ljava/lang/String;)V
-}
-
 public final class io/cratis/chronicle/projections/ChildrenPlacement : java/lang/Enum {
 	public static final field APPEND Lio/cratis/chronicle/projections/ChildrenPlacement;
 	public static final field PREPEND Lio/cratis/chronicle/projections/ChildrenPlacement;

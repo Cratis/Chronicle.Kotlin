@@ -866,10 +866,8 @@ to `EventSourceId`.
 Declare at most one of `prepend`, `orderBy` and `orderByDescending`. When a
 property has several `@ChildrenFrom` annotations, each one that declares an
 ordering must declare the same one; otherwise registration fails with
-`ConflictingChildrenOrdering`. Children ordering needs a Chronicle server and
-contracts version that carry it. Until this client is built against those
-contracts, registering an ordering fails with
-`ChildrenOrderingNotSupportedByContracts`.
+`ConflictingChildrenOrdering`. Children ordering needs Chronicle 19.150.0 or
+later.
 
 ---
 

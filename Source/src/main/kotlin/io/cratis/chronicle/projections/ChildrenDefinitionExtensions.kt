@@ -32,7 +32,7 @@ internal fun collectChildrenMap(readModelClass: KClass<*>): Map<String, Projecti
         val autoMapEnabled = childClass.findAnnotation<NoAutoMap>() == null && readModelClass.findAnnotation<NoAutoMap>() == null
 
         result[prop.name] = ProjectionsOuterClass.ChildrenDefinition.newBuilder()
-            .applyOrdering(prop.name, ordering)
+            .applyOrdering(ordering)
             .setIdentifiedBy(wireKey(identifiedBy))
             .addAllFrom(fromPairs)
             .addAllRemovedWith(removedWith)
@@ -52,7 +52,7 @@ internal fun buildChildrenMapFromEntries(
     entries.associate { entry ->
         val fromPairs = entry.fromEntries.mapNotNull { fe -> buildFromPair(fe.eventClass, fe.key, fe.properties, fe.parentKey) }
         entry.propertyName to ProjectionsOuterClass.ChildrenDefinition.newBuilder()
-            .applyOrdering(entry.propertyName, orderings[entry.propertyName])
+            .applyOrdering(orderings[entry.propertyName])
             .setIdentifiedBy(wireKey(entry.identifiedBy))
             .addAllFrom(fromPairs)
             .setAutoMap(ProjectionsOuterClass.AutoMap.Enabled)
@@ -93,21 +93,28 @@ private fun sortedBy(childClass: KClass<*>, propertyName: String, direction: Sor
     return ChildrenOrdering.sorted(propertyName, direction)
 }
 
-/**
- * Carries [ordering] onto the children definition of [propertyName].
- *
- * The `io.cratis:chronicle-contracts` version this client builds against has no `ChildrenDefinition.ordering`
- * field yet, so an ordering fails registration clearly instead of being dropped and leaving children in
- * arrival order. Once the contracts carry `ChildrenOrderingDefinition`, this sets it.
- *
- * @throws ChildrenOrderingNotSupportedByContracts when [ordering] is set.
- */
+/** Carries [ordering] onto the children definition so the kernel keeps the children in that order. */
 private fun ProjectionsOuterClass.ChildrenDefinition.Builder.applyOrdering(
-    propertyName: String,
     ordering: ChildrenOrdering?,
 ): ProjectionsOuterClass.ChildrenDefinition.Builder {
-    if (ordering != null) throw ChildrenOrderingNotSupportedByContracts(propertyName)
-    return this
+    if (ordering == null) return this
+    return setOrdering(
+        ProjectionsOuterClass.ChildrenOrderingDefinition.newBuilder()
+            .setPlacement(ordering.placement.toContract())
+            .setSortBy(ordering.sortBy)
+            .setDirection(ordering.direction.toContract()),
+    )
+}
+
+private fun ChildrenPlacement.toContract(): ProjectionsOuterClass.ChildrenPlacement = when (this) {
+    ChildrenPlacement.APPEND -> ProjectionsOuterClass.ChildrenPlacement.Append
+    ChildrenPlacement.PREPEND -> ProjectionsOuterClass.ChildrenPlacement.Prepend
+    ChildrenPlacement.SORTED -> ProjectionsOuterClass.ChildrenPlacement.Sorted
+}
+
+private fun SortDirection.toContract(): ProjectionsOuterClass.SortDirection = when (this) {
+    SortDirection.ASCENDING -> ProjectionsOuterClass.SortDirection.Ascending
+    SortDirection.DESCENDING -> ProjectionsOuterClass.SortDirection.Descending
 }
 
 /** Extracts the element [KClass] of a collection-typed property (e.g. `List<Child>` -> `Child`). */

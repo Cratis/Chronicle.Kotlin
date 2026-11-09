@@ -114,9 +114,8 @@ produces a value wins, and replay gives the same result. `toCausedBy` sets a
 property from the identity of whoever caused the event: its `SUBJECT`,
 `NAME` or `USER_NAME`.
 
-`DictionaryKey.fromEvent`, `removeKey` and `setOnce` need a Chronicle kernel
-that includes [Chronicle#5775](https://github.com/Cratis/Chronicle/pull/5775).
-An older kernel rejects the projection when it registers.
+`DictionaryKey.fromEvent`, `removeKey` and `setOnce` need Chronicle 19.150.0
+or later. An older kernel rejects the projection when it registers.
 
 <!-- validate: declarations -->
 
@@ -195,11 +194,8 @@ class ProductReviewsProjection : IProjectionFor<ProductReviews> {
 }
 ```
 
-Children ordering needs Chronicle contracts that include
-`ChildrenOrderingDefinition`. Until this client is built against them,
-registering a projection that declares an ordering fails with
-`ChildrenOrderingNotSupportedByContracts`, so children are never silently
-left in arrival order.
+Children ordering needs Chronicle 19.150.0 or later. An older kernel ignores
+the ordering and keeps children in arrival order.
 
 ## When to use a projection instead of a reducer
 
