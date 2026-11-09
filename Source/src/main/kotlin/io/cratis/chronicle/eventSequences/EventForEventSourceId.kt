@@ -4,7 +4,9 @@
 package io.cratis.chronicle.eventSequences
 
 import io.cratis.chronicle.auditing.Causation
+import io.cratis.chronicle.identity.Identity
 import java.time.Instant
+import java.util.UUID
 import kotlin.reflect.KClass
 
 /**
@@ -46,6 +48,18 @@ import kotlin.reflect.KClass
  *   event goes through. Per-event, so one atomic batch can mix events of different event sources.
  *   It must agree with any explicit [eventSourceType] and [eventStreamType] or the append is rejected.
  * @property eventStream The name of a stream declared by [eventSource]. Requires [eventSource].
+ * @property correlationId The correlation identifier the event had in its source. Used when importing;
+ *   an append takes the correlation of the call.
+ * @property causedBy The identity that caused the event in its source. Used when importing; an append
+ *   records the current identity.
+ * @property generation The generation of its event type the event was written in. Used when importing;
+ *   an append writes the generation the event's type is declared with.
+ * @property sourceSequenceNumber The sequence number the event had in its source. Used when importing,
+ *   where it is kept in the event's causation; the event gets a new sequence number in the sequence it
+ *   is imported into.
+ * @property idempotencyKey A key, typically the source system's event id, that makes importing the event
+ *   idempotent: importing it again into the same sequence reports it as already appended instead of
+ *   appending it twice. Used when importing.
  */
 data class EventForEventSourceId(
     val eventSourceId: String,
@@ -58,7 +72,12 @@ data class EventForEventSourceId(
     val subject: String? = null,
     val causation: List<Causation> = emptyList(),
     val eventSource: KClass<*>? = null,
-    val eventStream: String? = null
+    val eventStream: String? = null,
+    val correlationId: UUID? = null,
+    val causedBy: Identity? = null,
+    val generation: Int? = null,
+    val sourceSequenceNumber: Long? = null,
+    val idempotencyKey: String? = null,
 ) {
     /**
      * Preserves the constructor shape, and its default arguments, from before [eventSource] and [eventStream]
@@ -77,12 +96,35 @@ data class EventForEventSourceId(
         causation: List<Causation> = emptyList()
     ) : this(
         eventSourceId, event, eventStreamType, eventStreamId, eventSourceType, tags, occurred, subject,
-        causation, null, null
+        causation, null, null, null, null, null, null, null
+    )
+
+    /**
+     * Preserves the constructor shape, and its default arguments, from before the import fields
+     * ([correlationId], [causedBy], [generation], [sourceSequenceNumber] and [idempotencyKey]) existed,
+     * so callers compiled against it keep linking. The import fields are absent.
+     */
+    constructor(
+        eventSourceId: String,
+        event: Any,
+        eventStreamType: String? = null,
+        eventStreamId: String? = null,
+        eventSourceType: String? = null,
+        tags: List<String> = emptyList(),
+        occurred: Instant? = null,
+        subject: String? = null,
+        causation: List<Causation> = emptyList(),
+        eventSource: KClass<*>? = null,
+        eventStream: String? = null
+    ) : this(
+        eventSourceId, event, eventStreamType, eventStreamId, eventSourceType, tags, occurred, subject,
+        causation, eventSource, eventStream, null, null, null, null, null
     )
 
     /**
      * Preserves the `copy` shape, and its default arguments, from before [eventSource] and [eventStream]
-     * existed, so callers compiled against it keep linking. The routing of this instance is carried over unchanged.
+     * existed, so callers compiled against it keep linking. The routing and import fields of this instance are
+     * carried over unchanged.
      */
     fun copy(
         eventSourceId: String = this.eventSourceId,
@@ -96,7 +138,28 @@ data class EventForEventSourceId(
         causation: List<Causation> = this.causation
     ): EventForEventSourceId = copy(
         eventSourceId, event, eventStreamType, eventStreamId, eventSourceType, tags, occurred, subject,
-        causation, eventSource, eventStream
+        causation, eventSource, eventStream, correlationId, causedBy, generation, sourceSequenceNumber, idempotencyKey
+    )
+
+    /**
+     * Preserves the `copy` shape, and its default arguments, from before the import fields existed, so callers
+     * compiled against it keep linking. The import fields of this instance are carried over unchanged.
+     */
+    fun copy(
+        eventSourceId: String = this.eventSourceId,
+        event: Any = this.event,
+        eventStreamType: String? = this.eventStreamType,
+        eventStreamId: String? = this.eventStreamId,
+        eventSourceType: String? = this.eventSourceType,
+        tags: List<String> = this.tags,
+        occurred: Instant? = this.occurred,
+        subject: String? = this.subject,
+        causation: List<Causation> = this.causation,
+        eventSource: KClass<*>? = this.eventSource,
+        eventStream: String? = this.eventStream
+    ): EventForEventSourceId = copy(
+        eventSourceId, event, eventStreamType, eventStreamId, eventSourceType, tags, occurred, subject,
+        causation, eventSource, eventStream, correlationId, causedBy, generation, sourceSequenceNumber, idempotencyKey
     )
 
     /**

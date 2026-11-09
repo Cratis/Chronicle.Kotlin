@@ -129,6 +129,35 @@ class ApiCompatibilityTests {
         assertEquals(SomeSource::class, routed.copy(eventSource = SomeSource::class).eventSource)
     }
 
+    @Test
+    fun `the eleven argument event for event source id shape of the previous release still links`() {
+        val eventFor = EventForEventSourceId::class.java
+
+        assertEquals(1, eventFor.defaultConstructorsWithParameterCount(11 + 2))
+        assertEquals(1, eventFor.copyDefaultsWithParameterCount(1 + 11 + 2))
+    }
+
+    @Test
+    fun `copying an event for event source id the eleven argument way keeps the import fields`() {
+        val correlationId = java.util.UUID.randomUUID()
+        val event = EventForEventSourceId(
+            "id",
+            Any(),
+            correlationId = correlationId,
+            generation = 2,
+            sourceSequenceNumber = 7,
+            idempotencyKey = "source-7",
+        )
+
+        val copied = event.copy("other", event.event, null, null, null, emptyList(), null, null, emptyList(), null, null)
+
+        assertEquals("other", copied.eventSourceId)
+        assertEquals(correlationId, copied.correlationId)
+        assertEquals(2, copied.generation)
+        assertEquals(7L, copied.sourceSequenceNumber)
+        assertEquals("source-7", copied.idempotencyKey)
+    }
+
     private fun Class<*>.defaultConstructorsWithParameterCount(count: Int) =
         declaredConstructors.count {
             it.parameterCount == count && it.isSynthetic && it.parameterTypes[count - 2] == Int::class.javaPrimitiveType
