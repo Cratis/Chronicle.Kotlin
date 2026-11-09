@@ -62,6 +62,32 @@ private fun requireProperty(type: KClass<*>, propertyName: String): String {
     return propertyName
 }
 
+/**
+ * Confirms [propertyName] is a `Map` property of [type], so a dictionary entry operation addresses a
+ * property that can hold keyed entries.
+ *
+ * @throws UnknownReadModelProperty when [propertyName] is not a property of [type].
+ * @throws IllegalArgumentException when the property is not a `Map`.
+ */
+private fun requireDictionaryProperty(type: KClass<*>, propertyName: String): String {
+    val property = type.memberProperties.firstOrNull { it.name == propertyName }
+        ?: throw UnknownReadModelProperty(type, propertyName)
+    val classifier = property.returnType.classifier as? KClass<*>
+    require(classifier != null && Map::class.java.isAssignableFrom(classifier.java)) {
+        "'$propertyName' on '${type.simpleName}' is not a dictionary (Map) property, so it cannot hold keyed entries."
+    }
+    return propertyName
+}
+
+/** The target path of the dictionary entry of [propertyName] addressed by [key]. */
+private fun dictionaryEntry(propertyName: String, key: DictionaryKey): String = "$propertyName.${key.segment}"
+
+/** Wraps [expression] in the kernel's set once expression. */
+private fun setOnceExpression(expression: String): String = "\$setOnce($expression)"
+
+/** The kernel's expression for an identity property of whoever caused the event. */
+private fun causedByExpression(property: CausedByProperty): String = "\$causedBy(${property.expressionName})"
+
 class ProjectionBuilderFor<TReadModel : Any>(
     private val readModelClass: KClass<TReadModel>
 ) : IProjectionBuilderFor<TReadModel> {
@@ -72,6 +98,9 @@ class ProjectionBuilderFor<TReadModel : Any>(
     val removedWithEntries = mutableListOf<RemovedWithEntry>()
     val removedWithJoinEntries = mutableListOf<RemovedWithJoinEntry>()
     val childrenEntries = mutableListOf<ChildrenEntry>()
+
+    /** The ordering declared for each children property, keyed by the property name. */
+    val childrenOrderings = mutableMapOf<String, ChildrenOrdering>()
     val nestedEntries = mutableListOf<NestedEntry>()
     var isRewindable = true
         private set
@@ -146,6 +175,7 @@ class ProjectionBuilderFor<TReadModel : Any>(
         val builder = ChildrenBuilderFor(childClass)
         configure(builder)
         childrenEntries.add(ChildrenEntry(property.name, builder.identifiedBy, builder.fromEntries))
+        builder.ordering?.let { childrenOrderings[property.name] = it }
         return this
     }
 
@@ -156,7 +186,9 @@ class ProjectionBuilderFor<TReadModel : Any>(
     ): IProjectionBuilderFor<TReadModel> {
         val builder = ChildrenBuilderFor(childClass.kotlin)
         configure.accept(builder)
-        childrenEntries.add(ChildrenEntry(requireProperty(readModelClass, propertyName), builder.identifiedBy, builder.fromEntries))
+        val name = requireProperty(readModelClass, propertyName)
+        childrenEntries.add(ChildrenEntry(name, builder.identifiedBy, builder.fromEntries))
+        builder.ordering?.let { childrenOrderings[name] = it }
         return this
     }
 
@@ -296,37 +328,101 @@ class FromBuilderFor<TReadModel : Any, TEvent : Any>(
 
     override fun subtract(propertyName: String): ISubtractBuilderFor<TReadModel, TEvent> =
         SubtractBuilderFor(propertyMappings, requireProperty(readModelClass, propertyName), this)
+
+    override fun <TValue : Any?> setOnce(property: KProperty1<TReadModel, TValue>): ISetBuilderFor<TReadModel, TEvent, TValue> =
+        SetBuilderFor(propertyMappings, property.name, this, once = true)
+
+    override fun <TValue : Any?> setOnce(propertyName: String): ISetBuilderFor<TReadModel, TEvent, TValue> =
+        SetBuilderFor(propertyMappings, requireProperty(readModelClass, propertyName), this, once = true)
+
+    override fun <TValue : Any?> set(
+        property: KProperty1<TReadModel, Map<String, TValue>?>,
+        key: DictionaryKey,
+    ): ISetBuilderFor<TReadModel, TEvent, TValue> =
+        SetBuilderFor(propertyMappings, dictionaryEntry(property.name, key), this)
+
+    override fun <TValue : Any?> set(propertyName: String, key: DictionaryKey): ISetBuilderFor<TReadModel, TEvent, TValue> =
+        SetBuilderFor(propertyMappings, dictionaryEntry(requireDictionaryProperty(readModelClass, propertyName), key), this)
+
+    override fun <TValue : Any?> setOnce(
+        property: KProperty1<TReadModel, Map<String, TValue>?>,
+        key: DictionaryKey,
+    ): ISetBuilderFor<TReadModel, TEvent, TValue> =
+        SetBuilderFor(propertyMappings, dictionaryEntry(property.name, key), this, once = true)
+
+    override fun <TValue : Any?> setOnce(propertyName: String, key: DictionaryKey): ISetBuilderFor<TReadModel, TEvent, TValue> =
+        SetBuilderFor(
+            propertyMappings,
+            dictionaryEntry(requireDictionaryProperty(readModelClass, propertyName), key),
+            this,
+            once = true,
+        )
+
+    override fun count(property: KProperty1<TReadModel, Map<String, *>?>, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent> =
+        entryOperation(property.name, key, "\$count")
+
+    override fun count(propertyName: String, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent> =
+        entryOperation(requireDictionaryProperty(readModelClass, propertyName), key, "\$count")
+
+    override fun increment(property: KProperty1<TReadModel, Map<String, *>?>, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent> =
+        entryOperation(property.name, key, "\$increment")
+
+    override fun increment(propertyName: String, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent> =
+        entryOperation(requireDictionaryProperty(readModelClass, propertyName), key, "\$increment")
+
+    override fun decrement(property: KProperty1<TReadModel, Map<String, *>?>, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent> =
+        entryOperation(property.name, key, "\$decrement")
+
+    override fun decrement(propertyName: String, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent> =
+        entryOperation(requireDictionaryProperty(readModelClass, propertyName), key, "\$decrement")
+
+    override fun add(property: KProperty1<TReadModel, Map<String, *>?>, key: DictionaryKey): IAddBuilderFor<TReadModel, TEvent> =
+        AddBuilderFor(propertyMappings, dictionaryEntry(property.name, key), this)
+
+    override fun add(propertyName: String, key: DictionaryKey): IAddBuilderFor<TReadModel, TEvent> =
+        AddBuilderFor(propertyMappings, dictionaryEntry(requireDictionaryProperty(readModelClass, propertyName), key), this)
+
+    override fun subtract(property: KProperty1<TReadModel, Map<String, *>?>, key: DictionaryKey): ISubtractBuilderFor<TReadModel, TEvent> =
+        SubtractBuilderFor(propertyMappings, dictionaryEntry(property.name, key), this)
+
+    override fun subtract(propertyName: String, key: DictionaryKey): ISubtractBuilderFor<TReadModel, TEvent> =
+        SubtractBuilderFor(propertyMappings, dictionaryEntry(requireDictionaryProperty(readModelClass, propertyName), key), this)
+
+    override fun removeKey(property: KProperty1<TReadModel, Map<String, *>?>, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent> =
+        entryOperation(property.name, key, "\$remove")
+
+    override fun removeKey(propertyName: String, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent> =
+        entryOperation(requireDictionaryProperty(readModelClass, propertyName), key, "\$remove")
+
+    private fun entryOperation(propertyName: String, key: DictionaryKey, expression: String): IFromBuilderFor<TReadModel, TEvent> {
+        propertyMappings[dictionaryEntry(propertyName, key)] = expression
+        return this
+    }
 }
 
-class SetBuilderFor<TReadModel : Any, TEvent : Any, TValue : Any?>(
+class SetBuilderFor<TReadModel : Any, TEvent : Any, TValue : Any?> @JvmOverloads constructor(
     private val mappings: MutableMap<String, String>,
     private val targetProperty: String,
-    private val parent: IFromBuilderFor<TReadModel, TEvent>
+    private val parent: IFromBuilderFor<TReadModel, TEvent>,
+    private val once: Boolean = false,
 ) : ISetBuilderFor<TReadModel, TEvent, TValue> {
 
     @Deprecated("Ignores the lambda and maps the same-named event property; use toProperty or toValue instead")
-    override fun to(expression: (TEvent) -> TValue?): IFromBuilderFor<TReadModel, TEvent> {
-        mappings[targetProperty] = targetProperty
-        return parent
-    }
+    override fun to(expression: (TEvent) -> TValue?): IFromBuilderFor<TReadModel, TEvent> = assign(targetProperty)
 
-    override fun toValue(value: TValue?): IFromBuilderFor<TReadModel, TEvent> {
-        mappings[targetProperty] = valueExpression(value)
-        return parent
-    }
+    override fun toValue(value: TValue?): IFromBuilderFor<TReadModel, TEvent> = assign(valueExpression(value))
 
-    override fun toEventSourceId(): IFromBuilderFor<TReadModel, TEvent> {
-        mappings[targetProperty] = "\$eventSourceId"
-        return parent
-    }
+    override fun toEventSourceId(): IFromBuilderFor<TReadModel, TEvent> = assign("\$eventSourceId")
 
-    override fun toProperty(eventProperty: String): IFromBuilderFor<TReadModel, TEvent> {
-        mappings[targetProperty] = eventProperty
-        return parent
-    }
+    override fun toProperty(eventProperty: String): IFromBuilderFor<TReadModel, TEvent> = assign(eventProperty)
 
-    override fun toEventContextProperty(contextProperty: String): IFromBuilderFor<TReadModel, TEvent> {
-        mappings[targetProperty] = "\$eventContext($contextProperty)"
+    override fun toEventContextProperty(contextProperty: String): IFromBuilderFor<TReadModel, TEvent> =
+        assign("\$eventContext($contextProperty)")
+
+    override fun toCausedBy(property: CausedByProperty): IFromBuilderFor<TReadModel, TEvent> = assign(causedByExpression(property))
+
+    private fun assign(expression: String): IFromBuilderFor<TReadModel, TEvent> {
+        mappings[targetProperty] = if (once) setOnceExpression(expression) else expression
         return parent
     }
 }
@@ -368,6 +464,12 @@ class JoinBuilderFor<TReadModel : Any, TEvent : Any>(
     override fun <TValue : Any?> set(propertyName: String): ISetBuilderFor<TReadModel, TEvent, TValue> =
         SetBuilderFor(propertyMappings, requireProperty(readModelClass, propertyName), FromBuilderFor(readModelClass))
 
+    override fun <TValue : Any?> setOnce(property: KProperty1<TReadModel, TValue>): ISetBuilderFor<TReadModel, TEvent, TValue> =
+        SetBuilderFor(propertyMappings, property.name, FromBuilderFor(readModelClass), once = true)
+
+    override fun <TValue : Any?> setOnce(propertyName: String): ISetBuilderFor<TReadModel, TEvent, TValue> =
+        SetBuilderFor(propertyMappings, requireProperty(readModelClass, propertyName), FromBuilderFor(readModelClass), once = true)
+
     override fun on(property: KProperty1<TReadModel, *>): IJoinBuilderFor<TReadModel, TEvent> {
         on = property.name
         return this
@@ -389,6 +491,12 @@ class FromEveryBuilderFor<TReadModel : Any>(
 
     override fun <TValue : Any?> set(propertyName: String): IAllSetBuilderFor<TReadModel, TValue> =
         AllSetBuilderFor(propertyMappings, requireProperty(readModelClass, propertyName), this)
+
+    override fun <TValue : Any?> setOnce(property: KProperty1<TReadModel, TValue>): IAllSetBuilderFor<TReadModel, TValue> =
+        AllSetBuilderFor(propertyMappings, property.name, this, once = true)
+
+    override fun <TValue : Any?> setOnce(propertyName: String): IAllSetBuilderFor<TReadModel, TValue> =
+        AllSetBuilderFor(propertyMappings, requireProperty(readModelClass, propertyName), this, once = true)
 
     override fun <TValue : Any?> count(property: KProperty1<TReadModel, TValue>, keyFromContext: String): IFromEveryBuilderFor<TReadModel> {
         propertyMappings["${property.name}.\$eventContext.$keyFromContext"] = "\$count"
@@ -421,29 +529,26 @@ class FromEveryBuilderFor<TReadModel : Any>(
     }
 }
 
-class AllSetBuilderFor<TReadModel : Any, TValue : Any?>(
+class AllSetBuilderFor<TReadModel : Any, TValue : Any?> @JvmOverloads constructor(
     private val mappings: MutableMap<String, String>,
     private val targetProperty: String,
-    private val parent: IFromEveryBuilderFor<TReadModel>
+    private val parent: IFromEveryBuilderFor<TReadModel>,
+    private val once: Boolean = false,
 ) : IAllSetBuilderFor<TReadModel, TValue> {
 
-    override fun toValue(value: TValue?): IFromEveryBuilderFor<TReadModel> {
-        mappings[targetProperty] = valueExpression(value)
-        return parent
-    }
+    override fun toValue(value: TValue?): IFromEveryBuilderFor<TReadModel> = assign(valueExpression(value))
 
-    override fun toProperty(eventProperty: String): IFromEveryBuilderFor<TReadModel> {
-        mappings[targetProperty] = eventProperty
-        return parent
-    }
+    override fun toProperty(eventProperty: String): IFromEveryBuilderFor<TReadModel> = assign(eventProperty)
 
-    override fun toEventSourceId(): IFromEveryBuilderFor<TReadModel> {
-        mappings[targetProperty] = "\$eventSourceId"
-        return parent
-    }
+    override fun toEventSourceId(): IFromEveryBuilderFor<TReadModel> = assign("\$eventSourceId")
 
-    override fun toEventContextProperty(contextProperty: String): IFromEveryBuilderFor<TReadModel> {
-        mappings[targetProperty] = "\$eventContext($contextProperty)"
+    override fun toEventContextProperty(contextProperty: String): IFromEveryBuilderFor<TReadModel> =
+        assign("\$eventContext($contextProperty)")
+
+    override fun toCausedBy(property: CausedByProperty): IFromEveryBuilderFor<TReadModel> = assign(causedByExpression(property))
+
+    private fun assign(expression: String): IFromEveryBuilderFor<TReadModel> {
+        mappings[targetProperty] = if (once) setOnceExpression(expression) else expression
         return parent
     }
 }
@@ -481,6 +586,8 @@ class ChildrenBuilderFor<TChild : Any>(
     val fromEntries = mutableListOf<FromDefinitionEntry>()
     var identifiedBy: String = "EventSourceId"
         private set
+    var ordering: ChildrenOrdering? = null
+        private set
 
     override fun <TEvent : Any> from(
         eventClass: KClass<TEvent>,
@@ -494,6 +601,26 @@ class ChildrenBuilderFor<TChild : Any>(
 
     override fun identifiedBy(propertyName: String): IChildrenBuilderFor<TChild> {
         identifiedBy = propertyName
+        return this
+    }
+
+    override fun prepend(): IChildrenBuilderFor<TChild> = order(ChildrenOrdering.prepend())
+
+    override fun orderBy(property: KProperty1<TChild, *>): IChildrenBuilderFor<TChild> =
+        order(ChildrenOrdering.sorted(property.name, SortDirection.ASCENDING))
+
+    override fun orderBy(propertyName: String): IChildrenBuilderFor<TChild> =
+        order(ChildrenOrdering.sorted(requireProperty(childClass, propertyName), SortDirection.ASCENDING))
+
+    override fun orderByDescending(property: KProperty1<TChild, *>): IChildrenBuilderFor<TChild> =
+        order(ChildrenOrdering.sorted(property.name, SortDirection.DESCENDING))
+
+    override fun orderByDescending(propertyName: String): IChildrenBuilderFor<TChild> =
+        order(ChildrenOrdering.sorted(requireProperty(childClass, propertyName), SortDirection.DESCENDING))
+
+    private fun order(newOrdering: ChildrenOrdering): IChildrenBuilderFor<TChild> {
+        if (ordering != null) throw ChildrenOrderingAlreadyDefined(childClass)
+        ordering = newOrdering
         return this
     }
 }
@@ -512,6 +639,12 @@ class ChildFromBuilderFor<TChild : Any, TEvent : Any>(
 
     override fun <TValue : Any?> set(propertyName: String): ISetBuilderFor<TChild, TEvent, TValue> =
         SetBuilderFor(propertyMappings, requireProperty(childClass, propertyName), FromBuilderFor(childClass))
+
+    override fun <TValue : Any?> setOnce(property: KProperty1<TChild, TValue>): ISetBuilderFor<TChild, TEvent, TValue> =
+        SetBuilderFor(propertyMappings, property.name, FromBuilderFor(childClass), once = true)
+
+    override fun <TValue : Any?> setOnce(propertyName: String): ISetBuilderFor<TChild, TEvent, TValue> =
+        SetBuilderFor(propertyMappings, requireProperty(childClass, propertyName), FromBuilderFor(childClass), once = true)
 
     override fun usingKey(eventPropertyName: String): IChildFromBuilderFor<TChild, TEvent> {
         key = eventPropertyName

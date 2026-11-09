@@ -19,6 +19,12 @@ import kotlin.reflect.KClass
  *   Defaults to the child type's `id`/`key` property, falling back to "EventSourceId".
  * @property parentKey The event property identifying the parent instance.
  *   Defaults to "EventSourceId".
+ * @property prepend Places new children at the start of the collection, so the newest comes first.
+ * @property orderBy Keeps the collection sorted ascending by this property on the child.
+ * @property orderByDescending Keeps the collection sorted descending by this property on the child.
+ *
+ * Declare at most one of [prepend], [orderBy] and [orderByDescending]; when the property has several
+ * [ChildrenFrom] annotations, every one that declares an ordering must declare the same one.
  */
 @Target(AnnotationTarget.PROPERTY, AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
@@ -27,5 +33,8 @@ annotation class ChildrenFrom(
     val eventType: KClass<*>,
     val key: String = "EventSourceId",
     val identifiedBy: String = "",
-    val parentKey: String = "EventSourceId"
+    val parentKey: String = "EventSourceId",
+    val prepend: Boolean = false,
+    val orderBy: String = "",
+    val orderByDescending: String = "",
 )

@@ -3125,10 +3125,23 @@ public abstract interface annotation class io/cratis/chronicle/projections/AddFr
 
 public final class io/cratis/chronicle/projections/AllSetBuilderFor : io/cratis/chronicle/projections/IAllSetBuilderFor {
 	public fun <init> (Ljava/util/Map;Ljava/lang/String;Lio/cratis/chronicle/projections/IFromEveryBuilderFor;)V
+	public fun <init> (Ljava/util/Map;Ljava/lang/String;Lio/cratis/chronicle/projections/IFromEveryBuilderFor;Z)V
+	public synthetic fun <init> (Ljava/util/Map;Ljava/lang/String;Lio/cratis/chronicle/projections/IFromEveryBuilderFor;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun toCausedBy (Lio/cratis/chronicle/projections/CausedByProperty;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public fun toEventContextProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public fun toEventSourceId ()Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public fun toProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public fun toValue (Ljava/lang/Object;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
+}
+
+public final class io/cratis/chronicle/projections/CausedByProperty : java/lang/Enum {
+	public static final field NAME Lio/cratis/chronicle/projections/CausedByProperty;
+	public static final field SUBJECT Lio/cratis/chronicle/projections/CausedByProperty;
+	public static final field USER_NAME Lio/cratis/chronicle/projections/CausedByProperty;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getExpressionName ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lio/cratis/chronicle/projections/CausedByProperty;
+	public static fun values ()[Lio/cratis/chronicle/projections/CausedByProperty;
 }
 
 public final class io/cratis/chronicle/projections/ChildFromBuilderFor : io/cratis/chronicle/projections/IChildFromBuilderFor {
@@ -3138,6 +3151,8 @@ public final class io/cratis/chronicle/projections/ChildFromBuilderFor : io/crat
 	public final fun getPropertyMappings ()Ljava/util/Map;
 	public fun set (Ljava/lang/String;)Lio/cratis/chronicle/projections/ISetBuilderFor;
 	public fun set (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public fun setOnce (Ljava/lang/String;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public fun setOnce (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISetBuilderFor;
 	public fun usingKey (Ljava/lang/String;)Lio/cratis/chronicle/projections/IChildFromBuilderFor;
 	public fun usingParentKey (Ljava/lang/String;)Lio/cratis/chronicle/projections/IChildFromBuilderFor;
 }
@@ -3148,7 +3163,13 @@ public final class io/cratis/chronicle/projections/ChildrenBuilderFor : io/crati
 	public fun from (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
 	public final fun getFromEntries ()Ljava/util/List;
 	public final fun getIdentifiedBy ()Ljava/lang/String;
+	public final fun getOrdering ()Lio/cratis/chronicle/projections/ChildrenOrdering;
 	public fun identifiedBy (Ljava/lang/String;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
+	public fun orderBy (Ljava/lang/String;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
+	public fun orderBy (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
+	public fun orderByDescending (Ljava/lang/String;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
+	public fun orderByDescending (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
+	public fun prepend ()Lio/cratis/chronicle/projections/IChildrenBuilderFor;
 }
 
 public final class io/cratis/chronicle/projections/ChildrenEntry {
@@ -3170,11 +3191,55 @@ public abstract interface annotation class io/cratis/chronicle/projections/Child
 	public abstract fun eventType ()Ljava/lang/Class;
 	public abstract fun identifiedBy ()Ljava/lang/String;
 	public abstract fun key ()Ljava/lang/String;
+	public abstract fun orderBy ()Ljava/lang/String;
+	public abstract fun orderByDescending ()Ljava/lang/String;
 	public abstract fun parentKey ()Ljava/lang/String;
+	public abstract fun prepend ()Z
 }
 
 public abstract interface annotation class io/cratis/chronicle/projections/ChildrenFrom$Container : java/lang/annotation/Annotation {
 	public abstract fun value ()[Lio/cratis/chronicle/projections/ChildrenFrom;
+}
+
+public final class io/cratis/chronicle/projections/ChildrenOrdering {
+	public static final field Companion Lio/cratis/chronicle/projections/ChildrenOrdering$Companion;
+	public fun <init> (Lio/cratis/chronicle/projections/ChildrenPlacement;Ljava/lang/String;Lio/cratis/chronicle/projections/SortDirection;)V
+	public synthetic fun <init> (Lio/cratis/chronicle/projections/ChildrenPlacement;Ljava/lang/String;Lio/cratis/chronicle/projections/SortDirection;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Lio/cratis/chronicle/projections/ChildrenPlacement;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Lio/cratis/chronicle/projections/SortDirection;
+	public final fun copy (Lio/cratis/chronicle/projections/ChildrenPlacement;Ljava/lang/String;Lio/cratis/chronicle/projections/SortDirection;)Lio/cratis/chronicle/projections/ChildrenOrdering;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/projections/ChildrenOrdering;Lio/cratis/chronicle/projections/ChildrenPlacement;Ljava/lang/String;Lio/cratis/chronicle/projections/SortDirection;ILjava/lang/Object;)Lio/cratis/chronicle/projections/ChildrenOrdering;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getDirection ()Lio/cratis/chronicle/projections/SortDirection;
+	public final fun getPlacement ()Lio/cratis/chronicle/projections/ChildrenPlacement;
+	public final fun getSortBy ()Ljava/lang/String;
+	public fun hashCode ()I
+	public static final fun prepend ()Lio/cratis/chronicle/projections/ChildrenOrdering;
+	public static final fun sorted (Ljava/lang/String;Lio/cratis/chronicle/projections/SortDirection;)Lio/cratis/chronicle/projections/ChildrenOrdering;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/projections/ChildrenOrdering$Companion {
+	public final fun prepend ()Lio/cratis/chronicle/projections/ChildrenOrdering;
+	public final fun sorted (Ljava/lang/String;Lio/cratis/chronicle/projections/SortDirection;)Lio/cratis/chronicle/projections/ChildrenOrdering;
+}
+
+public final class io/cratis/chronicle/projections/ChildrenOrderingAlreadyDefined : java/lang/IllegalStateException {
+	public fun <init> (Lkotlin/reflect/KClass;)V
+}
+
+public final class io/cratis/chronicle/projections/ChildrenOrderingNotSupportedByContracts : java/lang/UnsupportedOperationException {
+	public fun <init> (Ljava/lang/String;)V
+}
+
+public final class io/cratis/chronicle/projections/ChildrenPlacement : java/lang/Enum {
+	public static final field APPEND Lio/cratis/chronicle/projections/ChildrenPlacement;
+	public static final field PREPEND Lio/cratis/chronicle/projections/ChildrenPlacement;
+	public static final field SORTED Lio/cratis/chronicle/projections/ChildrenPlacement;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/cratis/chronicle/projections/ChildrenPlacement;
+	public static fun values ()[Lio/cratis/chronicle/projections/ChildrenPlacement;
 }
 
 public abstract interface annotation class io/cratis/chronicle/projections/ClearWith : java/lang/annotation/Annotation {
@@ -3190,6 +3255,10 @@ public final class io/cratis/chronicle/projections/CompositeKeyBuilderFor : io/c
 	public final fun build ()Ljava/lang/String;
 	public fun property (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/ICompositeKeyBuilderFor;
 	public fun toEventContextProperty (Ljava/lang/String;Ljava/lang/String;)Lio/cratis/chronicle/projections/ICompositeKeyBuilderFor;
+}
+
+public final class io/cratis/chronicle/projections/ConflictingChildrenOrdering : java/lang/IllegalArgumentException {
+	public fun <init> (Ljava/lang/String;)V
 }
 
 public abstract interface annotation class io/cratis/chronicle/projections/Count : java/lang/annotation/Annotation {
@@ -3218,6 +3287,24 @@ public abstract interface annotation class io/cratis/chronicle/projections/Decre
 	public abstract fun keyFromContext ()Ljava/lang/String;
 }
 
+public final class io/cratis/chronicle/projections/DictionaryKey {
+	public static final field Companion Lio/cratis/chronicle/projections/DictionaryKey$Companion;
+	public synthetic fun <init> (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun equals (Ljava/lang/Object;)Z
+	public static final fun fromCausedBy (Lio/cratis/chronicle/projections/CausedByProperty;)Lio/cratis/chronicle/projections/DictionaryKey;
+	public static final fun fromContext (Ljava/lang/String;)Lio/cratis/chronicle/projections/DictionaryKey;
+	public static final fun fromEvent (Ljava/lang/String;)Lio/cratis/chronicle/projections/DictionaryKey;
+	public final fun getSegment ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/projections/DictionaryKey$Companion {
+	public final fun fromCausedBy (Lio/cratis/chronicle/projections/CausedByProperty;)Lio/cratis/chronicle/projections/DictionaryKey;
+	public final fun fromContext (Ljava/lang/String;)Lio/cratis/chronicle/projections/DictionaryKey;
+	public final fun fromEvent (Ljava/lang/String;)Lio/cratis/chronicle/projections/DictionaryKey;
+}
+
 public abstract interface annotation class io/cratis/chronicle/projections/EntersOn : java/lang/annotation/Annotation {
 	public abstract fun eventType ()Ljava/lang/Class;
 	public abstract fun key ()Ljava/lang/String;
@@ -3235,20 +3322,38 @@ public abstract interface annotation class io/cratis/chronicle/projections/FromA
 public final class io/cratis/chronicle/projections/FromBuilderFor : io/cratis/chronicle/projections/IFromBuilderFor {
 	public fun <init> (Lkotlin/reflect/KClass;)V
 	public fun add (Ljava/lang/String;)Lio/cratis/chronicle/projections/IAddBuilderFor;
+	public fun add (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IAddBuilderFor;
 	public fun add (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IAddBuilderFor;
+	public fun add (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IAddBuilderFor;
 	public fun count (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public fun count (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public fun count (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public fun count (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public fun decrement (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public fun decrement (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public fun decrement (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public fun decrement (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public final fun getKey ()Ljava/lang/String;
 	public final fun getPropertyMappings ()Ljava/util/Map;
 	public fun increment (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public fun increment (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public fun increment (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public fun increment (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public fun removeKey (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public fun removeKey (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public fun set (Ljava/lang/String;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public fun set (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/ISetBuilderFor;
 	public fun set (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/ISetBuilderFor;
 	public fun set (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public fun set (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public fun setOnce (Ljava/lang/String;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public fun setOnce (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public fun setOnce (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public fun setOnce (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/ISetBuilderFor;
 	public fun subtract (Ljava/lang/String;)Lio/cratis/chronicle/projections/ISubtractBuilderFor;
+	public fun subtract (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/ISubtractBuilderFor;
 	public fun subtract (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISubtractBuilderFor;
+	public fun subtract (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/ISubtractBuilderFor;
 	public fun usingCompositeKey (Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public fun usingCompositeKey (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public fun usingConstantKey (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
@@ -3301,6 +3406,8 @@ public final class io/cratis/chronicle/projections/FromEveryBuilderFor : io/crat
 	public fun increment (Lkotlin/reflect/KProperty1;Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public fun set (Ljava/lang/String;)Lio/cratis/chronicle/projections/IAllSetBuilderFor;
 	public fun set (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IAllSetBuilderFor;
+	public fun setOnce (Ljava/lang/String;)Lio/cratis/chronicle/projections/IAllSetBuilderFor;
+	public fun setOnce (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IAllSetBuilderFor;
 }
 
 public abstract interface annotation class io/cratis/chronicle/projections/GlobalFor : java/lang/annotation/Annotation {
@@ -3316,6 +3423,7 @@ public abstract interface class io/cratis/chronicle/projections/IAddBuilderFor {
 }
 
 public abstract interface class io/cratis/chronicle/projections/IAllSetBuilderFor {
+	public abstract fun toCausedBy (Lio/cratis/chronicle/projections/CausedByProperty;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public abstract fun toEventContextProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public abstract fun toEventSourceId ()Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public abstract fun toProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
@@ -3325,6 +3433,8 @@ public abstract interface class io/cratis/chronicle/projections/IAllSetBuilderFo
 public abstract interface class io/cratis/chronicle/projections/IChildFromBuilderFor {
 	public abstract fun set (Ljava/lang/String;)Lio/cratis/chronicle/projections/ISetBuilderFor;
 	public abstract fun set (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public abstract fun setOnce (Ljava/lang/String;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public abstract fun setOnce (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISetBuilderFor;
 	public abstract fun usingKey (Ljava/lang/String;)Lio/cratis/chronicle/projections/IChildFromBuilderFor;
 	public abstract fun usingParentKey (Ljava/lang/String;)Lio/cratis/chronicle/projections/IChildFromBuilderFor;
 }
@@ -3333,6 +3443,11 @@ public abstract interface class io/cratis/chronicle/projections/IChildrenBuilder
 	public fun from (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
 	public abstract fun from (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
 	public abstract fun identifiedBy (Ljava/lang/String;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
+	public abstract fun orderBy (Ljava/lang/String;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
+	public abstract fun orderBy (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
+	public abstract fun orderByDescending (Ljava/lang/String;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
+	public abstract fun orderByDescending (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IChildrenBuilderFor;
+	public abstract fun prepend ()Lio/cratis/chronicle/projections/IChildrenBuilderFor;
 }
 
 public final class io/cratis/chronicle/projections/IChildrenBuilderFor$DefaultImpls {
@@ -3350,18 +3465,36 @@ public final class io/cratis/chronicle/projections/ICompositeKeyBuilderFor$Defau
 
 public abstract interface class io/cratis/chronicle/projections/IFromBuilderFor {
 	public abstract fun add (Ljava/lang/String;)Lio/cratis/chronicle/projections/IAddBuilderFor;
+	public abstract fun add (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IAddBuilderFor;
 	public abstract fun add (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IAddBuilderFor;
+	public abstract fun add (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IAddBuilderFor;
 	public abstract fun count (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public abstract fun count (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun count (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public abstract fun count (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun decrement (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public abstract fun decrement (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun decrement (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public abstract fun decrement (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun increment (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public abstract fun increment (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun increment (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public abstract fun increment (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public abstract fun removeKey (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public abstract fun removeKey (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun set (Ljava/lang/String;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public abstract fun set (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/ISetBuilderFor;
 	public abstract fun set (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/ISetBuilderFor;
 	public abstract fun set (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public abstract fun set (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public abstract fun setOnce (Ljava/lang/String;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public abstract fun setOnce (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public abstract fun setOnce (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public abstract fun setOnce (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/ISetBuilderFor;
 	public abstract fun subtract (Ljava/lang/String;)Lio/cratis/chronicle/projections/ISubtractBuilderFor;
+	public abstract fun subtract (Ljava/lang/String;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/ISubtractBuilderFor;
 	public abstract fun subtract (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISubtractBuilderFor;
+	public abstract fun subtract (Lkotlin/reflect/KProperty1;Lio/cratis/chronicle/projections/DictionaryKey;)Lio/cratis/chronicle/projections/ISubtractBuilderFor;
 	public fun usingCompositeKey (Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun usingCompositeKey (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun usingConstantKey (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
@@ -3381,6 +3514,8 @@ public abstract interface class io/cratis/chronicle/projections/IFromEveryBuilde
 	public abstract fun increment (Lkotlin/reflect/KProperty1;Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromEveryBuilderFor;
 	public abstract fun set (Ljava/lang/String;)Lio/cratis/chronicle/projections/IAllSetBuilderFor;
 	public abstract fun set (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IAllSetBuilderFor;
+	public abstract fun setOnce (Ljava/lang/String;)Lio/cratis/chronicle/projections/IAllSetBuilderFor;
+	public abstract fun setOnce (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IAllSetBuilderFor;
 }
 
 public abstract interface class io/cratis/chronicle/projections/IJoinBuilderFor {
@@ -3388,6 +3523,8 @@ public abstract interface class io/cratis/chronicle/projections/IJoinBuilderFor 
 	public abstract fun on (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IJoinBuilderFor;
 	public abstract fun set (Ljava/lang/String;)Lio/cratis/chronicle/projections/ISetBuilderFor;
 	public abstract fun set (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public abstract fun setOnce (Ljava/lang/String;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public abstract fun setOnce (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISetBuilderFor;
 }
 
 public abstract interface class io/cratis/chronicle/projections/IKeyBuilderFor {
@@ -3485,6 +3622,7 @@ public abstract interface class io/cratis/chronicle/projections/IRemovedWithJoin
 
 public abstract interface class io/cratis/chronicle/projections/ISetBuilderFor {
 	public abstract fun to (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public abstract fun toCausedBy (Lio/cratis/chronicle/projections/CausedByProperty;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun toEventContextProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun toEventSourceId ()Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public abstract fun toProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
@@ -3530,6 +3668,8 @@ public final class io/cratis/chronicle/projections/JoinBuilderFor : io/cratis/ch
 	public fun on (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/IJoinBuilderFor;
 	public fun set (Ljava/lang/String;)Lio/cratis/chronicle/projections/ISetBuilderFor;
 	public fun set (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public fun setOnce (Ljava/lang/String;)Lio/cratis/chronicle/projections/ISetBuilderFor;
+	public fun setOnce (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/ISetBuilderFor;
 }
 
 public final class io/cratis/chronicle/projections/JoinDefinitionEntry {
@@ -3611,6 +3751,7 @@ public final class io/cratis/chronicle/projections/ProjectionBuilderFor : io/cra
 	public fun fromEvery (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IProjectionBuilderFor;
 	public final fun getAutoMapEnabled ()Z
 	public final fun getChildrenEntries ()Ljava/util/List;
+	public final fun getChildrenOrderings ()Ljava/util/Map;
 	public final fun getEnteringEventClasses ()Ljava/util/List;
 	public final fun getFromEntries ()Ljava/util/List;
 	public final fun getFromEveryProperties ()Ljava/util/Map;
@@ -3762,7 +3903,10 @@ public final class io/cratis/chronicle/projections/RemovedWithJoinEntry {
 
 public final class io/cratis/chronicle/projections/SetBuilderFor : io/cratis/chronicle/projections/ISetBuilderFor {
 	public fun <init> (Ljava/util/Map;Ljava/lang/String;Lio/cratis/chronicle/projections/IFromBuilderFor;)V
+	public fun <init> (Ljava/util/Map;Ljava/lang/String;Lio/cratis/chronicle/projections/IFromBuilderFor;Z)V
+	public synthetic fun <init> (Ljava/util/Map;Ljava/lang/String;Lio/cratis/chronicle/projections/IFromBuilderFor;ZILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun to (Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/IFromBuilderFor;
+	public fun toCausedBy (Lio/cratis/chronicle/projections/CausedByProperty;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public fun toEventContextProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public fun toEventSourceId ()Lio/cratis/chronicle/projections/IFromBuilderFor;
 	public fun toProperty (Ljava/lang/String;)Lio/cratis/chronicle/projections/IFromBuilderFor;
@@ -3772,6 +3916,7 @@ public final class io/cratis/chronicle/projections/SetBuilderFor : io/cratis/chr
 public abstract interface annotation class io/cratis/chronicle/projections/SetFrom : java/lang/annotation/Annotation {
 	public abstract fun eventType ()Ljava/lang/Class;
 	public abstract fun propertyPath ()Ljava/lang/String;
+	public abstract fun setOnce ()Z
 }
 
 public abstract interface annotation class io/cratis/chronicle/projections/SetFrom$Container : java/lang/annotation/Annotation {
@@ -3781,6 +3926,7 @@ public abstract interface annotation class io/cratis/chronicle/projections/SetFr
 public abstract interface annotation class io/cratis/chronicle/projections/SetFromContext : java/lang/annotation/Annotation {
 	public abstract fun contextProperty ()Ljava/lang/String;
 	public abstract fun eventType ()Ljava/lang/Class;
+	public abstract fun setOnce ()Z
 }
 
 public abstract interface annotation class io/cratis/chronicle/projections/SetFromContext$Container : java/lang/annotation/Annotation {
@@ -3795,6 +3941,14 @@ public abstract interface annotation class io/cratis/chronicle/projections/SetVa
 
 public abstract interface annotation class io/cratis/chronicle/projections/SetValue$Container : java/lang/annotation/Annotation {
 	public abstract fun value ()[Lio/cratis/chronicle/projections/SetValue;
+}
+
+public final class io/cratis/chronicle/projections/SortDirection : java/lang/Enum {
+	public static final field ASCENDING Lio/cratis/chronicle/projections/SortDirection;
+	public static final field DESCENDING Lio/cratis/chronicle/projections/SortDirection;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/cratis/chronicle/projections/SortDirection;
+	public static fun values ()[Lio/cratis/chronicle/projections/SortDirection;
 }
 
 public final class io/cratis/chronicle/projections/SubtractBuilderFor : io/cratis/chronicle/projections/ISubtractBuilderFor {
