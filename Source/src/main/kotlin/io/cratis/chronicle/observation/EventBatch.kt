@@ -31,6 +31,29 @@ class EventBatch(private val events: List<EventAndContext>) : List<EventAndConte
     internal val outcomes: List<BatchOutcome> get() = synchronized(reported) { reported.toList() }
 
     /**
+     * The partitions the batch method deferred, with how long each asked to wait before its events
+     * are delivered again. When a partition is reported more than once, its earliest report wins.
+     *
+     * This is what a spec calling a batch method directly asserts on; Chronicle reads the same reports.
+     */
+    val deferred: Map<String, Duration>
+        get() = earliestReports(BatchOutcome.Kind.Deferred).mapValues { it.value.retryAfter }
+
+    /**
+     * The partitions the batch method failed, with what failed each. A deferral the kernel cannot
+     * accept is reported here, as a [DeferralNotSupportedByKernel]. When a partition is reported more
+     * than once, its earliest report wins.
+     */
+    val failed: Map<String, Throwable>
+        get() = earliestReports(BatchOutcome.Kind.Failed)
+            .mapValues { it.value.error ?: PartitionFailedInBatch(it.key) }
+
+    private fun earliestReports(kind: BatchOutcome.Kind): Map<String, BatchOutcome> =
+        outcomes.groupBy { it.partition }
+            .mapValues { (_, reports) -> reports.minBy { it.at } }
+            .filterValues { it.kind == kind }
+
+    /**
      * Fails [partition] from its first event in the batch. Its other events are delivered again once
      * the failed partition is recovered.
      *

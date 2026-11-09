@@ -2688,6 +2688,8 @@ public final class io/cratis/chronicle/observation/EventBatch : java/util/List, 
 	public final fun fail (Ljava/lang/String;Ljava/lang/Throwable;)V
 	public fun get (I)Lio/cratis/chronicle/observation/EventAndContext;
 	public synthetic fun get (I)Ljava/lang/Object;
+	public final fun getDeferred ()Ljava/util/Map;
+	public final fun getFailed ()Ljava/util/Map;
 	public final fun getPartitions ()Ljava/util/List;
 	public fun getSize ()I
 	public fun indexOf (Lio/cratis/chronicle/observation/EventAndContext;)I
