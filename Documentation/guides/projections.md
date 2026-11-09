@@ -114,6 +114,10 @@ produces a value wins, and replay gives the same result. `toCausedBy` sets a
 property from the identity of whoever caused the event: its `SUBJECT`,
 `NAME` or `USER_NAME`.
 
+`DictionaryKey.fromEvent`, `removeKey` and `setOnce` need a Chronicle kernel
+that includes [Chronicle#5775](https://github.com/Cratis/Chronicle/pull/5775).
+An older kernel rejects the projection when it registers.
+
 <!-- validate: declarations -->
 
 ```kotlin
