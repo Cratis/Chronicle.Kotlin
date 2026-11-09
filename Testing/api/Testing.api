@@ -28,6 +28,8 @@ public final class io/cratis/chronicle/testing/InMemoryEventSequence : io/cratis
 	public fun append (Ljava/lang/String;Ljava/lang/Object;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun appendMany (Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/eventSequences/AppendOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun appendMany (Ljava/util/List;Ljava/util/Map;Ljava/util/UUID;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun beginImport (Lio/cratis/chronicle/imports/ImportId;Lio/cratis/chronicle/imports/ImportOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun beginImport (Lio/cratis/chronicle/imports/ImportOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun clear ()V
 	public fun compensate-ZSd2mZE (JLjava/lang/Object;Lio/cratis/chronicle/eventSequences/CompensateOptions;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun completeStream (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -42,6 +44,8 @@ public final class io/cratis/chronicle/testing/InMemoryEventSequence : io/cratis
 	public fun getTailSequenceNumber-NETI2YA (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getTailSequenceNumberForObserver-NETI2YA (Lkotlin/reflect/KClass;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun hasEventsFor (Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun import (Lkotlin/sequences/Sequence;Lio/cratis/chronicle/imports/ImportOptions;Lkotlinx/coroutines/flow/FlowCollector;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun import (Lkotlinx/coroutines/flow/Flow;Lio/cratis/chronicle/imports/ImportOptions;Lkotlinx/coroutines/flow/FlowCollector;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public final fun isRedacted (J)Z
 	public fun redact-rxlEwpA (JLjava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun redactForEventSource-8d2Qhxo (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -55,5 +59,11 @@ public final class io/cratis/chronicle/testing/ReadModelScenario {
 	public final fun getEventLog ()Lio/cratis/chronicle/testing/InMemoryEventSequence;
 	public final fun reset ()V
 	public final fun stateFor (Ljava/lang/String;)Ljava/lang/Object;
+}
+
+public final class io/cratis/chronicle/testing/ReducerDeferred : java/lang/Exception {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/time/Duration;)V
+	public final fun getEventSourceId ()Ljava/lang/String;
+	public final fun getRetryAfter ()Ljava/time/Duration;
 }
 

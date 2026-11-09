@@ -6,7 +6,7 @@ package io.cratis.chronicle.testing
 import io.cratis.chronicle.events.EventContext
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.json.chronicleGson
-import io.cratis.chronicle.observation.EventBatch
+import io.cratis.chronicle.observation.EventAndContext
 import kotlin.reflect.KClass
 import kotlin.reflect.KFunction
 import kotlin.reflect.full.callSuspend
@@ -40,6 +40,10 @@ import kotlin.reflect.jvm.isAccessible
  *
  * Chronicle folds each event source independently, so [fold] does too: state does not leak between
  * event sources, which is exactly the mistake a reducer spec should be able to catch.
+ *
+ * A batch reducer - one whose method takes an [io.cratis.chronicle.observation.EventBatch] - is called
+ * once per [fold] with every event it observes, as Chronicle delivers a page. A partition it fails
+ * rethrows the reported error, and a partition it defers throws [ReducerDeferred]; neither writes state.
  *
  * @param reducer The reducer instance to fold with.
  * @param eventStoreName The event store name stamped on event contexts.
@@ -80,17 +84,16 @@ class ReadModelScenario<TReadModel : Any>(
 
     private val states = mutableMapOf<String, Any?>()
 
+    private val batchMethod: ReducerBatchMethod? = ReducerBatchMethod.of(reducer::class, handlers.isNotEmpty())
+
+    private val reducerName: String = reducer::class.simpleName ?: reducer::class.java.name
+
     init {
-        // A batch reducer folds an event source's events in one call. The scenario folds one event at a
-        // time, so it says so plainly rather than reporting a reducer with no handlers.
-        require(reducer::class.memberFunctions.none { it.parameters.getOrNull(1)?.type?.classifier == EventBatch::class }) {
-            "'${reducer::class.simpleName}' has a batch method. ReadModelScenario folds per-event handlers only; " +
-                "call the batch method directly with an EventBatch to specify it."
-        }
-        require(handlers.isNotEmpty()) {
-            "'${reducer::class.simpleName}' has no handler methods, so there is nothing to fold. " +
+        require(handlers.isNotEmpty() || batchMethod != null) {
+            "'$reducerName' has no handler methods, so there is nothing to fold. " +
                 "A reducer handler is a public method whose first parameter is a class annotated " +
-                "with @EventType, returning the read model it produces."
+                "with @EventType, returning the read model it produces; a batch method takes an " +
+                "EventBatch and declares the event types it observes with @Observes."
         }
     }
 
@@ -112,6 +115,9 @@ class ReadModelScenario<TReadModel : Any>(
      */
     @Suppress("UNCHECKED_CAST")
     suspend fun fold(eventSourceId: String, vararg events: Any): TReadModel? {
+        val batch = batchMethod
+        if (batch != null) return foldInBatch(batch, eventSourceId, events.toList())
+
         for (event in events) {
             eventLog.append(eventSourceId, event)
             val context = eventLog.events.last().context
@@ -127,6 +133,30 @@ class ReadModelScenario<TReadModel : Any>(
         }
 
         return states[eventSourceId] as TReadModel?
+    }
+
+    /**
+     * Folds [events] through a batch reducer the way Chronicle delivers them to it: one call holding every
+     * observed event of the event source, in order. A partition the reducer defers or fails writes no
+     * state, as on a kernel, and is reported by throwing.
+     */
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun foldInBatch(method: ReducerBatchMethod, eventSourceId: String, events: List<Any>): TReadModel? {
+        val observed = events.mapNotNull { event ->
+            eventLog.append(eventSourceId, event)
+            val context = eventLog.events.last().context
+            method.eventClasses[context.eventType.id.value]?.let { eventClass ->
+                EventAndContext(chronicleGson.fromJson(chronicleGson.toJson(event), eventClass.java), context)
+            }
+        }
+        if (observed.isEmpty()) return states[eventSourceId] as TReadModel?
+
+        val (next, batch) = method.reduce(reducer, reducerName, eventLog.id.value, observed, states[eventSourceId])
+        batch.failed[eventSourceId]?.let { throw it }
+        batch.deferred[eventSourceId]?.let { throw ReducerDeferred(reducerName, eventSourceId, it) }
+
+        states[eventSourceId] = next
+        return next as TReadModel?
     }
 
     /**
