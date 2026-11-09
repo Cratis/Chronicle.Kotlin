@@ -25,6 +25,8 @@ import io.cratis.chronicle.eventSequences.EventLog
 import io.cratis.chronicle.eventSequences.EventSequence
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.eventSequences.IEventSequence
+import io.cratis.chronicle.imports.GrpcImportCalls
+import io.cratis.chronicle.imports.ImportCalls
 import io.cratis.chronicle.eventSources.EventSources
 import io.cratis.chronicle.eventSources.IEventSources
 import io.cratis.chronicle.eventSources.IEventSourcesCapability
@@ -172,9 +174,12 @@ class EventStore(
      */
     private val registrationGate = IRegistrationGate { awaitRegistration() }
 
+    private val importCalls: ImportCalls by lazy { GrpcImportCalls(services.imports) }
+
     override val eventLog: IEventLog by lazy {
         EventLog(name, namespace, services.eventSequences, unitOfWorkManager, traces, registrationGate, eventSources).also {
             it.resolveConstraintMessage = (constraints as ConstraintsService)::resolveMessageFor
+            it.importCalls = importCalls
         }
     }
 
@@ -368,6 +373,7 @@ class EventStore(
             eventSequences.getOrPut(id) {
                 EventSequence(id, name, namespace, services.eventSequences, traces, registrationGate, eventSources).also {
                     it.resolveConstraintMessage = (constraints as ConstraintsService)::resolveMessageFor
+                    it.importCalls = importCalls
                 }
             }
         }

@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.eventSequences
 
+import Cratis.Chronicle.Contracts.Imports.ImportsOuterClass
 import Cratis.Chronicle.Contracts.Sequences.Sequences
 import Cratis.Chronicle.Contracts.Sequences.EventSequencesGrpcKt
 import io.cratis.chronicle.artifacts.IRegistrationGate
@@ -20,6 +21,15 @@ import io.cratis.chronicle.eventSources.IEventSources
 import io.cratis.chronicle.eventSources.ResolvedEventRouting
 import io.cratis.chronicle.identity.Identity as ChronicleIdentity
 import io.cratis.chronicle.identity.identityProvider
+import io.cratis.chronicle.imports.EventSequenceImports
+import io.cratis.chronicle.imports.IEventImport
+import io.cratis.chronicle.imports.ImportCalls
+import io.cratis.chronicle.imports.ImportId
+import io.cratis.chronicle.imports.ImportOptions
+import io.cratis.chronicle.imports.ImportProgress
+import io.cratis.chronicle.imports.ImportResult
+import io.cratis.chronicle.imports.ImportsNotSupported
+import io.cratis.chronicle.imports.toImportContract
 import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.toBclGuid
 import io.cratis.chronicle.toUuid
@@ -29,6 +39,8 @@ import java.util.UUID
 import kotlin.reflect.KClass
 import kotlin.reflect.full.memberFunctions
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -63,6 +75,9 @@ open class EventSequence(
     override val appendOperations: SharedFlow<List<AppendedEventWithResult>> = _appendOperations.asSharedFlow()
 
     internal var resolveConstraintMessage: (ConstraintViolation) -> ConstraintViolation = { it }
+
+    /** The kernel's `Imports` service; without it this sequence cannot import. Set by the event store. */
+    internal var importCalls: ImportCalls? = null
 
     override suspend fun append(eventSourceId: String, event: Any, options: AppendOptions?): AppendResult {
         // The kernel rejects an event whose type it has never been told about, and registration
@@ -515,6 +530,72 @@ open class EventSequence(
         }.build()
 
         return stub.copyEventsForEventSource(request).ensureSuccess("copy events for event source").toUuid().toString()
+    }
+
+    override suspend fun import(
+        events: Flow<EventForEventSourceId>,
+        options: ImportOptions,
+        onProgress: FlowCollector<ImportProgress>?,
+    ): ImportResult {
+        registrationGate.awaitOpen()
+        return imports().run(options, onProgress) { it.add(events) }
+    }
+
+    override suspend fun import(
+        events: Sequence<EventForEventSourceId>,
+        options: ImportOptions,
+        onProgress: FlowCollector<ImportProgress>?,
+    ): ImportResult {
+        registrationGate.awaitOpen()
+        return imports().run(options, onProgress) { it.add(events) }
+    }
+
+    override suspend fun beginImport(options: ImportOptions): IEventImport {
+        registrationGate.awaitOpen()
+        return imports().begin(options)
+    }
+
+    override suspend fun beginImport(importId: ImportId, options: ImportOptions): IEventImport {
+        registrationGate.awaitOpen()
+        return imports().reattach(importId, options)
+    }
+
+    private fun imports(): EventSequenceImports = EventSequenceImports(
+        importCalls ?: throw ImportsNotSupported(),
+        eventStoreName,
+        namespace,
+        id.value,
+        ::toImportEvent,
+    )
+
+    /**
+     * The wire form of an imported event. Everything the event says about itself travels; what it leaves
+     * out is left to the kernel, as for an append.
+     */
+    private fun toImportEvent(event: EventForEventSourceId): ImportsOuterClass.ImportEvent {
+        val routing = routingFor(event.eventSource, event.eventStream, event.eventSourceType, event.eventStreamType)
+        val eventType = resolveEventType(event.event)
+        return ImportsOuterClass.ImportEvent.newBuilder().apply {
+            eventSourceId = event.eventSourceId
+            (routing?.eventSourceType ?: event.eventSourceType)?.let { eventSourceType = it }
+            (routing?.eventStreamType ?: event.eventStreamType)?.let { eventStreamType = it }
+            event.eventStreamId?.let { eventStreamId = it }
+            this.eventType = ImportsOuterClass.EventType.newBuilder()
+                .setId(eventType.id.value)
+                .setGeneration(event.generation ?: eventType.generation.value)
+                .setTombstone(eventType.tombstone)
+                .build()
+            content = chronicleGson.toJson(event.event)
+            addAllTags(event.tags)
+            event.occurred?.let { occurred = it.toImportContract() }
+            subject = event.subject ?: event.eventSourceId
+            event.correlationId?.let { correlationId = it.toBclGuid() }
+            addAllCausation(event.causation.map { it.toImportContract() })
+            event.causedBy?.let { causedBy = it.toImportContract() }
+            event.idempotencyKey?.let { idempotencyKey = it }
+            routing?.let { eventSource = it.definition.name }
+            event.sourceSequenceNumber?.let { sourceSequenceNumber = it }
+        }.build()
     }
 
     // -------------------------------------------------------------------------
