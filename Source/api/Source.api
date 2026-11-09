@@ -36,6 +36,7 @@ public final class io/cratis/chronicle/ChronicleOptions {
 	public final fun getArtifacts ()Lio/cratis/chronicle/artifacts/IClientArtifacts;
 	public final fun getAutoDiscoverAndRegister ()Z
 	public final fun getConnectionString ()Lio/cratis/chronicle/connection/ChronicleConnectionString;
+	public final fun getDefaultGraphSinkTypeId ()Ljava/lang/String;
 	public final fun getDefaultSinkTypeId ()Ljava/lang/String;
 	public final fun getMaxReceiveMessageSize ()Ljava/lang/Integer;
 	public final fun getOpenTelemetry ()Lio/opentelemetry/api/OpenTelemetry;
@@ -44,6 +45,7 @@ public final class io/cratis/chronicle/ChronicleOptions {
 	public fun hashCode ()I
 	public fun toString ()Ljava/lang/String;
 	public final fun withArtifactsFrom ([Ljava/lang/String;)Lio/cratis/chronicle/ChronicleOptions;
+	public final fun withDefaultGraphSinkTypeId (Ljava/lang/String;)Lio/cratis/chronicle/ChronicleOptions;
 	public final fun withMaxReceiveMessageSize (Ljava/lang/Integer;)Lio/cratis/chronicle/ChronicleOptions;
 	public final fun withReadModelNamingPolicy (Lio/cratis/chronicle/readModels/ReadModelNamingPolicy;)Lio/cratis/chronicle/ChronicleOptions;
 	public final fun withoutAutoRegistration ()Lio/cratis/chronicle/ChronicleOptions;
@@ -58,6 +60,7 @@ public final class io/cratis/chronicle/EventStore : io/cratis/chronicle/IEventSt
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ChronicleServices;Lio/cratis/chronicle/connection/ConnectionLifecycle;Ljava/lang/String;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ZLio/cratis/chronicle/diagnostics/ChronicleTraces;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ChronicleServices;Lio/cratis/chronicle/connection/ConnectionLifecycle;Ljava/lang/String;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ZLio/cratis/chronicle/diagnostics/ChronicleTraces;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ChronicleServices;Lio/cratis/chronicle/connection/ConnectionLifecycle;Ljava/lang/String;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ZLio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/readModels/ReadModelNamingPolicy;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ChronicleServices;Lio/cratis/chronicle/connection/ConnectionLifecycle;Ljava/lang/String;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ZLio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/readModels/ReadModelNamingPolicy;Ljava/lang/String;)V
 	public fun awaitRegistration (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun getCaptures ()Lio/cratis/chronicle/captures/ICapturesService;
 	public fun getCompliance ()Lio/cratis/chronicle/compliance/IComplianceService;
@@ -199,6 +202,8 @@ public final class io/cratis/chronicle/artifacts/ClientArtifacts : io/cratis/chr
 	public fun getEventSources ()Ljava/util/List;
 	public fun getEventTypeMigrations ()Ljava/util/List;
 	public fun getEventTypes ()Ljava/util/List;
+	public fun getGraphElements ()Ljava/util/List;
+	public fun getGraphProjections ()Ljava/util/List;
 	public fun getModelBoundProjections ()Ljava/util/List;
 	public fun getProjections ()Ljava/util/List;
 	public fun getReactorArgumentResolvers ()Ljava/util/List;
@@ -227,6 +232,8 @@ public abstract interface class io/cratis/chronicle/artifacts/IClientArtifacts {
 	public abstract fun getEventSeeders ()Ljava/util/List;
 	public abstract fun getEventTypeMigrations ()Ljava/util/List;
 	public abstract fun getEventTypes ()Ljava/util/List;
+	public fun getGraphElements ()Ljava/util/List;
+	public fun getGraphProjections ()Ljava/util/List;
 	public abstract fun getModelBoundProjections ()Ljava/util/List;
 	public abstract fun getProjections ()Ljava/util/List;
 	public abstract fun getReactorArgumentResolvers ()Ljava/util/List;
@@ -235,6 +242,11 @@ public abstract interface class io/cratis/chronicle/artifacts/IClientArtifacts {
 	public abstract fun getReadModels ()Ljava/util/List;
 	public abstract fun getReducers ()Ljava/util/List;
 	public abstract fun getWebhooks ()Ljava/util/List;
+}
+
+public final class io/cratis/chronicle/artifacts/IClientArtifacts$DefaultImpls {
+	public static fun getGraphElements (Lio/cratis/chronicle/artifacts/IClientArtifacts;)Ljava/util/List;
+	public static fun getGraphProjections (Lio/cratis/chronicle/artifacts/IClientArtifacts;)Ljava/util/List;
 }
 
 public abstract interface class io/cratis/chronicle/artifacts/IEventSourceArtifacts {
@@ -260,6 +272,8 @@ public final class io/cratis/chronicle/artifacts/KnownClientArtifacts : io/crati
 	public fun getEventSources ()Ljava/util/List;
 	public fun getEventTypeMigrations ()Ljava/util/List;
 	public fun getEventTypes ()Ljava/util/List;
+	public fun getGraphElements ()Ljava/util/List;
+	public fun getGraphProjections ()Ljava/util/List;
 	public fun getModelBoundProjections ()Ljava/util/List;
 	public fun getProjections ()Ljava/util/List;
 	public fun getReactorArgumentResolvers ()Ljava/util/List;
@@ -3691,6 +3705,7 @@ public final class io/cratis/chronicle/projections/ProjectionsService : io/crati
 }
 
 public abstract interface annotation class io/cratis/chronicle/projections/RemovedWith : java/lang/annotation/Annotation {
+	public abstract fun detach ()Z
 	public abstract fun eventType ()Ljava/lang/Class;
 	public abstract fun key ()Ljava/lang/String;
 	public abstract fun parentKey ()Ljava/lang/String;
@@ -3807,6 +3822,168 @@ public final class io/cratis/chronicle/projections/VariantMustDeclareEntersOnEve
 public abstract interface annotation class io/cratis/chronicle/projections/VariantOf : java/lang/annotation/Annotation {
 	public abstract fun identity ()Ljava/lang/Class;
 	public abstract fun key ()Ljava/lang/String;
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/graphs/Edge : java/lang/annotation/Annotation {
+	public abstract fun value ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/projections/graphs/EdgeCanHaveOnlyOneIdentifyingKey : java/lang/IllegalArgumentException {
+	public fun <init> (Lkotlin/reflect/KClass;)V
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/graphs/EdgeFrom : java/lang/annotation/Annotation {
+	public abstract fun eventType ()Ljava/lang/Class;
+	public abstract fun identity ()Ljava/lang/String;
+	public abstract fun sourceKey ()Ljava/lang/String;
+	public abstract fun targetKey ()Ljava/lang/String;
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/graphs/EdgeFrom$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Lio/cratis/chronicle/projections/graphs/EdgeFrom;
+}
+
+public final class io/cratis/chronicle/projections/graphs/EdgeMustHaveOneSourceAndOneTarget : java/lang/IllegalArgumentException {
+	public fun <init> (Lkotlin/reflect/KClass;)V
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/graphs/EdgeRemovedWith : java/lang/annotation/Annotation {
+	public abstract fun eventType ()Ljava/lang/Class;
+	public abstract fun identity ()Ljava/lang/String;
+	public abstract fun sourceKey ()Ljava/lang/String;
+	public abstract fun targetKey ()Ljava/lang/String;
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/graphs/EdgeRemovedWith$Container : java/lang/annotation/Annotation {
+	public abstract fun value ()[Lio/cratis/chronicle/projections/graphs/EdgeRemovedWith;
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/graphs/EdgeSource : java/lang/annotation/Annotation {
+	public abstract fun value ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/graphs/EdgeTarget : java/lang/annotation/Annotation {
+	public abstract fun value ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/graphs/Graph : java/lang/annotation/Annotation {
+	public abstract fun value ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/projections/graphs/GraphElementCannotBeReadModel : java/lang/IllegalArgumentException {
+	public fun <init> (Lkotlin/reflect/KClass;)V
+}
+
+public abstract interface class io/cratis/chronicle/projections/graphs/IGraphEdgeBuilder {
+	public fun from (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/graphs/IGraphEdgeBuilder;
+	public abstract fun from (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/graphs/IGraphEdgeBuilder;
+	public abstract fun identifiedBy (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/IGraphEdgeBuilder;
+	public abstract fun identifiedBy (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/graphs/IGraphEdgeBuilder;
+	public abstract fun named (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/IGraphEdgeBuilder;
+	public fun removedWith (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/graphs/IGraphEdgeBuilder;
+	public abstract fun removedWith (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/graphs/IGraphEdgeBuilder;
+}
+
+public final class io/cratis/chronicle/projections/graphs/IGraphEdgeBuilder$DefaultImpls {
+	public static fun from (Lio/cratis/chronicle/projections/graphs/IGraphEdgeBuilder;Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/graphs/IGraphEdgeBuilder;
+	public static fun removedWith (Lio/cratis/chronicle/projections/graphs/IGraphEdgeBuilder;Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/graphs/IGraphEdgeBuilder;
+}
+
+public abstract interface class io/cratis/chronicle/projections/graphs/IGraphEdgeFromBuilder : io/cratis/chronicle/projections/graphs/IGraphMappingBuilder {
+	public abstract fun usingIdentity (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/IGraphEdgeFromBuilder;
+	public abstract fun usingSourceKey (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/IGraphEdgeFromBuilder;
+	public abstract fun usingTargetKey (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/IGraphEdgeFromBuilder;
+}
+
+public abstract interface class io/cratis/chronicle/projections/graphs/IGraphEdgeRemovedWithBuilder {
+	public abstract fun usingIdentity (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/IGraphEdgeRemovedWithBuilder;
+	public abstract fun usingSourceKey (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/IGraphEdgeRemovedWithBuilder;
+	public abstract fun usingTargetKey (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/IGraphEdgeRemovedWithBuilder;
+}
+
+public abstract interface class io/cratis/chronicle/projections/graphs/IGraphMappingBuilder {
+	public abstract fun add (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;
+	public abstract fun add (Lkotlin/reflect/KProperty1;Ljava/lang/String;)Ljava/lang/Object;
+	public abstract fun count (Ljava/lang/String;)Ljava/lang/Object;
+	public abstract fun count (Lkotlin/reflect/KProperty1;)Ljava/lang/Object;
+	public abstract fun decrement (Ljava/lang/String;)Ljava/lang/Object;
+	public abstract fun decrement (Lkotlin/reflect/KProperty1;)Ljava/lang/Object;
+	public abstract fun increment (Ljava/lang/String;)Ljava/lang/Object;
+	public abstract fun increment (Lkotlin/reflect/KProperty1;)Ljava/lang/Object;
+	public abstract fun set (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/IGraphSetBuilder;
+	public abstract fun set (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/graphs/IGraphSetBuilder;
+	public abstract fun subtract (Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;
+	public abstract fun subtract (Lkotlin/reflect/KProperty1;Ljava/lang/String;)Ljava/lang/Object;
+}
+
+public abstract interface class io/cratis/chronicle/projections/graphs/IGraphNodeBuilder {
+	public fun from (Ljava/lang/Class;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+	public fun from (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+	public abstract fun from (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+	public static synthetic fun from$default (Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+	public abstract fun identifiedBy (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+	public abstract fun identifiedBy (Lkotlin/reflect/KProperty1;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+	public fun removedWith (Ljava/lang/Class;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+	public fun removedWith (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+	public abstract fun removedWith (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+	public static synthetic fun removedWith$default (Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+}
+
+public final class io/cratis/chronicle/projections/graphs/IGraphNodeBuilder$DefaultImpls {
+	public static fun from (Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;Ljava/lang/Class;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+	public static fun from (Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+	public static synthetic fun from$default (Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+	public static fun removedWith (Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;Ljava/lang/Class;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+	public static fun removedWith (Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+	public static synthetic fun removedWith$default (Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;ILjava/lang/Object;)Lio/cratis/chronicle/projections/graphs/IGraphNodeBuilder;
+}
+
+public abstract interface class io/cratis/chronicle/projections/graphs/IGraphNodeFromBuilder : io/cratis/chronicle/projections/graphs/IGraphMappingBuilder {
+	public abstract fun onlyWhenExisting ()Lio/cratis/chronicle/projections/graphs/IGraphNodeFromBuilder;
+	public abstract fun usingKey (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/IGraphNodeFromBuilder;
+}
+
+public abstract interface class io/cratis/chronicle/projections/graphs/IGraphNodeRemovedWithBuilder {
+	public abstract fun detach ()Lio/cratis/chronicle/projections/graphs/IGraphNodeRemovedWithBuilder;
+	public abstract fun usingKey (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/IGraphNodeRemovedWithBuilder;
+}
+
+public abstract interface class io/cratis/chronicle/projections/graphs/IGraphProjection {
+	public abstract fun define (Lio/cratis/chronicle/projections/graphs/IGraphProjectionBuilder;)V
+}
+
+public abstract interface class io/cratis/chronicle/projections/graphs/IGraphProjectionBuilder {
+	public fun edge (Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/graphs/IGraphProjectionBuilder;
+	public abstract fun edge (Lkotlin/reflect/KClass;Lkotlin/reflect/KClass;Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/graphs/IGraphProjectionBuilder;
+	public fun node (Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/graphs/IGraphProjectionBuilder;
+	public abstract fun node (Lkotlin/reflect/KClass;Lkotlin/jvm/functions/Function1;)Lio/cratis/chronicle/projections/graphs/IGraphProjectionBuilder;
+}
+
+public final class io/cratis/chronicle/projections/graphs/IGraphProjectionBuilder$DefaultImpls {
+	public static fun edge (Lio/cratis/chronicle/projections/graphs/IGraphProjectionBuilder;Ljava/lang/Class;Ljava/lang/Class;Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/graphs/IGraphProjectionBuilder;
+	public static fun node (Lio/cratis/chronicle/projections/graphs/IGraphProjectionBuilder;Ljava/lang/Class;Ljava/util/function/Consumer;)Lio/cratis/chronicle/projections/graphs/IGraphProjectionBuilder;
+}
+
+public abstract interface class io/cratis/chronicle/projections/graphs/IGraphSetBuilder {
+	public abstract fun toEventContextProperty (Ljava/lang/String;)Ljava/lang/Object;
+	public abstract fun toEventSourceId ()Ljava/lang/Object;
+	public abstract fun toProperty (Ljava/lang/String;)Ljava/lang/Object;
+	public abstract fun toValue (Ljava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class io/cratis/chronicle/projections/graphs/NestedObjectInGraph : java/lang/IllegalArgumentException {
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;)V
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/graphs/Node : java/lang/annotation/Annotation {
+}
+
+public final class io/cratis/chronicle/projections/graphs/NodeMustHaveExactlyOneKey : java/lang/IllegalArgumentException {
+	public fun <init> (Lkotlin/reflect/KClass;I)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/UnknownGraphEventProperty : java/lang/IllegalArgumentException {
+	public fun <init> (Lkotlin/reflect/KClass;Lkotlin/reflect/KClass;Ljava/lang/String;)V
 }
 
 public final class io/cratis/chronicle/readModels/DefaultReadModelNamingPolicy : io/cratis/chronicle/readModels/ReadModelNamingPolicy {
@@ -4026,7 +4203,9 @@ public abstract interface annotation class io/cratis/chronicle/seeding/Seeder : 
 public final class io/cratis/chronicle/sinks/WellKnownSinkTypes {
 	public static final field INSTANCE Lio/cratis/chronicle/sinks/WellKnownSinkTypes;
 	public static final field IN_MEMORY Ljava/lang/String;
+	public static final field IN_MEMORY_GRAPH Ljava/lang/String;
 	public static final field MONGODB Ljava/lang/String;
+	public static final field NEO4J Ljava/lang/String;
 	public static final field NONE Ljava/lang/String;
 	public static final field SQL Ljava/lang/String;
 }

@@ -18,6 +18,10 @@ package io.cratis.chronicle.keys
  * data class OrderLineAdded(@Key val orderId: String, val product: String, val quantity: Int)
  * ```
  *
+ * On a [io.cratis.chronicle.projections.graphs.Node] it marks the property holding the node's unique key, and
+ * on an [io.cratis.chronicle.projections.graphs.Edge] the property that identifies the edge among edges of
+ * the same type between the same two nodes.
+ *
  * This mirrors .NET's `Cratis.Chronicle.Keys.KeyAttribute`.
  */
 @Target(AnnotationTarget.PROPERTY, AnnotationTarget.FIELD)

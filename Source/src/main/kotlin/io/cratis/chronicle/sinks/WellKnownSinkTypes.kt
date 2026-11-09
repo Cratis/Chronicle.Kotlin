@@ -22,4 +22,10 @@ object WellKnownSinkTypes {
 
     /** In-memory sink — read models are not persisted across restarts. */
     const val IN_MEMORY = "InMemory"
+
+    /** Neo4j graph sink — the default for graph projections, which project events onto a property graph. */
+    const val NEO4J = "Neo4j"
+
+    /** In-memory graph sink — keeps the graph in the kernel's memory, for development and tests. */
+    const val IN_MEMORY_GRAPH = "InMemoryGraph"
 }

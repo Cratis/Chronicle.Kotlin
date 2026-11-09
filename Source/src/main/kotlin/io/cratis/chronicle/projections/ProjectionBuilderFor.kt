@@ -547,7 +547,7 @@ class NestedBuilderFor<TNested : Any>(
 }
 
 /** Constant expressions use the invariant textual value consumed by the kernel. */
-private fun valueExpression(value: Any?): String {
+internal fun valueExpression(value: Any?): String {
     val actual = if (value is ConceptAs<*>) value.value() else value
     return when (actual) {
         null -> "\$null"

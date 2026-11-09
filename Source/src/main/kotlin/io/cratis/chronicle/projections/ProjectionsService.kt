@@ -9,9 +9,13 @@ import io.cratis.chronicle.artifacts.isGlobalForHandler
 import io.cratis.chronicle.artifacts.isVariant
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.json.chronicleGson
+import io.cratis.chronicle.projections.graphs.GraphProjections
+import io.cratis.chronicle.projections.graphs.IGraphProjection
+import io.cratis.chronicle.projections.graphs.isGraphElement
 import io.cratis.chronicle.readModels.Passive
 import io.cratis.chronicle.readModels.ReadModelsService
 import io.cratis.chronicle.readModels.readModelIdentifier
+import io.cratis.chronicle.sinks.WellKnownSinkTypes
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.findAnnotations
@@ -40,6 +44,8 @@ class ProjectionsService(
     private val readModels: ReadModelsService,
     private val namespace: String = io.cratis.chronicle.EventStoreNamespaceName.default.value
 ) : IProjectionsService {
+    /** The sink that stores the graphs this service registers, from [io.cratis.chronicle.ChronicleOptions.defaultGraphSinkTypeId]. */
+    internal var graphSinkTypeId: String = WellKnownSinkTypes.NEO4J
 
     override suspend fun query(declaration: String, eventSequenceId: EventSequenceId): ProjectionQueryResult {
         val request = ProjectionsOuterClass.PreviewProjectionRequest.newBuilder()
@@ -76,6 +82,10 @@ class ProjectionsService(
         val built = mutableListOf<BuiltDefinition>()
         for (projection in projections) {
             when {
+                // A property graph is registered with its own definitions, below - a node that carries
+                // FromEvent is not a model-bound read model.
+                projection is KClass<*> && projection.isGraphElement() -> Unit
+                projection is IGraphProjection -> Unit
                 projection is KClass<*> && projection.isGlobalForHandler() && !projection.isVariant() -> Unit
                 projection is KClass<*> -> {
                     val globalHandlerClasses = projection.findAnnotation<VariantOf>()
@@ -90,16 +100,21 @@ class ProjectionsService(
                 else -> Unit
             }
         }
-        if (built.isEmpty()) return
+        val graphs = GraphProjections(graphSinkTypeId).registrationsFor(projections.toList())
+        if (built.isEmpty() && graphs.isEmpty()) return
 
         val definitionsByReadModel = built.associate { it.readModelClass to it.definition }
         val declarations = built.mapNotNull { b -> b.declaration?.let { b.readModelClass to it } }.toMap()
         val crossWired = VariantReclassifier.crossWireGroups(definitionsByReadModel, declarations)
 
+        // The read model a graph is stored as has to exist before the projection that fills it.
+        readModels.registerDefinitions(graphs.map { it.readModel })
+
         val request = ProjectionsOuterClass.RegisterRequest.newBuilder()
             .setEventStore(eventStoreName)
             .setOwnerValue(1) // CLIENT
             .addAllProjections(built.map { crossWired.getValue(it.readModelClass) })
+            .addAllProjections(graphs.map { it.projection })
             .build()
 
         stub.register(request)
