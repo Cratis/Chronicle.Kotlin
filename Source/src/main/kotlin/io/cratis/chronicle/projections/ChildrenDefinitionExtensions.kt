@@ -23,6 +23,7 @@ internal fun collectChildrenMap(readModelClass: KClass<*>): Map<String, Projecti
             buildFromPair(ann.eventType, mapped.resolvedKey(ann.key), mapped.properties, ann.parentKey)
         }
         val identifiedBy = annotations.firstOrNull { it.identifiedBy.isNotEmpty() }?.identifiedBy ?: EVENT_SOURCE_ID_KEY
+        val ordering = resolveChildrenOrdering(prop.name, childClass, annotations)
 
         // A [RemovedWith]/[RemovedWithJoin] placed on the same property as [ChildrenFrom] removes a
         // single child from this collection, rather than the whole read model instance.
@@ -31,6 +32,7 @@ internal fun collectChildrenMap(readModelClass: KClass<*>): Map<String, Projecti
         val autoMapEnabled = childClass.findAnnotation<NoAutoMap>() == null && readModelClass.findAnnotation<NoAutoMap>() == null
 
         result[prop.name] = ProjectionsOuterClass.ChildrenDefinition.newBuilder()
+            .applyOrdering(ordering)
             .setIdentifiedBy(wireKey(identifiedBy))
             .addAllFrom(fromPairs)
             .addAllRemovedWith(removedWith)
@@ -43,15 +45,77 @@ internal fun collectChildrenMap(readModelClass: KClass<*>): Map<String, Projecti
 }
 
 /** Converts [ChildrenEntry] instances collected by [ProjectionBuilderFor.children] into their wire shape. */
-internal fun buildChildrenMapFromEntries(entries: List<ChildrenEntry>): Map<String, ProjectionsOuterClass.ChildrenDefinition> =
+internal fun buildChildrenMapFromEntries(
+    entries: List<ChildrenEntry>,
+    orderings: Map<String, ChildrenOrdering> = emptyMap(),
+): Map<String, ProjectionsOuterClass.ChildrenDefinition> =
     entries.associate { entry ->
         val fromPairs = entry.fromEntries.mapNotNull { fe -> buildFromPair(fe.eventClass, fe.key, fe.properties, fe.parentKey) }
         entry.propertyName to ProjectionsOuterClass.ChildrenDefinition.newBuilder()
+            .applyOrdering(orderings[entry.propertyName])
             .setIdentifiedBy(wireKey(entry.identifiedBy))
             .addAllFrom(fromPairs)
             .setAutoMap(ProjectionsOuterClass.AutoMap.Enabled)
             .build()
     }
+
+/**
+ * Resolves the single ordering the [ChildrenFrom] [annotations] of [propertyName] declare, if any.
+ *
+ * @throws ConflictingChildrenOrdering when one annotation declares more than one ordering, or two
+ *   annotations declare different ones.
+ * @throws UnknownReadModelProperty when an ordering sorts by a property [childClass] does not have.
+ */
+internal fun resolveChildrenOrdering(
+    propertyName: String,
+    childClass: KClass<*>,
+    annotations: List<ChildrenFrom>,
+): ChildrenOrdering? {
+    var resolved: ChildrenOrdering? = null
+    for (annotation in annotations) {
+        val declared = buildList {
+            if (annotation.prepend) add(ChildrenOrdering.prepend())
+            if (annotation.orderBy.isNotEmpty()) add(sortedBy(childClass, annotation.orderBy, SortDirection.ASCENDING))
+            if (annotation.orderByDescending.isNotEmpty()) {
+                add(sortedBy(childClass, annotation.orderByDescending, SortDirection.DESCENDING))
+            }
+        }
+        if (declared.isEmpty()) continue
+        if (declared.size > 1) throw ConflictingChildrenOrdering(propertyName)
+        if (resolved != null && resolved != declared.single()) throw ConflictingChildrenOrdering(propertyName)
+        resolved = declared.single()
+    }
+    return resolved
+}
+
+private fun sortedBy(childClass: KClass<*>, propertyName: String, direction: SortDirection): ChildrenOrdering {
+    if (childClass.memberProperties.none { it.name == propertyName }) throw UnknownReadModelProperty(childClass, propertyName)
+    return ChildrenOrdering.sorted(propertyName, direction)
+}
+
+/** Carries [ordering] onto the children definition so the kernel keeps the children in that order. */
+private fun ProjectionsOuterClass.ChildrenDefinition.Builder.applyOrdering(
+    ordering: ChildrenOrdering?,
+): ProjectionsOuterClass.ChildrenDefinition.Builder {
+    if (ordering == null) return this
+    return setOrdering(
+        ProjectionsOuterClass.ChildrenOrderingDefinition.newBuilder()
+            .setPlacement(ordering.placement.toContract())
+            .setSortBy(ordering.sortBy)
+            .setDirection(ordering.direction.toContract()),
+    )
+}
+
+private fun ChildrenPlacement.toContract(): ProjectionsOuterClass.ChildrenPlacement = when (this) {
+    ChildrenPlacement.APPEND -> ProjectionsOuterClass.ChildrenPlacement.Append
+    ChildrenPlacement.PREPEND -> ProjectionsOuterClass.ChildrenPlacement.Prepend
+    ChildrenPlacement.SORTED -> ProjectionsOuterClass.ChildrenPlacement.Sorted
+}
+
+private fun SortDirection.toContract(): ProjectionsOuterClass.SortDirection = when (this) {
+    SortDirection.ASCENDING -> ProjectionsOuterClass.SortDirection.Ascending
+    SortDirection.DESCENDING -> ProjectionsOuterClass.SortDirection.Descending
+}
 
 /** Extracts the element [KClass] of a collection-typed property (e.g. `List<Child>` -> `Child`). */
 internal fun KProperty1<*, *>.elementClass(): KClass<*>? =

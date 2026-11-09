@@ -20,11 +20,13 @@ import kotlin.reflect.KClass
  * @property eventType The event class this context mapping applies to.
  * @property contextProperty The property on the event context to read the value from.
  *   Defaults to the annotated property's own name.
+ * @property setOnce Sets the property only when it has no value yet - the first event wins.
  */
 @Target(AnnotationTarget.PROPERTY, AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
 @Repeatable
 annotation class SetFromContext(
     val eventType: KClass<*>,
-    val contextProperty: String = ""
+    val contextProperty: String = "",
+    val setOnce: Boolean = false,
 )

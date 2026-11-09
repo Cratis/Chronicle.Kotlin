@@ -712,11 +712,16 @@ can be mapped differently per event type.
 | --- | --- | --- | --- |
 | `propertyPath` | `String` | `""` | Path to the source property. |
 | `eventType` | `KClass<*>` | `Nothing::class` | Event it applies to. |
+| `setOnce` | `Boolean` | `false` | Set only while the property is empty. |
 
 `propertyPath` is a dot-separated path on the event, and defaults to the
 annotated property's own name. The default `eventType` applies the mapping
 to every event in the read model's `@FromEvent` list that has a matching
 source property.
+
+With `setOnce = true` the first event that produces a value wins and later
+events leave the property as it is. Replay gives the same result, because
+the outcome depends only on the order of the events.
 
 ---
 
@@ -775,8 +780,10 @@ the mapping to a single event type.
 | --- | --- | --- | --- |
 | `eventType` | `KClass<*>` | — | The event class this mapping applies to. |
 | `contextProperty` | `String` | `""` | The context property to read from. |
+| `setOnce` | `Boolean` | `false` | Set only while the property is empty. |
 
-`contextProperty` defaults to the annotated property's own name.
+`contextProperty` defaults to the annotated property's own name. Use
+`setOnce = true` to keep, for example, the time something was first seen.
 
 <!-- validate: declarations -->
 
@@ -849,9 +856,18 @@ instances created or updated by a specific event type.
 | `key` | `String` | `"EventSourceId"` | Event property identifying the child. |
 | `identifiedBy` | `String` | `""` | Child's own identity property. |
 | `parentKey` | `String` | `"EventSourceId"` | Event property for the parent. |
+| `prepend` | `Boolean` | `false` | Put new children first. |
+| `orderBy` | `String` | `""` | Sort children ascending by this. |
+| `orderByDescending` | `String` | `""` | Sort children descending by this. |
 
 `identifiedBy` defaults to the child type's `id`/`key` property, falling back
 to `EventSourceId`.
+
+Declare at most one of `prepend`, `orderBy` and `orderByDescending`. When a
+property has several `@ChildrenFrom` annotations, each one that declares an
+ordering must declare the same one; otherwise registration fails with
+`ConflictingChildrenOrdering`. Children ordering needs Chronicle 19.150.0 or
+later.
 
 ---
 
