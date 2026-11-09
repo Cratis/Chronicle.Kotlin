@@ -19,6 +19,8 @@ import io.cratis.chronicle.projections.FromEvent
 import io.cratis.chronicle.projections.GlobalFor
 import io.cratis.chronicle.projections.IProjectionFor
 import io.cratis.chronicle.projections.VariantOf
+import io.cratis.chronicle.projections.graphs.IGraphProjection
+import io.cratis.chronicle.projections.graphs.isGraphElement
 import io.cratis.chronicle.readModels.ReadModel
 import io.cratis.chronicle.seeding.ICanSeedEvents
 import io.cratis.chronicle.webhooks.IWebhookDefiner
@@ -79,7 +81,15 @@ internal fun KClass<*>.isDeclarativeProjection(): Boolean =
     isInstantiableArtifact() && isSubclassOf(IProjectionFor::class)
 
 /** Whether this class is a model-bound projection — a read model that declares the events it projects from. */
-internal fun KClass<*>.isModelBoundProjection(): Boolean = findAnnotations<FromEvent>().isNotEmpty()
+internal fun KClass<*>.isModelBoundProjection(): Boolean =
+    findAnnotations<FromEvent>().isNotEmpty() && !isGraphElement()
+
+/**
+ * Whether this class is declared as a graph through a fluent builder - an [IGraphProjection] - rather than
+ * by annotating the nodes and edges.
+ */
+internal fun KClass<*>.isGraphProjection(): Boolean =
+    isInstantiableArtifact() && isSubclassOf(IGraphProjection::class)
 
 /** Whether this class is one of several mutually exclusive read model variants of the same logical entity. */
 internal fun KClass<*>.isVariant(): Boolean = hasAnnotation<VariantOf>()

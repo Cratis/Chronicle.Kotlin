@@ -155,6 +155,7 @@ Everything you write is one of a handful of kinds. Annotate it, and the client f
 | **Read model** | `@ReadModel` on a class | The shape some part of your system reads |
 | **Reducer** | `@Reducer` with one method per event | Folds a stream of events into a read model |
 | **Projection** | `IProjectionFor<T>`, or `@FromEvent` on the model | Declares the same fold, without writing the fold |
+| **Graph** | `@Node` and `@Edge` classes, or `IGraphProjection` | Projects events onto a property graph of nodes and edges, stored in Neo4j |
 | **Reactor** | `@Reactor` with one method per event | Does something when a fact arrives — mail, calls, more events |
 | **Constraint** | `IConstraint` with `@Constraint` | A rule the kernel enforces before an append is accepted |
 | **Seeder** | `ICanSeedEvents` with `@Seeder` | Facts that should exist the first time the system runs |

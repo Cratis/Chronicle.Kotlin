@@ -29,7 +29,8 @@ class ChronicleClient(private val options: ChronicleOptions) : IChronicleClient 
                 options.artifactActivator,
                 options.autoDiscoverAndRegister,
                 traces,
-                options.readModelNamingPolicy
+                options.readModelNamingPolicy,
+                options.defaultGraphSinkTypeId
             )
         }
     }

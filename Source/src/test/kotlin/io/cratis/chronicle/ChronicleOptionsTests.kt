@@ -80,4 +80,32 @@ class ChronicleOptionsTests {
         assertTrue(opts.artifacts.eventTypes.contains(OrderPlaced::class))
         assertTrue(opts.artifacts.reactors.contains(OrderReactor::class))
     }
+
+    @Test
+    fun `graphs are stored in Neo4j by default`() {
+        assertEquals("Neo4j", ChronicleOptions.development().defaultGraphSinkTypeId)
+    }
+
+    @Test
+    fun `withDefaultGraphSinkTypeId changes the sink graphs are stored in`() {
+        val opts = ChronicleOptions.development()
+        val changed = opts.withDefaultGraphSinkTypeId("InMemoryGraph")
+
+        assertEquals("InMemoryGraph", changed.defaultGraphSinkTypeId)
+        assertEquals("Neo4j", opts.defaultGraphSinkTypeId)
+        assertEquals(opts.defaultSinkTypeId, changed.defaultSinkTypeId)
+        assertNotEquals(opts, changed)
+        assertEquals(opts.withDefaultGraphSinkTypeId("InMemoryGraph"), changed)
+        assertEquals(changed.hashCode(), opts.withDefaultGraphSinkTypeId("InMemoryGraph").hashCode())
+    }
+
+    @Test
+    fun `the graph sink survives the other with functions`() {
+        val opts = ChronicleOptions.development().withDefaultGraphSinkTypeId("InMemoryGraph")
+
+        assertEquals("InMemoryGraph", opts.withoutAutoRegistration().defaultGraphSinkTypeId)
+        assertEquals("InMemoryGraph", opts.withArtifactsFrom("io.cratis.chronicle.artifacts.given").defaultGraphSinkTypeId)
+        assertEquals("InMemoryGraph", opts.withMaxReceiveMessageSize(7).defaultGraphSinkTypeId)
+        assertEquals("InMemoryGraph", opts.withReadModelNamingPolicy { it.simpleName }.defaultGraphSinkTypeId)
+    }
 }

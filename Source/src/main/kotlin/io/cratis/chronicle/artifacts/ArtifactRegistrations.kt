@@ -86,7 +86,10 @@ class ArtifactRegistrations(
         eventStore.constraints.registerModelBound(artifacts.eventTypes)
         // Projections come in two shapes: a class that defines one through a builder, registered as an
         // instance, and a read model that declares the events it projects from, registered as a class.
-        val projections: List<Any> = instancesOf(artifacts.projections) + artifacts.modelBoundProjections
+        // A property graph is declared the same two ways - annotated node and edge classes, or an
+        // IGraphProjection instance - and registers through the same call.
+        val projections: List<Any> = instancesOf(artifacts.projections) + artifacts.modelBoundProjections +
+            artifacts.graphElements + instancesOf(artifacts.graphProjections)
         eventStore.projections.register(*projections.toTypedArray())
         eventStore.webhooks.register(*instancesOf(artifacts.webhooks).toTypedArray())
 

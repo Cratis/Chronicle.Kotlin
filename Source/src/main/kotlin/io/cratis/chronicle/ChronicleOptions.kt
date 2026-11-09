@@ -38,6 +38,10 @@ import io.opentelemetry.api.OpenTelemetry
  *   [withReadModelNamingPolicy]; it is deliberately not a constructor parameter, so the constructors,
  *   `copy` and `componentN` keep their published shape. Because of that a call to `copy` does not carry
  *   the policy over - set it again afterwards. It takes part in [equals] and [hashCode].
+ * @property defaultGraphSinkTypeId The sink type graph projections are stored in. Defaults to
+ *   [WellKnownSinkTypes.NEO4J]; use [WellKnownSinkTypes.IN_MEMORY_GRAPH] for development and tests. Set it with
+ *   [withDefaultGraphSinkTypeId]; like [readModelNamingPolicy] it is not a constructor parameter, so a call
+ *   to `copy` does not carry it over. It takes part in [equals] and [hashCode].
  */
 data class ChronicleOptions @JvmOverloads constructor(
     val connectionString: ChronicleConnectionString,
@@ -55,12 +59,15 @@ data class ChronicleOptions @JvmOverloads constructor(
     var readModelNamingPolicy: ReadModelNamingPolicy = DefaultReadModelNamingPolicy
         private set
 
+    /** The sink type graph projections are stored in. See [withDefaultGraphSinkTypeId]. */
+    var defaultGraphSinkTypeId: String = WellKnownSinkTypes.NEO4J
+        private set
+
     /**
      * The same options with automatic discovery and registration turned off, leaving every artifact to
      * be registered by hand through the services on [IEventStore].
      */
-    fun withoutAutoRegistration(): ChronicleOptions =
-        copy(autoDiscoverAndRegister = false).withReadModelNamingPolicy(readModelNamingPolicy)
+    fun withoutAutoRegistration(): ChronicleOptions = copy(autoDiscoverAndRegister = false).carrying(this)
 
     /**
      * The same options with [policy] naming the container each read model is stored in.
@@ -72,14 +79,22 @@ data class ChronicleOptions @JvmOverloads constructor(
      * @param policy The policy to apply.
      */
     fun withReadModelNamingPolicy(policy: ReadModelNamingPolicy): ChronicleOptions =
-        copy().also { it.readModelNamingPolicy = policy }
+        copy().carrying(this).also { it.readModelNamingPolicy = policy }
+
+    /**
+     * The same options with graph projections stored in the graph sink of type [sinkTypeId].
+     *
+     * @param sinkTypeId The sink type, such as [WellKnownSinkTypes.NEO4J] or [WellKnownSinkTypes.IN_MEMORY_GRAPH].
+     */
+    fun withDefaultGraphSinkTypeId(sinkTypeId: String): ChronicleOptions =
+        copy().carrying(this).also { it.defaultGraphSinkTypeId = sinkTypeId }
 
     /**
      * The same options with a different limit on the size of a message accepted from the kernel.
      *
      * @param bytes The largest message in bytes, or `null` for grpc-java's own default of 4 MB.
      */
-    fun withMaxReceiveMessageSize(bytes: Int?): ChronicleOptions = copy(maxReceiveMessageSize = bytes)
+    fun withMaxReceiveMessageSize(bytes: Int?): ChronicleOptions = copy(maxReceiveMessageSize = bytes).carrying(this)
 
     /**
      * The same options with artifact discovery narrowed to [packages] and everything beneath them.
@@ -90,7 +105,14 @@ data class ChronicleOptions @JvmOverloads constructor(
      * @param packages The packages to scan.
      */
     fun withArtifactsFrom(vararg packages: String): ChronicleOptions =
-        copy(artifacts = ClientArtifacts(packages.toList())).withReadModelNamingPolicy(readModelNamingPolicy)
+        copy(artifacts = ClientArtifacts(packages.toList())).carrying(this)
+
+    /** Carries over the settings that are not constructor parameters, which `copy` does not. */
+    private fun carrying(source: ChronicleOptions): ChronicleOptions {
+        readModelNamingPolicy = source.readModelNamingPolicy
+        defaultGraphSinkTypeId = source.defaultGraphSinkTypeId
+        return this
+    }
 
     override fun equals(other: Any?): Boolean =
         other is ChronicleOptions &&
@@ -101,7 +123,8 @@ data class ChronicleOptions @JvmOverloads constructor(
             artifacts == other.artifacts &&
             artifactActivator == other.artifactActivator &&
             openTelemetry == other.openTelemetry &&
-            readModelNamingPolicy == other.readModelNamingPolicy
+            readModelNamingPolicy == other.readModelNamingPolicy &&
+            defaultGraphSinkTypeId == other.defaultGraphSinkTypeId
 
     override fun hashCode(): Int = listOf(
         connectionString,
@@ -111,7 +134,8 @@ data class ChronicleOptions @JvmOverloads constructor(
         artifacts,
         artifactActivator,
         openTelemetry,
-        readModelNamingPolicy
+        readModelNamingPolicy,
+        defaultGraphSinkTypeId
     ).hashCode()
 
     companion object {

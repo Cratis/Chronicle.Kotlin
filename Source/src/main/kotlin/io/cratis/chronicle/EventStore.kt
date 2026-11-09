@@ -95,6 +95,8 @@ import java.util.concurrent.ConcurrentHashMap
  *   own; [ChronicleClient] turns it on from [ChronicleOptions.autoDiscoverAndRegister].
  * @param readModelNamingPolicy Names the container each read model is stored in, from
  *   [ChronicleOptions.readModelNamingPolicy].
+ * @param defaultGraphSinkTypeId The sink graph projections are stored in, from
+ *   [ChronicleOptions.defaultGraphSinkTypeId].
  */
 class EventStore(
     override val name: String,
@@ -106,8 +108,35 @@ class EventStore(
     private val artifactActivator: IArtifactActivator,
     private val autoDiscoverAndRegister: Boolean,
     private val traces: ChronicleTraces,
-    private val readModelNamingPolicy: ReadModelNamingPolicy
+    private val readModelNamingPolicy: ReadModelNamingPolicy,
+    private val defaultGraphSinkTypeId: String
 ) : IEventStore, IEventSourcesCapability {
+    /** Creates an event store that stores graphs in the default graph sink of the kernel. */
+    constructor(
+        name: String,
+        namespace: String,
+        services: ChronicleServices,
+        lifecycle: ConnectionLifecycle,
+        defaultSinkTypeId: String,
+        artifacts: IClientArtifacts,
+        artifactActivator: IArtifactActivator,
+        autoDiscoverAndRegister: Boolean,
+        traces: ChronicleTraces,
+        readModelNamingPolicy: ReadModelNamingPolicy
+    ) : this(
+        name,
+        namespace,
+        services,
+        lifecycle,
+        defaultSinkTypeId,
+        artifacts,
+        artifactActivator,
+        autoDiscoverAndRegister,
+        traces,
+        readModelNamingPolicy,
+        io.cratis.chronicle.sinks.WellKnownSinkTypes.NEO4J
+    )
+
     /** Creates an event store that names read model containers after the read model identifier. */
     constructor(
         name: String,
@@ -129,7 +158,8 @@ class EventStore(
         artifactActivator,
         autoDiscoverAndRegister,
         traces,
-        DefaultReadModelNamingPolicy
+        DefaultReadModelNamingPolicy,
+        io.cratis.chronicle.sinks.WellKnownSinkTypes.NEO4J
     )
 
     private val registrations = ArtifactRegistrations(this, artifacts, artifactActivator)
@@ -232,7 +262,9 @@ class EventStore(
     }
 
     override val projections: IProjectionsService by lazy {
-        ProjectionsService(name, services.projections, readModelsService, namespace)
+        ProjectionsService(name, services.projections, readModelsService, namespace).also {
+            it.graphSinkTypeId = defaultGraphSinkTypeId
+        }
     }
 
     override val constraints: IConstraintsService by lazy {

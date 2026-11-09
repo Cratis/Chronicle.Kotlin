@@ -3,6 +3,7 @@
 
 package io.cratis.chronicle.artifacts
 
+import io.cratis.chronicle.projections.graphs.isGraphElement
 import kotlin.reflect.KClass
 
 /**
@@ -30,6 +31,8 @@ class KnownClientArtifacts(classes: Iterable<KClass<*>>) : IClientArtifacts, IEv
     override val projections: List<KClass<*>> = candidates.filter { it.isDeclarativeProjection() }
     override val modelBoundProjections: List<KClass<*>> =
         candidates.filter { it.isModelBoundProjection() || it.isVariant() || it.isGlobalForHandler() }
+    override val graphElements: List<KClass<*>> = candidates.filter { it.isGraphElement() }
+    override val graphProjections: List<KClass<*>> = candidates.filter { it.isGraphProjection() }
     override val reactors: List<KClass<*>> = candidates.filter { it.isReactor() }
     override val reducers: List<KClass<*>> = candidates.filter { it.isReducer() }
     override val constraints: List<KClass<*>> = candidates.filter { it.isConstraint() }

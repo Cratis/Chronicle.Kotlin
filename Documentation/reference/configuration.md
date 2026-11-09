@@ -31,6 +31,7 @@ data class ChronicleOptions(
 | `openTelemetry` | `null` | Where spans go — see [Tracing](../guides/tracing.md) |
 | `maxReceiveMessageSize` | `100 MiB` | Receive limit (bytes) |
 | `readModelNamingPolicy` | `DefaultReadModelNamingPolicy` | Names each read model's container — see [Read model container names](#read-model-container-names) |
+| `defaultGraphSinkTypeId` | `Neo4j` | Sink for [graph projections](../guides/graph-projections.md), set with `withDefaultGraphSinkTypeId` |
 
 `programIdentifier` is a human-readable label that shows up in diagnostics.
 `defaultSinkTypeId` defaults to `WellKnownSinkTypes.MONGODB`, and can be
@@ -48,9 +49,13 @@ ChronicleOptions.development().withoutAutoRegistration()
 ChronicleOptions.development().withArtifactsFrom("com.acme.ordering")
 ```
 
-`readModelNamingPolicy` is not a constructor parameter. Set it with
-`withReadModelNamingPolicy`, described below. `copy` does not carry it over,
-so set it again after copying.
+`readModelNamingPolicy` and `defaultGraphSinkTypeId` are not constructor
+parameters. Set them with `withReadModelNamingPolicy`, described below, and
+`withDefaultGraphSinkTypeId(sinkTypeId)`. `copy` does not carry them over,
+so set them again after copying. `defaultGraphSinkTypeId` is the sink graph
+projections are stored in: `WellKnownSinkTypes.NEO4J` unless set, or
+`WellKnownSinkTypes.IN_MEMORY_GRAPH` for development and tests. See
+[Graph projections](../guides/graph-projections.md).
 
 `maxReceiveMessageSize` defaults to `100 * 1024 * 1024` bytes (100 MiB).
 Set it in the constructor or with `withMaxReceiveMessageSize(bytes)`.

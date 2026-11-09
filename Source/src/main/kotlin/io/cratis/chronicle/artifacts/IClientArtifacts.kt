@@ -32,6 +32,18 @@ interface IClientArtifacts {
     /** Every read model carrying [io.cratis.chronicle.projections.FromEvent] — a model-bound projection. */
     val modelBoundProjections: List<KClass<*>>
 
+    /**
+     * Every class annotated with [io.cratis.chronicle.projections.graphs.Node] or
+     * [io.cratis.chronicle.projections.graphs.Edge] - the model-bound declaration of a property graph.
+     *
+     * A node that carries [io.cratis.chronicle.projections.FromEvent] is a graph element, not a model-bound
+     * read model, so it is listed here and not in [modelBoundProjections].
+     */
+    val graphElements: List<KClass<*>> get() = emptyList()
+
+    /** Every class implementing [io.cratis.chronicle.projections.graphs.IGraphProjection] - a graph declared with a builder. */
+    val graphProjections: List<KClass<*>> get() = emptyList()
+
     /** Every class annotated with [io.cratis.chronicle.observation.Reactor]. */
     val reactors: List<KClass<*>>
 

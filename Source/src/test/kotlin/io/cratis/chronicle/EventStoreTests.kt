@@ -8,6 +8,9 @@ import io.cratis.chronicle.artifacts.KnownClientArtifacts
 import io.cratis.chronicle.connection.ChronicleConnectionFailed
 import io.cratis.chronicle.connection.ChronicleServices
 import io.cratis.chronicle.connection.ConnectionLifecycle
+import io.cratis.chronicle.diagnostics.ChronicleTraces
+import io.cratis.chronicle.projections.ProjectionsService
+import io.cratis.chronicle.readModels.DefaultReadModelNamingPolicy
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.observation.Reactor
 import io.cratis.chronicle.events.EventType
@@ -54,6 +57,31 @@ class EventStoreTests {
     private fun newEventStore(): EventStore {
         val channel = Grpc.newChannelBuilderForAddress("localhost", 1, InsecureChannelCredentials.create()).build()
         return EventStore("my-store", "default", ChronicleServices(channel), ConnectionLifecycle())
+    }
+
+    @Test
+    fun `stores graphs in Neo4j unless told otherwise`() {
+        assertEquals("Neo4j", (newEventStore().projections as ProjectionsService).graphSinkTypeId)
+    }
+
+    @Test
+    fun `gives the projections the graph sink it was configured with`() {
+        val channel = Grpc.newChannelBuilderForAddress("localhost", 1, InsecureChannelCredentials.create()).build()
+        val store = EventStore(
+            "my-store",
+            "default",
+            ChronicleServices(channel),
+            ConnectionLifecycle(),
+            "MongoDB",
+            KnownClientArtifacts.empty,
+            ArtifactActivator,
+            false,
+            ChronicleTraces.default,
+            DefaultReadModelNamingPolicy,
+            "InMemoryGraph"
+        )
+
+        assertEquals("InMemoryGraph", (store.projections as ProjectionsService).graphSinkTypeId)
     }
 
     @Test

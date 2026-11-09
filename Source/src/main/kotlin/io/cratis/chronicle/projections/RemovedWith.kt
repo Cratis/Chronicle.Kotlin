@@ -13,6 +13,8 @@ import kotlin.reflect.KClass
  * @property key The event property identifying the instance/child to remove. Defaults to "EventSourceId".
  * @property parentKey The event property identifying the parent instance, when removing a child.
  *   Defaults to "EventSourceId".
+ * @property detach Only for a [io.cratis.chronicle.projections.graphs.Node]: delete the edges attached to the
+ *   node together with it. Without it a node that still has edges cannot be deleted. Ignored on a read model.
  */
 @Target(AnnotationTarget.CLASS, AnnotationTarget.PROPERTY, AnnotationTarget.FIELD)
 @Retention(AnnotationRetention.RUNTIME)
@@ -20,5 +22,6 @@ import kotlin.reflect.KClass
 annotation class RemovedWith(
     val eventType: KClass<*>,
     val key: String = "EventSourceId",
-    val parentKey: String = "EventSourceId"
+    val parentKey: String = "EventSourceId",
+    val detach: Boolean = false
 )

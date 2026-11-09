@@ -145,10 +145,22 @@ class ReadModelsService(
             .setObserverIdentifier(observerIdentifier)
             .build()
 
+        registerDefinitions(listOf(definition))
+    }
+
+    /**
+     * Registers read model definitions that are already built - the definitions of property graphs, which
+     * are not described by a read model class.
+     *
+     * @param definitions The definitions to register.
+     */
+    internal suspend fun registerDefinitions(definitions: List<Readmodels.ReadModelDefinition>) {
+        if (definitions.isEmpty()) return
+
         val request = Readmodels.RegisterManyRequest.newBuilder()
             .setEventStore(eventStoreName)
             .setOwnerValue(1) // CLIENT
-            .addReadModels(definition)
+            .addAllReadModels(definitions)
             .setSourceValue(1)
             .build()
 
