@@ -39,7 +39,7 @@ internal fun buildPropertyMappingsForEvent(readModelClass: KClass<*>, eventKClas
                 // validating. The implicit Nothing::class form deliberately applies to whichever
                 // subscribed events happen to carry a matching property, so it is not.
                 if (setFrom.eventType == eventKClass) PropertyValidator.validatePropertyExists(eventKClass, resolved)
-                mappings[prop.name] = resolved
+                mappings[prop.name] = if (setFrom.setOnce) "\$setOnce($resolved)" else resolved
                 break
             }
         }
@@ -68,7 +68,8 @@ internal fun buildPropertyMappingsForEvent(readModelClass: KClass<*>, eventKClas
         prop.findAnnotations<SetFromContext>().firstOrNull { it.eventType == eventKClass }?.let { setFromContext ->
             val resolved = setFromContext.contextProperty.ifEmpty { prop.name }
             PropertyValidator.validatePropertyExists(EventContext::class, resolved)
-            mappings[prop.name] = "\$eventContext($resolved)"
+            val expression = "\$eventContext($resolved)"
+            mappings[prop.name] = if (setFromContext.setOnce) "\$setOnce($expression)" else expression
         }
         prop.findAnnotations<SetValue>().firstOrNull { it.eventType == eventKClass }?.let { setValue ->
             // Kotlin's reflection has no reliable way to tell a genuinely non-nullable property from an

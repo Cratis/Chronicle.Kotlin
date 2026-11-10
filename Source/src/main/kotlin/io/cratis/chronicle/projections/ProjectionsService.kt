@@ -172,7 +172,7 @@ class ProjectionsService(
             readModelClass,
             fromPairs,
             joinPairs = joinPairs,
-            children = buildChildrenMapFromEntries(builderFor.childrenEntries),
+            children = buildChildrenMapFromEntries(builderFor.childrenEntries, builderFor.childrenOrderings),
             nested = buildNestedMapFromEntries(builderFor.nestedEntries),
             isRewindable = builderFor.isRewindable,
             isActive = readModelClass.findAnnotation<Passive>() == null,

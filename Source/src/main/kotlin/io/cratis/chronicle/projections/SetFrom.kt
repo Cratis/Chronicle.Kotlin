@@ -15,11 +15,14 @@ import kotlin.reflect.KClass
  * @property eventType The specific event class this mapping applies to.
  *   Defaults to [Nothing] which means the mapping applies to all events in the read model's
  *   [FromEvent] list that contain a matching source property.
+ * @property setOnce Sets the property only when it has no value yet - the first event that produces
+ *   a value wins and later events leave it as it is.
  */
 @Target(AnnotationTarget.FIELD, AnnotationTarget.PROPERTY)
 @Retention(AnnotationRetention.RUNTIME)
 @Repeatable
 annotation class SetFrom(
     val propertyPath: String = "",
-    val eventType: KClass<*> = Nothing::class
+    val eventType: KClass<*> = Nothing::class,
+    val setOnce: Boolean = false,
 )

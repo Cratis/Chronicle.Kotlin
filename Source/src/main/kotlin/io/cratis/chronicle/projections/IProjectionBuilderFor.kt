@@ -265,6 +265,80 @@ interface IFromBuilderFor<TReadModel : Any, TEvent : Any> {
      * @throws UnknownReadModelProperty when [propertyName] is not a property of [TReadModel].
      */
     fun subtract(propertyName: String): ISubtractBuilderFor<TReadModel, TEvent>
+
+    /**
+     * Sets [property] only when it has no value yet (`$setOnce(...)`): the first event that produces a value
+     * wins and later events leave it as it is - on replay too, since the outcome only depends on event order.
+     */
+    fun <TValue : Any?> setOnce(property: KProperty1<TReadModel, TValue>): ISetBuilderFor<TReadModel, TEvent, TValue>
+
+    /**
+     * The same, by property name - for callers, such as Java, that cannot produce a [KProperty1].
+     *
+     * @throws UnknownReadModelProperty when [propertyName] is not a property of [TReadModel].
+     */
+    fun <TValue : Any?> setOnce(propertyName: String): ISetBuilderFor<TReadModel, TEvent, TValue>
+
+    /**
+     * Sets the entry of the dictionary [property] whose key is resolved per event from [key].
+     *
+     * @param property A `Map<String, V>` property on the read model.
+     * @param key Where the entry key comes from - the event content, the event context or who caused the event.
+     */
+    fun <TValue : Any?> set(property: KProperty1<TReadModel, Map<String, TValue>?>, key: DictionaryKey): ISetBuilderFor<TReadModel, TEvent, TValue>
+
+    /**
+     * The same, by property name - for callers, such as Java, that cannot produce a [KProperty1].
+     *
+     * @throws UnknownReadModelProperty when [propertyName] is not a property of [TReadModel].
+     * @throws IllegalArgumentException when [propertyName] is not a `Map` property.
+     */
+    fun <TValue : Any?> set(propertyName: String, key: DictionaryKey): ISetBuilderFor<TReadModel, TEvent, TValue>
+
+    /** Sets the dictionary entry addressed by [key] only when the entry has no value yet - see [setOnce]. */
+    fun <TValue : Any?> setOnce(property: KProperty1<TReadModel, Map<String, TValue>?>, key: DictionaryKey): ISetBuilderFor<TReadModel, TEvent, TValue>
+
+    /** The same, by property name - see [set]. */
+    fun <TValue : Any?> setOnce(propertyName: String, key: DictionaryKey): ISetBuilderFor<TReadModel, TEvent, TValue>
+
+    /** Counts events into the dictionary entry of [property] addressed by [key]. */
+    fun count(property: KProperty1<TReadModel, Map<String, *>?>, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent>
+
+    /** The same, by property name - see [set]. */
+    fun count(propertyName: String, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent>
+
+    /** Increments the dictionary entry of [property] addressed by [key] by one. */
+    fun increment(property: KProperty1<TReadModel, Map<String, *>?>, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent>
+
+    /** The same, by property name - see [set]. */
+    fun increment(propertyName: String, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent>
+
+    /** Decrements the dictionary entry of [property] addressed by [key] by one. */
+    fun decrement(property: KProperty1<TReadModel, Map<String, *>?>, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent>
+
+    /** The same, by property name - see [set]. */
+    fun decrement(propertyName: String, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent>
+
+    /** Adds an event value into the dictionary entry of [property] addressed by [key]. */
+    fun add(property: KProperty1<TReadModel, Map<String, *>?>, key: DictionaryKey): IAddBuilderFor<TReadModel, TEvent>
+
+    /** The same, by property name - see [set]. */
+    fun add(propertyName: String, key: DictionaryKey): IAddBuilderFor<TReadModel, TEvent>
+
+    /** Subtracts an event value from the dictionary entry of [property] addressed by [key]. */
+    fun subtract(property: KProperty1<TReadModel, Map<String, *>?>, key: DictionaryKey): ISubtractBuilderFor<TReadModel, TEvent>
+
+    /** The same, by property name - see [set]. */
+    fun subtract(propertyName: String, key: DictionaryKey): ISubtractBuilderFor<TReadModel, TEvent>
+
+    /**
+     * Removes the dictionary entry of [property] addressed by [key] (`$remove`). A key that is not in the
+     * dictionary leaves it unchanged.
+     */
+    fun removeKey(property: KProperty1<TReadModel, Map<String, *>?>, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent>
+
+    /** The same, by property name - see [set]. */
+    fun removeKey(propertyName: String, key: DictionaryKey): IFromBuilderFor<TReadModel, TEvent>
 }
 
 /** Implemented by the client; applications should not implement this builder interface. */
@@ -277,6 +351,9 @@ interface ISetBuilderFor<TReadModel : Any, TEvent : Any, TValue : Any?> {
 
     /** Maps to a property on the event context (e.g. the sequence number, or who caused it) rather than the event payload. */
     fun toEventContextProperty(contextProperty: String): IFromBuilderFor<TReadModel, TEvent>
+
+    /** Maps to an identity property of whoever caused the event (`$causedBy(...)`). */
+    fun toCausedBy(property: CausedByProperty): IFromBuilderFor<TReadModel, TEvent>
 }
 
 /** Builds up an add operation — the property on the event whose value is added into the target property. */
@@ -300,6 +377,16 @@ interface IJoinBuilderFor<TReadModel : Any, TEvent : Any> {
      */
     fun <TValue : Any?> set(propertyName: String): ISetBuilderFor<TReadModel, TEvent, TValue>
 
+    /** Sets [property] from the joined event only when it has no value yet (`$setOnce(...)`). */
+    fun <TValue : Any?> setOnce(property: KProperty1<TReadModel, TValue>): ISetBuilderFor<TReadModel, TEvent, TValue>
+
+    /**
+     * The same, by property name - for callers, such as Java, that cannot produce a [KProperty1].
+     *
+     * @throws UnknownReadModelProperty when [propertyName] is not a property of [TReadModel].
+     */
+    fun <TValue : Any?> setOnce(propertyName: String): ISetBuilderFor<TReadModel, TEvent, TValue>
+
     /** Sets the read model property that defines the relationship, i.e. what is being joined on. */
     fun on(property: KProperty1<TReadModel, *>): IJoinBuilderFor<TReadModel, TEvent>
 
@@ -321,6 +408,16 @@ interface IFromEveryBuilderFor<TReadModel : Any> {
      * @throws UnknownReadModelProperty when [propertyName] is not a property of [TReadModel].
      */
     fun <TValue : Any?> set(propertyName: String): IAllSetBuilderFor<TReadModel, TValue>
+
+    /** Sets [property] from every event only while it has no value yet (`$setOnce(...)`). */
+    fun <TValue : Any?> setOnce(property: KProperty1<TReadModel, TValue>): IAllSetBuilderFor<TReadModel, TValue>
+
+    /**
+     * The same, by property name - for callers, such as Java, that cannot produce a [KProperty1].
+     *
+     * @throws UnknownReadModelProperty when [propertyName] is not a property of [TReadModel].
+     */
+    fun <TValue : Any?> setOnce(propertyName: String): IAllSetBuilderFor<TReadModel, TValue>
 
     /**
      * Counts every event into a dictionary-typed property, with the key resolved from [EventContext].
@@ -380,6 +477,9 @@ interface IAllSetBuilderFor<TReadModel : Any, TValue : Any?> {
     fun toProperty(eventProperty: String): IFromEveryBuilderFor<TReadModel>
     fun toEventSourceId(): IFromEveryBuilderFor<TReadModel>
     fun toEventContextProperty(contextProperty: String): IFromEveryBuilderFor<TReadModel>
+
+    /** Maps to an identity property of whoever caused the event (`$causedBy(...)`). */
+    fun toCausedBy(property: CausedByProperty): IFromEveryBuilderFor<TReadModel>
 }
 
 /** Builds up the key (and, where applicable, parent key) used to resolve which instance an event removes. */
@@ -407,6 +507,41 @@ interface IChildrenBuilderFor<TChild : Any> {
 
     /** Sets the property on [TChild] that is the child's own identity within the collection. */
     fun identifiedBy(propertyName: String): IChildrenBuilderFor<TChild>
+
+    /**
+     * Places new children at the start of the collection, so the newest comes first.
+     *
+     * @throws ChildrenOrderingAlreadyDefined when an ordering is already defined.
+     */
+    fun prepend(): IChildrenBuilderFor<TChild>
+
+    /**
+     * Keeps the collection sorted ascending by [property] on the child as new children arrive.
+     *
+     * @throws ChildrenOrderingAlreadyDefined when an ordering is already defined.
+     */
+    fun orderBy(property: KProperty1<TChild, *>): IChildrenBuilderFor<TChild>
+
+    /**
+     * The same, by property name - for callers, such as Java, that cannot produce a [KProperty1].
+     *
+     * @throws UnknownReadModelProperty when [propertyName] is not a property of [TChild].
+     */
+    fun orderBy(propertyName: String): IChildrenBuilderFor<TChild>
+
+    /**
+     * Keeps the collection sorted descending by [property] on the child as new children arrive.
+     *
+     * @throws ChildrenOrderingAlreadyDefined when an ordering is already defined.
+     */
+    fun orderByDescending(property: KProperty1<TChild, *>): IChildrenBuilderFor<TChild>
+
+    /**
+     * The same, by property name - for callers, such as Java, that cannot produce a [KProperty1].
+     *
+     * @throws UnknownReadModelProperty when [propertyName] is not a property of [TChild].
+     */
+    fun orderByDescending(propertyName: String): IChildrenBuilderFor<TChild>
 }
 
 interface IChildFromBuilderFor<TChild : Any, TEvent : Any> {
@@ -418,6 +553,16 @@ interface IChildFromBuilderFor<TChild : Any, TEvent : Any> {
      * @throws UnknownReadModelProperty when [propertyName] is not a property of [TChild].
      */
     fun <TValue : Any?> set(propertyName: String): ISetBuilderFor<TChild, TEvent, TValue>
+
+    /** Sets [property] on the child only when it has no value yet (`$setOnce(...)`). */
+    fun <TValue : Any?> setOnce(property: KProperty1<TChild, TValue>): ISetBuilderFor<TChild, TEvent, TValue>
+
+    /**
+     * The same, by property name - for callers, such as Java, that cannot produce a [KProperty1].
+     *
+     * @throws UnknownReadModelProperty when [propertyName] is not a property of [TChild].
+     */
+    fun <TValue : Any?> setOnce(propertyName: String): ISetBuilderFor<TChild, TEvent, TValue>
 
     fun usingKey(eventPropertyName: String): IChildFromBuilderFor<TChild, TEvent>
     fun usingParentKey(eventPropertyName: String): IChildFromBuilderFor<TChild, TEvent>
