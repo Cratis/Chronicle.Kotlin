@@ -38,4 +38,23 @@ class EventBatchTests {
     fun `reporting a partition the batch holds no events for is refused`() {
         assertThrows<PartitionNotInBatch> { batch.fail("z", IllegalStateException("x")) }
     }
+
+    @Test
+    fun `the deferred and failed partitions are readable for a spec calling a batch method`() {
+        val failure = IllegalStateException("x")
+        batch.defer("b", Duration.ofSeconds(2))
+        batch.fail("a", failure)
+
+        assertEquals(mapOf("b" to Duration.ofSeconds(2)), batch.deferred)
+        assertEquals(mapOf<String, Throwable>("a" to failure), batch.failed)
+    }
+
+    @Test
+    fun `the earliest report of a partition wins`() {
+        batch.defer(batch[2].context, Duration.ofSeconds(2))
+        batch.fail("a", IllegalStateException("x"))
+
+        assertEquals(setOf("a"), batch.failed.keys)
+        assertEquals(emptyMap<String, Duration>(), batch.deferred)
+    }
 }

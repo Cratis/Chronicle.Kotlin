@@ -4,7 +4,15 @@
 package io.cratis.chronicle.eventSequences
 
 import io.cratis.chronicle.eventSequences.concurrency.ConcurrencyScope
+import io.cratis.chronicle.imports.IEventImport
+import io.cratis.chronicle.imports.ImportId
+import io.cratis.chronicle.imports.ImportOptions
+import io.cratis.chronicle.imports.ImportProgress
+import io.cratis.chronicle.imports.ImportResult
+import io.cratis.chronicle.imports.ImportsNotSupported
 import java.util.UUID
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.SharedFlow
 import kotlin.reflect.KClass
 
@@ -213,4 +221,69 @@ interface IEventSequence {
      */
     suspend fun compensate(compensationFor: EventSequenceNumber, event: Any, options: CompensateOptions? = null): AppendResult =
         throw CompensationsNotSupported(this::class.java)
+
+    /**
+     * Imports events into the event sequence in bulk: every event is validated before any is committed,
+     * and the commit runs on the kernel as a job.
+     *
+     * [events] is read lazily as chunks are sent, within the kernel's limits and with a bounded number of
+     * chunks in flight, so a large import never holds all its events at once. Each event keeps what its
+     * [EventForEventSourceId] says - when it occurred, its correlation, causation and identity, its subject
+     * and tags - and gets a new sequence number. Imported events reach every observer once, as catch-up.
+     *
+     * ```kotlin
+     * val result = eventStore.eventLog.import(legacyEvents.asFlow()) { progress -> println(progress.eventsCommitted) }
+     * ```
+     *
+     * @param events The events, in the order they are to be committed.
+     * @param options The [ImportOptions].
+     * @param onProgress Receives the progress the kernel reports while the import runs.
+     * @return The [ImportResult]: [ImportResult.isSuccess] when everything that was not rejected is committed.
+     * @throws ImportsNotSupported if this event sequence, or the kernel, cannot import.
+     */
+    suspend fun import(
+        events: Flow<EventForEventSourceId>,
+        options: ImportOptions = ImportOptions.default,
+        onProgress: FlowCollector<ImportProgress>? = null,
+    ): ImportResult = throw ImportsNotSupported()
+
+    /**
+     * Imports events from a lazy sequence into the event sequence in bulk, reading it as chunks are sent.
+     * Otherwise the same as the [Flow] overload.
+     *
+     * @param events The events, in the order they are to be committed.
+     * @param options The [ImportOptions].
+     * @param onProgress Receives the progress the kernel reports while the import runs.
+     * @return The [ImportResult].
+     * @throws ImportsNotSupported if this event sequence, or the kernel, cannot import.
+     */
+    suspend fun import(
+        events: Sequence<EventForEventSourceId>,
+        options: ImportOptions = ImportOptions.default,
+        onProgress: FlowCollector<ImportProgress>? = null,
+    ): ImportResult = throw ImportsNotSupported()
+
+    /**
+     * Begins an import session, for producers that are not one stream: add events to it any number of
+     * times, then complete or abandon it. Keep its [IEventImport.importId] to reattach after a crash.
+     *
+     * @param options The [ImportOptions]; [ImportOptions.importId] begins it under a chosen identifier.
+     * @return The session.
+     * @throws ImportsNotSupported if this event sequence, or the kernel, cannot import.
+     * @throws io.cratis.chronicle.imports.ImportCouldNotBegin if the kernel refuses to begin it.
+     */
+    suspend fun beginImport(options: ImportOptions = ImportOptions.default): IEventImport = throw ImportsNotSupported()
+
+    /**
+     * Reattaches to an import session that is still staging, for a producer that crashed or lost its
+     * connection. Adding continues after the events the kernel acknowledged ([IEventImport.eventsAcknowledged]).
+     *
+     * @param importId The import to reattach to.
+     * @param options The [ImportOptions]; what the import was begun with is kept.
+     * @return The session.
+     * @throws ImportsNotSupported if this event sequence, or the kernel, cannot import.
+     * @throws io.cratis.chronicle.imports.ImportCouldNotBegin if the import does not exist or imports into another sequence.
+     */
+    suspend fun beginImport(importId: ImportId, options: ImportOptions = ImportOptions.default): IEventImport =
+        throw ImportsNotSupported()
 }
