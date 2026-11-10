@@ -16,7 +16,10 @@ Use the [Kotlin annotation reference](../reference/annotations.md#graph) for
 `@Graph`, `@Node`, `@Edge`, `@EdgeSource`, `@EdgeTarget`, `@EdgeFrom` and
 `@EdgeRemovedWith`. Annotated nodes and edges, and `IGraphProjection`
 implementations, are registered with the other artifacts; see
-[Artifact registration](artifact-registration.md).
+[Artifact registration](artifact-registration.md). To register them by hand,
+pass the node and edge classes, or the builder instance, to
+`store.projections.register(...)`. The read model the graph is stored as is
+registered first, then the projection that fills it.
 
 ## What the JVM client checks
 
