@@ -14,6 +14,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -21,6 +22,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.reflect.full.findAnnotation
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 class ReactorsService(
     private val eventStoreName: String,
@@ -34,6 +37,13 @@ class ReactorsService(
 ) : IReactorsService {
 
     private val sideEffects = ReactorSideEffects(eventLog)
+
+    /** Creates the backoff deciding how long each reactor waits before re-establishing its observation. */
+    internal var reconnectBackoff: () -> ObservationReconnectBackoff =
+        { ObservationReconnectBackoff(baseDelay = REOBSERVE_DELAY_MS.milliseconds) }
+
+    /** How the wait before a reactor re-establishes its observation is done. Specs replace this to observe the waits. */
+    internal var waitBeforeReconnect: suspend (Duration) -> Unit = { delay(it) }
 
     override suspend fun register(reactor: Any): Job {
         val registration = ReactorRegistration.from(reactor::class, arguments)
@@ -55,20 +65,31 @@ class ReactorsService(
         // Re-register on every connection, not just the first. The kernel keys a
         // subscription by connection id and drops it when the client is evicted, so an
         // observation established under an earlier connection is dead once we reconnect.
+        val backoff = reconnectBackoff()
         return CoroutineScope(Dispatchers.IO).launch {
             lifecycle.connections().collectLatest { connectionId ->
                 while (isActive) {
+                    backoff.streamOpened()
                     try {
-                        observe(registration, dispatch, connectionId, eventTypes)
+                        observe(registration, dispatch, connectionId, eventTypes, backoff)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         System.err.println("[ReactorsService] '${registration.id}' failed: ${e.message}")
+
+                        // The kernel no longer knows this connection. Retrying the stream under the same
+                        // connection id can never work, so reconnect the whole client, which brings a new
+                        // connection id and re-establishes every observation.
+                        if (e.isSessionLost()) {
+                            lifecycle.requestReconnect(connectionId)
+                            awaitCancellation()
+                        }
                     }
 
                     // The kernel closes a cross-store (inbox) stream rather than tailing it
                     // forever, so a stream that ends cleanly still has to be re-established.
-                    delay(REOBSERVE_DELAY_MS)
+                    // Streams that keep ending without working back off, with jitter.
+                    waitBeforeReconnect(backoff.nextDelay())
                 }
             }
         }
@@ -78,7 +99,8 @@ class ReactorsService(
         registration: ReactorRegistration,
         dispatch: ReactorEventDispatch,
         connectionId: String,
-        eventTypes: List<ObservationReactors.EventTypeWithKeyExpression>
+        eventTypes: List<ObservationReactors.EventTypeWithKeyExpression>,
+        backoff: ObservationReconnectBackoff
     ) {
         // Use a Channel instead of MutableSharedFlow so that messages sent before
         // the gRPC stub starts collecting are buffered and not dropped.
@@ -88,6 +110,7 @@ class ReactorsService(
             requests.send(registrationMessage(registration, connectionId, eventTypes))
 
             stub.observe(requests.receiveAsFlow()).collect { eventsToObserve ->
+                backoff.streamDelivered()
                 // A replay notification on its own carries no events and expects no answer: this client
                 // learns of a replay from the flags on the replayed events themselves.
                 if (eventsToObserve.isReplayNotification()) return@collect
@@ -158,7 +181,10 @@ class ReactorsService(
         replayState != ObservationReactors.ReplayState.REPLAY_STATE_None && eventsCount == 0 && partitionsCount == 0
 
     private companion object {
-        /** How long to wait before re-establishing an observation whose stream ended. */
+        /**
+         * How long to wait before re-establishing an observation whose stream ended, once the stream had worked.
+         * Streams that end without having worked back off from this, see [ObservationReconnectBackoff].
+         */
         const val REOBSERVE_DELAY_MS = 2_000L
     }
 }

@@ -3,8 +3,11 @@
 
 package io.cratis.chronicle.connection
 
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -33,6 +36,30 @@ data class ConnectionState(val connectionId: String, val isConnected: Boolean)
 class ConnectionLifecycle {
     private val _state = MutableStateFlow(ConnectionState(newConnectionId(), false))
     private val _terminalFailure = MutableStateFlow<Throwable?>(null)
+    private val _reconnectRequests = MutableSharedFlow<String>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
+    /**
+     * The connection ids the kernel has said it no longer knows. The connection manager ends the
+     * session running under such an id, which reconnects the client under a new one.
+     */
+    internal val reconnectRequests: Flow<String> = _reconnectRequests.asSharedFlow()
+
+    /**
+     * Asks for the whole client to reconnect, because the kernel no longer knows [connectionId] -
+     * it restarted, or it evicted this client. Retrying a stream under that id can never work.
+     *
+     * Only a request naming the current, acknowledged connection counts, so a herd of observers
+     * whose streams failed together causes one reconnect, not one each.
+     */
+    internal fun requestReconnect(connectionId: String) {
+        val current = _state.value
+        if (current.isConnected && current.connectionId == connectionId) {
+            _reconnectRequests.tryEmit(connectionId)
+        }
+    }
 
     /** Last non-transient connection failure, until the kernel acknowledges a connection. */
     val terminalFailure: StateFlow<Throwable?> = _terminalFailure.asStateFlow()

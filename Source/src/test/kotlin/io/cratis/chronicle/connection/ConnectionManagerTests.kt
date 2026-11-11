@@ -291,4 +291,44 @@ class ConnectionManagerTests {
 
         assertFalse(connected)
     }
+
+    @Test
+    fun `reconnects under a new connection id when the kernel no longer knows the connection`() = runTest {
+        val connections = FakeConnections(keepAlives = 1)
+        val manager = managerFor(connections)
+        manager.connect()
+        runCurrent()
+        val stale = manager.connectionId
+
+        manager.lifecycle.requestReconnect(stale)
+        // Well inside the keep-alive timeout, so only the request can have ended the session.
+        advanceTimeBy(1_500)
+        val connectCount = connections.connectCount
+        val connected = manager.lifecycle.isConnected
+        val current = manager.connectionId
+        manager.close()
+
+        assertEquals(2, connectCount)
+        assertTrue(connected)
+        assertNotEquals(stale, current)
+        assertEquals(current, connections.answered.last())
+    }
+
+    @Test
+    fun `ignores a reconnect request naming a connection it already left`() = runTest {
+        val connections = FakeConnections(keepAlives = 1)
+        val manager = managerFor(connections)
+        manager.connect()
+        runCurrent()
+        val current = manager.connectionId
+
+        manager.lifecycle.requestReconnect("an-earlier-connection")
+        advanceTimeBy(1_500)
+        val connectCount = connections.connectCount
+        val after = manager.connectionId
+        manager.close()
+
+        assertEquals(1, connectCount)
+        assertEquals(current, after)
+    }
 }

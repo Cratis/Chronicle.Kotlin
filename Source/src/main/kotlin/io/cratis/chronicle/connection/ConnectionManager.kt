@@ -9,12 +9,14 @@ import io.grpc.Status
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.net.InetAddress
@@ -35,7 +37,9 @@ import kotlin.random.Random
  *
  * Eviction does not close the `Connect` stream, so a lost connection usually shows up as a
  * stream that simply goes silent. A watchdog therefore treats a gap between keep-alives as
- * a lost connection, and the session is re-established either way.
+ * a lost connection, and the session is re-established either way. So is a session an
+ * observer reports the kernel no longer knows, through [ConnectionLifecycle.requestReconnect]:
+ * the kernel restarted or evicted the client, and only a new connection id can recover.
  *
  * Every re-establishment first asks [refreshChannel] for a fresh channel — retrying on the
  * channel a session just died on could fail identically forever, because the address it
@@ -122,6 +126,13 @@ class ConnectionManager(
             }
         }
 
+        // An observer told by the kernel that it no longer knows this connection ends the
+        // session, so the client reconnects under a new connection id.
+        val sessionLost = launch(start = CoroutineStart.UNDISPATCHED) {
+            lifecycle.reconnectRequests.first { it == connectionId }
+            session.cancel(CancellationException("The kernel no longer knows connection $connectionId"))
+        }
+
         val watchdog = launch {
             while (isActive) {
                 delay(WATCHDOG_INTERVAL_MS)
@@ -134,6 +145,7 @@ class ConnectionManager(
 
         session.join()
         watchdog.cancel()
+        sessionLost.cancel()
     }
 
     private fun isTerminalFailure(error: Exception): Boolean {
