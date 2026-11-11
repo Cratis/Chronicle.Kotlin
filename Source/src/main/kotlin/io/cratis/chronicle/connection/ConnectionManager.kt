@@ -44,14 +44,30 @@ import kotlin.random.Random
  * Every re-establishment first asks [refreshChannel] for a fresh channel — retrying on the
  * channel a session just died on could fail identically forever, because the address it
  * dials was pinned when the channel was built.
+ *
+ * The wait between attempts grows while sessions keep failing, and only starts over once a
+ * session has stayed up for [HEALTHY_SESSION_MS]: a session the kernel drops right after it
+ * was established must not bring the client — and every observer it re-registers — back
+ * once a second.
+ *
+ * @param random The source of the jitter spreading out reconnect attempts.
  */
-class ConnectionManager(
+class ConnectionManager internal constructor(
     private val connections: IKeepAliveConnections,
-    val lifecycle: ConnectionLifecycle = ConnectionLifecycle(),
-    dispatcher: CoroutineDispatcher = Dispatchers.IO,
-    private val currentTimeMillis: () -> Long = System::currentTimeMillis,
-    private val refreshChannel: suspend () -> Unit = {}
+    val lifecycle: ConnectionLifecycle,
+    dispatcher: CoroutineDispatcher,
+    private val currentTimeMillis: () -> Long,
+    private val refreshChannel: suspend () -> Unit,
+    private val random: Random
 ) {
+    constructor(
+        connections: IKeepAliveConnections,
+        lifecycle: ConnectionLifecycle = ConnectionLifecycle(),
+        dispatcher: CoroutineDispatcher = Dispatchers.IO,
+        currentTimeMillis: () -> Long = System::currentTimeMillis,
+        refreshChannel: suspend () -> Unit = {}
+    ) : this(connections, lifecycle, dispatcher, currentTimeMillis, refreshChannel, Random)
+
     /** Stable client identity for the current connection, rotated on every reconnect. */
     val connectionId: String get() = lifecycle.connectionId
 
@@ -81,6 +97,7 @@ class ConnectionManager(
         var attempt = 0
 
         while (coroutineContext.isActive) {
+            var startedAt = currentTimeMillis()
             try {
                 // A drop condemns the channel the session ran on: gRPC redials dead
                 // transports on its own, but the address it dials stays pinned to
@@ -89,8 +106,8 @@ class ConnectionManager(
                 // and rebuilds authentication, so a replaced host or a changed record
                 // is not retried forever.
                 if (attempt > 0) refreshChannel()
+                startedAt = currentTimeMillis()
                 runSession()
-                attempt = 0
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -100,6 +117,9 @@ class ConnectionManager(
                 System.err.println("[Chronicle] Connection lost: ${e.message}")
             }
 
+            // A session that stayed up long enough worked, so the wait starts over. One the kernel
+            // dropped right away keeps backing off, however it ended.
+            if (currentTimeMillis() - startedAt >= HEALTHY_SESSION_MS) attempt = 0
             lifecycle.markDisconnected()
             attempt++
             delay(backoffFor(attempt))
@@ -130,6 +150,7 @@ class ConnectionManager(
         // session, so the client reconnects under a new connection id.
         val sessionLost = launch(start = CoroutineStart.UNDISPATCHED) {
             lifecycle.reconnectRequests.first { it == connectionId }
+            System.err.println("[Chronicle] Kernel no longer knows connection $connectionId; reconnecting")
             session.cancel(CancellationException("The kernel no longer knows connection $connectionId"))
         }
 
@@ -173,7 +194,7 @@ class ConnectionManager(
      */
     private fun backoffFor(attempt: Int): Long {
         val ceiling = minOf(BASE_BACKOFF_MS shl (attempt - 1).coerceAtMost(MAX_BACKOFF_SHIFT), MAX_BACKOFF_MS)
-        return ceiling / 2 + Random.nextLong(ceiling / 2 + 1)
+        return ceiling / 2 + random.nextLong(ceiling / 2 + 1)
     }
 
     companion object {
@@ -188,6 +209,9 @@ class ConnectionManager(
          * which is the threshold the C# client uses too.
          */
         internal const val KEEP_ALIVE_TIMEOUT_MS = 5_000L
+
+        /** How long a session must stay up before the wait between attempts starts over. */
+        internal const val HEALTHY_SESSION_MS = 30_000L
 
         private const val BASE_BACKOFF_MS = 1_000L
         private const val MAX_BACKOFF_MS = 30_000L

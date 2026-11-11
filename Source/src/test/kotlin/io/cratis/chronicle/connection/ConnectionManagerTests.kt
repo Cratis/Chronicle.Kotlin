@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import kotlin.random.Random
 
 /**
  * A kernel that pushes [keepAlives] keep-alives and then behaves according to [thenFail]:
@@ -53,13 +54,21 @@ class ConnectionManagerTests {
 
     private fun TestScope.managerFor(
         connections: IKeepAliveConnections,
+        random: Random = Random,
         refreshChannel: suspend () -> Unit = {}
     ) = ConnectionManager(
         connections,
-        dispatcher = StandardTestDispatcher(testScheduler),
-        currentTimeMillis = { testScheduler.currentTime },
-        refreshChannel = refreshChannel
+        ConnectionLifecycle(),
+        StandardTestDispatcher(testScheduler),
+        { testScheduler.currentTime },
+        refreshChannel,
+        random
     )
+
+    /** Jitter that always lands at the bottom of the wait, so every wait is exactly half its ceiling. */
+    private val lowestJitter = object : Random() {
+        override fun nextBits(bitCount: Int) = 0
+    }
 
     @Test
     fun `unauthenticated failures are retained until an acknowledged retry`() = runTest {
@@ -78,7 +87,9 @@ class ConnectionManagerTests {
             runCurrent()
             assertEquals(Status.Code.UNAUTHENTICATED, Status.fromThrowable(manager.lifecycle.terminalFailure.value).code)
             reject = false
-            advanceTimeBy(30_000)
+            // Past the first retry, which waits at most a second, and well inside the keep-alive
+            // timeout of the single keep-alive this kernel sends.
+            advanceTimeBy(1_500)
             runCurrent()
             assertTrue(manager.lifecycle.isConnected)
             assertEquals(null, manager.lifecycle.terminalFailure.value)
@@ -320,15 +331,63 @@ class ConnectionManagerTests {
         val manager = managerFor(connections)
         manager.connect()
         runCurrent()
+        val stale = manager.connectionId
+        manager.lifecycle.requestReconnect(stale)
+        advanceTimeBy(1_500)
         val current = manager.connectionId
 
-        manager.lifecycle.requestReconnect("an-earlier-connection")
+        // An observer of the earlier session reporting late, after the client already reconnected.
+        manager.lifecycle.requestReconnect(stale)
         advanceTimeBy(1_500)
         val connectCount = connections.connectCount
         val after = manager.connectionId
         manager.close()
 
-        assertEquals(1, connectCount)
+        assertNotEquals(stale, current)
+        assertEquals(2, connectCount)
         assertEquals(current, after)
+    }
+
+    @Test
+    fun `reconnects once however many observers report the same lost connection`() = runTest {
+        val connections = FakeConnections(keepAlives = 1)
+        val manager = managerFor(connections)
+        manager.connect()
+        runCurrent()
+        val stale = manager.connectionId
+
+        repeat(50) { manager.lifecycle.requestReconnect(stale) }
+        advanceTimeBy(1_500)
+        val connectCount = connections.connectCount
+        manager.close()
+
+        assertEquals(2, connectCount)
+    }
+
+    @Test
+    fun `keeps backing off when sessions are lost right after they are established`() = runTest {
+        val connections = FakeConnections(keepAlives = 1)
+        val manager = managerFor(connections, random = lowestJitter)
+        manager.connect()
+        runCurrent()
+
+        // The first loss waits half of the first ceiling of one second.
+        manager.lifecycle.requestReconnect(manager.connectionId)
+        runCurrent()
+        advanceTimeBy(501)
+        val afterFirstWait = connections.connectCount
+
+        // The session was up for well under the healthy threshold, so the next wait doubles.
+        manager.lifecycle.requestReconnect(manager.connectionId)
+        runCurrent()
+        advanceTimeBy(999)
+        val beforeSecondWaitEnds = connections.connectCount
+        advanceTimeBy(2)
+        val afterSecondWait = connections.connectCount
+        manager.close()
+
+        assertEquals(2, afterFirstWait)
+        assertEquals(2, beforeSecondWaitEnds)
+        assertEquals(3, afterSecondWait)
     }
 }
