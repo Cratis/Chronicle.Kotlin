@@ -14,24 +14,51 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.reflect.full.findAnnotation
+import kotlin.time.Duration
 
-class ReactorsService(
+/**
+ * Registers reactors with the kernel and keeps their observations established.
+ *
+ * @param reconnectBackoff Creates the backoff deciding how long each reactor waits before re-establishing its
+ * observation.
+ * @param waitBeforeReconnect How the wait before a reactor re-establishes its observation is done.
+ */
+class ReactorsService internal constructor(
     private val eventStoreName: String,
     private val namespace: String,
     private val lifecycle: ConnectionLifecycle,
     private val stub: ReactorsGrpcKt.ReactorsCoroutineStub,
     eventLog: IEventLog,
-    private val middlewares: ReactorMiddlewares = ReactorMiddlewares.none,
-    private val arguments: ReactorMethodArguments = ReactorMethodArguments.contextOnly,
-    private val traces: ChronicleTraces = ChronicleTraces.default
+    private val middlewares: ReactorMiddlewares,
+    private val arguments: ReactorMethodArguments,
+    private val traces: ChronicleTraces,
+    private val reconnectBackoff: () -> ObservationReconnectBackoff,
+    private val waitBeforeReconnect: suspend (Duration) -> Unit
 ) : IReactorsService {
+
+    constructor(
+        eventStoreName: String,
+        namespace: String,
+        lifecycle: ConnectionLifecycle,
+        stub: ReactorsGrpcKt.ReactorsCoroutineStub,
+        eventLog: IEventLog,
+        middlewares: ReactorMiddlewares = ReactorMiddlewares.none,
+        arguments: ReactorMethodArguments = ReactorMethodArguments.contextOnly,
+        traces: ChronicleTraces = ChronicleTraces.default
+    ) : this(
+        eventStoreName, namespace, lifecycle, stub, eventLog, middlewares, arguments, traces,
+        { ObservationReconnectBackoff() }, { delay(it) }
+    )
 
     private val sideEffects = ReactorSideEffects(eventLog)
 
@@ -55,20 +82,34 @@ class ReactorsService(
         // Re-register on every connection, not just the first. The kernel keys a
         // subscription by connection id and drops it when the client is evicted, so an
         // observation established under an earlier connection is dead once we reconnect.
+        val backoff = reconnectBackoff()
         return CoroutineScope(Dispatchers.IO).launch {
             lifecycle.connections().collectLatest { connectionId ->
-                while (isActive) {
+                while (currentCoroutineContext().isActive) {
+                    backoff.streamOpened()
                     try {
-                        observe(registration, dispatch, connectionId, eventTypes)
+                        observe(registration, dispatch, connectionId, eventTypes, backoff)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // gRPC may surface the cancellation of a superseded connection as a CANCELLED
+                        // status rather than a CancellationException; that stream did not fail.
+                        currentCoroutineContext().ensureActive()
                         System.err.println("[ReactorsService] '${registration.id}' failed: ${e.message}")
+
+                        // The kernel no longer knows this connection. Retrying the stream under the same
+                        // connection id can never work, so reconnect the whole client, which brings a new
+                        // connection id and re-establishes every observation.
+                        if (e.isSessionLost()) {
+                            lifecycle.requestReconnect(connectionId)
+                            awaitCancellation()
+                        }
                     }
 
                     // The kernel closes a cross-store (inbox) stream rather than tailing it
                     // forever, so a stream that ends cleanly still has to be re-established.
-                    delay(REOBSERVE_DELAY_MS)
+                    // Streams that keep ending without working back off, with jitter.
+                    waitBeforeReconnect(backoff.nextDelay())
                 }
             }
         }
@@ -78,7 +119,8 @@ class ReactorsService(
         registration: ReactorRegistration,
         dispatch: ReactorEventDispatch,
         connectionId: String,
-        eventTypes: List<ObservationReactors.EventTypeWithKeyExpression>
+        eventTypes: List<ObservationReactors.EventTypeWithKeyExpression>,
+        backoff: ObservationReconnectBackoff
     ) {
         // Use a Channel instead of MutableSharedFlow so that messages sent before
         // the gRPC stub starts collecting are buffered and not dropped.
@@ -88,6 +130,7 @@ class ReactorsService(
             requests.send(registrationMessage(registration, connectionId, eventTypes))
 
             stub.observe(requests.receiveAsFlow()).collect { eventsToObserve ->
+                backoff.streamDelivered()
                 // A replay notification on its own carries no events and expects no answer: this client
                 // learns of a replay from the flags on the replayed events themselves.
                 if (eventsToObserve.isReplayNotification()) return@collect
@@ -156,9 +199,4 @@ class ReactorsService(
 
     private fun ObservationReactors.EventsToObserve.isReplayNotification(): Boolean =
         replayState != ObservationReactors.ReplayState.REPLAY_STATE_None && eventsCount == 0 && partitionsCount == 0
-
-    private companion object {
-        /** How long to wait before re-establishing an observation whose stream ended. */
-        const val REOBSERVE_DELAY_MS = 2_000L
-    }
 }

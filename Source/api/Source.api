@@ -3285,7 +3285,6 @@ public final class io/cratis/chronicle/observation/ReactorMiddlewares$Companion 
 }
 
 public final class io/cratis/chronicle/observation/ReactorsService : io/cratis/chronicle/observation/IReactorsService {
-	public static final field REOBSERVE_DELAY_MS J
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ConnectionLifecycle;LCratis/Chronicle/Contracts/Observation/Reactors/ReactorsGrpcKt$ReactorsCoroutineStub;Lio/cratis/chronicle/eventSequences/IEventLog;Lio/cratis/chronicle/observation/ReactorMiddlewares;Lio/cratis/chronicle/observation/ReactorMethodArguments;Lio/cratis/chronicle/diagnostics/ChronicleTraces;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ConnectionLifecycle;LCratis/Chronicle/Contracts/Observation/Reactors/ReactorsGrpcKt$ReactorsCoroutineStub;Lio/cratis/chronicle/eventSequences/IEventLog;Lio/cratis/chronicle/observation/ReactorMiddlewares;Lio/cratis/chronicle/observation/ReactorMethodArguments;Lio/cratis/chronicle/diagnostics/ChronicleTraces;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun register (Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
@@ -3327,7 +3326,6 @@ public final class io/cratis/chronicle/observation/ReducerMixesBatchAndPerEventM
 }
 
 public final class io/cratis/chronicle/observation/ReducersService : io/cratis/chronicle/observation/IReducersService {
-	public static final field REOBSERVE_DELAY_MS J
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ConnectionLifecycle;LCratis/Chronicle/Contracts/Observation/Reducers/ReducersGrpcKt$ReducersCoroutineStub;Ljava/lang/String;Lio/cratis/chronicle/readModels/ReadModelsService;Lio/cratis/chronicle/diagnostics/ChronicleTraces;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ConnectionLifecycle;LCratis/Chronicle/Contracts/Observation/Reducers/ReducersGrpcKt$ReducersCoroutineStub;Ljava/lang/String;Lio/cratis/chronicle/readModels/ReadModelsService;Lio/cratis/chronicle/diagnostics/ChronicleTraces;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun register (Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
