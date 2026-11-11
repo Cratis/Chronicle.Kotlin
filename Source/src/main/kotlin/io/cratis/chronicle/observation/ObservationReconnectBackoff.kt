@@ -5,6 +5,7 @@ package io.cratis.chronicle.observation
 
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import kotlin.math.pow
 import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
@@ -54,13 +55,16 @@ internal class ObservationReconnectBackoff(
         }
 
         val exponent = minOf(streamsEndedWithoutWorking.incrementAndGet() - 1, MAX_EXPONENT)
-        val ceiling = minOf(maxDelay.inWholeMilliseconds.toDouble(), baseDelay.inWholeMilliseconds * Math.pow(2.0, exponent.toDouble()))
+        val ceiling = minOf(maxDelay.inWholeMilliseconds.toDouble(), baseDelay.inWholeMilliseconds * 2.0.pow(exponent))
         val jitter = 0.5 + 0.5 * nextJitter().coerceIn(0.0, 1.0)
         return (ceiling * jitter).toLong().milliseconds
     }
 
     companion object {
-        /** The default wait after a stream that had worked. */
+        /**
+         * The default wait before re-establishing an observation whose stream ended, once the stream had worked.
+         * Streams that end without having worked back off from this.
+         */
         val DEFAULT_BASE_DELAY: Duration = 2.seconds
 
         /** The default longest wait between attempts. */

@@ -16,31 +16,47 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.reflect.full.findAnnotation
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.milliseconds
 
-class ReducersService(
+/**
+ * Registers reducers with the kernel and keeps their observations established.
+ *
+ * @param reconnectBackoff Creates the backoff deciding how long each reducer waits before re-establishing its
+ * observation.
+ * @param waitBeforeReconnect How the wait before a reducer re-establishes its observation is done.
+ */
+class ReducersService internal constructor(
     private val eventStoreName: String,
     private val namespace: String,
     private val lifecycle: ConnectionLifecycle,
     private val stub: ReducersGrpcKt.ReducersCoroutineStub,
-    private val defaultSinkTypeId: String = WellKnownSinkTypes.MONGODB,
-    private val readModels: io.cratis.chronicle.readModels.ReadModelsService? = null,
-    private val traces: ChronicleTraces = ChronicleTraces.default
+    private val defaultSinkTypeId: String,
+    private val readModels: io.cratis.chronicle.readModels.ReadModelsService?,
+    private val traces: ChronicleTraces,
+    private val reconnectBackoff: () -> ObservationReconnectBackoff,
+    private val waitBeforeReconnect: suspend (Duration) -> Unit
 ) : IReducersService {
 
-    /** Creates the backoff deciding how long each reducer waits before re-establishing its observation. */
-    internal var reconnectBackoff: () -> ObservationReconnectBackoff =
-        { ObservationReconnectBackoff(baseDelay = REOBSERVE_DELAY_MS.milliseconds) }
-
-    /** How the wait before a reducer re-establishes its observation is done. Specs replace this to observe the waits. */
-    internal var waitBeforeReconnect: suspend (Duration) -> Unit = { delay(it) }
+    constructor(
+        eventStoreName: String,
+        namespace: String,
+        lifecycle: ConnectionLifecycle,
+        stub: ReducersGrpcKt.ReducersCoroutineStub,
+        defaultSinkTypeId: String = WellKnownSinkTypes.MONGODB,
+        readModels: io.cratis.chronicle.readModels.ReadModelsService? = null,
+        traces: ChronicleTraces = ChronicleTraces.default
+    ) : this(
+        eventStoreName, namespace, lifecycle, stub, defaultSinkTypeId, readModels, traces,
+        { ObservationReconnectBackoff() }, { delay(it) }
+    )
 
     override suspend fun register(reducer: Any): Job {
         val registration = ReducerRegistration.from(reducer::class)
@@ -71,13 +87,16 @@ class ReducersService(
         val backoff = reconnectBackoff()
         return CoroutineScope(Dispatchers.IO).launch {
             lifecycle.connections().collectLatest { connectionId ->
-                while (isActive) {
+                while (currentCoroutineContext().isActive) {
                     backoff.streamOpened()
                     try {
                         doObserve(connectionId, eventTypes, dispatch, registration, backoff)
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
+                        // gRPC may surface the cancellation of a superseded connection as a CANCELLED
+                        // status rather than a CancellationException; that stream did not fail.
+                        currentCoroutineContext().ensureActive()
                         System.err.println("[ReducersService] '${registration.id}' failed: ${e.message}")
 
                         // The kernel no longer knows this connection. Retrying the stream under the same
@@ -173,12 +192,4 @@ class ReducersService(
 
     private fun ObservationReducers.ReduceOperationMessage.isReplayNotification(): Boolean =
         replayState != ObservationReducers.ReplayState.REPLAY_STATE_None && eventsCount == 0 && partitionsCount == 0
-
-    private companion object {
-        /**
-         * How long to wait before re-establishing an observation whose stream ended, once the stream had worked.
-         * Streams that end without having worked back off from this, see [ObservationReconnectBackoff].
-         */
-        const val REOBSERVE_DELAY_MS = 2_000L
-    }
 }
