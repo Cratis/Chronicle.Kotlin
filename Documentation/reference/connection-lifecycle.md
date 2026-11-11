@@ -96,6 +96,37 @@ framework. Look for lines such as:
 [Chronicle] Failed to fetch OAuth2 token: Token request failed with status 401
 ```
 
+## Re-establishing reactor and reducer streams
+
+Each reactor and reducer holds its own observation stream. When that stream
+ends while the connection stays up, the observer opens it again on its own,
+after a wait:
+
+- The first wait is about 2 seconds.
+- Each stream that ends without having worked doubles the wait, up to 60
+  seconds, so a kernel that is still busy is not asked again at the same pace.
+- Every wait lands at random between half and all of that ceiling. Reactors
+  and reducers whose streams failed together come back spread out, not as a
+  herd.
+- The wait starts over at about 2 seconds once a stream has worked: it
+  delivered something, or it stayed open for 3 minutes. A stream the kernel
+  closes after a long life comes back quickly.
+
+These waits are not configurable.
+
+A stream can also fail because the kernel no longer knows the client's
+connection, for example after the kernel restarted. Retrying under the same
+connection id cannot work, so the observer does not retry. It asks the client
+to reconnect instead: the client ends the connection, reconnects with a new
+connection id, and every reactor and reducer registers again under it. Many
+observers that hit this together cause one reconnect, not one each.
+
+A failed stream is written to standard error with the observer's id:
+
+```text
+[ReactorsService] 'my-reactor' failed: UNAVAILABLE: io exception
+```
+
 ## Registration and the first append
 
 With automatic registration on (the default), the client registers every
