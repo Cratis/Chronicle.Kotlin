@@ -74,6 +74,10 @@ lost and reconnects:
 
 - It waits with exponential backoff, starting at about 1 second and capped at
   30 seconds, with jitter so a fleet of clients does not return all at once.
+- The wait only starts over once a connection has stayed up for 30 seconds.
+  A connection the kernel drops right after it was established keeps backing
+  off, so the client does not reconnect, and register everything again, once
+  a second.
 - It retries forever, until you dispose the client.
 - Every attempt dials from scratch: DNS and SRV are resolved again, a host is
   picked again, a new token is fetched and the compatibility check runs again.
@@ -102,15 +106,18 @@ Each reactor and reducer holds its own observation stream. When that stream
 ends while the connection stays up, the observer opens it again on its own,
 after a wait:
 
-- The first wait is about 2 seconds.
+- The first wait is between 1 and 2 seconds.
 - Each stream that ends without having worked doubles the wait, up to 60
   seconds, so a kernel that is still busy is not asked again at the same pace.
 - Every wait lands at random between half and all of that ceiling. Reactors
   and reducers whose streams failed together come back spread out, not as a
   herd.
-- The wait starts over at about 2 seconds once a stream has worked: it
+- The wait starts over at 1–2 seconds once a stream has worked: it
   delivered something, or it stayed open for 3 minutes. A stream the kernel
   closes after a long life comes back quickly.
+- The growth carries across reconnects. A new connection opens the stream at
+  once, but if that stream also ends without working, the next wait continues
+  from where it was.
 
 These waits are not configurable.
 
@@ -119,7 +126,13 @@ connection, for example after the kernel restarted. Retrying under the same
 connection id cannot work, so the observer does not retry. It asks the client
 to reconnect instead: the client ends the connection, reconnects with a new
 connection id, and every reactor and reducer registers again under it. Many
-observers that hit this together cause one reconnect, not one each.
+observers that hit this together cause one reconnect, not one each. That
+reconnect waits with the same jittered connection backoff described in
+[Staying connected](#staying-connected), and the client writes:
+
+```text
+[Chronicle] Kernel no longer knows connection <connection-id>; reconnecting
+```
 
 A failed stream is written to standard error with the observer's id:
 
