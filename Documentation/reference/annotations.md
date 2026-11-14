@@ -23,7 +23,8 @@ applies. Browse by concern:
   [@NoAutoMap](#noautomap).
 - Graph projections: [@Graph](#graph), [@Node](#node), [@Edge](#edge),
   [@EdgeSource / @EdgeTarget](#edgesource--edgetarget),
-  [@EdgeFrom](#edgefrom), [@EdgeRemovedWith](#edgeremovedwith).
+  [@EdgeFrom](#edgefrom), [@EdgeRemovedWith](#edgeremovedwith),
+  [@ViewOf](#viewof), [@Follows](#follows), [@FromEdge](#fromedge).
 - Constraints: [@Constraint](#constraint), [@Unique](#unique),
   [@RemoveConstraint](#removeconstraint).
 - Seeding, compliance and webhooks: [@Seeder](#seeder), [@Pii](#pii),
@@ -1086,6 +1087,49 @@ mappings of a read model naming this event.
 Declares that an event deletes an [@Edge](#edge). The nodes at both ends stay.
 Repeatable, with the same parameters as [@EdgeFrom](#edgefrom) except that it
 maps no properties.
+
+---
+
+## @ViewOf
+
+Marks a class as a view over a property graph, anchored at one
+[@Node](#node). The members of the view are its constructor properties, in
+declaration order: properties of the node, relations marked
+[@Follows](#follows) and edge properties marked [@FromEdge](#fromedge). The
+property marked [@Key](#key) is the key of the node. The view cannot also be a
+node or an edge. See [Graph projections](../guides/graph-projections.md#read-a-graph-with-views).
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `value` | `KClass<*>` | — | The node class the view is anchored at. |
+| `name` | `String` | `""` | Unique view name. Defaults to the class name. |
+
+---
+
+## @Follows
+
+Marks a member of a [@ViewOf](#viewof) view as a relation that follows one
+[@Edge](#edge) to another view. A collection is a relation of cardinality many,
+a single nullable value cardinality one. The direction is derived from the
+labels of the edge; an edge that starts and ends at the same node label needs
+an explicit `Outgoing` or `Incoming`.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `value` | `KClass<*>` | — | The edge class that is followed. |
+| `direction` | `FollowDirection` | `Derived` | `Outgoing` or `Incoming`. |
+
+---
+
+## @FromEdge
+
+Marks a member of a [@ViewOf](#viewof) view as a property of the edge that was
+followed to reach the view. Only valid in a view that is the target of
+relations of one edge type.
+
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `source` | `String` | `""` | Edge property name. Defaults to member name. |
 
 ---
 

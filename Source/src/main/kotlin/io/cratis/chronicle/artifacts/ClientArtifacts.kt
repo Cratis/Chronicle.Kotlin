@@ -21,7 +21,9 @@ import io.cratis.chronicle.projections.VariantOf
 import io.cratis.chronicle.projections.graphs.Edge
 import io.cratis.chronicle.projections.graphs.IGraphProjection
 import io.cratis.chronicle.projections.graphs.Node
+import io.cratis.chronicle.projections.graphs.ViewOf
 import io.cratis.chronicle.projections.graphs.isGraphElement
+import io.cratis.chronicle.projections.graphs.isGraphView
 import io.cratis.chronicle.readModels.ReadModel
 import io.cratis.chronicle.seeding.ICanSeedEvents
 import io.cratis.chronicle.webhooks.IWebhookDefiner
@@ -63,6 +65,7 @@ class ClientArtifacts(
     override val projections: List<KClass<*>> get() = discovered.projections
     override val modelBoundProjections: List<KClass<*>> get() = discovered.modelBoundProjections
     override val graphElements: List<KClass<*>> get() = discovered.graphElements
+    override val graphViews: List<KClass<*>> get() = discovered.graphViews
     override val graphProjections: List<KClass<*>> get() = discovered.graphProjections
     override val reactors: List<KClass<*>> get() = discovered.reactors
     override val reducers: List<KClass<*>> get() = discovered.reducers
@@ -96,6 +99,7 @@ class ClientArtifacts(
                 result.withAnnotation(Node::class) { it.isGraphElement() } +
                     result.withAnnotation(Edge::class) { it.isGraphElement() }
                 ).distinct(),
+            graphViews = result.withAnnotation(ViewOf::class) { it.isGraphView() },
             graphProjections = result.implementing(IGraphProjection::class) { it.isGraphProjection() },
             reactors = result.withAnnotation(Reactor::class) { it.isReactor() },
             reducers = result.withAnnotation(Reducer::class) { it.isReducer() },
@@ -159,6 +163,7 @@ class ClientArtifacts(
         val projections: List<KClass<*>>,
         val modelBoundProjections: List<KClass<*>>,
         val graphElements: List<KClass<*>>,
+        val graphViews: List<KClass<*>>,
         val graphProjections: List<KClass<*>>,
         val reactors: List<KClass<*>>,
         val reducers: List<KClass<*>>,

@@ -204,6 +204,7 @@ public final class io/cratis/chronicle/artifacts/ClientArtifacts : io/cratis/chr
 	public fun getEventTypes ()Ljava/util/List;
 	public fun getGraphElements ()Ljava/util/List;
 	public fun getGraphProjections ()Ljava/util/List;
+	public fun getGraphViews ()Ljava/util/List;
 	public fun getModelBoundProjections ()Ljava/util/List;
 	public fun getProjections ()Ljava/util/List;
 	public fun getReactorArgumentResolvers ()Ljava/util/List;
@@ -234,6 +235,7 @@ public abstract interface class io/cratis/chronicle/artifacts/IClientArtifacts {
 	public abstract fun getEventTypes ()Ljava/util/List;
 	public fun getGraphElements ()Ljava/util/List;
 	public fun getGraphProjections ()Ljava/util/List;
+	public fun getGraphViews ()Ljava/util/List;
 	public abstract fun getModelBoundProjections ()Ljava/util/List;
 	public abstract fun getProjections ()Ljava/util/List;
 	public abstract fun getReactorArgumentResolvers ()Ljava/util/List;
@@ -247,6 +249,7 @@ public abstract interface class io/cratis/chronicle/artifacts/IClientArtifacts {
 public final class io/cratis/chronicle/artifacts/IClientArtifacts$DefaultImpls {
 	public static fun getGraphElements (Lio/cratis/chronicle/artifacts/IClientArtifacts;)Ljava/util/List;
 	public static fun getGraphProjections (Lio/cratis/chronicle/artifacts/IClientArtifacts;)Ljava/util/List;
+	public static fun getGraphViews (Lio/cratis/chronicle/artifacts/IClientArtifacts;)Ljava/util/List;
 }
 
 public abstract interface class io/cratis/chronicle/artifacts/IEventSourceArtifacts {
@@ -274,6 +277,7 @@ public final class io/cratis/chronicle/artifacts/KnownClientArtifacts : io/crati
 	public fun getEventTypes ()Ljava/util/List;
 	public fun getGraphElements ()Ljava/util/List;
 	public fun getGraphProjections ()Ljava/util/List;
+	public fun getGraphViews ()Ljava/util/List;
 	public fun getModelBoundProjections ()Ljava/util/List;
 	public fun getProjections ()Ljava/util/List;
 	public fun getReactorArgumentResolvers ()Ljava/util/List;
@@ -4225,12 +4229,39 @@ public abstract interface annotation class io/cratis/chronicle/projections/Varia
 	public abstract fun key ()Ljava/lang/String;
 }
 
+public final class io/cratis/chronicle/projections/graphs/AmbiguousDirection : io/cratis/chronicle/projections/graphs/InvalidGraphView {
+	public static final field Companion Lio/cratis/chronicle/projections/graphs/AmbiguousDirection$Companion;
+	public static final field REASON Ljava/lang/String;
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/lang/String;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/AmbiguousDirection$Companion {
+}
+
+public final class io/cratis/chronicle/projections/graphs/DuplicateViewName : io/cratis/chronicle/projections/graphs/InvalidGraphView {
+	public static final field Companion Lio/cratis/chronicle/projections/graphs/DuplicateViewName$Companion;
+	public static final field REASON Ljava/lang/String;
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/lang/String;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/DuplicateViewName$Companion {
+}
+
 public abstract interface annotation class io/cratis/chronicle/projections/graphs/Edge : java/lang/annotation/Annotation {
 	public abstract fun value ()Ljava/lang/String;
 }
 
 public final class io/cratis/chronicle/projections/graphs/EdgeCanHaveOnlyOneIdentifyingKey : java/lang/IllegalArgumentException {
 	public fun <init> (Lkotlin/reflect/KClass;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/EdgeDirection : java/lang/Enum {
+	public static final field Incoming Lio/cratis/chronicle/projections/graphs/EdgeDirection;
+	public static final field Outgoing Lio/cratis/chronicle/projections/graphs/EdgeDirection;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getValue ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/EdgeDirection;
+	public static fun values ()[Lio/cratis/chronicle/projections/graphs/EdgeDirection;
 }
 
 public abstract interface annotation class io/cratis/chronicle/projections/graphs/EdgeFrom : java/lang/annotation/Annotation {
@@ -4246,6 +4277,33 @@ public abstract interface annotation class io/cratis/chronicle/projections/graph
 
 public final class io/cratis/chronicle/projections/graphs/EdgeMustHaveOneSourceAndOneTarget : java/lang/IllegalArgumentException {
 	public fun <init> (Lkotlin/reflect/KClass;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/EdgeNotIncidentOnRoot : io/cratis/chronicle/projections/graphs/InvalidGraphView {
+	public static final field Companion Lio/cratis/chronicle/projections/graphs/EdgeNotIncidentOnRoot$Companion;
+	public static final field REASON Ljava/lang/String;
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/lang/String;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/EdgeNotIncidentOnRoot$Companion {
+}
+
+public final class io/cratis/chronicle/projections/graphs/EdgePropertyViewNotUsedAsTarget : io/cratis/chronicle/projections/graphs/InvalidGraphView {
+	public static final field Companion Lio/cratis/chronicle/projections/graphs/EdgePropertyViewNotUsedAsTarget$Companion;
+	public static final field REASON Ljava/lang/String;
+	public fun <init> (Lkotlin/reflect/KClass;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/EdgePropertyViewNotUsedAsTarget$Companion {
+}
+
+public final class io/cratis/chronicle/projections/graphs/EdgePropertyViewSharedAcrossEdges : io/cratis/chronicle/projections/graphs/InvalidGraphView {
+	public static final field Companion Lio/cratis/chronicle/projections/graphs/EdgePropertyViewSharedAcrossEdges$Companion;
+	public static final field REASON Ljava/lang/String;
+	public fun <init> (Lkotlin/reflect/KClass;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/EdgePropertyViewSharedAcrossEdges$Companion {
 }
 
 public abstract interface annotation class io/cratis/chronicle/projections/graphs/EdgeRemovedWith : java/lang/annotation/Annotation {
@@ -4267,12 +4325,159 @@ public abstract interface annotation class io/cratis/chronicle/projections/graph
 	public abstract fun value ()Ljava/lang/Class;
 }
 
+public final class io/cratis/chronicle/projections/graphs/FollowDirection : java/lang/Enum {
+	public static final field Derived Lio/cratis/chronicle/projections/graphs/FollowDirection;
+	public static final field Incoming Lio/cratis/chronicle/projections/graphs/FollowDirection;
+	public static final field Outgoing Lio/cratis/chronicle/projections/graphs/FollowDirection;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/FollowDirection;
+	public static fun values ()[Lio/cratis/chronicle/projections/graphs/FollowDirection;
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/graphs/Follows : java/lang/annotation/Annotation {
+	public abstract fun direction ()Lio/cratis/chronicle/projections/graphs/FollowDirection;
+	public abstract fun value ()Ljava/lang/Class;
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/graphs/FromEdge : java/lang/annotation/Annotation {
+	public abstract fun source ()Ljava/lang/String;
+}
+
 public abstract interface annotation class io/cratis/chronicle/projections/graphs/Graph : java/lang/annotation/Annotation {
 	public abstract fun value ()Ljava/lang/String;
 }
 
 public final class io/cratis/chronicle/projections/graphs/GraphElementCannotBeReadModel : java/lang/IllegalArgumentException {
 	public fun <init> (Lkotlin/reflect/KClass;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/GraphView {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lio/cratis/chronicle/projections/graphs/GraphView;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/projections/graphs/GraphView;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lio/cratis/chronicle/projections/graphs/GraphView;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getMembers ()Ljava/util/List;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getRoot ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/projections/graphs/GraphViewCardinality : java/lang/Enum {
+	public static final field Many Lio/cratis/chronicle/projections/graphs/GraphViewCardinality;
+	public static final field One Lio/cratis/chronicle/projections/graphs/GraphViewCardinality;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getValue ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/GraphViewCardinality;
+	public static fun values ()[Lio/cratis/chronicle/projections/graphs/GraphViewCardinality;
+}
+
+public final class io/cratis/chronicle/projections/graphs/GraphViewDefinition {
+	public fun <init> (Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/projections/graphs/GraphViewSchema;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/projections/graphs/GraphViewSchema;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/util/List;
+	public final fun component3 ()Lio/cratis/chronicle/projections/graphs/GraphViewSchema;
+	public final fun copy (Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/projections/graphs/GraphViewSchema;)Lio/cratis/chronicle/projections/graphs/GraphViewDefinition;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/projections/graphs/GraphViewDefinition;Ljava/lang/String;Ljava/util/List;Lio/cratis/chronicle/projections/graphs/GraphViewSchema;ILjava/lang/Object;)Lio/cratis/chronicle/projections/graphs/GraphViewDefinition;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getGraph ()Ljava/lang/String;
+	public final fun getSchema ()Lio/cratis/chronicle/projections/graphs/GraphViewSchema;
+	public final fun getViews ()Ljava/util/List;
+	public fun hashCode ()I
+	public final fun toJson ()Ljava/lang/String;
+	public final fun toJson (Z)Ljava/lang/String;
+	public static synthetic fun toJson$default (Lio/cratis/chronicle/projections/graphs/GraphViewDefinition;ZILjava/lang/Object;)Ljava/lang/String;
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/projections/graphs/GraphViewMember {
+	public fun <init> (Ljava/lang/String;Lio/cratis/chronicle/projections/graphs/GraphViewMemberKind;Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/projections/graphs/EdgeDirection;Lio/cratis/chronicle/projections/graphs/GraphViewCardinality;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;Lio/cratis/chronicle/projections/graphs/GraphViewMemberKind;Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/projections/graphs/EdgeDirection;Lio/cratis/chronicle/projections/graphs/GraphViewCardinality;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Lio/cratis/chronicle/projections/graphs/GraphViewMemberKind;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Lio/cratis/chronicle/projections/graphs/EdgeDirection;
+	public final fun component6 ()Lio/cratis/chronicle/projections/graphs/GraphViewCardinality;
+	public final fun component7 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;Lio/cratis/chronicle/projections/graphs/GraphViewMemberKind;Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/projections/graphs/EdgeDirection;Lio/cratis/chronicle/projections/graphs/GraphViewCardinality;Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/GraphViewMember;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/projections/graphs/GraphViewMember;Ljava/lang/String;Lio/cratis/chronicle/projections/graphs/GraphViewMemberKind;Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/projections/graphs/EdgeDirection;Lio/cratis/chronicle/projections/graphs/GraphViewCardinality;Ljava/lang/String;ILjava/lang/Object;)Lio/cratis/chronicle/projections/graphs/GraphViewMember;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getCardinality ()Lio/cratis/chronicle/projections/graphs/GraphViewCardinality;
+	public final fun getDirection ()Lio/cratis/chronicle/projections/graphs/EdgeDirection;
+	public final fun getEdge ()Ljava/lang/String;
+	public final fun getKind ()Lio/cratis/chronicle/projections/graphs/GraphViewMemberKind;
+	public final fun getName ()Ljava/lang/String;
+	public final fun getSource ()Ljava/lang/String;
+	public final fun getView ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/projections/graphs/GraphViewMemberKind : java/lang/Enum {
+	public static final field EdgeProperty Lio/cratis/chronicle/projections/graphs/GraphViewMemberKind;
+	public static final field Property Lio/cratis/chronicle/projections/graphs/GraphViewMemberKind;
+	public static final field Relation Lio/cratis/chronicle/projections/graphs/GraphViewMemberKind;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public final fun getValue ()Ljava/lang/String;
+	public static fun valueOf (Ljava/lang/String;)Lio/cratis/chronicle/projections/graphs/GraphViewMemberKind;
+	public static fun values ()[Lio/cratis/chronicle/projections/graphs/GraphViewMemberKind;
+}
+
+public final class io/cratis/chronicle/projections/graphs/GraphViewSchema {
+	public fun <init> (Ljava/util/List;Ljava/util/List;)V
+	public final fun component1 ()Ljava/util/List;
+	public final fun component2 ()Ljava/util/List;
+	public final fun copy (Ljava/util/List;Ljava/util/List;)Lio/cratis/chronicle/projections/graphs/GraphViewSchema;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/projections/graphs/GraphViewSchema;Ljava/util/List;Ljava/util/List;ILjava/lang/Object;)Lio/cratis/chronicle/projections/graphs/GraphViewSchema;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getEdges ()Ljava/util/List;
+	public final fun getNodes ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/projections/graphs/GraphViewSchemaEdge {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/lang/String;
+	public final fun component4 ()Ljava/lang/String;
+	public final fun component5 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lio/cratis/chronicle/projections/graphs/GraphViewSchemaEdge;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/projections/graphs/GraphViewSchemaEdge;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lio/cratis/chronicle/projections/graphs/GraphViewSchemaEdge;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getIdentifiedBy ()Ljava/lang/String;
+	public final fun getProperties ()Ljava/util/List;
+	public final fun getSource ()Ljava/lang/String;
+	public final fun getTarget ()Ljava/lang/String;
+	public final fun getType ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/projections/graphs/GraphViewSchemaNode {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun component2 ()Ljava/lang/String;
+	public final fun component3 ()Ljava/util/List;
+	public final fun copy (Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Lio/cratis/chronicle/projections/graphs/GraphViewSchemaNode;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/projections/graphs/GraphViewSchemaNode;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lio/cratis/chronicle/projections/graphs/GraphViewSchemaNode;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getKey ()Ljava/lang/String;
+	public final fun getLabel ()Ljava/lang/String;
+	public final fun getProperties ()Ljava/util/List;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/projections/graphs/GraphViews {
+	public static final field INSTANCE Lio/cratis/chronicle/projections/graphs/GraphViews;
+	public static final fun definitionsFor ([Ljava/lang/Object;)Ljava/util/List;
 }
 
 public abstract interface class io/cratis/chronicle/projections/graphs/IGraphEdgeBuilder {
@@ -4372,6 +4577,12 @@ public abstract interface class io/cratis/chronicle/projections/graphs/IGraphSet
 	public abstract fun toValue (Ljava/lang/Object;)Ljava/lang/Object;
 }
 
+public abstract class io/cratis/chronicle/projections/graphs/InvalidGraphView : java/lang/IllegalArgumentException {
+	public fun <init> (Ljava/lang/String;Lkotlin/reflect/KClass;Ljava/lang/String;)V
+	public final fun getReason ()Ljava/lang/String;
+	public final fun getView ()Lkotlin/reflect/KClass;
+}
+
 public final class io/cratis/chronicle/projections/graphs/NestedObjectInGraph : java/lang/IllegalArgumentException {
 	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;)V
 }
@@ -4383,8 +4594,85 @@ public final class io/cratis/chronicle/projections/graphs/NodeMustHaveExactlyOne
 	public fun <init> (Lkotlin/reflect/KClass;I)V
 }
 
+public final class io/cratis/chronicle/projections/graphs/RecursiveView : io/cratis/chronicle/projections/graphs/InvalidGraphView {
+	public static final field Companion Lio/cratis/chronicle/projections/graphs/RecursiveView$Companion;
+	public static final field REASON Ljava/lang/String;
+	public fun <init> (Lkotlin/reflect/KClass;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/RecursiveView$Companion {
+}
+
+public final class io/cratis/chronicle/projections/graphs/RelationTargetNotAView : io/cratis/chronicle/projections/graphs/InvalidGraphView {
+	public static final field Companion Lio/cratis/chronicle/projections/graphs/RelationTargetNotAView$Companion;
+	public static final field REASON Ljava/lang/String;
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;Lkotlin/reflect/KClass;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/RelationTargetNotAView$Companion {
+}
+
+public final class io/cratis/chronicle/projections/graphs/TargetLabelMismatch : io/cratis/chronicle/projections/graphs/InvalidGraphView {
+	public static final field Companion Lio/cratis/chronicle/projections/graphs/TargetLabelMismatch$Companion;
+	public static final field REASON Ljava/lang/String;
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;Lkotlin/reflect/KClass;Ljava/lang/String;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/TargetLabelMismatch$Companion {
+}
+
+public final class io/cratis/chronicle/projections/graphs/UnknownEdge : io/cratis/chronicle/projections/graphs/InvalidGraphView {
+	public static final field Companion Lio/cratis/chronicle/projections/graphs/UnknownEdge$Companion;
+	public static final field REASON Ljava/lang/String;
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;Lkotlin/reflect/KClass;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/UnknownEdge$Companion {
+}
+
+public final class io/cratis/chronicle/projections/graphs/UnknownEdgeProperty : io/cratis/chronicle/projections/graphs/InvalidGraphView {
+	public static final field Companion Lio/cratis/chronicle/projections/graphs/UnknownEdgeProperty$Companion;
+	public static final field REASON Ljava/lang/String;
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;Ljava/lang/String;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/UnknownEdgeProperty$Companion {
+}
+
 public final class io/cratis/chronicle/projections/graphs/UnknownGraphEventProperty : java/lang/IllegalArgumentException {
 	public fun <init> (Lkotlin/reflect/KClass;Lkotlin/reflect/KClass;Ljava/lang/String;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/UnknownNodeProperty : io/cratis/chronicle/projections/graphs/InvalidGraphView {
+	public static final field Companion Lio/cratis/chronicle/projections/graphs/UnknownNodeProperty$Companion;
+	public static final field REASON Ljava/lang/String;
+	public fun <init> (Lkotlin/reflect/KClass;Ljava/lang/String;Lkotlin/reflect/KClass;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/UnknownNodeProperty$Companion {
+}
+
+public final class io/cratis/chronicle/projections/graphs/ViewIsAlsoSchema : io/cratis/chronicle/projections/graphs/InvalidGraphView {
+	public static final field Companion Lio/cratis/chronicle/projections/graphs/ViewIsAlsoSchema$Companion;
+	public static final field REASON Ljava/lang/String;
+	public fun <init> (Lkotlin/reflect/KClass;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/ViewIsAlsoSchema$Companion {
+}
+
+public abstract interface annotation class io/cratis/chronicle/projections/graphs/ViewOf : java/lang/annotation/Annotation {
+	public abstract fun name ()Ljava/lang/String;
+	public abstract fun value ()Ljava/lang/Class;
+}
+
+public final class io/cratis/chronicle/projections/graphs/ViewRootNotANode : io/cratis/chronicle/projections/graphs/InvalidGraphView {
+	public static final field Companion Lio/cratis/chronicle/projections/graphs/ViewRootNotANode$Companion;
+	public static final field REASON Ljava/lang/String;
+	public fun <init> (Lkotlin/reflect/KClass;Lkotlin/reflect/KClass;)V
+}
+
+public final class io/cratis/chronicle/projections/graphs/ViewRootNotANode$Companion {
 }
 
 public final class io/cratis/chronicle/readModels/DefaultReadModelNamingPolicy : io/cratis/chronicle/readModels/ReadModelNamingPolicy {

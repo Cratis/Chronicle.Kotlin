@@ -89,7 +89,7 @@ class ArtifactRegistrations(
         // A property graph is declared the same two ways - annotated node and edge classes, or an
         // IGraphProjection instance - and registers through the same call.
         val projections: List<Any> = instancesOf(artifacts.projections) + artifacts.modelBoundProjections +
-            artifacts.graphElements + instancesOf(artifacts.graphProjections)
+            artifacts.graphElements + instancesOf(artifacts.graphProjections) + artifacts.graphViews
         eventStore.projections.register(*projections.toTypedArray())
         eventStore.webhooks.register(*instancesOf(artifacts.webhooks).toTypedArray())
 

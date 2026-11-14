@@ -12,6 +12,7 @@ import io.cratis.chronicle.json.chronicleGson
 import io.cratis.chronicle.projections.graphs.GraphProjections
 import io.cratis.chronicle.projections.graphs.IGraphProjection
 import io.cratis.chronicle.projections.graphs.isGraphElement
+import io.cratis.chronicle.projections.graphs.isGraphView
 import io.cratis.chronicle.readModels.Passive
 import io.cratis.chronicle.readModels.ReadModelsService
 import io.cratis.chronicle.readModels.readModelIdentifier
@@ -86,6 +87,8 @@ class ProjectionsService(
                 // FromEvent is not a model-bound read model.
                 projection is KClass<*> && projection.isGraphElement() -> Unit
                 projection is IGraphProjection -> Unit
+                // A view reads a graph; it is checked with the graphs, below, and registers nothing itself.
+                projection is KClass<*> && projection.isGraphView() -> Unit
                 projection is KClass<*> && projection.isGlobalForHandler() && !projection.isVariant() -> Unit
                 projection is KClass<*> -> {
                     val globalHandlerClasses = projection.findAnnotation<VariantOf>()
@@ -100,8 +103,12 @@ class ProjectionsService(
                 else -> Unit
             }
         }
-        val graphs = GraphProjections(graphSinkTypeId).registrationsFor(projections.toList())
-        if (built.isEmpty() && graphs.isEmpty()) return
+        val declared = GraphProjections(graphSinkTypeId).declarationsFor(projections.toList())
+        val graphs = declared.registrations
+        if (built.isEmpty() && graphs.isEmpty()) {
+            declared.throwIfAnyViewIsInvalid()
+            return
+        }
 
         val definitionsByReadModel = built.associate { it.readModelClass to it.definition }
         val declarations = built.mapNotNull { b -> b.declaration?.let { b.readModelClass to it } }.toMap()
@@ -118,6 +125,9 @@ class ProjectionsService(
             .build()
 
         stub.register(request)
+
+        // An invalid view does not keep anything else from registering; it is reported once everything is.
+        declared.throwIfAnyViewIsInvalid()
     }
 
     /**
