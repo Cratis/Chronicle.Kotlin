@@ -41,6 +41,9 @@ interface IClientArtifacts {
      */
     val graphElements: List<KClass<*>> get() = emptyList()
 
+    /** Every class annotated with [io.cratis.chronicle.projections.graphs.ViewOf] - a view over a property graph. */
+    val graphViews: List<KClass<*>> get() = emptyList()
+
     /** Every class implementing [io.cratis.chronicle.projections.graphs.IGraphProjection] - a graph declared with a builder. */
     val graphProjections: List<KClass<*>> get() = emptyList()
 
