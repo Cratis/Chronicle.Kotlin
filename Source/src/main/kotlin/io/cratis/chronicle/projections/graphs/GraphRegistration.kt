@@ -12,9 +12,11 @@ import Cratis.Chronicle.Contracts.ReadModels.Readmodels
  * @property graphName The name of the graph.
  * @property readModel The read model definition, carrying the schema with the graph annotations.
  * @property projection The projection definition, carrying the graph mappings.
+ * @property views The valid views declared over the graph. They are not part of what the kernel is told.
  */
 internal data class GraphRegistration(
     val graphName: String,
     val readModel: Readmodels.ReadModelDefinition,
-    val projection: ProjectionsOuterClass.ProjectionDefinition
+    val projection: ProjectionsOuterClass.ProjectionDefinition,
+    val views: GraphViewDefinition = GraphViewDefinition(graphName, emptyList())
 )

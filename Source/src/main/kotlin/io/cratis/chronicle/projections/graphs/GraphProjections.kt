@@ -18,27 +18,40 @@ internal class GraphProjections(private val sinkTypeId: String) {
      * Builds the registrations for [declarations], leaving out everything that is not a graph.
      *
      * Annotated classes that share a graph name make up one graph. Every [IGraphProjection] makes up a graph
-     * of its own, identified by the projection class.
+     * of its own, identified by the projection class. Views are checked, but a view that is invalid does not
+     * stop anything here; see [declarationsFor].
      */
-    fun registrationsFor(declarations: List<Any>): List<GraphRegistration> {
+    fun registrationsFor(declarations: List<Any>): List<GraphRegistration> = declarationsFor(declarations).registrations
+
+    /**
+     * Builds everything [declarations] declare about graphs: the registration of every graph and, for every
+     * view that breaks a rule, the failure. An invalid view never stops a graph from being registered.
+     */
+    fun declarationsFor(declarations: List<Any>): GraphDeclarations {
         val annotated = declarations.filterIsInstance<KClass<*>>().filter { it.isGraphElement() }
-        val registrations = annotated
+        val models = annotated
             .groupBy { graphNameOf(it) }
             .map { (graph, types) ->
-                val model = GraphModel(
+                GraphModel(
                     graph,
                     types.filter { it.hasAnnotation<Node>() }.map { ModelBoundGraphReader.readNode(it) },
                     types.filter { it.hasAnnotation<Edge>() }.map { ModelBoundGraphReader.readEdge(it) }
-                )
-                GraphDefinitionBuilder.build(model, graph, sinkTypeId)
+                ) to graph
             }
-
         val fluent = declarations.filterIsInstance<IGraphProjection>().map { projection ->
-            val model = GraphProjectionBuilder().build(projection)
-            GraphDefinitionBuilder.build(model, projection::class.qualifiedName ?: projection::class.java.name, sinkTypeId)
+            GraphProjectionBuilder().build(projection) to (projection::class.qualifiedName ?: projection::class.java.name)
         }
 
-        return registrations + fluent
+        val outcome = GraphViewValidator(
+            (models + fluent).map { it.first },
+            declarations.filterIsInstance<KClass<*>>().filter { it.isGraphView() }
+        ).validate()
+
+        val registrations = (models + fluent).map { (model, projectionId) ->
+            GraphDefinitionBuilder.build(model, projectionId, sinkTypeId)
+                .copy(views = outcome.definitions[model.name] ?: GraphViewDefinition(model.name, emptyList()))
+        }
+        return GraphDeclarations(registrations, outcome.failures)
     }
 }
 
