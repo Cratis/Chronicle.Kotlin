@@ -1102,7 +1102,7 @@ node or an edge. See [Graph projections](../guides/graph-projections.md#read-a-g
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `value` | `KClass<*>` | — | The node class the view is anchored at. |
-| `name` | `String` | `""` | The name of the view, unique within the graph. Defaults to the class name. |
+| `name` | `String` | `""` | Unique view name. Defaults to the class name. |
 
 ---
 
@@ -1110,12 +1110,14 @@ node or an edge. See [Graph projections](../guides/graph-projections.md#read-a-g
 
 Marks a member of a [@ViewOf](#viewof) view as a relation that follows one
 [@Edge](#edge) to another view. A collection is a relation of cardinality many,
-a single nullable value cardinality one.
+a single nullable value cardinality one. The direction is derived from the
+labels of the edge; an edge that starts and ends at the same node label needs
+an explicit `Outgoing` or `Incoming`.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `value` | `KClass<*>` | — | The edge class that is followed. |
-| `direction` | `FollowDirection` | `Derived` | `Outgoing` or `Incoming`. Derived from the labels of the edge unless the edge starts and ends at the same node label. |
+| `direction` | `FollowDirection` | `Derived` | `Outgoing` or `Incoming`. |
 
 ---
 
@@ -1127,7 +1129,7 @@ relations of one edge type.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
-| `source` | `String` | `""` | The name of the edge property to read. Defaults to the name of the member. |
+| `source` | `String` | `""` | Edge property name. Defaults to member name. |
 
 ---
 
