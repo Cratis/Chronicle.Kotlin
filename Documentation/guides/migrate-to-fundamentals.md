@@ -3,9 +3,10 @@ title: Migrate to Fundamentals
 description: Update concepts and correlation ids for Chronicle 7.x in Kotlin and Java without changing stored JSON or schemas, and learn which code changes you need.
 ---
 
-Chronicle 7.x adopts `io.cratis:fundamentals:0.1.0`. This is a **major,
-breaking release**: recompile consumers after updating. There is no dependency
-to add; Fundamentals comes transitively with `io.cratis:chronicle`.
+Chronicle 7.x adopts `io.cratis:fundamentals` (7.0 shipped with `0.1.0`;
+7.11.0 depends on `0.8.0`). This is a **major, breaking release**: recompile
+consumers after updating. There is no dependency to add; Fundamentals comes
+transitively with `io.cratis:chronicle`.
 
 The JSON wire format and event schemas do not change. Concepts still serialize
 as their wrapped scalar value, so existing events continue to read back.

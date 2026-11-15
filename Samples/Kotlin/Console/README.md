@@ -6,13 +6,18 @@ A runnable sample demonstrating the Chronicle Kotlin client.
 
 1. Appends domain events (`EmployeeHired`, `EmployeeEmailSet`, `EmployeePromoted`, `EmployeeAddressSet`, `EmployeeMoved`) to a Chronicle event store
 2. Reacts to those events via `HrNotificationReactor` (logs notifications)
-3. Demonstrates reducer artifact discovery (`EmployeeStateReducer`) folding events into `EmployeeState`
+3. Registers a reducer (`EmployeeStateReducer`) by hand that folds events into `EmployeeState`
 4. Registers a declarative projection (`EmployeeListProjection`) for the `Employee` read model
 5. Queries a reducer-backed read model via `eventStore.readModels.getInstanceByKey(...)`
-6. Registers a discoverable `@Seeder` artifact (`EmployeeSeeder`) and seeds initial employee events
-7. Registers two discoverable `@Constraint` artifacts: `UniqueEmployeeHire` (unique-event-type constraint) and `UniqueEmployeeEmail` (unique property constraint with an index collection)
+6. Seeds initial employee events with a `@Seeder` artifact (`EmployeeSeeder`) through `store.seeding.seed(...)`
+7. Registers two `@Constraint` artifacts through `store.constraints.register(...)`: `UniqueEmployeeHire` (unique-event-type constraint) and `UniqueEmployeeEmail` (unique property constraint with an index collection)
 8. Demonstrates Unit of Work transactions with `eventLog.transactional` and `unitOfWorkManager.begin()`
 9. Demonstrates compliance features via the `@Pii` decorator and the `Customer` read model
+
+The sample turns automatic discovery and registration off with `withoutAutoRegistration()`, so every
+artifact is registered by hand — a tour of the registration API and of the order the kernel needs.
+With automatic registration on (the default), the client discovers and registers these artifacts
+for you; see the Spring Boot sample.
 
 ## Keyboard controls
 

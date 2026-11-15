@@ -81,10 +81,21 @@ interface IEventStore {
     val identities: IIdentityManagerService
     val failedPartitions: IFailedPartitions
     val observers: IObservers
+    val captures: ICapturesService
 
     fun getEventSequence(id: EventSequenceId): IEventSequence
+    suspend fun registerAll()
+    suspend fun awaitRegistration()
 }
 ```
+
+`captures` manages [captures](../guides/captures.md) whose declarations
+are not known at build time. `registerAll` registers every artifact the
+application owns, in the order the kernel needs; it runs automatically on
+every connect unless automatic registration is turned off, and calling it
+again is safe. `awaitRegistration` suspends until automatic registration
+has finished, and returns immediately when it is turned off. See
+[Artifact registration](../guides/artifact-registration.md).
 
 `compliance`, `eventTypes`, `namespaces`, `externalServices`, `jobs`,
 `eventStoreSubscriptions`, `webhooks`, and `identities` are available on
@@ -195,12 +206,24 @@ data class EventForEventSourceId(
     val tags: List<String> = emptyList(),
     val occurred: Instant? = null,
     val subject: String? = null,
-    val causation: List<Causation> = emptyList()
+    val causation: List<Causation> = emptyList(),
+    val eventSource: KClass<*>? = null,
+    val eventStream: String? = null,
+    val correlationId: UUID? = null,
+    val causedBy: Identity? = null,
+    val generation: Int? = null,
+    val sourceSequenceNumber: Long? = null,
+    val idempotencyKey: String? = null
 )
 ```
 
 Every unset field falls back to the same default a plain `append` uses,
-resolved against that event's own event source id.
+resolved against that event's own event source id. `eventSource` and
+`eventStream` route the event through an event source definition, as on
+`AppendOptions`. The fields after them are used when importing events; an
+ordinary append takes those values from the current call instead. A
+secondary constructor keeps the original shape, the fields up to
+`causation`, for callers compiled against it.
 
 ### Composed operations
 
@@ -257,7 +280,8 @@ that never sets one is appended unchecked, and a scope already set is never
 cleared by a later `ConcurrencyScope.notSet` — so a call that expresses no
 expectation cannot silently disable a check that was explicitly asked for.
 
-Causation is not composed here; it is derived from the ambient
+`withCausation` sets the causation chain for every staged event. Without
+it, or with an empty list, causation is derived from the ambient
 `CausationManager` when `perform()` runs.
 
 Java reaches this through `EventSequenceOperationsJavaBridge`
@@ -410,7 +434,9 @@ data class AppendOptions(
     val subject: String? = null,
     val tags: List<String> = emptyList(),
     val occurred: Instant? = null,
-    val causation: List<Causation> = emptyList()
+    val causation: List<Causation> = emptyList(),
+    val eventSource: KClass<*>? = null,
+    val eventStream: String? = null
 )
 
 data class ConcurrencyScope(
@@ -419,9 +445,17 @@ data class ConcurrencyScope(
     val eventStreamType: String? = null,
     val eventStreamId: String? = null,
     val eventSourceType: String? = null,
-    val eventTypes: List<EventTypeDescriptor> = emptyList()
+    val eventTypes: List<EventTypeDescriptor> = emptyList(),
+    val expectsNoMatchingEvent: Boolean = false
 )
 ```
+
+`eventSource` names a class carrying an event source definition to append
+through, and `eventStream` names one of the streams it declares. A
+secondary `AppendOptions` constructor keeps the shape without them.
+`expectsNoMatchingEvent` makes the kernel reject the append if any event
+matching the scope already exists; it cannot be combined with a concrete
+`sequenceNumber`.
 
 Build one with `ConcurrencyScopeBuilder` rather than the constructor
 directly — `withSequenceNumber` sets the expected position, and
@@ -697,6 +731,11 @@ the event store forever until something removes them.
 interface IObservers {
     suspend fun getAll(): List<ObserverInformation>
     suspend fun remove(observerId: String): ObserverRemovalResult
+    suspend fun fastForward(
+        observerId: String,
+        eventSequenceId: EventSequenceId = EventSequenceId.eventLog
+    ): FastForwardResult
+    suspend fun fastForward(observerClass: KClass<*>): FastForwardResult
 }
 
 data class ObserverInformation(
@@ -737,6 +776,12 @@ observer is running or still has a subscribed client in *any* namespace, and
 across all of them. Stop the declaring application first if the intent is to
 remove a live observer — there is no override. Read model data and sink
 containers are left untouched; only the observer's own bookkeeping goes.
+
+`fastForward` moves an observer to the tail of its event sequence, by id or
+by its reactor or reducer class. Every event it has not yet handled is
+skipped without invoking it and its failed partitions are discarded. State
+it has already built is kept, so the skipped events are missing from it;
+replay the observer instead to rebuild.
 
 ---
 
@@ -817,10 +862,10 @@ interface IReadModelsService {
   `removed`), and the triggering event's `eventSequenceNumber`/`occurred`/
   `correlationId` when known.
 - `release`/`releaseMany` decrypt `@Pii`-annotated properties on one or a
-  batch of read model instances. The compliance subject defaults to each
-  instance's `id` property if present; pass `subject` explicitly to
-  `release` when there is no `id` property or it isn't the compliance
-  subject.
+  batch of read model instances. The compliance subject comes from a
+  property annotated `@Subject` that carries a value, falling back to a
+  property named `id` (case-insensitive); pass `subject` explicitly to
+  `release` when neither identifies the compliance subject.
 
 ---
 
@@ -926,8 +971,13 @@ From Java, use `ProjectionsServiceJavaBridge.query(...)`.
 ```kotlin
 interface IConstraintsService {
     suspend fun register(vararg constraints: Any)
+    suspend fun registerModelBound(eventTypes: List<KClass<*>>)
 }
 ```
+
+`register` takes hand-written `IConstraint` instances and ignores anything
+else. `registerModelBound` registers the model-bound `@Unique` and
+`@RemoveConstraint` annotations declared on the given event types.
 
 `IConstraintBuilder`, passed into `IConstraint.define`, can additionally
 scope every constraint added through it — see
@@ -945,7 +995,7 @@ interface IEventTypesService {
     suspend fun registerSingle(eventClass: KClass<*>)
     suspend fun getAllGenerationsForEventType(
         eventTypeId: String
-    ): List<Events.EventTypeRegistration>
+    ): List<Eventtypes.EventTypeDetailsResponse>
     fun getRegisteredEventTypes(): List<EventTypeDescriptor>
 }
 ```
@@ -984,8 +1034,8 @@ namespace-scoped seed data via `forNamespace`.
 interface IComplianceService {
     suspend fun release(
         subject: String,
-        schema: String,
-        payload: String
+        schema: String = "{}",
+        payload: String = "{}"
     ): String
     suspend fun deleteEncryptionKey(identifier: String)
 }

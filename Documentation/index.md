@@ -37,8 +37,9 @@ unverified until that check and your own tests pass. See [Connection lifecycle](
 
 ## Kotlin and Java setup
 
-Add the client to your Gradle build. The pages in this section were
-checked against `6.5.0`; the
+Add the client to your Gradle build. The examples in this section use
+`7.11.0`, including the Fundamentals types such as
+`io.cratis.fundamentals.geospatial` that arrived in 7.x; the
 [latest release](https://central.sonatype.com/artifact/io.cratis/chronicle) is
 on Maven Central:
 
@@ -46,11 +47,11 @@ on Maven Central:
 
 ```kotlin
 dependencies {
-    implementation("io.cratis:chronicle:6.5.0")
+    implementation("io.cratis:chronicle:7.11.0")
 }
 ```
 
-Maven uses the same coordinates, `io.cratis:chronicle:6.5.0`. The same JVM
+Maven uses the same coordinates, `io.cratis:chronicle:7.11.0`. The same JVM
 client supports both Kotlin and Java. Shared pages include separate Kotlin
 and Java tabs when both examples exist.
 
@@ -61,7 +62,7 @@ it and wires everything up:
 
 ```kotlin
 dependencies {
-    implementation("io.cratis:chronicle-spring-boot-starter:6.5.0")
+    implementation("io.cratis:chronicle-spring-boot-starter:7.11.0")
 }
 ```
 
@@ -132,8 +133,11 @@ services:
 
 Chronicle is ready once `curl -sk https://localhost:35000/health` reports
 `Healthy`. The `Samples/Kotlin/Console` and `Samples/Java/Console` folders
-in the repository contain this file along with PostgreSQL, SQL Server, and
-SQLite profiles.
+in the repository contain a similar file along with PostgreSQL, SQL Server,
+and SQLite profiles. Their ports are not bound to loopback, so Docker
+publishes them on every network interface and the kernel and databases are
+reachable from other machines. Add `127.0.0.1:` to their port mappings, as
+above, before running them on a shared network.
 
 ## Client-specific pages
 

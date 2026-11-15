@@ -35,6 +35,8 @@ val options = ChronicleOptions.development().copy(openTelemetry = myOpenTelemetr
 | `Chronicle appendMany` | A batch is appended |
 | `Chronicle observe <EventType>` | A reactor handles an event |
 | `Chronicle reduce <EventType>` | A reducer folds an event |
+| `Chronicle observe batch <method>` | A reactor batch handler runs |
+| `Chronicle reduce batch <method>` | A reducer batch handler runs |
 
 Every span is reported under the `io.cratis.chronicle` instrumentation scope,
 and carries the identifiers you would otherwise correlate by hand:
@@ -48,7 +50,7 @@ and carries the identifiers you would otherwise correlate by hand:
 | `chronicle.namespace` | Appends |
 | `chronicle.observer_id` | Observations |
 | `chronicle.sequence_number` | Observations |
-| `chronicle.event_count` | Batch appends |
+| `chronicle.event_count` | Batch appends and batch observations |
 | `chronicle.is_replay` | Observations |
 
 An append the kernel refuses, or a handler that throws, ends its span with an
