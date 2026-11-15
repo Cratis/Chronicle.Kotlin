@@ -683,6 +683,10 @@ Marks a function as deriving its key from the event context — for example
 the event source id, or a correlation id — rather than from a property on
 the event payload.
 
+The JVM client declares this annotation as metadata only: it mirrors the
+.NET client's `ContextKeyAttribute`, but nothing in the client reads it at
+runtime yet, so applying it does not change how keys are resolved.
+
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `property` | `String` | *(required)* | `EventContext` property to use. |
@@ -698,8 +702,9 @@ class PickTicketHandlers {
 }
 ```
 
-`IKeyBuilder`/`KeyBuilder` build the same resolution fluently instead of
-declaratively — see the `io.cratis.chronicle.keys` package.
+It is not a working alternative to `IKeyBuilder`/`KeyBuilder` in the
+`io.cratis.chronicle.keys` package. To control a projection's key, use the
+projection builder's key configuration instead.
 
 ---
 

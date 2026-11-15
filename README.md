@@ -42,8 +42,8 @@ and AI-friendly by design, with free [AI skills](https://github.com/Cratis/AI) f
 - **The past is never lost.** Nothing is updated in place. Every state your system has ever been in
   is reconstructible, which turns "how did this record end up like that?" from an archaeology
   project into a query.
-- **Coroutines all the way down.** Every call that touches the kernel suspends. Java gets blocking
-  bridges for the same surface, so neither language is the second-class one.
+- **Coroutines all the way down.** Every call that touches the kernel suspends. Java gets a blocking
+  client for the common operations and static bridges for the rest, so Java is not left out.
 - **Rules the kernel enforces.** Uniqueness and other constraints are checked at append time, on the
   server, not by a read-then-write race in your code.
 
@@ -190,20 +190,20 @@ docker run --rm -p 127.0.0.1:35000:35000 cratis/chronicle:latest-development
 
 ### Plain Kotlin or Java
 
-The examples here use `6.5.0`; check [Maven Central](https://central.sonatype.com/artifact/io.cratis/chronicle)
+The examples here use `7.11.0`; check [Maven Central](https://central.sonatype.com/artifact/io.cratis/chronicle)
 for the latest release.
 
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.cratis:chronicle:6.5.0")
+    implementation("io.cratis:chronicle:7.11.0")
 }
 ```
 
 ```groovy
 // build.gradle
 dependencies {
-    implementation 'io.cratis:chronicle:6.5.0'
+    implementation 'io.cratis:chronicle:7.11.0'
 }
 ```
 
@@ -250,7 +250,9 @@ public static void main(String[] args) {
 </table>
 
 Java cannot call Kotlin `suspend` functions, so Java goes through `BlockingChronicleClient` in
-`io.cratis.chronicle.java`: the same surface, with each call blocking until the kernel answers.
+`io.cratis.chronicle.java`, with each call blocking until the kernel answers. It wraps the common
+operations, not every service; for the rest, `io.cratis.chronicle.java` holds lower-level static
+bridges, and `unwrap()` returns the suspending object underneath.
 
 The first append waits until the client has told the kernel about your event types, and creating
 the client throws if the kernel cannot be reached. `development()` skips certificate validation to
@@ -266,7 +268,7 @@ The starter brings the client with it and wires everything up. It targets Spring
 ```kotlin
 // build.gradle.kts
 dependencies {
-    implementation("io.cratis:chronicle-spring-boot-starter:6.5.0")
+    implementation("io.cratis:chronicle-spring-boot-starter:7.11.0")
 }
 ```
 

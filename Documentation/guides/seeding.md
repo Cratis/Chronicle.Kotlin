@@ -28,8 +28,10 @@ data class FundsDeposited(val accountId: String, val amount: Double)
 
 ## Implement a seeder
 
-Annotate a class with `@Seeder`, implement `ICanSeedEvents`, and use
-`IEventSeedingBuilder.forEventSource` to accumulate events:
+Implement `ICanSeedEvents` and use `IEventSeedingBuilder.forEventSource` to
+accumulate events. Discovery finds seeders by the `ICanSeedEvents`
+interface; the `@Seeder` annotation in these examples only marks the class
+and does not affect discovery:
 
 <!-- validate: declarations -->
 
@@ -116,11 +118,11 @@ class TypedAccountSeeder : ICanSeedEvents {
 
 ## Seed a specific namespace
 
-By default, seed data targets the event store's own namespace. Call
-`forNamespace` to target a different one instead — it returns a scoped
-builder whose `forEventSource`/`forEventType` calls all seed into that
-namespace, leaving calls made directly on `builder` targeting the event
-store's own namespace as before:
+By default, seed data is global: the server applies it to every namespace
+of the event store, including namespaces created later. Call `forNamespace`
+to seed one namespace only — it returns a scoped builder whose
+`forEventSource`/`forEventType` calls all seed into that namespace, while
+calls made directly on `builder` stay global:
 
 <!-- validate: declarations -->
 
@@ -144,7 +146,14 @@ class MultiNamespaceAccountSeeder : ICanSeedEvents {
 
 ## Running seeders
 
-Pass seeder instances to the event store's `seeding` service:
+With automatic discovery and registration on (the default), the client
+finds every class that implements `ICanSeedEvents` and seeds it when the
+event store connects, after the observers that should see the seeded
+events are registered. You do not need to call anything. See
+[Artifact registration](artifact-registration.md).
+
+With automatic registration turned off, pass seeder instances to the event
+store's `seeding` service yourself:
 
 <!-- validate: declarations -->
 
@@ -167,6 +176,9 @@ suspend fun runSeeders(store: IEventStore) {
 - Keep seed data minimal and deterministic.
 - Use clear event source IDs to make debugging easier.
 - Group seeders by scenario so you can remove or adjust them easily.
-- Only call `store.seeding.seed(...)` when you want seeding to run — for
-  example, guard it behind a development-only build flag or configuration
-  check.
+- To run seeders only in some environments — for example, development —
+  control which seeders the client discovers: narrow the scan or list
+  artifacts explicitly, or turn automatic registration off and call
+  `store.seeding.seed(...)` yourself behind a configuration check. Guarding
+  a manual call alone does not stop discovered seeders from running. See
+  [Artifact registration](artifact-registration.md).

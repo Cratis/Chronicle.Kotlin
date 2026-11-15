@@ -8,8 +8,9 @@ package io.cratis.chronicle.seeding
  *
  * @property eventSourceId The event source id the [events] are seeded for.
  * @property events The events to seed.
- * @property namespace The namespace to target, or `null` to use the event store's own namespace -
- *   set via [IEventSeedingBuilder.forNamespace].
+ * @property namespace The namespace to target, or `null` for a global entry that the kernel applies to
+ *   every namespace of the event store, including namespaces created later - set via
+ *   [IEventSeedingBuilder.forNamespace].
  */
 data class EventSeedEntry(
     val eventSourceId: String,

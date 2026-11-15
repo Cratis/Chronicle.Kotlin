@@ -25,16 +25,25 @@ class ExchangeRates : ICapture {
 
     override val declaration = """
         capture ExchangeRates
-            from api "https://api.example.com/rates" every 5 minutes
-                append RateObserved
-                    set currency to base
-                    set rate to value
-    """
+          source api
+            api ExchangeRatesApi
+            route /rates
+            poll 5m
+          key currency
+          append RateObserved
+            when rate
+            currency = $.currency
+            rate = $.rate
+    """.trimIndent()
 }
 ```
 
-The body is a Capture Declaration Language document. The language belongs to
-the kernel, which is what parses and runs it — see the
+The body is a Capture Declaration Language (CDL) document. A capture needs
+exactly one `source` block and one `key` directive, and every `append` block
+needs a `when` clause. Here `api` names an External Service configured on the
+kernel, which holds the base URL and authentication; `route` is appended to
+it and `poll` sets the interval. The language belongs to the kernel, which is
+what parses and runs it — see the
 [Chronicle documentation](https://github.com/Cratis/Chronicle) for its full
 shape.
 
