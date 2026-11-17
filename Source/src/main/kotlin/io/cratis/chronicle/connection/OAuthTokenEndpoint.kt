@@ -18,11 +18,16 @@ import java.nio.charset.StandardCharsets
  *
  * When TLS is enabled, [skipTlsValidation] defaults to `true`, accepting any certificate via
  * [InsecureTrustManager]. Set it to `false` to require full certificate chain validation against
- * the platform default trust manager instead.
+ * the platform default trust manager instead - or against the certificate authorities in
+ * `caCertificatePath`, presenting the client certificate in `certificatePath`, when [tls] carries them.
  */
-internal fun createChronicleHttpClient(disableTls: Boolean, skipTlsValidation: Boolean): HttpClient = when {
+internal fun createChronicleHttpClient(
+    disableTls: Boolean,
+    skipTlsValidation: Boolean,
+    tls: ChronicleTls = ChronicleTls.NONE
+): HttpClient = when {
     disableTls -> HttpClient.newHttpClient()
-    skipTlsValidation -> HttpClient.newBuilder().sslContext(InsecureTrustManager.sslContext()).build()
+    skipTlsValidation || !tls.isEmpty -> HttpClient.newBuilder().sslContext(tls.sslContext(skipTlsValidation)).build()
     else -> HttpClient.newHttpClient()
 }
 
@@ -41,7 +46,8 @@ internal class OAuthTokenEndpoint(
     private val clientId: String,
     private val clientSecret: String,
     disableTls: Boolean = false,
-    skipTlsValidation: Boolean = true
+    skipTlsValidation: Boolean = true,
+    tls: ChronicleTls = ChronicleTls.NONE
 ) {
     /**
      * An access token as returned by the endpoint.
@@ -55,7 +61,7 @@ internal class OAuthTokenEndpoint(
         @SerializedName("expires_in") val expiresInSeconds: Long? = null
     )
 
-    private val httpClient = createChronicleHttpClient(disableTls, skipTlsValidation)
+    private val httpClient = createChronicleHttpClient(disableTls, skipTlsValidation, tls)
     private val gson = Gson()
 
     /** Fetches a fresh token, throwing when the endpoint cannot produce one. */

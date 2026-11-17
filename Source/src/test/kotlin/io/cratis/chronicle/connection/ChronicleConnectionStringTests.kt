@@ -329,4 +329,118 @@ class ChronicleConnectionStringTests {
             assertEquals(parsed, roundTripped, "Round-tripping '$original' should preserve every field")
         }
     }
+
+    @Test
+    fun `parses caCertificatePath`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000?caCertificatePath=%2Fetc%2Fca.pem")
+        assertEquals("/etc/ca.pem", cs.caCertificatePath)
+    }
+
+    @Test
+    fun `caCertificatePath may hold an at sign`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000?caCertificatePath=%2Fhome%2Fme@corp%2Fca.pem")
+        assertEquals("/home/me@corp/ca.pem", cs.caCertificatePath)
+    }
+
+    @Test
+    fun `parses certificatePath and certificatePassword`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000?certificatePath=%2Fetc%2Fclient.p12&certificatePassword=s3cret%21")
+        assertEquals("/etc/client.p12", cs.certificatePath)
+        assertEquals("s3cret!", cs.certificatePassword)
+    }
+
+    @Test
+    fun `certificate options default to null`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000")
+        assertNull(cs.certificatePath)
+        assertNull(cs.certificatePassword)
+        assertNull(cs.caCertificatePath)
+    }
+
+    @Test
+    fun `parses auth none and lets it beat credentials`() {
+        val cs = ChronicleConnectionString.parse("chronicle://alice:secret@host:35000?auth=none")
+        assertTrue(cs.noAuthentication)
+        assertEquals("alice", cs.username)
+    }
+
+    @Test
+    fun `auth none is case-insensitive`() {
+        assertTrue(ChronicleConnectionString.parse("chronicle://host:35000?AUTH=None").noAuthentication)
+    }
+
+    @Test
+    fun `authentication is on by default`() {
+        assertFalse(ChronicleConnectionString.parse("chronicle://host:35000").noAuthentication)
+    }
+
+    @Test
+    fun `parses skipCompatibilityCheck and skipKeepAlive`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000?skipCompatibilityCheck=true&skipKeepAlive=true")
+        assertTrue(cs.skipCompatibilityCheck)
+        assertTrue(cs.skipKeepAlive)
+    }
+
+    @Test
+    fun `skipCompatibilityCheck and skipKeepAlive default to false`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000")
+        assertFalse(cs.skipCompatibilityCheck)
+        assertFalse(cs.skipKeepAlive)
+    }
+
+    @Test
+    fun `throws on a boolean option that is neither true nor false`() {
+        val error = assertThrows(IllegalArgumentException::class.java) {
+            ChronicleConnectionString.parse("chronicle://host:35000?skipTlsValidation=maybe")
+        }
+        assertTrue(error.message!!.contains("skipTlsValidation"))
+    }
+
+    @Test
+    fun `percent-decodes credentials and a literal plus stays a plus`() {
+        val cs = ChronicleConnectionString.parse("chronicle://al%40ice:p%3Ass%2Bword@host:35000")
+        assertEquals("al@ice", cs.username)
+        assertEquals("p:ss+word", cs.password)
+    }
+
+    @Test
+    fun `toString percent-encodes credentials so they round trip`() {
+        val cs = ChronicleConnectionString(
+            addresses = listOf(ChronicleServerAddress("host", 35000)),
+            username = "al@ice",
+            password = "p:ss/w?rd"
+        )
+        assertEquals(cs, ChronicleConnectionString.parse(cs.toString()))
+    }
+
+    @Test
+    fun `throws when user information spilled an unencoded separator into the query`() {
+        assertThrows(IllegalArgumentException::class.java) {
+            ChronicleConnectionString.parse("chronicle://alice:pa?ss@host:35000")
+        }
+    }
+
+    @Test
+    fun `option names are matched case-insensitively`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000?SKIPTLSVALIDATION=false&DisableTls=true&ApiKey=abc")
+        assertFalse(cs.skipTlsValidation)
+        assertTrue(cs.disableTls)
+        assertEquals("abc", cs.apiKey)
+    }
+
+    @Test
+    fun `unknown options are kept and round trip`() {
+        val cs = ChronicleConnectionString.parse("chronicle://host:35000?custom=value")
+        assertEquals(mapOf("custom" to "value"), cs.additionalOptions)
+        assertEquals("chronicle://host:35000?custom=value", cs.toString())
+    }
+
+    @Test
+    fun `round trips the new options`() {
+        val original = "chronicle://host:35000?auth=none&skipCompatibilityCheck=true&skipKeepAlive=true" +
+            "&certificatePath=%2Fc.p12&certificatePassword=pw&caCertificatePath=%2Fca.pem"
+        val parsed = ChronicleConnectionString.parse(original)
+        assertEquals(parsed, ChronicleConnectionString.parse(parsed.toString()))
+        assertEquals(original, parsed.toString())
+    }
 }

@@ -11,9 +11,16 @@ interface LoadBalancerStrategy {
     companion object {
         /** Builds the [LoadBalancerStrategy] configured on [connectionString]. */
         fun forConnectionString(connectionString: ChronicleConnectionString): LoadBalancerStrategy =
+            forConnectionString(connectionString, ChronicleTls.load(connectionString))
+
+        internal fun forConnectionString(connectionString: ChronicleConnectionString, tls: ChronicleTls): LoadBalancerStrategy =
             when (connectionString.loadBalancer) {
                 LoadBalancer.LEAST_CONNECTIONS ->
-                    LeastConnectionsLoadBalancerStrategy(connectionString.disableTls, connectionString.skipTlsValidation)
+                    LeastConnectionsLoadBalancerStrategy(
+                        connectionString.disableTls,
+                        connectionString.skipTlsValidation,
+                        httpClient = createChronicleHttpClient(connectionString.disableTls, connectionString.skipTlsValidation, tls)
+                    )
                 LoadBalancer.ROUND_ROBIN -> RoundRobinLoadBalancerStrategy()
                 LoadBalancer.RANDOM -> RandomLoadBalancerStrategy()
             }

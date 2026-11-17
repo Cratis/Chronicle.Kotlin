@@ -63,6 +63,15 @@ class OAuthTokenProvider internal constructor(
         skipTlsValidation: Boolean = true
     ) : this(OAuthTokenEndpoint(tokenEndpoint, clientId, clientSecret, disableTls, skipTlsValidation)::fetch)
 
+    internal constructor(
+        tokenEndpoint: String,
+        clientId: String,
+        clientSecret: String,
+        disableTls: Boolean,
+        skipTlsValidation: Boolean,
+        tls: ChronicleTls
+    ) : this(OAuthTokenEndpoint(tokenEndpoint, clientId, clientSecret, disableTls, skipTlsValidation, tls)::fetch)
+
     private val mutex = Mutex()
 
     private var cachedToken: String? = null
