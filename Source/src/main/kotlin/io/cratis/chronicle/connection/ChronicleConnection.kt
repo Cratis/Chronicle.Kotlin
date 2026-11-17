@@ -119,12 +119,8 @@ class ChronicleConnection @JvmOverloads constructor(
     }
 
     private fun createTokenProvider(address: ChronicleServerAddress): ITokenProvider {
-        // Asking for no authentication is deliberate and beats anything else the connection string carries. Without
-        // TLS the development credentials have nowhere to go either: the token endpoint is served over TLS only, so
-        // a cleartext connection with no credentials authenticates with nothing.
-        if (connectionString.noAuthentication ||
-            (connectionString.disableTls && connectionString.username == null && connectionString.password == null)
-        ) {
+        // Asking for no authentication is deliberate and beats anything else the connection string carries.
+        if (connectionString.noAuthentication) {
             return NoOpTokenProvider
         }
 
