@@ -28,8 +28,11 @@ class ChronicleConnection @JvmOverloads constructor(
         }
     }
 
+    // Loaded once, up front: a missing or unreadable certificate file fails the connection setup here
+    // rather than on every reconnect - or not at all until validation is switched on.
+    private val tls = ChronicleTls.load(connectionString)
     private val srvResolver = SrvResolver()
-    private val loadBalancerStrategy = LoadBalancerStrategy.forConnectionString(connectionString)
+    private val loadBalancerStrategy = LoadBalancerStrategy.forConnectionString(connectionString, tls)
 
     /**
      * The channel every stub holds. The [SwappableChannel] indirection is what makes
@@ -51,11 +54,16 @@ class ChronicleConnection @JvmOverloads constructor(
     }
     private val connectionManager: ConnectionManager by connectionManagerDelegate
 
+    /** Stands in for the connection manager's lifecycle when `skipKeepAlive=true`: there is no session to track. */
+    private val standaloneLifecycle = ConnectionLifecycle()
+
     /** Tracks whether the client is connected, and under which connection ID. */
-    val lifecycle: ConnectionLifecycle get() = connectionManager.lifecycle
+    val lifecycle: ConnectionLifecycle get() =
+        if (connectionString.skipKeepAlive) standaloneLifecycle else connectionManager.lifecycle
 
     /** The current client connection ID. Rotates on every reconnect. */
-    val connectionId: String get() = connectionManager.connectionId
+    val connectionId: String get() =
+        if (connectionString.skipKeepAlive) standaloneLifecycle.connectionId else connectionManager.connectionId
 
     /**
      * Dials a fresh managed channel for a newly resolved and selected server address.
@@ -73,13 +81,13 @@ class ChronicleConnection @JvmOverloads constructor(
         val builder = Grpc.newChannelBuilderForAddress(
             address.host,
             address.port,
-            connectionString.createCredentials()
+            connectionString.createCredentials(tls)
         )
         maxReceiveMessageSize?.let { builder.maxInboundMessageSize(it) }
         builder.intercept(BearerTokenInterceptor(createTokenProvider(address)))
         val managed = builder.build()
         try {
-            CompatibilityPreflight.verify(managed)
+            if (!connectionString.skipCompatibilityCheck) CompatibilityPreflight.verify(managed)
             return managed
         } catch (error: Throwable) {
             managed.shutdownNow()
@@ -111,6 +119,11 @@ class ChronicleConnection @JvmOverloads constructor(
     }
 
     private fun createTokenProvider(address: ChronicleServerAddress): ITokenProvider {
+        // Asking for no authentication is deliberate and beats anything else the connection string carries.
+        if (connectionString.noAuthentication) {
+            return NoOpTokenProvider
+        }
+
         val username = connectionString.username
             ?: ChronicleConnectionString.DEVELOPMENT_CLIENT
         val password = connectionString.password
@@ -125,13 +138,32 @@ class ChronicleConnection @JvmOverloads constructor(
             username,
             password,
             connectionString.disableTls,
-            connectionString.skipTlsValidation
+            connectionString.skipTlsValidation,
+            tls
         )
     }
 
     fun connect() {
+        if (connectionString.skipKeepAlive) {
+            connectWithoutKeepAlive()
+            return
+        }
+
         @Suppress("UNUSED_EXPRESSION")
         connectionManager
+    }
+
+    /**
+     * Dials the channel and marks the connection as up, without a session: no keep-alive stream and no
+     * watchdog. A dial failure is reported as a terminal failure, the way the session machinery would.
+     */
+    private fun connectWithoutKeepAlive() {
+        try {
+            channel
+            standaloneLifecycle.markConnected(standaloneLifecycle.connectionId)
+        } catch (error: Exception) {
+            standaloneLifecycle.markTerminalFailure(error)
+        }
     }
 
     fun disconnect() {

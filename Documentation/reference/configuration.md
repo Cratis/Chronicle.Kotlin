@@ -158,18 +158,42 @@ targets and ports.
 | `disableTls` | `false` | Connect over plaintext instead of TLS |
 | `skipTlsValidation` | `true` | Accept any server certificate |
 | `apiKey` | *(none)* | Rejected at client creation; see below |
+| `auth` | *(none)* | `none` skips authentication, even with credentials |
 | `loadBalancer` | `least-connections` | Policy across multiple addresses |
 | `srvNameServer` | *(none)* | DNS server for `chronicle+srv://` |
+| `certificatePath` | *(none)* | PKCS#12 or PEM client certificate |
+| `certificatePassword` | *(none)* | Password for PKCS#12 or encrypted PEM |
+| `caCertificatePath` | *(none)* | PEM or PKCS#7 trusted authorities file |
+| `skipCompatibilityCheck` | `false` | Skip the compatibility check on connect |
+| `skipKeepAlive` | `false` | Skip the keep-alive session |
 
 `loadBalancer` accepts `least-connections`, `round-robin` or `random`.
 Option names are matched without regard to case. An option name the client
 does not recognize is ignored without an error, so check the spelling of
 `skipTlsValidation` in particular: a misspelled one leaves certificate
-validation off. An unknown `loadBalancer` value throws
-`IllegalArgumentException`.
+validation off. An unknown `loadBalancer` value, or a boolean option that is
+neither `true` nor `false`, throws `IllegalArgumentException`.
+
+Percent-encode reserved characters in the user name and password, such as `@`,
+`:`, `/` and `?`; a literal `+` stays a plus. A connection string whose user
+information leaks a separator into the options is rejected.
 
 `skipTlsValidation` accepts self-signed certificates. Set it to `false` to
 require full certificate chain validation.
+
+`caCertificatePath` trusts a private certificate authority, or a kernel's
+self-signed certificate, without touching the JVM trust store: it points at a
+PEM or PKCS#7 file holding the authorities the server certificate must chain
+to. It takes effect only with `skipTlsValidation=false`, but the file is read
+whenever the option is set, so a missing or unreadable file, or one without
+certificates, fails client creation.
+
+For mutual TLS, `certificatePath` names a PKCS#12 file, or a PEM file holding
+the certificate chain and a PKCS#8 private key (`BEGIN PRIVATE KEY` or
+`BEGIN ENCRYPTED PRIVATE KEY`) in any order. `certificatePassword` unlocks a
+PKCS#12 file or an encrypted PEM key. Convert a traditional `RSA PRIVATE KEY`
+with `openssl pkcs8 -topk8`. The client presents the certificate on the gRPC
+channel, the token request and the load balancer probes.
 
 <!-- validate: body -->
 
