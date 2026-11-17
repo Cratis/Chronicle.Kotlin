@@ -158,14 +158,14 @@ targets and ports.
 | `disableTls` | `false` | Connect over plaintext instead of TLS |
 | `skipTlsValidation` | `true` | Accept any server certificate |
 | `apiKey` | *(none)* | Rejected at client creation; see below |
-| `auth` | *(none)* | `none` skips authentication; it beats any credentials in the connection string |
+| `auth` | *(none)* | `none` skips authentication, even with credentials |
 | `loadBalancer` | `least-connections` | Policy across multiple addresses |
 | `srvNameServer` | *(none)* | DNS server for `chronicle+srv://` |
-| `certificatePath` | *(none)* | PKCS#12 (`.p12`/`.pfx`) or PEM file with the client certificate for mutual TLS |
-| `certificatePassword` | *(none)* | Password for a PKCS#12 file or an encrypted PEM private key |
-| `caCertificatePath` | *(none)* | PEM or PKCS#7 file with the certificate authorities the server certificate must chain to |
-| `skipCompatibilityCheck` | `false` | Skip the server compatibility check on connect |
-| `skipKeepAlive` | `false` | Skip the keep-alive session; the client cannot host reactors or reducers |
+| `certificatePath` | *(none)* | PKCS#12 or PEM client certificate |
+| `certificatePassword` | *(none)* | Password for PKCS#12 or encrypted PEM |
+| `caCertificatePath` | *(none)* | PEM or PKCS#7 trusted authorities file |
+| `skipCompatibilityCheck` | `false` | Skip the compatibility check on connect |
+| `skipKeepAlive` | `false` | Skip the keep-alive session |
 
 `loadBalancer` accepts `least-connections`, `round-robin` or `random`.
 Option names are matched without regard to case. An option name the client
