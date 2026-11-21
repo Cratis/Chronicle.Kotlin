@@ -56,7 +56,7 @@ public final class io/cratis/chronicle/ChronicleOptions$Companion {
 	public final fun fromConnectionString (Ljava/lang/String;)Lio/cratis/chronicle/ChronicleOptions;
 }
 
-public final class io/cratis/chronicle/EventStore : io/cratis/chronicle/IEventStore, io/cratis/chronicle/eventSources/IEventSourcesCapability {
+public final class io/cratis/chronicle/EventStore : io/cratis/chronicle/IEventStore, io/cratis/chronicle/eventSources/IEventSourcesCapability, io/cratis/chronicle/patterns/IPatternsCapability {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ChronicleServices;Lio/cratis/chronicle/connection/ConnectionLifecycle;Ljava/lang/String;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ZLio/cratis/chronicle/diagnostics/ChronicleTraces;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ChronicleServices;Lio/cratis/chronicle/connection/ConnectionLifecycle;Ljava/lang/String;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ZLio/cratis/chronicle/diagnostics/ChronicleTraces;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ChronicleServices;Lio/cratis/chronicle/connection/ConnectionLifecycle;Ljava/lang/String;Lio/cratis/chronicle/artifacts/IClientArtifacts;Lio/cratis/chronicle/artifacts/IArtifactActivator;ZLio/cratis/chronicle/diagnostics/ChronicleTraces;Lio/cratis/chronicle/readModels/ReadModelNamingPolicy;)V
@@ -78,6 +78,7 @@ public final class io/cratis/chronicle/EventStore : io/cratis/chronicle/IEventSt
 	public fun getNamespace ()Ljava/lang/String;
 	public fun getNamespaces ()Lio/cratis/chronicle/namespaces/INamespacesService;
 	public fun getObservers ()Lio/cratis/chronicle/observation/IObservers;
+	public fun getPatterns ()Lio/cratis/chronicle/patterns/IPatterns;
 	public fun getProjections ()Lio/cratis/chronicle/projections/IProjectionsService;
 	public fun getReactors ()Lio/cratis/chronicle/observation/IReactorsService;
 	public fun getReadModels ()Lio/cratis/chronicle/readModels/IReadModelsService;
@@ -123,6 +124,10 @@ public final class io/cratis/chronicle/EventStoreNamespaceName {
 
 public final class io/cratis/chronicle/EventStoreNamespaceName$Companion {
 	public final fun getDefault-cSkOqig ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/EventStorePatterns {
+	public static final fun getPatterns (Lio/cratis/chronicle/IEventStore;)Lio/cratis/chronicle/patterns/IPatterns;
 }
 
 public abstract interface class io/cratis/chronicle/IChronicleClient : java/lang/AutoCloseable {
@@ -662,6 +667,7 @@ public final class io/cratis/chronicle/connection/ChronicleServices {
 	public final fun getMaterializedReadModels ()LCratis/Chronicle/Contracts/ReadModels/MaterializedReadModelsGrpcKt$MaterializedReadModelsCoroutineStub;
 	public final fun getNamespaces ()LCratis/Chronicle/Contracts/Namespaces/NamespacesGrpcKt$NamespacesCoroutineStub;
 	public final fun getObservers ()LCratis/Chronicle/Contracts/Observation/ObserversGrpcKt$ObserversCoroutineStub;
+	public final fun getPatterns ()LCratis/Chronicle/Contracts/Patterns/PatternsGrpcKt$PatternsCoroutineStub;
 	public final fun getProjections ()LCratis/Chronicle/Contracts/Projections/ProjectionsGrpcKt$ProjectionsCoroutineStub;
 	public final fun getReactors ()LCratis/Chronicle/Contracts/Observation/Reactors/ReactorsGrpcKt$ReactorsCoroutineStub;
 	public final fun getReadModelExplorer ()LCratis/Chronicle/Contracts/ReadModelExplorer/ReadModelExplorerGrpcKt$ReadModelExplorerCoroutineStub;
@@ -3391,6 +3397,196 @@ public abstract interface annotation class io/cratis/chronicle/observation/Tag :
 
 public abstract interface annotation class io/cratis/chronicle/observation/Tags : java/lang/annotation/Annotation {
 	public abstract fun value ()[Lio/cratis/chronicle/observation/Tag;
+}
+
+public final class io/cratis/chronicle/patterns/BehaviorPattern {
+	public fun <init> (Lio/cratis/chronicle/patterns/PatternGroupingKey;Lio/cratis/chronicle/patterns/FacetSet;JLio/cratis/chronicle/patterns/PatternConfidence;DDLjava/time/OffsetDateTime;Ljava/time/OffsetDateTime;)V
+	public final fun component1 ()Lio/cratis/chronicle/patterns/PatternGroupingKey;
+	public final fun component2 ()Lio/cratis/chronicle/patterns/FacetSet;
+	public final fun component3 ()J
+	public final fun component4 ()Lio/cratis/chronicle/patterns/PatternConfidence;
+	public final fun component5 ()D
+	public final fun component6 ()D
+	public final fun component7 ()Ljava/time/OffsetDateTime;
+	public final fun component8 ()Ljava/time/OffsetDateTime;
+	public final fun copy (Lio/cratis/chronicle/patterns/PatternGroupingKey;Lio/cratis/chronicle/patterns/FacetSet;JLio/cratis/chronicle/patterns/PatternConfidence;DDLjava/time/OffsetDateTime;Ljava/time/OffsetDateTime;)Lio/cratis/chronicle/patterns/BehaviorPattern;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/patterns/BehaviorPattern;Lio/cratis/chronicle/patterns/PatternGroupingKey;Lio/cratis/chronicle/patterns/FacetSet;JLio/cratis/chronicle/patterns/PatternConfidence;DDLjava/time/OffsetDateTime;Ljava/time/OffsetDateTime;ILjava/lang/Object;)Lio/cratis/chronicle/patterns/BehaviorPattern;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAction ()Lio/cratis/chronicle/patterns/FacetValue;
+	public final fun getConfidence ()Lio/cratis/chronicle/patterns/PatternConfidence;
+	public final fun getFacets ()Lio/cratis/chronicle/patterns/FacetSet;
+	public final fun getFirstSeen ()Ljava/time/OffsetDateTime;
+	public final fun getGroupingKey ()Lio/cratis/chronicle/patterns/PatternGroupingKey;
+	public final fun getLastSeen ()Ljava/time/OffsetDateTime;
+	public final fun getOccurrences ()J
+	public final fun getSpecificity ()I
+	public final fun getSupport ()D
+	public final fun getWeight ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/patterns/Facet {
+	public fun <init> (Lio/cratis/chronicle/patterns/FacetName;Lio/cratis/chronicle/patterns/FacetValue;)V
+	public final fun component1 ()Lio/cratis/chronicle/patterns/FacetName;
+	public final fun component2 ()Lio/cratis/chronicle/patterns/FacetValue;
+	public final fun copy (Lio/cratis/chronicle/patterns/FacetName;Lio/cratis/chronicle/patterns/FacetValue;)Lio/cratis/chronicle/patterns/Facet;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/patterns/Facet;Lio/cratis/chronicle/patterns/FacetName;Lio/cratis/chronicle/patterns/FacetValue;ILjava/lang/Object;)Lio/cratis/chronicle/patterns/Facet;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getName ()Lio/cratis/chronicle/patterns/FacetName;
+	public final fun getValue ()Lio/cratis/chronicle/patterns/FacetValue;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/patterns/FacetName {
+	public static final field AggregateType Lio/cratis/chronicle/patterns/FacetName;
+	public static final field CausedByCommand Lio/cratis/chronicle/patterns/FacetName;
+	public static final field CommandType Lio/cratis/chronicle/patterns/FacetName;
+	public static final field Companion Lio/cratis/chronicle/patterns/FacetName$Companion;
+	public static final field CorrelationRootId Lio/cratis/chronicle/patterns/FacetName;
+	public static final field Day Lio/cratis/chronicle/patterns/FacetName;
+	public static final field InitiatorId Lio/cratis/chronicle/patterns/FacetName;
+	public static final field InitiatorType Lio/cratis/chronicle/patterns/FacetName;
+	public static final field Month Lio/cratis/chronicle/patterns/FacetName;
+	public static final field OnBehalfOf Lio/cratis/chronicle/patterns/FacetName;
+	public static final field TimeBucket Lio/cratis/chronicle/patterns/FacetName;
+	public static final field Unspecified Lio/cratis/chronicle/patterns/FacetName;
+	public static final field Year Lio/cratis/chronicle/patterns/FacetName;
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lio/cratis/chronicle/patterns/FacetName;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/patterns/FacetName;Ljava/lang/String;ILjava/lang/Object;)Lio/cratis/chronicle/patterns/FacetName;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun isAction ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/patterns/FacetName$Companion {
+}
+
+public final class io/cratis/chronicle/patterns/FacetSet {
+	public static final field Companion Lio/cratis/chronicle/patterns/FacetSet$Companion;
+	public static final field empty Lio/cratis/chronicle/patterns/FacetSet;
+	public fun <init> (Ljava/lang/Iterable;)V
+	public final fun asMap ()Ljava/util/Map;
+	public final fun constrains (Lio/cratis/chronicle/patterns/FacetName;)Z
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getAction ()Lio/cratis/chronicle/patterns/FacetValue;
+	public final fun getFacets ()Ljava/util/List;
+	public final fun getSpecificity ()I
+	public fun hashCode ()I
+	public final fun isEmpty ()Z
+	public fun toString ()Ljava/lang/String;
+	public final fun valueOf (Lio/cratis/chronicle/patterns/FacetName;)Lio/cratis/chronicle/patterns/FacetValue;
+	public final fun with (Lio/cratis/chronicle/patterns/FacetName;Lio/cratis/chronicle/patterns/FacetValue;)Lio/cratis/chronicle/patterns/FacetSet;
+	public final fun with (Lio/cratis/chronicle/patterns/FacetName;Ljava/lang/String;)Lio/cratis/chronicle/patterns/FacetSet;
+}
+
+public final class io/cratis/chronicle/patterns/FacetSet$Companion {
+}
+
+public final class io/cratis/chronicle/patterns/FacetValue {
+	public static final field Companion Lio/cratis/chronicle/patterns/FacetValue$Companion;
+	public static final field Unspecified Lio/cratis/chronicle/patterns/FacetValue;
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lio/cratis/chronicle/patterns/FacetValue;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/patterns/FacetValue;Ljava/lang/String;ILjava/lang/Object;)Lio/cratis/chronicle/patterns/FacetValue;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public final fun isSpecified ()Z
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/patterns/FacetValue$Companion {
+}
+
+public abstract interface class io/cratis/chronicle/patterns/IPatterns {
+	public static final field Companion Lio/cratis/chronicle/patterns/IPatterns$Companion;
+	public abstract fun getPatterns (Lio/cratis/chronicle/patterns/PatternGroupingKey;Lio/cratis/chronicle/patterns/FacetSet;Lio/cratis/chronicle/patterns/PatternConfidence;ILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun getPatterns$default (Lio/cratis/chronicle/patterns/IPatterns;Lio/cratis/chronicle/patterns/PatternGroupingKey;Lio/cratis/chronicle/patterns/FacetSet;Lio/cratis/chronicle/patterns/PatternConfidence;ILkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun getPatternsAt (Lio/cratis/chronicle/patterns/PatternGroupingKey;Ljava/time/OffsetDateTime;Lio/cratis/chronicle/patterns/FacetSet;Lio/cratis/chronicle/patterns/PatternConfidence;ILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun getPatternsAt$default (Lio/cratis/chronicle/patterns/IPatterns;Lio/cratis/chronicle/patterns/PatternGroupingKey;Ljava/time/OffsetDateTime;Lio/cratis/chronicle/patterns/FacetSet;Lio/cratis/chronicle/patterns/PatternConfidence;ILkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public abstract fun getPatternsForScope (Lio/cratis/chronicle/patterns/PatternGroupingKey;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getScopes (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public abstract fun getUsualActions (Lio/cratis/chronicle/patterns/PatternGroupingKey;Lio/cratis/chronicle/patterns/FacetSet;Lio/cratis/chronicle/patterns/PatternConfidence;ILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public static synthetic fun getUsualActions$default (Lio/cratis/chronicle/patterns/IPatterns;Lio/cratis/chronicle/patterns/PatternGroupingKey;Lio/cratis/chronicle/patterns/FacetSet;Lio/cratis/chronicle/patterns/PatternConfidence;ILkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public final class io/cratis/chronicle/patterns/IPatterns$Companion {
+	public final fun getUnsupported ()Lio/cratis/chronicle/patterns/IPatterns;
+}
+
+public final class io/cratis/chronicle/patterns/IPatterns$DefaultImpls {
+	public static synthetic fun getPatterns$default (Lio/cratis/chronicle/patterns/IPatterns;Lio/cratis/chronicle/patterns/PatternGroupingKey;Lio/cratis/chronicle/patterns/FacetSet;Lio/cratis/chronicle/patterns/PatternConfidence;ILkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun getPatternsAt$default (Lio/cratis/chronicle/patterns/IPatterns;Lio/cratis/chronicle/patterns/PatternGroupingKey;Ljava/time/OffsetDateTime;Lio/cratis/chronicle/patterns/FacetSet;Lio/cratis/chronicle/patterns/PatternConfidence;ILkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+	public static synthetic fun getUsualActions$default (Lio/cratis/chronicle/patterns/IPatterns;Lio/cratis/chronicle/patterns/PatternGroupingKey;Lio/cratis/chronicle/patterns/FacetSet;Lio/cratis/chronicle/patterns/PatternConfidence;ILkotlin/coroutines/Continuation;ILjava/lang/Object;)Ljava/lang/Object;
+}
+
+public abstract interface class io/cratis/chronicle/patterns/IPatternsCapability {
+	public abstract fun getPatterns ()Lio/cratis/chronicle/patterns/IPatterns;
+}
+
+public final class io/cratis/chronicle/patterns/PatternConfidence {
+	public static final field Certain Lio/cratis/chronicle/patterns/PatternConfidence;
+	public static final field Companion Lio/cratis/chronicle/patterns/PatternConfidence$Companion;
+	public static final field None Lio/cratis/chronicle/patterns/PatternConfidence;
+	public fun <init> (D)V
+	public final fun component1 ()D
+	public final fun copy (D)Lio/cratis/chronicle/patterns/PatternConfidence;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/patterns/PatternConfidence;DILjava/lang/Object;)Lio/cratis/chronicle/patterns/PatternConfidence;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()D
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/patterns/PatternConfidence$Companion {
+}
+
+public final class io/cratis/chronicle/patterns/PatternGroupingKey {
+	public fun <init> (Ljava/lang/String;)V
+	public final fun component1 ()Ljava/lang/String;
+	public final fun copy (Ljava/lang/String;)Lio/cratis/chronicle/patterns/PatternGroupingKey;
+	public static synthetic fun copy$default (Lio/cratis/chronicle/patterns/PatternGroupingKey;Ljava/lang/String;ILjava/lang/Object;)Lio/cratis/chronicle/patterns/PatternGroupingKey;
+	public fun equals (Ljava/lang/Object;)Z
+	public final fun getValue ()Ljava/lang/String;
+	public fun hashCode ()I
+	public fun toString ()Ljava/lang/String;
+}
+
+public final class io/cratis/chronicle/patterns/Patterns : io/cratis/chronicle/patterns/IPatterns {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;LCratis/Chronicle/Contracts/Patterns/PatternsGrpcKt$PatternsCoroutineStub;)V
+	public fun getPatterns (Lio/cratis/chronicle/patterns/PatternGroupingKey;Lio/cratis/chronicle/patterns/FacetSet;Lio/cratis/chronicle/patterns/PatternConfidence;ILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun getPatternsAt (Lio/cratis/chronicle/patterns/PatternGroupingKey;Ljava/time/OffsetDateTime;Lio/cratis/chronicle/patterns/FacetSet;Lio/cratis/chronicle/patterns/PatternConfidence;ILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun getPatternsForScope (Lio/cratis/chronicle/patterns/PatternGroupingKey;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun getScopes (Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	public fun getUsualActions (Lio/cratis/chronicle/patterns/PatternGroupingKey;Lio/cratis/chronicle/patterns/FacetSet;Lio/cratis/chronicle/patterns/PatternConfidence;ILkotlin/coroutines/Continuation;)Ljava/lang/Object;
+}
+
+public final class io/cratis/chronicle/patterns/PatternsNotSupported : java/lang/UnsupportedOperationException {
+	public fun <init> ()V
+}
+
+public final class io/cratis/chronicle/patterns/TimeBucket : java/lang/Enum {
+	public static final field Afternoon Lio/cratis/chronicle/patterns/TimeBucket;
+	public static final field EarlyMorning Lio/cratis/chronicle/patterns/TimeBucket;
+	public static final field Evening Lio/cratis/chronicle/patterns/TimeBucket;
+	public static final field Midday Lio/cratis/chronicle/patterns/TimeBucket;
+	public static final field Morning Lio/cratis/chronicle/patterns/TimeBucket;
+	public static final field Night Lio/cratis/chronicle/patterns/TimeBucket;
+	public static fun getEntries ()Lkotlin/enums/EnumEntries;
+	public static fun valueOf (Ljava/lang/String;)Lio/cratis/chronicle/patterns/TimeBucket;
+	public static fun values ()[Lio/cratis/chronicle/patterns/TimeBucket;
+}
+
+public final class io/cratis/chronicle/patterns/TimeBucketExtensions {
+	public static final fun toTimeBucket (Ljava/time/OffsetDateTime;)Lio/cratis/chronicle/patterns/TimeBucket;
+	public static final fun toTimeBucket (Ljava/time/ZonedDateTime;)Lio/cratis/chronicle/patterns/TimeBucket;
 }
 
 public final class io/cratis/chronicle/projections/AddBuilderFor : io/cratis/chronicle/projections/IAddBuilderFor {

@@ -13,6 +13,7 @@ import io.cratis.chronicle.projections.ProjectionsService
 import io.cratis.chronicle.readModels.DefaultReadModelNamingPolicy
 import io.cratis.chronicle.eventSequences.EventSequenceId
 import io.cratis.chronicle.observation.Reactor
+import io.cratis.chronicle.patterns.Patterns
 import io.cratis.chronicle.events.EventType
 import io.cratis.chronicle.java.BlockingEventStore
 import io.cratis.chronicle.java.EventStoreJavaBridge
@@ -82,6 +83,11 @@ class EventStoreTests {
         )
 
         assertEquals("InMemoryGraph", (store.projections as ProjectionsService).graphSinkTypeId)
+    }
+
+    @Test
+    fun `asks the kernel about behavior patterns`() {
+        assertInstanceOf(Patterns::class.java, newEventStore().patterns)
     }
 
     @Test

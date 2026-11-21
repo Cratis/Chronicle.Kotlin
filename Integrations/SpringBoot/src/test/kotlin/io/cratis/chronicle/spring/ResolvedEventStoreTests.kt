@@ -5,9 +5,12 @@ package io.cratis.chronicle.spring
 
 import io.cratis.chronicle.EventStore
 import io.cratis.chronicle.IChronicleClient
+import io.cratis.chronicle.IEventStore
 import io.cratis.chronicle.connection.ChronicleServices
 import io.cratis.chronicle.connection.ConnectionLifecycle
 import io.cratis.chronicle.namespaces.IEventStoreNamespaceResolver
+import io.cratis.chronicle.patterns
+import io.cratis.chronicle.patterns.IPatterns
 import io.grpc.Grpc
 import io.grpc.InsecureChannelCredentials
 import io.mockk.every
@@ -54,5 +57,17 @@ class ResolvedEventStoreTests {
         assertThat(subject.eventLog).isNotNull()
         assertThat(subject.readModels).isNotNull()
         assertThat(subject.unitOfWorkManager).isNotNull()
+    }
+
+    @Test
+    fun `offers the behavior patterns of the store it resolved, whichever namespace that is`() {
+        var namespace = "acme"
+        val subject: IEventStore = ResolvedEventStore(client, "Ordering", IEventStoreNamespaceResolver { namespace })
+
+        assertThat(subject.patterns).isNotSameAs(IPatterns.unsupported)
+
+        namespace = "globex"
+
+        assertThat(subject.patterns).isNotSameAs(IPatterns.unsupported)
     }
 }

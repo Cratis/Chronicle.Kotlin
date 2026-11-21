@@ -25,6 +25,9 @@ import io.cratis.chronicle.observation.IFailedPartitions
 import io.cratis.chronicle.observation.IObservers
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
+import io.cratis.chronicle.patterns.IPatterns
+import io.cratis.chronicle.patterns.IPatternsCapability
+import io.cratis.chronicle.patterns
 import io.cratis.chronicle.projections.IProjectionsService
 import io.cratis.chronicle.readModels.IReadModelsService
 import io.cratis.chronicle.seeding.IEventSeedingService
@@ -50,7 +53,7 @@ class ResolvedEventStore(
     private val client: IChronicleClient,
     private val eventStoreName: String,
     private val namespaceResolver: IEventStoreNamespaceResolver
-) : IEventStore, IEventSourcesCapability {
+) : IEventStore, IEventSourcesCapability, IPatternsCapability {
     /** The event store for the namespace the current piece of work belongs to. */
     val current: IEventStore get() = client.getEventStore(eventStoreName, namespaceResolver.resolve())
 
@@ -67,6 +70,7 @@ class ResolvedEventStore(
     override val compliance: IComplianceService get() = current.compliance
     override val eventTypes: IEventTypesService get() = current.eventTypes
     override val eventSources: IEventSources get() = current.eventSources
+    override val patterns: IPatterns get() = current.patterns
     override val namespaces: INamespacesService get() = current.namespaces
     override val externalServices: IExternalServicesService get() = current.externalServices
     override val jobs: IJobsService get() = current.jobs

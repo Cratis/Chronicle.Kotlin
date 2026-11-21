@@ -30,6 +30,10 @@ import io.cratis.chronicle.observation.IFailedPartitions
 import io.cratis.chronicle.observation.IObservers
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
+import io.cratis.chronicle.patterns.IPatterns
+import io.cratis.chronicle.patterns.IPatternsCapability
+import io.cratis.chronicle.patterns.PatternGroupingKey
+import io.cratis.chronicle.patterns.PatternsNotSupported
 import io.cratis.chronicle.projections.IProjectionsService
 import io.cratis.chronicle.readModels.IReadModelsService
 import io.cratis.chronicle.seeding.IEventSeedingService
@@ -102,6 +106,21 @@ class LegacyEventStoreCompatibilityTests {
         assertFalse((store as IEventStore) is IEventSourcesCapability)
         assertSame(IEventSources.unsupported, store.eventSources)
         assertTrue(store.eventSources.all.isEmpty())
+    }
+
+    @Test
+    fun `a store written against the old interface reports patterns as unsupported`() {
+        val store = legacyStore()
+
+        assertFalse((store as IEventStore) is IPatternsCapability)
+        assertSame(IPatterns.unsupported, store.patterns)
+    }
+
+    @Test
+    fun `asking an unsupported store about patterns fails loudly`() {
+        val store = legacyStore()
+
+        assertThrows<PatternsNotSupported> { runBlocking { store.patterns.getPatternsAt(PatternGroupingKey("user")) } }
     }
 
     @Test

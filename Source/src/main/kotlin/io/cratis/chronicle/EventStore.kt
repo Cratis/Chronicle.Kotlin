@@ -55,6 +55,9 @@ import io.cratis.chronicle.observation.IReactorMiddleware
 import io.cratis.chronicle.observation.IReactorsService
 import io.cratis.chronicle.observation.IReducersService
 import io.cratis.chronicle.observation.Observers
+import io.cratis.chronicle.patterns.IPatterns
+import io.cratis.chronicle.patterns.IPatternsCapability
+import io.cratis.chronicle.patterns.Patterns
 import io.cratis.chronicle.observation.ReactorMethodArguments
 import io.cratis.chronicle.observation.ReactorMiddlewares
 import io.cratis.chronicle.observation.ReactorsService
@@ -112,7 +115,7 @@ class EventStore(
     private val traces: ChronicleTraces,
     private val readModelNamingPolicy: ReadModelNamingPolicy,
     private val defaultGraphSinkTypeId: String
-) : IEventStore, IEventSourcesCapability {
+) : IEventStore, IEventSourcesCapability, IPatternsCapability {
     /** Creates an event store that stores graphs in the default graph sink of the kernel. */
     constructor(
         name: String,
@@ -286,6 +289,10 @@ class EventStore(
 
     override val eventSources: IEventSources by lazy {
         EventSources(name, services.eventSources, artifacts)
+    }
+
+    override val patterns: IPatterns by lazy {
+        Patterns(name, namespace, services.patterns)
     }
 
     override val eventTypes: IEventTypesService by lazy {
