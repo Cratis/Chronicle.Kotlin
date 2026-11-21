@@ -11,7 +11,7 @@ import java.time.OffsetDateTime
 internal fun PatternsOuterClass.QueryResult_IEnumerable_BehaviorPatternDetailsResponse.ensureSuccess(
     operation: String,
 ): List<BehaviorPattern> {
-    ensureSuccess(operation, isAuthorized, exceptionMessagesList)
+    ensureSuccess(operation, isAuthorized, exceptionMessagesList, validationResultsList)
     return dataList.map { it.toClient() }
 }
 
@@ -19,7 +19,7 @@ internal fun PatternsOuterClass.QueryResult_IEnumerable_BehaviorPatternDetailsRe
 internal fun PatternsOuterClass.QueryResult_IEnumerable_PatternScopeResponse.ensureSuccess(
     operation: String,
 ): List<PatternGroupingKey> {
-    ensureSuccess(operation, isAuthorized, exceptionMessagesList)
+    ensureSuccess(operation, isAuthorized, exceptionMessagesList, validationResultsList)
     return dataList.map { PatternGroupingKey(it.id) }
 }
 
@@ -38,7 +38,13 @@ internal fun PatternsOuterClass.BehaviorPatternDetailsResponse.toClient() = Beha
 private fun PatternsOuterClass.SerializableDateTimeOffset.toOffsetDateTime(): OffsetDateTime? =
     value.takeIf { it.isNotBlank() }?.let(OffsetDateTime::parse)
 
-private fun ensureSuccess(operation: String, isAuthorized: Boolean, exceptionMessages: List<String>) {
+private fun ensureSuccess(
+    operation: String,
+    isAuthorized: Boolean,
+    exceptionMessages: List<String>,
+    validationResults: List<PatternsOuterClass.ValidationResult>,
+) {
     if (!isAuthorized) throw ChronicleCommandRejected(operation, "not authorized")
     if (exceptionMessages.isNotEmpty()) throw ChronicleCommandRejected(operation, exceptionMessages.joinToString("; "))
+    if (validationResults.isNotEmpty()) throw ChronicleCommandRejected(operation, validationResults.joinToString("; ") { it.message })
 }

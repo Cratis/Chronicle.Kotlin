@@ -143,6 +143,37 @@ class PatternsTests {
     }
 
     @Test
+    fun `a pattern query rejected by validation throws instead of returning no patterns`() {
+        coEvery { stub.patternsForScope(any(), any()) } returns
+            result().toBuilder()
+                .addValidationResults(PatternsOuterClass.ValidationResult.newBuilder().setMessage("Invalid scope"))
+                .addValidationResults(PatternsOuterClass.ValidationResult.newBuilder().setMessage("Invalid context"))
+                .build()
+
+        val exception = assertThrows<ChronicleCommandRejected> {
+            runBlocking { patterns.getPatternsForScope(user) }
+        }
+
+        assertEquals("Chronicle rejected 'get patterns for scope': Invalid scope; Invalid context", exception.message)
+    }
+
+    @Test
+    fun `a scopes query rejected by validation throws instead of returning data`() {
+        coEvery { stub.allPatternScopes(any(), any()) } returns
+            PatternsOuterClass.QueryResult_IEnumerable_PatternScopeResponse.newBuilder()
+                .setIsAuthorized(true)
+                .addValidationResults(PatternsOuterClass.ValidationResult.newBuilder().setMessage("Invalid namespace"))
+                .addData(PatternsOuterClass.PatternScopeResponse.newBuilder().setId("user-1"))
+                .build()
+
+        val exception = assertThrows<ChronicleCommandRejected> {
+            runBlocking { patterns.getScopes() }
+        }
+
+        assertEquals("Chronicle rejected 'get pattern scopes': Invalid namespace", exception.message)
+    }
+
+    @Test
     fun `the scopes are the ids the kernel returned`() = runBlocking {
         coEvery { stub.allPatternScopes(any(), any()) } returns
             PatternsOuterClass.QueryResult_IEnumerable_PatternScopeResponse.newBuilder()
