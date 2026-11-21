@@ -22,6 +22,7 @@ import Cratis.Chronicle.Contracts.Observation.ObserversGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Reactors.ReactorsGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Reducers.ReducersGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Webhooks.WebhooksGrpcKt
+import Cratis.Chronicle.Contracts.Patterns.PatternsGrpcKt
 import Cratis.Chronicle.Contracts.Projections.ProjectionsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModelExplorer.ReadModelExplorerGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
@@ -77,4 +78,6 @@ class ChronicleServices(channel: io.grpc.Channel) {
         CapturesGrpcKt.CapturesCoroutineStub(channel)
     val imports: ImportsGrpcKt.ImportsCoroutineStub =
         ImportsGrpcKt.ImportsCoroutineStub(channel)
+    val patterns: PatternsGrpcKt.PatternsCoroutineStub =
+        PatternsGrpcKt.PatternsCoroutineStub(channel)
 }

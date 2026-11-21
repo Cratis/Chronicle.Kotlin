@@ -12,6 +12,8 @@
   href: correlation.md
 - name: Captures
   href: captures.md
+- name: Behavior patterns
+  href: patterns.md
 - name: Testing
   href: testing.md
 - name: Appending Events

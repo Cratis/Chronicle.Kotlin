@@ -30,6 +30,7 @@ These cover what only the Kotlin and Java client does:
 - [Event sources and streams](event-sources.md)
 - [Reacting to read model changes](read-model-reactors.md)
 - [Capturing external sources](captures.md)
+- [Asking about behavior patterns](patterns.md)
 - [Registering external services](external-services.md)
 - [Tracing with OpenTelemetry](tracing.md)
 - [Correlation](correlation.md)
