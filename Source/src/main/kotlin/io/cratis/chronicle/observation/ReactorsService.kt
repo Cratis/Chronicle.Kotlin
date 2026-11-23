@@ -19,6 +19,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
@@ -43,7 +44,8 @@ class ReactorsService internal constructor(
     private val arguments: ReactorMethodArguments,
     private val traces: ChronicleTraces,
     private val reconnectBackoff: () -> ObservationReconnectBackoff,
-    private val waitBeforeReconnect: suspend (Duration) -> Unit
+    private val waitBeforeReconnect: suspend (Duration) -> Unit,
+    private val observeOverride: ((Flow<ObservationReactors.ReactorMessage>) -> Flow<ObservationReactors.EventsToObserve>)? = null
 ) : IReactorsService {
 
     constructor(
@@ -54,11 +56,23 @@ class ReactorsService internal constructor(
         eventLog: IEventLog,
         middlewares: ReactorMiddlewares = ReactorMiddlewares.none,
         arguments: ReactorMethodArguments = ReactorMethodArguments.contextOnly,
-        traces: ChronicleTraces = ChronicleTraces.default
+        traces: ChronicleTraces = ChronicleTraces.default,
+        observe: ((Flow<ObservationReactors.ReactorMessage>) -> Flow<ObservationReactors.EventsToObserve>)?
     ) : this(
         eventStoreName, namespace, lifecycle, stub, eventLog, middlewares, arguments, traces,
-        { ObservationReconnectBackoff() }, { delay(it) }
+        { ObservationReconnectBackoff() }, { delay(it) }, observe
     )
+
+    constructor(
+        eventStoreName: String,
+        namespace: String,
+        lifecycle: ConnectionLifecycle,
+        stub: ReactorsGrpcKt.ReactorsCoroutineStub,
+        eventLog: IEventLog,
+        middlewares: ReactorMiddlewares = ReactorMiddlewares.none,
+        arguments: ReactorMethodArguments = ReactorMethodArguments.contextOnly,
+        traces: ChronicleTraces = ChronicleTraces.default
+    ) : this(eventStoreName, namespace, lifecycle, stub, eventLog, middlewares, arguments, traces, null)
 
     private val sideEffects = ReactorSideEffects(eventLog)
 
@@ -129,7 +143,7 @@ class ReactorsService internal constructor(
         try {
             requests.send(registrationMessage(registration, connectionId, eventTypes))
 
-            stub.observe(requests.receiveAsFlow()).collect { eventsToObserve ->
+            (observeOverride?.invoke(requests.receiveAsFlow()) ?: stub.observe(requests.receiveAsFlow())).collect { eventsToObserve ->
                 backoff.streamDelivered()
                 // A replay notification on its own carries no events and expects no answer: this client
                 // learns of a replay from the flags on the replayed events themselves.

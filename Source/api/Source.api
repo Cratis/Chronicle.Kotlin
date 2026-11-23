@@ -39,6 +39,7 @@ public final class io/cratis/chronicle/ChronicleOptions {
 	public final fun getDefaultGraphSinkTypeId ()Ljava/lang/String;
 	public final fun getDefaultSinkTypeId ()Ljava/lang/String;
 	public final fun getMaxReceiveMessageSize ()Ljava/lang/Integer;
+	public final fun getMultiplexObservation ()Z
 	public final fun getOpenTelemetry ()Lio/opentelemetry/api/OpenTelemetry;
 	public final fun getProgramIdentifier ()Ljava/lang/String;
 	public final fun getReadModelNamingPolicy ()Lio/cratis/chronicle/readModels/ReadModelNamingPolicy;
@@ -47,6 +48,7 @@ public final class io/cratis/chronicle/ChronicleOptions {
 	public final fun withArtifactsFrom ([Ljava/lang/String;)Lio/cratis/chronicle/ChronicleOptions;
 	public final fun withDefaultGraphSinkTypeId (Ljava/lang/String;)Lio/cratis/chronicle/ChronicleOptions;
 	public final fun withMaxReceiveMessageSize (Ljava/lang/Integer;)Lio/cratis/chronicle/ChronicleOptions;
+	public final fun withMultiplexObservation (Z)Lio/cratis/chronicle/ChronicleOptions;
 	public final fun withReadModelNamingPolicy (Lio/cratis/chronicle/readModels/ReadModelNamingPolicy;)Lio/cratis/chronicle/ChronicleOptions;
 	public final fun withoutAutoRegistration ()Lio/cratis/chronicle/ChronicleOptions;
 }
@@ -3326,6 +3328,8 @@ public final class io/cratis/chronicle/observation/ReactorMiddlewares$Companion 
 public final class io/cratis/chronicle/observation/ReactorsService : io/cratis/chronicle/observation/IReactorsService {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ConnectionLifecycle;LCratis/Chronicle/Contracts/Observation/Reactors/ReactorsGrpcKt$ReactorsCoroutineStub;Lio/cratis/chronicle/eventSequences/IEventLog;Lio/cratis/chronicle/observation/ReactorMiddlewares;Lio/cratis/chronicle/observation/ReactorMethodArguments;Lio/cratis/chronicle/diagnostics/ChronicleTraces;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ConnectionLifecycle;LCratis/Chronicle/Contracts/Observation/Reactors/ReactorsGrpcKt$ReactorsCoroutineStub;Lio/cratis/chronicle/eventSequences/IEventLog;Lio/cratis/chronicle/observation/ReactorMiddlewares;Lio/cratis/chronicle/observation/ReactorMethodArguments;Lio/cratis/chronicle/diagnostics/ChronicleTraces;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ConnectionLifecycle;LCratis/Chronicle/Contracts/Observation/Reactors/ReactorsGrpcKt$ReactorsCoroutineStub;Lio/cratis/chronicle/eventSequences/IEventLog;Lio/cratis/chronicle/observation/ReactorMiddlewares;Lio/cratis/chronicle/observation/ReactorMethodArguments;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lkotlin/jvm/functions/Function1;)V
+	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ConnectionLifecycle;LCratis/Chronicle/Contracts/Observation/Reactors/ReactorsGrpcKt$ReactorsCoroutineStub;Lio/cratis/chronicle/eventSequences/IEventLog;Lio/cratis/chronicle/observation/ReactorMiddlewares;Lio/cratis/chronicle/observation/ReactorMethodArguments;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lkotlin/jvm/functions/Function1;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun register (Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 
@@ -3367,6 +3371,7 @@ public final class io/cratis/chronicle/observation/ReducerMixesBatchAndPerEventM
 public final class io/cratis/chronicle/observation/ReducersService : io/cratis/chronicle/observation/IReducersService {
 	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ConnectionLifecycle;LCratis/Chronicle/Contracts/Observation/Reducers/ReducersGrpcKt$ReducersCoroutineStub;Ljava/lang/String;Lio/cratis/chronicle/readModels/ReadModelsService;Lio/cratis/chronicle/diagnostics/ChronicleTraces;)V
 	public synthetic fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ConnectionLifecycle;LCratis/Chronicle/Contracts/Observation/Reducers/ReducersGrpcKt$ReducersCoroutineStub;Ljava/lang/String;Lio/cratis/chronicle/readModels/ReadModelsService;Lio/cratis/chronicle/diagnostics/ChronicleTraces;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;Lio/cratis/chronicle/connection/ConnectionLifecycle;LCratis/Chronicle/Contracts/Observation/Reducers/ReducersGrpcKt$ReducersCoroutineStub;Ljava/lang/String;Lio/cratis/chronicle/readModels/ReadModelsService;Lio/cratis/chronicle/diagnostics/ChronicleTraces;Lkotlin/jvm/functions/Function1;)V
 	public fun register (Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
 

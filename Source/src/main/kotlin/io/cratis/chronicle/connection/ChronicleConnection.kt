@@ -44,7 +44,22 @@ class ChronicleConnection @JvmOverloads constructor(
     }
     private val channel: SwappableChannel by channelDelegate
 
-    val services: ChronicleServices by lazy { ChronicleServices(channel) }
+    /** What the kernel advertised on the channel in use; nothing when the compatibility check was skipped. */
+    @Volatile
+    private var capabilities: Set<String> = emptySet()
+
+    /**
+     * Whether every reactor and reducer may share one observation call when the kernel supports it. On by default;
+     * set it before the first observer starts.
+     */
+    internal var multiplexObservation: Boolean = true
+
+    val services: ChronicleServices by lazy {
+        ChronicleServices(channel).also {
+            it.multiplexedObservation.advertisedCapabilities = { capabilities }
+            it.multiplexedObservation.enabled = { multiplexObservation }
+        }
+    }
 
     private val connectionManagerDelegate = lazy {
         ConnectionManager(
@@ -87,7 +102,7 @@ class ChronicleConnection @JvmOverloads constructor(
         builder.intercept(BearerTokenInterceptor(createTokenProvider(address)))
         val managed = builder.build()
         try {
-            if (!connectionString.skipCompatibilityCheck) CompatibilityPreflight.verify(managed)
+            capabilities = if (connectionString.skipCompatibilityCheck) emptySet() else CompatibilityPreflight.verify(managed)
             return managed
         } catch (error: Throwable) {
             managed.shutdownNow()

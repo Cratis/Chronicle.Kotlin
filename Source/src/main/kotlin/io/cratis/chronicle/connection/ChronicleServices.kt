@@ -19,7 +19,10 @@ import Cratis.Chronicle.Contracts.Namespaces.NamespacesGrpcKt
 import Cratis.Chronicle.Contracts.Observation.EventStoreSubscriptions.EventStoreSubscriptionsGrpcKt
 import Cratis.Chronicle.Contracts.Observation.FailedPartitionsGrpcKt
 import Cratis.Chronicle.Contracts.Observation.ObserversGrpcKt
+import Cratis.Chronicle.Contracts.Observation.Multiplexed.MultiplexedObservationGrpcKt
+import Cratis.Chronicle.Contracts.Observation.Reactors.ObservationReactors
 import Cratis.Chronicle.Contracts.Observation.Reactors.ReactorsGrpcKt
+import Cratis.Chronicle.Contracts.Observation.Reducers.ObservationReducers
 import Cratis.Chronicle.Contracts.Observation.Reducers.ReducersGrpcKt
 import Cratis.Chronicle.Contracts.Observation.Webhooks.WebhooksGrpcKt
 import Cratis.Chronicle.Contracts.Patterns.PatternsGrpcKt
@@ -28,6 +31,8 @@ import Cratis.Chronicle.Contracts.ReadModelExplorer.ReadModelExplorerGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.MaterializedReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.ReadModels.ReadModelsGrpcKt
 import Cratis.Chronicle.Contracts.Seeding.EventSeedingGrpcKt
+import io.cratis.chronicle.observation.MultiplexedObservation
+import kotlinx.coroutines.flow.Flow
 
 class ChronicleServices(channel: io.grpc.Channel) {
     val connection: ConnectionServiceGrpcKt.ConnectionServiceCoroutineStub =
@@ -80,4 +85,21 @@ class ChronicleServices(channel: io.grpc.Channel) {
         ImportsGrpcKt.ImportsCoroutineStub(channel)
     val patterns: PatternsGrpcKt.PatternsCoroutineStub =
         PatternsGrpcKt.PatternsCoroutineStub(channel)
+
+    /**
+     * Chooses, for every observation stream a reactor or reducer opens, between the one call all of them can
+     * share and a call of their own.
+     */
+    internal val multiplexedObservation: MultiplexedObservation =
+        MultiplexedObservation(MultiplexedObservationGrpcKt.MultiplexedObservationCoroutineStub(channel))
+
+    /** Opens the observation stream of a reactor: over the shared call when the kernel supports it. */
+    internal fun observeReactor(
+        requests: Flow<ObservationReactors.ReactorMessage>
+    ): Flow<ObservationReactors.EventsToObserve> = multiplexedObservation.reactor(requests) { reactors.observe(it) }
+
+    /** Opens the observation stream of a reducer: over the shared call when the kernel supports it. */
+    internal fun observeReducer(
+        requests: Flow<ObservationReducers.ReducerMessage>
+    ): Flow<ObservationReducers.ReduceOperationMessage> = multiplexedObservation.reducer(requests) { reducers.observe(it) }
 }

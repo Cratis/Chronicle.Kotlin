@@ -108,4 +108,21 @@ class ChronicleOptionsTests {
         assertEquals("InMemoryGraph", opts.withMaxReceiveMessageSize(7).defaultGraphSinkTypeId)
         assertEquals("InMemoryGraph", opts.withReadModelNamingPolicy { it.simpleName }.defaultGraphSinkTypeId)
     }
+
+    @Test
+    fun `observation is multiplexed by default and can be turned off`() {
+        val opts = ChronicleOptions.development()
+
+        assertEquals(true, opts.multiplexObservation)
+        assertEquals(false, opts.withMultiplexObservation(false).multiplexObservation)
+    }
+
+    @Test
+    fun `turning multiplexing off survives changing other options and is part of equality`() {
+        val off = ChronicleOptions.development().withMultiplexObservation(false)
+
+        assertEquals(false, off.withMaxReceiveMessageSize(7).multiplexObservation)
+        assertEquals(false, off.withoutAutoRegistration().multiplexObservation)
+        assertEquals(false, off == ChronicleOptions.development())
+    }
 }
