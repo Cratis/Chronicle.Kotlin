@@ -56,6 +56,14 @@ class ProjectionsService(
     private val namespace: String = io.cratis.chronicle.EventStoreNamespaceName.default.value,
     private val registrant: String = ""
 ) : IProjectionsService {
+    /** Creates a service that registers without naming a registrant, so it does not wait for the kernel to apply. */
+    constructor(
+        eventStoreName: String,
+        stub: ProjectionsGrpcKt.ProjectionsCoroutineStub,
+        readModels: ReadModelsService,
+        namespace: String
+    ) : this(eventStoreName, stub, readModels, namespace, "")
+
     /** How long a registration waits for the kernel to apply it, or for a busy kernel to take it in, before it stops waiting. */
     internal var maxWaitForRegistration: Duration = 5.minutes
 

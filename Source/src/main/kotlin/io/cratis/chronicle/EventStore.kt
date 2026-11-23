@@ -273,7 +273,7 @@ class EventStore(
     }
 
     override val projections: IProjectionsService by lazy {
-        ProjectionsService(name, services.projections, readModelsService, namespace, services.registrant()).also {
+        ProjectionsService(name, services.projections, readModelsService, namespace, services.registrant).also {
             it.graphSinkTypeId = defaultGraphSinkTypeId
         }
     }

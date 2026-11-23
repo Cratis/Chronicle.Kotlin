@@ -90,7 +90,7 @@ class ChronicleServices(channel: io.grpc.Channel) {
      * Who this client registers projections as, so the kernel can say when it has applied them. Empty when the program
      * did not identify itself, in which case a registration is not waited for.
      */
-    internal var registrant: () -> String = { "" }
+    internal var registrant: String = ""
 
     /**
      * Chooses, for every observation stream a reactor or reducer opens, between the one call all of them can

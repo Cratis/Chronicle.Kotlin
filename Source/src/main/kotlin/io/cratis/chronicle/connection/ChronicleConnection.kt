@@ -54,14 +54,14 @@ class ChronicleConnection @JvmOverloads constructor(
      */
     internal var multiplexObservation: Boolean = true
 
-    /** Who this client registers projections as. Empty when the program did not name itself. */
+    /** Who this client registers projections as. Empty when the program did not name itself; set before connecting. */
     internal var registrant: String = ""
 
     val services: ChronicleServices by lazy {
         ChronicleServices(channel).also {
             it.multiplexedObservation.advertisedCapabilities = { capabilities }
             it.multiplexedObservation.enabled = { multiplexObservation }
-            it.registrant = { registrant }
+            it.registrant = registrant
         }
     }
 

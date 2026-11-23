@@ -3072,6 +3072,7 @@ public final class io/cratis/chronicle/observation/FailedPartitions : io/cratis/
 }
 
 public final class io/cratis/chronicle/observation/FastForwardOutcome : java/lang/Enum {
+	public static final field Accepted Lio/cratis/chronicle/observation/FastForwardOutcome;
 	public static final field AlreadyAtTail Lio/cratis/chronicle/observation/FastForwardOutcome;
 	public static final field FastForwarded Lio/cratis/chronicle/observation/FastForwardOutcome;
 	public static final field NotAvailable Lio/cratis/chronicle/observation/FastForwardOutcome;
@@ -4319,9 +4320,16 @@ public final class io/cratis/chronicle/projections/ProjectionQueryResult$Project
 	public fun toString ()Ljava/lang/String;
 }
 
+public final class io/cratis/chronicle/projections/ProjectionRegistrationNotApplied : java/lang/RuntimeException {
+	public fun <init> (Ljava/lang/String;Ljava/lang/String;)V
+	public final fun getFailure ()Ljava/lang/String;
+	public final fun getRegistrant ()Ljava/lang/String;
+}
+
 public final class io/cratis/chronicle/projections/ProjectionsService : io/cratis/chronicle/projections/IProjectionsService {
 	public fun <init> (Ljava/lang/String;LCratis/Chronicle/Contracts/Projections/ProjectionsGrpcKt$ProjectionsCoroutineStub;Lio/cratis/chronicle/readModels/ReadModelsService;Ljava/lang/String;)V
-	public synthetic fun <init> (Ljava/lang/String;LCratis/Chronicle/Contracts/Projections/ProjectionsGrpcKt$ProjectionsCoroutineStub;Lio/cratis/chronicle/readModels/ReadModelsService;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	public fun <init> (Ljava/lang/String;LCratis/Chronicle/Contracts/Projections/ProjectionsGrpcKt$ProjectionsCoroutineStub;Lio/cratis/chronicle/readModels/ReadModelsService;Ljava/lang/String;Ljava/lang/String;)V
+	public synthetic fun <init> (Ljava/lang/String;LCratis/Chronicle/Contracts/Projections/ProjectionsGrpcKt$ProjectionsCoroutineStub;Lio/cratis/chronicle/readModels/ReadModelsService;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	public fun query-s7YucsY (Ljava/lang/String;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	public fun register ([Ljava/lang/Object;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 }
