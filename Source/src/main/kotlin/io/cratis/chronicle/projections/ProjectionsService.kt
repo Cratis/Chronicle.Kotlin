@@ -17,10 +17,17 @@ import io.cratis.chronicle.readModels.Passive
 import io.cratis.chronicle.readModels.ReadModelsService
 import io.cratis.chronicle.readModels.readModelIdentifier
 import io.cratis.chronicle.sinks.WellKnownSinkTypes
+import io.grpc.Status
+import kotlinx.coroutines.delay
 import kotlin.reflect.KClass
 import kotlin.reflect.full.findAnnotation
 import kotlin.reflect.full.findAnnotations
 import kotlin.reflect.full.primaryConstructor
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
 
 /**
  * The definition built for one read model class, plus what it declared about being a variant - carried
@@ -37,14 +44,24 @@ private data class BuiltDefinition(
 internal const val EVENT_SOURCE_ID_KEY = "EventSourceId"
 internal const val EVENT_SOURCE_ID_EXPRESSION = "\$eventSourceId"
 
+private val FIRST_STATUS_DELAY = 50.milliseconds
+private val MAX_STATUS_DELAY = 2.seconds
+
 internal fun wireKey(key: String): String = if (key == EVENT_SOURCE_ID_KEY) EVENT_SOURCE_ID_EXPRESSION else key
 
 class ProjectionsService(
     private val eventStoreName: String,
     private val stub: ProjectionsGrpcKt.ProjectionsCoroutineStub,
     private val readModels: ReadModelsService,
-    private val namespace: String = io.cratis.chronicle.EventStoreNamespaceName.default.value
+    private val namespace: String = io.cratis.chronicle.EventStoreNamespaceName.default.value,
+    private val registrant: String = ""
 ) : IProjectionsService {
+    /** How long a registration waits for the kernel to apply it, or for a busy kernel to take it in, before it stops waiting. */
+    internal var maxWaitForRegistration: Duration = 5.minutes
+
+    /** How a wait between two questions to the kernel is done. */
+    internal var waitForKernel: suspend (Duration) -> Unit = { delay(it) }
+
     /** The sink that stores the graphs this service registers, from [io.cratis.chronicle.ChronicleOptions.defaultGraphSinkTypeId]. */
     internal var graphSinkTypeId: String = WellKnownSinkTypes.NEO4J
 
@@ -122,12 +139,76 @@ class ProjectionsService(
             .setOwnerValue(1) // CLIENT
             .addAllProjections(built.map { crossWired.getValue(it.readModelClass) })
             .addAllProjections(graphs.map { it.projection })
+            // Naming who registers is what lets the kernel report when it has applied what it accepted. It is not
+            // the full set: a registration made by hand says nothing about the projections the client does not name.
+            .setRegistrant(registrant)
             .build()
 
-        stub.register(request)
+        registerWithKernel(request)
+        waitUntilApplied()
 
         // An invalid view does not keep anything else from registering; it is reported once everything is.
         declared.throwIfAnyViewIsInvalid()
+    }
+
+    /**
+     * Sends the registration, waiting out a kernel that says it is busy.
+     *
+     * A busy kernel answers UNAVAILABLE with a `retry-after` trailer, in seconds; that is when to ask again.
+     */
+    private suspend fun registerWithKernel(request: ProjectionsOuterClass.RegisterRequest) {
+        val started = TimeSource.Monotonic.markNow()
+        while (true) {
+            try {
+                stub.register(request)
+                return
+            } catch (error: Exception) {
+                val retryAfter = error.retryAfter() ?: throw error
+                if (started.elapsedNow() + retryAfter > maxWaitForRegistration) throw error
+                waitForKernel(retryAfter)
+            }
+        }
+    }
+
+    /**
+     * Waits until the kernel has applied what it accepted from this registrant.
+     *
+     * The kernel takes a registration in and answers at once; applying it happens in the background. Asking with short
+     * calls rather than one long one is what keeps a busy kernel from timing the client out. A kernel that applies
+     * before it answers has no status to ask for, and answers UNIMPLEMENTED or never says pending.
+     *
+     * @throws ProjectionRegistrationNotApplied When the kernel accepted the registration but could not apply it.
+     */
+    private suspend fun waitUntilApplied() {
+        if (registrant.isEmpty()) return
+
+        val request = ProjectionsOuterClass.GetRegistrationStatusRequest.newBuilder()
+            .setEventStore(eventStoreName)
+            .setRegistrant(registrant)
+            .build()
+        val started = TimeSource.Monotonic.markNow()
+        var delay = FIRST_STATUS_DELAY
+        while (true) {
+            val status = try {
+                stub.getRegistrationStatus(request)
+            } catch (error: Exception) {
+                if (error.grpcStatusCode() == Status.Code.UNIMPLEMENTED) return
+                throw error
+            }
+
+            when (status.state) {
+                ProjectionsOuterClass.RegistrationState.Applied -> return
+                ProjectionsOuterClass.RegistrationState.Failed -> throw ProjectionRegistrationNotApplied(registrant, status.failure)
+                else -> Unit
+            }
+
+            if (started.elapsedNow() > maxWaitForRegistration) {
+                System.err.println("[ProjectionsService] '$registrant' is still being applied after $maxWaitForRegistration; no longer waiting")
+                return
+            }
+            waitForKernel(delay)
+            delay = minOf(delay * 2, MAX_STATUS_DELAY)
+        }
     }
 
     /**

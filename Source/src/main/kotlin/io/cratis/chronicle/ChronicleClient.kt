@@ -11,6 +11,9 @@ import java.util.concurrent.ConcurrentHashMap
 class ChronicleClient(private val options: ChronicleOptions) : IChronicleClient {
     private val connection = ChronicleConnection(options.connectionString, options.maxReceiveMessageSize)
         .also { it.multiplexObservation = options.multiplexObservation }
+        // Naming the program is what makes a projection registration something the kernel can report on. The default
+        // identifier is the lack of a name, and a name shared by every anonymous program would mix their registrations up.
+        .also { it.registrant = options.programIdentifier.takeUnless { name -> name.isBlank() || name == "Unknown" } ?: "" }
         .also { it.connect() }
 
     // Built once per client so every event store shares one tracer. Resolving the global
