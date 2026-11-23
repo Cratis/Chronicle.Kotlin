@@ -31,9 +31,14 @@ data class ChronicleOptions(
 | `openTelemetry` | `null` | Where spans go — see [Tracing](../guides/tracing.md) |
 | `maxReceiveMessageSize` | `100 MiB` | Receive limit (bytes) |
 | `readModelNamingPolicy` | `DefaultReadModelNamingPolicy` | Names each read model's container — see [Read model container names](#read-model-container-names) |
+| `multiplexObservation` | `true` | One stream for all observers, see below |
 | `defaultGraphSinkTypeId` | `Neo4j` | Sink for [graph projections](../guides/graph-projections.md), set with `withDefaultGraphSinkTypeId` |
 
-`programIdentifier` is a human-readable label that shows up in diagnostics.
+`programIdentifier` is a human-readable label that shows up in diagnostics. When
+you set it, it is also who the client registers projections as: the client then
+waits until the kernel has applied what it accepted, and fails with
+`ProjectionRegistrationNotApplied` if the kernel could not apply it. Left at
+`"Unknown"`, a registration is sent without a registrant and is not waited for.
 `defaultSinkTypeId` defaults to `WellKnownSinkTypes.MONGODB`, and can be
 overridden per process with the `CHRONICLE_SINK_TYPE` environment variable
 — for example `CHRONICLE_SINK_TYPE=SQL`.
@@ -49,9 +54,10 @@ ChronicleOptions.development().withoutAutoRegistration()
 ChronicleOptions.development().withArtifactsFrom("com.acme.ordering")
 ```
 
-`readModelNamingPolicy` and `defaultGraphSinkTypeId` are not constructor
-parameters. Set them with `withReadModelNamingPolicy`, described below, and
-`withDefaultGraphSinkTypeId(sinkTypeId)`. `copy` does not carry them over,
+`readModelNamingPolicy`, `defaultGraphSinkTypeId` and `multiplexObservation`
+are not constructor parameters. Set them with `withReadModelNamingPolicy`,
+described below, `withDefaultGraphSinkTypeId(sinkTypeId)` and
+`withMultiplexObservation(enabled)`. `copy` does not carry them over,
 so set them again after copying. `defaultGraphSinkTypeId` is the sink graph
 projections are stored in: `WellKnownSinkTypes.NEO4J` unless set, or
 `WellKnownSinkTypes.IN_MEMORY_GRAPH` for development and tests. See
@@ -61,6 +67,14 @@ projections are stored in: `WellKnownSinkTypes.NEO4J` unless set, or
 Set it in the constructor or with `withMaxReceiveMessageSize(bytes)`.
 Passing `null` leaves grpc-java's own receive limit in effect. This is a
 received-message limit, not an event-schema or append-payload validation rule.
+
+`multiplexObservation` is on by default. A kernel that supports it serves every
+reactor and reducer of a connection over one stream instead of one stream each,
+which keeps a program with many observers well inside the limit on concurrent
+HTTP/2 streams. The client uses the shared stream only when the kernel says it
+supports it, so an older kernel keeps one stream per observer. Turn it off with
+`withMultiplexObservation(false)` to keep one stream per observer against a
+kernel that supports sharing.
 
 Use `development()` only for a kernel on your own machine. Before connecting
 to a remote kernel, set `skipTlsValidation=false` and ensure the JVM trusts

@@ -783,6 +783,10 @@ skipped without invoking it and its failed partitions are discarded. State
 it has already built is kept, so the skipped events are missing from it;
 replay the observer instead to rebuild.
 
+When the kernel takes the request in and applies it in the
+background, the outcome is `FastForwardOutcome.Accepted` and the observer has
+not moved yet.
+
 ---
 
 ## IReducersService
