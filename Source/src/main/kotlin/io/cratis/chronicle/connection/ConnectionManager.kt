@@ -71,6 +71,8 @@ class ConnectionManager internal constructor(
     /** Stable client identity for the current connection, rotated on every reconnect. */
     val connectionId: String get() = lifecycle.connectionId
 
+    private val kernelStatus = KernelStatusReport()
+
     private val scope = CoroutineScope(SupervisorJob() + dispatcher)
     private var connectJob: Job? = null
 
@@ -137,6 +139,7 @@ class ConnectionManager internal constructor(
         val session = launch {
             connections.connect(buildRequest(connectionId)).collect {
                 lastKeepAlive.set(currentTimeMillis())
+                kernelStatus.observe(it)
 
                 // Answering is what bumps LastSeen on the kernel. A failure here means the
                 // connection is already gone, so let it surface rather than swallowing it.

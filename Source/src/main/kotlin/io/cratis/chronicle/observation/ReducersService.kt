@@ -19,6 +19,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.isActive
@@ -42,7 +43,8 @@ class ReducersService internal constructor(
     private val readModels: io.cratis.chronicle.readModels.ReadModelsService?,
     private val traces: ChronicleTraces,
     private val reconnectBackoff: () -> ObservationReconnectBackoff,
-    private val waitBeforeReconnect: suspend (Duration) -> Unit
+    private val waitBeforeReconnect: suspend (Duration) -> Unit,
+    private val observeOverride: ((Flow<ObservationReducers.ReducerMessage>) -> Flow<ObservationReducers.ReduceOperationMessage>)? = null
 ) : IReducersService {
 
     constructor(
@@ -55,7 +57,21 @@ class ReducersService internal constructor(
         traces: ChronicleTraces = ChronicleTraces.default
     ) : this(
         eventStoreName, namespace, lifecycle, stub, defaultSinkTypeId, readModels, traces,
-        { ObservationReconnectBackoff() }, { delay(it) }
+        { ObservationReconnectBackoff() }, { delay(it) }, null
+    )
+
+    constructor(
+        eventStoreName: String,
+        namespace: String,
+        lifecycle: ConnectionLifecycle,
+        stub: ReducersGrpcKt.ReducersCoroutineStub,
+        defaultSinkTypeId: String,
+        readModels: io.cratis.chronicle.readModels.ReadModelsService?,
+        traces: ChronicleTraces,
+        observe: ((Flow<ObservationReducers.ReducerMessage>) -> Flow<ObservationReducers.ReduceOperationMessage>)?
+    ) : this(
+        eventStoreName, namespace, lifecycle, stub, defaultSinkTypeId, readModels, traces,
+        { ObservationReconnectBackoff() }, { delay(it) }, observe
     )
 
     override suspend fun register(reducer: Any): Job {
@@ -164,7 +180,7 @@ class ReducersService internal constructor(
                     .build()
             )
 
-            stub.observe(requests.receiveAsFlow()).collect { operation ->
+            (observeOverride?.invoke(requests.receiveAsFlow()) ?: stub.observe(requests.receiveAsFlow())).collect { operation ->
                 backoff.streamDelivered()
                 // A replay notification on its own carries no events and expects no answer.
                 if (operation.isReplayNotification()) return@collect

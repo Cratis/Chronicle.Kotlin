@@ -11,7 +11,8 @@ import java.util.concurrent.TimeUnit
 
 /** Verifies a newly dialed channel before any application stub can use it. */
 internal object CompatibilityPreflight {
-    suspend fun verify(channel: Channel) {
+    /** Verifies the server and returns the capabilities it advertises. */
+    suspend fun verify(channel: Channel): Set<String> {
         val descriptor = ConnectionServiceGrpcKt::class.java.getResourceAsStream("/chronicle/chronicle.desc")
             ?.use { it.readBytes() }
             ?.takeIf { it.isNotEmpty() }
@@ -30,5 +31,6 @@ internal object CompatibilityPreflight {
                 "Chronicle server ${response.serverVersion} is incompatible: ${response.incompatibilitiesList.joinToString("; ")}. No operations were sent."
             )
         }
+        return response.capabilitiesList.toSet()
     }
 }

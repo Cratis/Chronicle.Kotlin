@@ -191,4 +191,23 @@ class ObserversTests {
     fun `an outcome this client does not know is reported as not available`() {
         assertEquals(FastForwardOutcome.NotAvailable, FastForwardOutcome.fromWire(99))
     }
+
+    @Test
+    fun `an accepted fast forward is reported as accepted`() {
+        assertEquals(FastForwardOutcome.Accepted, FastForwardOutcome.fromWire(4))
+    }
+
+    @Test
+    fun `every outcome the kernel sends today is mapped`() {
+        assertEquals(
+            listOf(
+                FastForwardOutcome.FastForwarded,
+                FastForwardOutcome.AlreadyAtTail,
+                FastForwardOutcome.Replaying,
+                FastForwardOutcome.NotAvailable,
+                FastForwardOutcome.Accepted
+            ),
+            (0..4).map { FastForwardOutcome.fromWire(it) }
+        )
+    }
 }

@@ -59,6 +59,13 @@ data class ChronicleOptions @JvmOverloads constructor(
     var readModelNamingPolicy: ReadModelNamingPolicy = DefaultReadModelNamingPolicy
         private set
 
+    /**
+     * Whether every reactor and reducer shares one observation stream to the kernel, when the kernel supports it.
+     * On by default; see [withMultiplexObservation].
+     */
+    var multiplexObservation: Boolean = true
+        private set
+
     /** The sink type graph projections are stored in. See [withDefaultGraphSinkTypeId]. */
     var defaultGraphSinkTypeId: String = WellKnownSinkTypes.NEO4J
         private set
@@ -107,10 +114,22 @@ data class ChronicleOptions @JvmOverloads constructor(
     fun withArtifactsFrom(vararg packages: String): ChronicleOptions =
         copy(artifacts = ClientArtifacts(packages.toList())).carrying(this)
 
+    /**
+     * The same options with [enabled] deciding whether every reactor and reducer shares one observation stream.
+     *
+     * Sharing is used only when the kernel advertises it, so older kernels keep one stream per observer either way.
+     * Turn it off to keep one stream per observer against a kernel that supports sharing.
+     *
+     * @param enabled Whether to share one stream. On by default.
+     */
+    fun withMultiplexObservation(enabled: Boolean): ChronicleOptions =
+        copy().carrying(this).also { it.multiplexObservation = enabled }
+
     /** Carries over the settings that are not constructor parameters, which `copy` does not. */
     private fun carrying(source: ChronicleOptions): ChronicleOptions {
         readModelNamingPolicy = source.readModelNamingPolicy
         defaultGraphSinkTypeId = source.defaultGraphSinkTypeId
+        multiplexObservation = source.multiplexObservation
         return this
     }
 
@@ -124,7 +143,8 @@ data class ChronicleOptions @JvmOverloads constructor(
             artifactActivator == other.artifactActivator &&
             openTelemetry == other.openTelemetry &&
             readModelNamingPolicy == other.readModelNamingPolicy &&
-            defaultGraphSinkTypeId == other.defaultGraphSinkTypeId
+            defaultGraphSinkTypeId == other.defaultGraphSinkTypeId &&
+            multiplexObservation == other.multiplexObservation
 
     override fun hashCode(): Int = listOf(
         connectionString,
@@ -135,7 +155,8 @@ data class ChronicleOptions @JvmOverloads constructor(
         artifactActivator,
         openTelemetry,
         readModelNamingPolicy,
-        defaultGraphSinkTypeId
+        defaultGraphSinkTypeId,
+        multiplexObservation
     ).hashCode()
 
     companion object {

@@ -17,7 +17,13 @@ enum class FastForwardOutcome {
     Replaying,
 
     /** The observer is retired or removed, so nothing was changed. */
-    NotAvailable;
+    NotAvailable,
+
+    /**
+     * The kernel took the request in and will apply it in the background, so the observer has not moved yet. What
+     * [FastForwardResult] says about sequence numbers is not known at this point.
+     */
+    Accepted;
 
     internal companion object {
         /** Maps the wire value of the outcome. Values this client does not know are [NotAvailable]. */
@@ -25,6 +31,7 @@ enum class FastForwardOutcome {
             0 -> FastForwarded
             1 -> AlreadyAtTail
             2 -> Replaying
+            4 -> Accepted
             else -> NotAvailable
         }
     }

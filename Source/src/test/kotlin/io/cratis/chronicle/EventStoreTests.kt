@@ -186,7 +186,7 @@ class EventStoreTests {
     fun `automatic registration logs failed observer once and retries on reconnect`() = runBlocking {
         val services = mockk<ChronicleServices>(relaxed = true)
         coEvery { services.eventStores.ensureEventStore(any(), any()) } returns mockk(relaxed = true)
-        every { services.reactors.observe(any(), any()) } returns emptyFlow()
+        every { services.observeReactor(any()) } returns emptyFlow()
         val lifecycle = ConnectionLifecycle()
         val attempts = AtomicInteger()
         val output = ByteArrayOutputStream()

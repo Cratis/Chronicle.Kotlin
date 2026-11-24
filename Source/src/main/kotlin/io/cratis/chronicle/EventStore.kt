@@ -212,7 +212,8 @@ class EventStore(
             eventLog,
             ReactorMiddlewares(discoveredMiddlewares()),
             ReactorMethodArguments(discoveredArgumentResolvers() + ReadModelArgument(readModelsService)),
-            traces
+            traces,
+            services::observeReactor
         )
     }
 
@@ -266,11 +267,13 @@ class EventStore(
     }
 
     override val reducers: IReducersService by lazy {
-        ReducersService(name, namespace, lifecycle, services.reducers, defaultSinkTypeId, readModelsService, traces)
+        ReducersService(
+            name, namespace, lifecycle, services.reducers, defaultSinkTypeId, readModelsService, traces, services::observeReducer
+        )
     }
 
     override val projections: IProjectionsService by lazy {
-        ProjectionsService(name, services.projections, readModelsService, namespace).also {
+        ProjectionsService(name, services.projections, readModelsService, namespace, services.registrant).also {
             it.graphSinkTypeId = defaultGraphSinkTypeId
         }
     }
